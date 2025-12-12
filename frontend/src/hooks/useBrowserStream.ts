@@ -12,6 +12,25 @@ interface BrowserFrame {
   url?: string;
 }
 
+interface StepUpdate {
+  stepIndex: number;
+  step?: {
+    id: string;
+    action: string;
+    description: string;
+  };
+  stepResult?: {
+    step_id: string;
+    success: boolean;
+    error?: string;
+    execution_time_ms: number;
+    element_found?: boolean;
+    selector_used?: any;
+  };
+  status: 'pending' | 'running' | 'completed';
+  timestamp: number;
+}
+
 interface UseBrowserStreamOptions {
   executionId?: string;
   enabled?: boolean;
@@ -24,6 +43,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finalResult, setFinalResult] = useState<any>(null);
+  const [stepUpdates, setStepUpdates] = useState<Map<number, StepUpdate>>(new Map());
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
@@ -120,6 +140,40 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
           }
 
           setFinalResult(data.result);
+        } else if (data.type === 'step_start') {
+          // Step execution started
+          const stepUpdate: StepUpdate = {
+            stepIndex: data.stepIndex,
+            step: data.step,
+            status: 'running',
+            timestamp: data.timestamp || Date.now()
+          };
+          setStepUpdates((prev: Map<number, StepUpdate>) => {
+            const newMap = new Map(prev);
+            newMap.set(data.stepIndex, stepUpdate);
+            return newMap;
+          });
+        } else if (data.type === 'step_complete') {
+          // Step execution completed
+          const stepUpdate: StepUpdate = {
+            stepIndex: data.stepIndex,
+            stepResult: data.stepResult,
+            status: 'completed',
+            timestamp: data.timestamp || Date.now()
+          };
+          setStepUpdates((prev: Map<number, StepUpdate>) => {
+            const newMap = new Map(prev);
+            const existing = newMap.get(data.stepIndex);
+            if (existing) {
+              newMap.set(data.stepIndex, {
+                ...existing,
+                ...stepUpdate
+              });
+            } else {
+              newMap.set(data.stepIndex, stepUpdate);
+            }
+            return newMap;
+          });
         } else if (data.type === 'connected') {
           console.log('WebSocket connection confirmed by backend', { executionId: data.executionId });
           setIsConnected(true);
@@ -200,6 +254,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
     isConnected,
     error,
     finalResult, // Final execution result received via WebSocket
+    stepUpdates, // Real-time step progress updates
     connect,
     disconnect,
   };

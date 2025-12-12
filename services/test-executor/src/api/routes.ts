@@ -5,7 +5,7 @@ import { DOMAnalyzer } from '../infrastructure/selectors/dom-analyzer';
 import { PlaywrightController } from '../infrastructure/browser/playwright-controller';
 import { createLogger } from '../../shared/logger/logger';
 import { ExecutionRepository } from '../../shared/database/repositories/execution-repository';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 
 const router = Router();
 const logger = createLogger('test-executor-routes');
@@ -61,6 +61,16 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
   try {
     const testCase: TestCase = req.body;
     const headless = req.query.headless === 'true';
+
+    // Validate and fix test case ID if needed
+    if (!validateUUID(testCase.id)) {
+      logger.warn('Invalid test case ID format detected, generating new UUID', {
+        originalId: testCase.id,
+        testCaseName: testCase.name
+      });
+      testCase.id = uuidv4();
+      logger.info('Generated new UUID for test case', { newId: testCase.id });
+    }
 
     // Generate execution ID immediately (BEFORE test starts)
     // This allows frontend to connect to WebSocket early

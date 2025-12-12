@@ -11,7 +11,14 @@ class VisionAnalyzer:
     """Analyzes screenshots using vision AI to detect elements"""
     
     def __init__(self):
-        self.llm_client = LLMClient()
+        self._llm_client = None
+    
+    @property
+    def llm_client(self):
+        """Lazy initialization of LLM client"""
+        if self._llm_client is None:
+            self._llm_client = LLMClient()
+        return self._llm_client
     
     def _image_to_base64(self, image_path: str) -> str:
         """Convert image to base64 string"""

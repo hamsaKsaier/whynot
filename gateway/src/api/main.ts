@@ -23,7 +23,7 @@ function transformTestCaseEntity(entity: TestCaseEntity): TestCase {
   // Parse JSONB fields
   const steps = typeof entity.steps === 'string' ? JSON.parse(entity.steps) : entity.steps;
   const metadata = typeof entity.metadata === 'string' ? JSON.parse(entity.metadata) : (entity.metadata || {});
-  
+
   return {
     id: entity.id,
     name: entity.name,
@@ -192,7 +192,13 @@ app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.gene
     additional_context: sanitizedContext
   };
 
-  const testCases = await orchestrator.generateTestCases(userStory);
+  logger.info('Generating test cases', {
+    websiteUrl: sanitizedUrl,
+    hasAdditionalContext: !!sanitizedContext
+  });
+
+  // Use method that captures page content first, then generates tests
+  const testCases = await orchestrator.generateTestCasesWithPageCapture(userStory);
 
   // Persist generated test cases
   try {
@@ -242,6 +248,22 @@ app.get('/metrics', (req, res) => {
   });
 });
 
+// Debug endpoint to check rate limit configuration
+app.get('/api/debug/rate-limits', (req, res) => {
+  res.json({
+    rate_limits: {
+      test_execution_max: process.env.RATE_LIMIT_TEST_EXECUTION_MAX || '10 (default)',
+      test_generation_max: process.env.RATE_LIMIT_TEST_GENERATION_MAX || '20 (default)',
+      max_requests: process.env.RATE_LIMIT_MAX_REQUESTS || '100 (default)',
+    },
+    parsed_values: {
+      test_execution_max: parseInt(process.env.RATE_LIMIT_TEST_EXECUTION_MAX || '10', 10),
+      test_generation_max: parseInt(process.env.RATE_LIMIT_TEST_GENERATION_MAX || '20', 10),
+      max_requests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+    }
+  });
+});
+
 // Get test case by ID
 app.get('/api/test-cases/:id', asyncHandler(async (req, res) => {
   const entity = await testCaseRepository.findById(req.params.id);
@@ -282,13 +304,13 @@ app.get('/api/executions', asyncHandler(async (req, res) => {
 app.put('/api/test-cases/:id', validate(schemas.executeTest), asyncHandler(async (req, res) => {
   const id = req.params.id;
   const updates = req.body;
-  
+
   logger.info('Updating test case', { testCaseId: id });
   const updated = await testCaseRepository.update(id, updates);
   if (!updated) {
     throw createError('Test case not found', 404, 'NOT_FOUND');
   }
-  
+
   const testCase = transformTestCaseEntity(updated);
   res.json({ success: true, test_case: testCase });
 }));
@@ -296,13 +318,13 @@ app.put('/api/test-cases/:id', validate(schemas.executeTest), asyncHandler(async
 // Delete test case
 app.delete('/api/test-cases/:id', asyncHandler(async (req, res) => {
   const id = req.params.id;
-  
+
   logger.info('Deleting test case', { testCaseId: id });
   const deleted = await testCaseRepository.delete(id);
   if (!deleted) {
     throw createError('Test case not found', 404, 'NOT_FOUND');
   }
-  
+
   res.json({ success: true, message: 'Test case deleted successfully' });
 }));
 

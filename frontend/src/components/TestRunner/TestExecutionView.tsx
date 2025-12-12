@@ -12,6 +12,7 @@ interface TestExecutionViewProps {
   headless: boolean;
   onHeadlessChange?: (headless: boolean) => void;
   onStop?: () => void;
+  onExecutionComplete?: (result: ExecutionResult) => void;
 }
 
 export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
@@ -28,7 +29,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
 
   // Connect to browser stream if not headless and execution is running
   // Connect immediately when executionId is available
-  const { currentFrame, isConnected, error: streamError, finalResult: wsFinalResult } = useBrowserStream({
+  const { currentFrame, isConnected, error: streamError, finalResult: wsFinalResult, stepUpdates } = useBrowserStream({
     executionId: executionResult?.execution_id,
     enabled: !headless && !!executionResult?.execution_id, // Enable as soon as executionId is available
     wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:3001',
@@ -42,12 +43,28 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
     }
   }, [wsFinalResult, onExecutionComplete]);
 
-  // Update current step index based on execution progress
+  // Update current step index based on execution progress and real-time updates
   useEffect(() => {
+    // First check for real-time step updates (step_start events)
+    if (stepUpdates && stepUpdates.size > 0) {
+      // Find the most recent running step
+      let latestRunningIndex: number | undefined;
+      stepUpdates.forEach((update: any, index: number) => {
+        if (update.status === 'running') {
+          latestRunningIndex = index;
+        }
+      });
+      if (latestRunningIndex !== undefined) {
+        setCurrentStepIndex(latestRunningIndex);
+        return;
+      }
+    }
+
+    // Fallback to execution result
     if (executionResult) {
       // Find the first step that hasn't completed yet (success is undefined)
       const runningStepIndex = executionResult.steps.findIndex(
-        (s) => s.success === undefined
+        (s: StepResult) => s.success === undefined
       );
       if (runningStepIndex !== -1) {
         setCurrentStepIndex(runningStepIndex);
@@ -56,17 +73,17 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
         setCurrentStepIndex(executionResult.steps.length - 1);
       }
     }
-  }, [executionResult]);
+  }, [executionResult, stepUpdates]);
 
   // Initialize steps from testCase if executionResult has no steps or steps is empty
-  const steps: StepResult[] = (executionResult?.steps && executionResult.steps.length > 0) 
-    ? executionResult.steps 
+  const steps: StepResult[] = (executionResult?.steps && executionResult.steps.length > 0)
+    ? executionResult.steps
     : testCase.steps.map((step, index) => ({
-        step_id: step.id || `step-${index}`,
-        // success is undefined for pending steps
-        execution_time_ms: 0,
-        element_found: false,
-      }));
+      step_id: step.id || `step-${index}`,
+      // success is undefined for pending steps
+      execution_time_ms: 0,
+      element_found: false,
+    }));
 
   return (
     <div className="h-full flex flex-col">
@@ -84,6 +101,8 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
         <div className="w-80 flex-shrink-0">
           <TestStepsList
             steps={steps}
+            testSteps={testCase.steps}
+            stepUpdates={stepUpdates}
             currentStepIndex={currentStepIndex}
             onStepClick={setSelectedStepIndex}
           />
@@ -158,8 +177,8 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
                       {steps[selectedStepIndex].success === undefined
                         ? 'Pending'
                         : steps[selectedStepIndex].success
-                        ? 'Passed'
-                        : 'Failed'}
+                          ? 'Passed'
+                          : 'Failed'}
                     </span>
                   </div>
                   <div>

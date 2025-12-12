@@ -71,6 +71,22 @@ export class DOMAnalyzer {
       $('input, textarea').each((_, el) => {
         candidates.push($(el));
       });
+    } else if (description.role === 'link' || description.role === 'navigation') {
+      $('a').each((_, el) => {
+        candidates.push($(el));
+      });
+    }
+
+    // Search for links if description mentions "link" or "links"
+    const descriptionText = JSON.stringify(description).toLowerCase();
+    if (descriptionText.includes('link') && !descriptionText.includes('button')) {
+      $('a').each((_, el) => {
+        const $el = $(el);
+        // Only add if it matches other criteria or if we're just looking for any links
+        if (!description.text || $el.text().toLowerCase().includes(description.text.toLowerCase())) {
+          candidates.push($el);
+        }
+      });
     }
 
     return candidates;
@@ -146,7 +162,27 @@ export class DOMAnalyzer {
       }
     }
 
-    // 7. XPath (last resort)
+    // 7. Tag-based selector (for links, buttons, etc.)
+    const tagName = element.prop('tagName')?.toLowerCase();
+    if (tagName === 'a') {
+      // For links, add a generic 'a' selector as fallback
+      selectors.push({
+        type: 'css',
+        value: 'a',
+        stability_score: 0.35
+      });
+      // Also add selector with href if available
+      const href = element.attr('href');
+      if (href) {
+        selectors.push({
+          type: 'css',
+          value: `a[href="${href}"]`,
+          stability_score: 0.80
+        });
+      }
+    }
+
+    // 8. XPath (last resort)
     const xpath = this.generateXPath($, element);
     if (xpath) {
       selectors.push({

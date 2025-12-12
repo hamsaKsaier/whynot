@@ -23,9 +23,12 @@ export const apiRateLimiter = rateLimit({
 /**
  * Strict rate limiter for test execution (more restrictive)
  */
+const testExecutionMax = parseInt(process.env.RATE_LIMIT_TEST_EXECUTION_MAX || '10', 10);
+console.log(`[Rate Limit] Test execution rate limit set to: ${testExecutionMax} per hour`);
+
 export const testExecutionRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: parseInt(process.env.RATE_LIMIT_TEST_EXECUTION_MAX || '10', 10), // Limit each IP to 10 test executions per hour
+  max: testExecutionMax, // Limit each IP to N test executions per hour
   message: 'Too many test executions from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -55,6 +58,8 @@ export const testGenerationRateLimiter = rateLimit({
     );
   }
 });
+
+
 
 
 

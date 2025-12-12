@@ -36,43 +36,111 @@ export class WorkflowOrchestrator {
     screenshot_base64: string;
     url: string;
   }> {
+    // Configurable timeout for page capture (default: 60 seconds)
+    const captureTimeout = parseInt(
+      process.env.PAGE_CAPTURE_TIMEOUT_MS || '60000',
+      10
+    );
+    const maxRetries = parseInt(
+      process.env.PAGE_CAPTURE_MAX_RETRIES || '2',
+      10
+    );
+
     try {
-      logger.info('Capturing page content', { websiteUrl });
+      logger.info('Capturing page content', {
+        websiteUrl,
+        timeout: captureTimeout,
+        maxRetries,
+        testExecutorUrl: this.testExecutorUrl
+      });
+
       const response = await this.testExecutorCircuitBreaker.execute(() =>
         retryWithBackoff(
-          () => axios.post(
-            `${this.testExecutorUrl}/api/capture-page`,
-            { website_url: websiteUrl },
-            {
-              headers: { 'Content-Type': 'application/json' },
-              timeout: 30000 // 30 second timeout for page capture
-            }
-          ),
+          () => {
+            logger.debug('Sending page capture request', {
+              url: websiteUrl,
+              endpoint: `${this.testExecutorUrl}/api/capture-page`
+            });
+            return axios.post(
+              `${this.testExecutorUrl}/api/capture-page`,
+              { website_url: websiteUrl },
+              {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: captureTimeout
+              }
+            );
+          },
           {
-            maxRetries: 2,
+            maxRetries,
             initialDelayMs: 1000,
             maxDelayMs: 5000,
             retryableErrors: (error: any) => {
-              if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
-                return true;
+              const isRetryable =
+                error.code === 'ECONNREFUSED' ||
+                error.code === 'ETIMEDOUT' ||
+                error.code === 'ENOTFOUND' ||
+                (error.response?.status >= 500 && error.response?.status < 600);
+
+              if (isRetryable) {
+                logger.warn('Retryable error encountered, will retry', {
+                  code: error.code,
+                  status: error.response?.status,
+                  message: error.message
+                });
               }
-              if (error.response?.status >= 500 && error.response?.status < 600) {
-                return true;
-              }
-              return false;
+              return isRetryable;
             }
           }
         )
       );
-      logger.debug('Page content captured successfully', { url: response.data?.url });
+
+      if (!response.data) {
+        throw new Error('Empty response from page capture endpoint');
+      }
+
+      if (!response.data.html || !response.data.screenshot_base64) {
+        throw new Error('Incomplete page content: missing HTML or screenshot');
+      }
+
+      logger.info('Page content captured successfully', {
+        url: response.data.url || websiteUrl,
+        htmlLength: response.data.html?.length || 0,
+        screenshotSize: response.data.screenshot_base64
+          ? `${(response.data.screenshot_base64.length / 1024).toFixed(2)} KB`
+          : 'unknown'
+      });
+
       return response.data;
     } catch (error: any) {
       const axiosError = error as AxiosError;
-      logger.error('Failed to capture page content', error, {
-        websiteUrl,
-        statusCode: axiosError.response?.status
-      });
-      throw new Error(`Failed to capture page content: ${error.message || 'Unknown error'}`);
+      const errorDetails = {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        statusCode: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        responseData: axiosError.response?.data,
+        url: websiteUrl,
+        testExecutorUrl: this.testExecutorUrl,
+        timeout: captureTimeout
+      };
+
+      logger.error('Failed to capture page content', error, errorDetails);
+
+      // Provide more specific error messages
+      let errorMessage = `Failed to capture page content from ${websiteUrl}`;
+
+      if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
+        errorMessage += `: Request timed out after ${captureTimeout}ms. The page may be loading too slowly.`;
+      } else if (error.code === 'ECONNREFUSED') {
+        errorMessage += `: Cannot connect to test executor at ${this.testExecutorUrl}. Service may be down.`;
+      } else if (error.response?.status) {
+        errorMessage += `: HTTP ${error.response.status} ${error.response.statusText || ''}`;
+      } else {
+        errorMessage += `: ${error.message || 'Unknown error'}`;
+      }
+
+      throw new Error(errorMessage);
     }
   }
 
@@ -108,9 +176,23 @@ export class WorkflowOrchestrator {
       console.log(`   📄 HTML length: ${pageContent.html.length} characters`);
       console.log(`   🖼️  Screenshot: ${(pageContent.screenshot_base64.length / 1024).toFixed(2)} KB\n`);
     } catch (error: any) {
+      const errorDetails = {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        ...(error.response && {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        })
+      };
       console.log(`   ⚠️  Failed to capture page content: ${error.message}`);
+      console.log(`   📋 Error details:`, JSON.stringify(errorDetails, null, 2));
       console.log(`   ℹ️  Continuing without page context...\n`);
-      logger.warn('Failed to capture page content, proceeding without it', error);
+      logger.warn('Failed to capture page content, proceeding without it', {
+        error: errorDetails,
+        url: userStory.website_url
+      });
       // Continue without page content - will use old method
     }
 
@@ -173,6 +255,63 @@ export class WorkflowOrchestrator {
       testCase,
       executionResult
     };
+  }
+
+  /**
+   * Generate test cases with automatic page content capture
+   * Attempts to capture page content first, then generates tests with context if successful
+   */
+  async generateTestCasesWithPageCapture(userStory: UserStory): Promise<TestCase[]> {
+    logger.info('Generating test cases with page capture', {
+      websiteUrl: userStory.website_url
+    });
+
+    let pageContent: { html: string; screenshot_base64: string; url: string } | null = null;
+
+    // Attempt to capture page content
+    try {
+      logger.info('Attempting to capture page content', {
+        websiteUrl: userStory.website_url
+      });
+      pageContent = await this.capturePageContent(userStory.website_url);
+      logger.info('Page content captured successfully', {
+        url: pageContent.url,
+        htmlLength: pageContent.html.length,
+        screenshotSize: `${(pageContent.screenshot_base64.length / 1024).toFixed(2)} KB`
+      });
+    } catch (error: any) {
+      const errorDetails = {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        ...(error.response && {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        })
+      };
+      logger.warn('Failed to capture page content, will generate tests without context', {
+        websiteUrl: userStory.website_url,
+        error: errorDetails
+      });
+      // Continue without page content - will use fallback method
+    }
+
+    // Generate test cases with or without page context
+    if (pageContent) {
+      try {
+        return await this.generateTestCasesWithPageContext(userStory, pageContent);
+      } catch (error: any) {
+        logger.error('Failed to generate tests with page context, falling back', error, {
+          websiteUrl: userStory.website_url
+        });
+        // Fallback to method without page context
+        return await this.generateTestCases(userStory);
+      }
+    } else {
+      logger.info('Generating test cases without page context (fallback mode)');
+      return await this.generateTestCases(userStory);
+    }
   }
 
   /**

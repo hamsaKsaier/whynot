@@ -109,3 +109,8 @@ For production environments:
 - Implement **authentication** for higher limits
 - Use **user-based rate limiting** instead of IP-based for authenticated users
 - Monitor rate limit hits to adjust limits based on actual usage
+
+
+
+
+

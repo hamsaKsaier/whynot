@@ -105,10 +105,20 @@ export class TestRunner {
           description: step.description
         });
 
+        // Send step start event via WebSocket
+        if (browserStreamer) {
+          browserStreamer.sendStepStart(step, i);
+        }
+
         try {
-          // Pass log function to step executor
-          const stepResult = await this.stepExecutor.executeStep(step, i, sendLog);
+          // Pass log function and test case ID to step executor
+          const stepResult = await this.stepExecutor.executeStep(step, i, sendLog, testCase.id);
           stepResults.push(stepResult);
+
+          // Send step complete event via WebSocket
+          if (browserStreamer) {
+            browserStreamer.sendStepComplete(stepResult, i);
+          }
 
           if (stepResult.screenshot_path) {
             screenshots.push(stepResult.screenshot_path);
@@ -164,13 +174,19 @@ export class TestRunner {
           const stepContext = `Step ${i + 1}/${testCase.steps.length}`;
           error = `${stepContext} threw unexpected error: ${stepError.message || 'Unknown error'}`;
 
-          stepResults.push({
+          const errorStepResult = {
             step_id: step.id || `step-${i + 1}`,
             success: false,
             error: stepError.message || 'Unexpected error',
             execution_time_ms: Date.now() - Date.parse(startedAt),
             element_found: false
-          });
+          };
+          stepResults.push(errorStepResult);
+
+          // Send step complete event for error case
+          if (browserStreamer) {
+            browserStreamer.sendStepComplete(errorStepResult, i);
+          }
 
           break;
         }
@@ -241,7 +257,8 @@ export class TestRunner {
     sendLog('info', '\n========================================');
     sendLog('info', '📊 TEST EXECUTION SUMMARY');
     sendLog('info', '========================================');
-    sendLog('info', `Status: ${status === 'completed' ? '✅ COMPLETED' : status === 'failed' ? '❌ FAILED' : '⏸️  ' + status.toUpperCase()}`);
+    const statusDisplay = status === 'completed' ? '✅ COMPLETED' : status === 'failed' ? '❌ FAILED' : `⏸️  ${String(status).toUpperCase()}`;
+    sendLog('info', `Status: ${statusDisplay}`);
     sendLog('info', `Total Duration: ${totalDuration}ms`);
     sendLog('info', `Steps Completed: ${stepResults.length}/${testCase.steps.length}`);
     sendLog('info', `Steps Passed: ${stepResults.filter(s => s.success).length}`);

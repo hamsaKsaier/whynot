@@ -9,7 +9,14 @@ class TestGenerator:
     """Generates test cases from user stories using AI"""
     
     def __init__(self):
-        self.llm_client = LLMClient()
+        self._llm_client = None
+    
+    @property
+    def llm_client(self):
+        """Lazy initialization of LLM client"""
+        if self._llm_client is None:
+            self._llm_client = LLMClient()
+        return self._llm_client
     
     def _create_test_generation_prompt(self, user_story: str, website_url: str) -> str:
         """Create prompt for test case generation"""
@@ -334,7 +341,7 @@ Example format:
                 test_cases_data = response
         
         for idx, tc_data in enumerate(test_cases_data):
-            test_case_id = f"test-{uuid.uuid4().hex[:8]}"
+            test_case_id = str(uuid.uuid4())
             
             steps = self._parse_test_steps(tc_data.get("steps", []))
             

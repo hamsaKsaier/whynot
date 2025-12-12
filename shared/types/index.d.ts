@@ -25,6 +25,7 @@ export interface TestStep {
     expected_outcome?: string;
     wait_time?: number;
     description: string;
+    suggested_selectors?: ElementSelector[];
 }
 export interface TestCase {
     id: string;
