@@ -91,7 +91,35 @@ export class SelectorLearner {
       return [];
     }
   }
+
+  /**
+   * Track selector attempt (success or failure)
+   */
+  async trackSelectorAttempt(
+    testCaseId: string,
+    stepId: string,
+    selector: ElementSelector,
+    success: boolean
+  ): Promise<void> {
+    try {
+      await this.repository.trackSelectorAttempt(testCaseId, stepId, selector, success);
+    } catch (error) {
+      console.warn('Failed to track selector attempt:', error);
+      // Don't throw - tracking is optional, shouldn't break execution
+    }
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

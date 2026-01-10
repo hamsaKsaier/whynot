@@ -70,6 +70,17 @@ export function setupWebSocketServer(server: any): void {
       // Store connection for later attachment
       pendingConnections.set(executionId, ws);
       logger.info('WebSocket connection stored, waiting for streamer', { executionId });
+      
+      // Send immediate confirmation to keep connection alive
+      try {
+        ws.send(JSON.stringify({ 
+          type: 'connected', 
+          executionId,
+          message: 'Waiting for browser stream to start...' 
+        }));
+      } catch (error: any) {
+        logger.warn('Failed to send initial connected message', { error: error.message, executionId });
+      }
     }
 
     ws.on('message', (message: string) => {
@@ -86,22 +97,40 @@ export function setupWebSocketServer(server: any): void {
       }
     });
 
-    ws.on('close', () => {
-      logger.info('WebSocket connection closed', { executionId });
+    ws.on('close', (code: number, reason: Buffer) => {
+      logger.info('WebSocket connection closed', { 
+        executionId, 
+        code, 
+        reason: reason.toString(),
+        hasStreamer: !!activeStreams.get(executionId),
+        wasPending: pendingConnections.has(executionId)
+      });
       pendingConnections.delete(executionId);
       // Don't cleanup streamer here - it will be cleaned up when test completes
     });
 
     ws.on('error', (error: Error) => {
-      logger.error('WebSocket error', error, { executionId });
+      logger.error('WebSocket error in handler', { 
+        executionId, 
+        error: error.message,
+        readyState: ws.readyState,
+        hasStreamer: !!activeStreams.get(executionId),
+        wasPending: pendingConnections.has(executionId)
+      });
     });
 
-    // Send connection confirmation
-    ws.send(JSON.stringify({ 
-      type: 'connected', 
-      executionId,
-      message: 'Browser streaming connected' 
-    }));
+    // Send connection confirmation (only if streamer already exists)
+    if (streamer) {
+      try {
+        ws.send(JSON.stringify({ 
+          type: 'connected', 
+          executionId,
+          message: 'Browser streaming connected' 
+        }));
+      } catch (error: any) {
+        logger.warn('Failed to send connected message', { error: error.message, executionId });
+      }
+    }
   });
 
   logger.info('WebSocket server started', { path: '/ws/browser-stream' });

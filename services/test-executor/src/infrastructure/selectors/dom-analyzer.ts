@@ -149,15 +149,45 @@ export class DOMAnalyzer {
       }
     }
 
-    // 6. Class name (if stable)
+    // 6. Class names (process all classes, rank by stability)
     const className = element.attr('class');
     if (className) {
-      const classes = className.split(' ').filter(c => c && !c.includes('hover') && !c.includes('active'));
-      if (classes.length > 0) {
+      const classes = className.split(' ').filter(c => c && c.trim().length > 0);
+      
+      // Separate stable and unstable classes
+      const stableClasses: string[] = [];
+      const unstableClasses: string[] = [];
+      
+      for (const cls of classes) {
+        const trimmedClass = cls.trim();
+        // Skip state classes
+        if (trimmedClass.includes('hover') || trimmedClass.includes('active') || 
+            trimmedClass.includes('focus') || trimmedClass.includes('disabled')) {
+          continue;
+        }
+        
+        if (this.isStableClass(trimmedClass)) {
+          stableClasses.push(trimmedClass);
+        } else {
+          unstableClasses.push(trimmedClass);
+        }
+      }
+      
+      // Add stable classes with higher score (0.65)
+      for (const cls of stableClasses) {
         selectors.push({
           type: 'class',
-          value: `.${classes[0]}`,
-          stability_score: 0.50
+          value: `.${cls}`,
+          stability_score: 0.65
+        });
+      }
+      
+      // Add unstable classes with lower score (0.40)
+      for (const cls of unstableClasses) {
+        selectors.push({
+          type: 'class',
+          value: `.${cls}`,
+          stability_score: 0.40
         });
       }
     }
@@ -205,6 +235,47 @@ export class DOMAnalyzer {
     ];
 
     return !unstablePatterns.some(pattern => pattern.test(id));
+  }
+
+  /**
+   * Check if a CSS class name is stable (semantic) or unstable (framework-generated)
+   * @param className The class name to check
+   * @returns true if stable, false if unstable
+   */
+  private isStableClass(className: string): boolean {
+    // Filter out empty strings and whitespace
+    if (!className || className.trim().length === 0) {
+      return false;
+    }
+
+    const trimmedClass = className.trim();
+
+    // Reject state classes
+    const stateClasses = ['hover', 'active', 'focus', 'disabled', 'selected', 'checked', 'open', 'closed'];
+    if (stateClasses.includes(trimmedClass.toLowerCase())) {
+      return false;
+    }
+
+    // Reject unstable patterns (framework-generated)
+    const unstablePatterns = [
+      /^[a-z0-9]{6,}$/i,  // Random hash-like: sc-123abc, abc123def
+      /^css-[a-z0-9]+$/i,  // CSS-in-JS: css-xyz789
+      /^[a-z]+-\d+$/i,     // Index-based: item-0, button-1, card-2
+      /^(mt|mb|ml|mr|pt|pb|pl|pr|px|py|mx|my|w-|h-|bg-|text-|border-|rounded-|shadow-|flex|grid)-\d+$/i,  // Tailwind utilities with numbers
+    ];
+
+    if (unstablePatterns.some(pattern => pattern.test(trimmedClass))) {
+      return false;
+    }
+
+    // Accept stable patterns (semantic classes)
+    const stablePatterns = [
+      /^[a-z]+(-[a-z]+)+$/i,  // BEM: button-primary, card-header, login-form
+      /^[a-z]+__[a-z]+/i,     // BEM element: button__text, card__header
+      /^(login|submit|cancel|save|delete|edit|add|remove|search|filter|menu|nav|header|footer|sidebar|content|main|container|wrapper|form|input|button|link|card|modal|dialog|dropdown|tab|panel|sidebar|navbar|breadcrumb|pagination|alert|notification|badge|tooltip|popover|accordion|carousel|slider|tabs|accordion)/i,  // Semantic names
+    ];
+
+    return stablePatterns.some(pattern => pattern.test(trimmedClass));
   }
 
   private generateXPath($: cheerio.CheerioAPI, element: cheerio.Cheerio<any>): string | null {

@@ -33,6 +33,25 @@ export class ExecutionRepository {
    */
   async create(execution: ExecutionResult): Promise<ExecutionEntity> {
     return await transaction(async (client) => {
+      // Convert started_at from ISO string to Date if needed
+      let startedAt: Date;
+      if (typeof execution.started_at === 'string') {
+        startedAt = new Date(execution.started_at);
+      } else {
+        // Assume it's already a Date or use current time as fallback
+        startedAt = execution.started_at ? (execution.started_at as any as Date) : new Date();
+      }
+
+      // Convert completed_at from ISO string to Date if needed
+      let completedAt: Date | null = null;
+      if (execution.completed_at) {
+        if (typeof execution.completed_at === 'string') {
+          completedAt = new Date(execution.completed_at);
+        } else {
+          completedAt = execution.completed_at as any as Date;
+        }
+      }
+
       // Insert execution
       const execResult = await client.query<ExecutionEntity>(
         `INSERT INTO executions (id, test_case_id, status, started_at, completed_at, total_duration_ms, error, screenshots)
@@ -42,8 +61,8 @@ export class ExecutionRepository {
           execution.execution_id,
           execution.test_case_id,
           execution.status,
-          execution.started_at,
-          execution.completed_at || null,
+          startedAt,
+          completedAt,
           execution.total_duration_ms,
           execution.error || null,
           execution.screenshots || []
@@ -82,7 +101,7 @@ export class ExecutionRepository {
       'SELECT * FROM executions WHERE id = $1',
       [id]
     );
-    
+
     return result[0] || null;
   }
 

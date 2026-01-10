@@ -5,15 +5,25 @@ import { DOMAnalyzer } from '../infrastructure/selectors/dom-analyzer';
 import { PlaywrightController } from '../infrastructure/browser/playwright-controller';
 import { createLogger } from '../../shared/logger/logger';
 import { ExecutionRepository } from '../../shared/database/repositories/execution-repository';
+import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 
 const router = Router();
 const logger = createLogger('test-executor-routes');
 const testRunner = new TestRunner(
   process.env.AI_SERVICE_URL || 'http://localhost:8000',
-  process.env.SCREENSHOTS_DIR || './screenshots'
+  process.env.SCREENSHOTS_DIR || './screenshots',
+  true // Enable browser pool
 );
 const executionRepository = new ExecutionRepository();
+const testCaseRepository = new TestCaseRepository();
+
+// Warm up browser pool on startup (async, non-blocking)
+testRunner.warmUp().then(() => {
+  logger.info('Browser pool warmed up and ready');
+}).catch((err) => {
+  logger.warn('Failed to warm up browser pool', { error: err.message });
+});
 
 router.get('/health', async (req: Request, res: Response) => {
   const health = {
@@ -62,6 +72,46 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
     const testCase: TestCase = req.body;
     const headless = req.query.headless === 'true';
 
+    // Log raw request body for debugging
+    try {
+      const rawBody = JSON.stringify(testCase);
+      logger.debug('Raw request body received', {
+        bodySize: rawBody.length,
+        firstStepKeys: testCase.steps[0] ? Object.keys(testCase.steps[0]) : [],
+        firstStepHasSuggestedSelectors: !!testCase.steps[0]?.suggested_selectors,
+        firstStepSuggestedSelectorsCount: testCase.steps[0]?.suggested_selectors?.length || 0,
+        sampleBody: rawBody.substring(0, 500) // First 500 chars
+      });
+    } catch (bodyError) {
+      logger.warn('Failed to serialize request body for logging', { error: bodyError });
+    }
+
+    // Log test case received and suggested_selectors status for each step
+    logger.info('Received test case from API', {
+      testCaseId: testCase.id,
+      name: testCase.name,
+      stepsCount: testCase.steps.length
+    });
+
+    testCase.steps.forEach((step, idx) => {
+      const hasSuggestedSelectors = !!(step.suggested_selectors && step.suggested_selectors.length > 0);
+      const selectorCount = step.suggested_selectors?.length || 0;
+      const selectorTypes = hasSuggestedSelectors
+        ? step.suggested_selectors?.map(s => s.type).join(', ')
+        : 'none';
+
+      logger.info(`Step ${idx + 1} received in API route`, {
+        stepId: step.id,
+        action: step.action,
+        hasSuggestedSelectors,
+        suggestedSelectorsCount: selectorCount,
+        selectorTypes,
+        selectors: hasSuggestedSelectors
+          ? step.suggested_selectors?.slice(0, 2).map(s => ({ type: s.type, value: s.value, stability: s.stability_score }))
+          : []
+      });
+    });
+
     // Validate and fix test case ID if needed
     if (!validateUUID(testCase.id)) {
       logger.warn('Invalid test case ID format detected, generating new UUID', {
@@ -96,7 +146,9 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
       });
 
       // Run test asynchronously (don't await - let it run in background)
-      testRunner.runTest(testCase, headless, executionId)
+      // Default to isolated=true for test isolation (fresh context per test)
+      const isolate = req.query.isolate !== 'false'; // Default true unless explicitly false
+      testRunner.runTest(testCase, headless, executionId, isolate)
         .then(async (result) => {
           const duration = Date.now() - Date.parse(result.started_at);
 
@@ -108,12 +160,52 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
             stepsFailed: result.steps.filter(s => !s.success).length
           });
 
+          // Ensure test case exists in database before persisting execution
+          try {
+            const existingTestCase = await testCaseRepository.findById(result.test_case_id);
+            if (!existingTestCase) {
+              logger.warn('Test case not found in database, attempting to create it', {
+                testCaseId: result.test_case_id,
+                executionId: result.execution_id
+              });
+              // Try to create test case from the original testCase object
+              // Note: This might not have all fields, but it's better than failing
+              try {
+                await testCaseRepository.create(testCase);
+                logger.info('Test case created in database', { testCaseId: testCase.id });
+              } catch (createError: any) {
+                logger.error('Failed to create test case in database', {
+                  error: createError.message,
+                  testCaseId: testCase.id
+                });
+              }
+            }
+          } catch (checkError: any) {
+            logger.warn('Failed to check test case existence', {
+              error: checkError.message,
+              testCaseId: result.test_case_id
+            });
+          }
+
           // Persist execution result
           try {
             await executionRepository.create(result);
             logger.debug('Execution result persisted to database');
           } catch (dbError: any) {
-            logger.error('Failed to persist execution to database', dbError);
+            // Check if it's a foreign key constraint error
+            if (dbError.code === '23503') {
+              logger.error('Failed to persist execution: test case does not exist in database', {
+                executionId: result.execution_id,
+                testCaseId: result.test_case_id,
+                error: dbError.message
+              });
+            } else {
+              logger.error('Failed to persist execution to database', {
+                executionId: result.execution_id,
+                error: dbError.message,
+                code: dbError.code
+              });
+            }
           }
         })
         .catch((error: any) => {
@@ -124,8 +216,10 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
         });
     } else {
       // For headless mode, run synchronously (no WebSocket needed)
+      // Default to isolated=true for test isolation (fresh context per test)
+      const isolate = req.query.isolate !== 'false'; // Default true unless explicitly false
       const startTime = Date.now();
-      const result = await testRunner.runTest(testCase, headless, executionId);
+      const result = await testRunner.runTest(testCase, headless, executionId, isolate);
       const duration = Date.now() - startTime;
 
       logger.info('Test execution completed', {
@@ -136,12 +230,50 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
         stepsFailed: result.steps.filter(s => !s.success).length
       });
 
+      // Ensure test case exists in database before persisting execution
+      try {
+        const existingTestCase = await testCaseRepository.findById(result.test_case_id);
+        if (!existingTestCase) {
+          logger.warn('Test case not found in database, attempting to create it', {
+            testCaseId: result.test_case_id,
+            executionId: result.execution_id
+          });
+          try {
+            await testCaseRepository.create(testCase);
+            logger.info('Test case created in database', { testCaseId: testCase.id });
+          } catch (createError: any) {
+            logger.error('Failed to create test case in database', {
+              error: createError.message,
+              testCaseId: testCase.id
+            });
+          }
+        }
+      } catch (checkError: any) {
+        logger.warn('Failed to check test case existence', {
+          error: checkError.message,
+          testCaseId: result.test_case_id
+        });
+      }
+
       // Persist execution result
       try {
         await executionRepository.create(result);
         logger.debug('Execution result persisted to database');
       } catch (dbError: any) {
-        logger.error('Failed to persist execution to database', dbError);
+        // Check if it's a foreign key constraint error
+        if (dbError.code === '23503') {
+          logger.error('Failed to persist execution: test case does not exist in database', {
+            executionId: result.execution_id,
+            testCaseId: result.test_case_id,
+            error: dbError.message
+          });
+        } else {
+          logger.error('Failed to persist execution to database', {
+            executionId: result.execution_id,
+            error: dbError.message,
+            code: dbError.code
+          });
+        }
       }
 
       res.json(result);

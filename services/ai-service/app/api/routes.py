@@ -5,10 +5,13 @@ from app.domain.models import UserStory, TestCase, VisionAnalysisResult
 from app.application.test_generator import TestGenerator
 from app.application.html_preprocessor import HTMLPreProcessor
 from app.application.selector_agents import StrategyAgent
+from app.application.chatbot import TestAutomationChatbot
+from app.application.chat_session import getSessionManager, ChatSession
 from app.infrastructure.vision.vision_analyzer import VisionAnalyzer
 from app.infrastructure.llm.llm_client import LLMClient
 from datetime import datetime
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,7 @@ router = APIRouter()
 test_generator = TestGenerator()
 vision_analyzer = VisionAnalyzer()
 html_preprocessor = HTMLPreProcessor()
+chatbot = TestAutomationChatbot()
 _strategy_agent = None
 
 def get_strategy_agent():
@@ -58,7 +62,7 @@ async def health_check():
     return details
 
 
-@router.post("/api/generate-tests", response_model=List[TestCase])
+@router.post("/api/generate-tests")
 async def generate_tests(user_story: UserStoryWithPageContext):
     """Generate test cases from user story, optionally with page context"""
     import traceback
@@ -134,7 +138,54 @@ async def generate_tests(user_story: UserStoryWithPageContext):
             if tc.metadata:
                 tc.metadata["generated_at"] = datetime.utcnow().isoformat()
         
-        return test_cases
+        # Log suggested_selectors status for each step before returning
+        for tc_idx, tc in enumerate(test_cases):
+            logger.info(f"Test case {tc_idx + 1} ready to return", {
+                "test_case_id": tc.id,
+                "name": tc.name,
+                "steps_count": len(tc.steps)
+            })
+            for step_idx, step in enumerate(tc.steps):
+                has_suggested_selectors = step.suggested_selectors is not None and len(step.suggested_selectors) > 0
+                selector_count = len(step.suggested_selectors) if step.suggested_selectors else 0
+                logger.info(f"  Step {step_idx + 1} suggested_selectors status", {
+                    "step_id": step.id,
+                    "action": str(step.action),
+                    "has_suggested_selectors": has_suggested_selectors,
+                    "selector_count": selector_count,
+                    "selectors": [
+                        {"type": sel.type, "value": sel.value, "stability": sel.stability_score}
+                        for sel in (step.suggested_selectors[:2] if has_suggested_selectors else [])
+                    ]
+                })
+        
+        # Explicitly serialize to ensure suggested_selectors are included
+        serialized_cases = []
+        for tc in test_cases:
+            # Use model_dump for Pydantic v2, dict() for v1
+            if hasattr(tc, 'model_dump'):
+                tc_dict = tc.model_dump(exclude_none=False, mode='json')
+            else:
+                tc_dict = tc.dict(exclude_none=False)
+            serialized_cases.append(tc_dict)
+        
+        # Log the serialized JSON to verify suggested_selectors are present
+        for tc_dict in serialized_cases:
+            for step in tc_dict.get('steps', []):
+                has_selectors = step.get('suggested_selectors') is not None
+                selector_count = len(step.get('suggested_selectors', [])) if step.get('suggested_selectors') else 0
+                logger.info(f"Serialized step {step.get('id')} has suggested_selectors: {has_selectors} (count: {selector_count})")
+                if has_selectors:
+                    selectors = step.get('suggested_selectors', [])
+                    for idx, sel in enumerate(selectors[:2], 1):
+                        logger.info(f"  Serialized selector {idx}: {sel.get('type')} = \"{sel.get('value')}\"")
+        
+        # Log sample JSON payload for debugging
+        if serialized_cases:
+            sample_json = json.dumps(serialized_cases[0], indent=2)
+            logger.debug(f"Sample serialized test case JSON (first 2000 chars):\n{sample_json[:2000]}")
+        
+        return serialized_cases
     except ValueError as e:
         # Handle configuration errors (missing API keys, etc.)
         error_msg = str(e)
@@ -293,12 +344,29 @@ Return JSON:
         
         # Extract selectors
         recommended_selectors = response_text.get('recommended_selectors', [])
+        analysis = response_text.get('analysis', '')
+        confidence = response_text.get('confidence', 0.5)
+        
+        # Log Claude's recommendations for selector failure resolution
+        step_id = request.get('step_id', 'unknown')
+        logger.info(f"🎯 Claude selector failure resolution for step {step_id}")
+        logger.info(f"   Analysis: {analysis}")
+        logger.info(f"   Confidence: {confidence}")
+        logger.info(f"   Recommended selectors: {len(recommended_selectors)}")
+        
+        for idx, selector in enumerate(recommended_selectors, 1):
+            sel_type = selector.get('type', 'unknown')
+            sel_value = selector.get('value', '')
+            sel_stability = selector.get('stability_score', 0)
+            sel_reason = selector.get('reason', 'No reason provided')
+            logger.info(f"      {idx}. {sel_type} = \"{sel_value}\" (stability: {sel_stability})")
+            logger.info(f"         Reason: {sel_reason}")
         
         return {
             "success": len(recommended_selectors) > 0,
-            "analysis": response_text.get('analysis', ''),
+            "analysis": analysis,
             "recommended_selectors": recommended_selectors,
-            "confidence": response_text.get('confidence', 0.5)
+            "confidence": confidence
         }
     except Exception as e:
         logger.error(f"Claude fallback failed: {str(e)}")
@@ -306,5 +374,270 @@ Return JSON:
         raise HTTPException(
             status_code=500,
             detail=f"Claude fallback failed: {str(e)}"
+        )
+
+
+@router.post("/api/analyze-failure")
+async def analyze_failure(request: dict):
+    """AI-powered failure analysis to classify test failures"""
+    import traceback
+    import base64
+    
+    try:
+        from app.infrastructure.llm.llm_client import LLMClient
+        
+        llm_client = LLMClient()
+        
+        # Extract request data
+        step_id = request.get('step_id', 'unknown')
+        step_description = request.get('step_description', '')
+        error_message = request.get('error_message', '')
+        element_found = request.get('element_found', False)
+        attempted_selectors = request.get('attempted_selectors', [])
+        page_state = request.get('page_state', {})
+        target_description = request.get('target_description', {})
+        screenshot_base64 = request.get('screenshot_base64')
+        
+        # Build comprehensive prompt
+        prompt = f"""Analyze this test step failure and classify it.
+
+STEP INFORMATION:
+- Step ID: {step_id}
+- Step Description: {step_description}
+- Error Message: {error_message}
+- Element Found in DOM: {element_found}
+- Attempted Selectors: {len(attempted_selectors)} selector(s) were tried
+
+TARGET ELEMENT:
+{json.dumps(target_description, indent=2)}
+
+PAGE STATE:
+- URL: {page_state.get('url', 'unknown')}
+- Title: {page_state.get('title', 'unknown')}
+- HTML Snippet: {page_state.get('html_snippet', '')[:1000] if page_state.get('html_snippet') else 'N/A'}
+
+Your task:
+1. Determine if this is a SYSTEM FAILURE (our fault - selector/timing issues) or APPLICATION BUG (developer's fault)
+2. Classify the failure category
+3. Provide confidence score (0.0 to 1.0)
+4. Suggest recovery actions if it's a system failure
+5. Suggest fixes if it's an application bug
+
+Return JSON:
+{{
+  "category": "selector_failure|timing_failure|element_missing|element_not_visible|element_not_interactable|assertion_failure|functional_bug|unknown",
+  "confidence": 0.85,
+  "is_system_failure": true,
+  "reason": "Detailed explanation of why this failure occurred",
+  "suggested_actions": [
+    "Action 1",
+    "Action 2"
+  ]
+}}"""
+
+        # Use vision if screenshot available
+        if screenshot_base64:
+            response_text = await llm_client.generate_with_vision(
+                prompt,
+                screenshot_base64,
+                "You are an expert at analyzing test automation failures. Classify failures accurately."
+            )
+        else:
+            response_text = await llm_client.generate_completion(
+                prompt,
+                "You are an expert at analyzing test automation failures. Classify failures accurately."
+            )
+        
+        # Parse JSON response
+        response_data = llm_client._extract_and_repair_json(response_text)
+        
+        logger.info(f"Failure analysis completed for step {step_id}", {
+            "category": response_data.get("category"),
+            "is_system_failure": response_data.get("is_system_failure"),
+            "confidence": response_data.get("confidence")
+        })
+        
+        return response_data
+        
+    except Exception as e:
+        logger.error(f"Failure analysis failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failure analysis failed: {str(e)}"
+        )
+
+
+# Chatbot endpoints
+
+@router.post("/api/chat/session")
+async def create_chat_session(request: dict):
+    """Create a new chat session"""
+    try:
+        session_manager = getSessionManager()
+        session = session_manager.createSession(
+            test_case_id=request.get('test_case_id'),
+            step_id=request.get('step_id'),
+            execution_id=request.get('execution_id'),
+            context=request.get('context', {})
+        )
+        
+        return {
+            "success": True,
+            "session_id": session.session_id,
+            "session": session.toDict()
+        }
+    except Exception as e:
+        logger.error(f"Failed to create chat session: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create chat session: {str(e)}"
+        )
+
+
+@router.post("/api/chat/message")
+async def send_chat_message(request: dict):
+    """Send a message in a chat session and get response"""
+    try:
+        session_id = request.get('session_id')
+        message = request.get('message', '')
+        context = request.get('context', {})
+        
+        if not session_id:
+            raise ValueError("session_id is required")
+        if not message:
+            raise ValueError("message is required")
+        
+        session_manager = getSessionManager()
+        session = session_manager.getSession(session_id)
+        
+        if not session:
+            # Create new session if doesn't exist
+            session = session_manager.createSession(
+                test_case_id=context.get('test_case_id'),
+                step_id=context.get('step_id'),
+                execution_id=context.get('execution_id'),
+                context=context
+            )
+        
+        # Add user message
+        session.addMessage('user', message)
+        
+        # Get conversation history
+        conversation_history = [
+            {"role": msg["role"], "content": msg["content"]}
+            for msg in session.messages
+        ]
+        
+        # Process message with chatbot
+        response = await chatbot.processMessage(
+            context={**session.context, **context},
+            userMessage=message,
+            conversationHistory=conversation_history
+        )
+        
+        # Add assistant response
+        if response.get('success'):
+            session.addMessage('assistant', response.get('message', ''), {
+                'intent': response.get('intent'),
+                'actions': response.get('actions', [])
+            })
+        
+        return {
+            "success": response.get('success', True),
+            "session_id": session.session_id,
+            "message": response.get('message', ''),
+            "intent": response.get('intent'),
+            "actions": response.get('actions', []),
+            "generated_test": response.get('generated_test'),
+            "modifications": response.get('modifications'),
+            "confidence": response.get('confidence', 0.8)
+        }
+    except Exception as e:
+        logger.error(f"Failed to process chat message: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process chat message: {str(e)}"
+        )
+
+
+@router.get("/api/chat/session/{session_id}")
+async def get_chat_session(session_id: str):
+    """Get chat session with message history"""
+    try:
+        session_manager = getSessionManager()
+        session = session_manager.getSession(session_id)
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        return {
+            "success": True,
+            "session": session.getContext()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get chat session: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get chat session: {str(e)}"
+        )
+
+
+@router.post("/api/chat/generate-test")
+async def generate_test_from_chat(request: dict):
+    """Generate test case from conversation"""
+    try:
+        conversation = request.get('conversation', [])
+        user_story = request.get('user_story')
+        
+        test_case = await chatbot.generateTestFromConversation(
+            conversation=conversation,
+            userStory=user_story
+        )
+        
+        return {
+            "success": True,
+            "test_case": test_case
+        }
+    except Exception as e:
+        logger.error(f"Failed to generate test from chat: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate test from chat: {str(e)}"
+        )
+
+
+@router.post("/api/chat/modify-test")
+async def modify_test_from_chat(request: dict):
+    """Modify test case based on chat conversation"""
+    try:
+        test_case = request.get('test_case')
+        user_request = request.get('user_request', '')
+        step_index = request.get('step_index')  # NEW: Optional step index
+        step = request.get('step')  # NEW: Optional step object
+        
+        if not test_case:
+            raise ValueError("test_case is required")
+        
+        # Call modifyTest with optional step context
+        modified_test_case = await chatbot.modifyTest(
+            testCase=test_case,
+            userRequest=user_request,
+            stepIndex=step_index,
+            step=step
+        )
+        
+        return {
+            "success": True,
+            "test_case": modified_test_case,  # Return full test case
+            "modifications": modified_test_case  # For backwards compatibility
+        }
+    except Exception as e:
+        logger.error(f"Failed to modify test from chat: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to modify test from chat: {str(e)}"
         )
 

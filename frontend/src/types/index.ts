@@ -45,6 +45,36 @@ export interface ElementSelector {
   confidence?: number;
 }
 
+export enum FailureCategory {
+  SELECTOR_FAILURE = 'selector_failure',
+  TIMING_FAILURE = 'timing_failure',
+  PAGE_LOAD_FAILURE = 'page_load_failure',
+  SELECTOR_INSTABILITY = 'selector_instability',
+  ELEMENT_MISSING = 'element_missing',
+  ELEMENT_NOT_VISIBLE = 'element_not_visible',
+  ELEMENT_NOT_INTERACTABLE = 'element_not_interactable',
+  ASSERTION_FAILURE = 'assertion_failure',
+  FUNCTIONAL_BUG = 'functional_bug',
+  UNKNOWN = 'unknown'
+}
+
+export interface FailureAnalysis {
+  category: FailureCategory;
+  confidence: number;
+  isSystemFailure: boolean;
+  reason: string;
+  suggestedActions: string[];
+  recoveryAttempted: boolean;
+  recoverySuccess?: boolean;
+}
+
+export interface PageState {
+  url: string;
+  title: string;
+  html_snippet?: string;
+  element_count?: number;
+}
+
 export interface StepResult {
   step_id: string;
   success?: boolean; // Optional to support pending/running states
@@ -53,12 +83,16 @@ export interface StepResult {
   execution_time_ms: number;
   element_found?: boolean;
   selector_used?: ElementSelector;
+  failure_analysis?: FailureAnalysis;
+  attempted_selectors?: ElementSelector[];
+  page_state?: PageState;
+  recovery_attempts?: number;
 }
 
 export interface ExecutionResult {
   execution_id: string;
   test_case_id: string;
-  status: 'running' | 'completed' | 'failed' | 'timeout';
+  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused';
   steps: StepResult[];
   total_duration_ms: number;
   screenshots: string[];
@@ -96,6 +130,88 @@ export interface GenerateTestsRequest {
 
 export interface GenerateTestsResponse {
   test_cases: TestCase[];
+}
+
+// Flow visualization types
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  website_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserStory {
+  id: string;
+  project_id: string;
+  story: string;
+  website_url?: string;
+  additional_context?: string;
+  folder_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TestSuite {
+  id: string;
+  user_story_id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FlowNodeType = 'project' | 'folder' | 'userStory' | 'testSuite' | 'testCase' | 'testStep';
+
+export interface FlowNode {
+  id: string;
+  type: FlowNodeType;
+  data: {
+    label: string;
+    description?: string;
+    [key: string]: any;
+  };
+  position: { x: number; y: number };
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  type?: string;
+}
+
+// User Story Folder for organizing stories
+export interface UserStoryFolder {
+  id: string;
+  project_id: string;
+  name: string;
+  color?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlowData {
+  projects: Array<{
+    project: Project;
+    folders?: UserStoryFolder[];
+    user_stories: Array<{
+      user_story: UserStory & { folder_id?: string };
+      test_suites: Array<{
+        test_suite: TestSuite;
+        test_cases: Array<{
+          test_case: TestCase;
+          steps: TestStep[];
+        }>;
+      }>;
+      // For test cases without test suites
+      test_cases?: Array<{
+        test_case: TestCase;
+        steps: TestStep[];
+      }>;
+    }>;
+  }>;
 }
 
 

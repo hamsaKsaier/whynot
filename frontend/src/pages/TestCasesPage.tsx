@@ -5,6 +5,7 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Alert } from '../components/common/Alert';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { TestAutomationChatbot } from '../components/Chatbot/TestAutomationChatbot';
 import { getTestCases, updateTestCase, deleteTestCase } from '../services/api';
 import type { TestCase } from '../types';
 
@@ -235,6 +236,14 @@ export const TestCasesPage: React.FC = () => {
         variant="danger"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteConfirm({ isOpen: false, testCase: null })}
+      />
+
+      <TestAutomationChatbot
+        context={{}}
+        onTestGenerated={(testCase) => {
+          // Navigate to home page with generated test
+          navigate('/', { state: { testCase } });
+        }}
       />
     </div>
   );

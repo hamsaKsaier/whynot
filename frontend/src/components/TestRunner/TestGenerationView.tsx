@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { FiChevronDown, FiChevronUp, FiPlay, FiTrash2 } from 'react-icons/fi';
-import type { TestCase } from '../../types';
+import { FiChevronDown, FiChevronUp, FiPlay, FiTrash2, FiEdit } from 'react-icons/fi';
+import type { TestCase, TestStep } from '../../types';
 
 interface TestGenerationViewProps {
   testCases: TestCase[];
   onRunTest: (testCase: TestCase, headless?: boolean) => void;
   onDelete?: (testCase: TestCase) => void;
+  onStepFix?: (testCase: TestCase, stepIndex: number, step: TestStep) => void;
   isLoading?: boolean;
   headless?: boolean;
 }
@@ -17,6 +18,7 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
   testCases,
   onRunTest,
   onDelete,
+  onStepFix,
   isLoading = false,
   headless = false,
 }) => {
@@ -136,6 +138,22 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
                           </div>
                         )}
                       </div>
+                      {/* Fix/Edit Icon */}
+                      {onStepFix && (
+                        <div className="flex-shrink-0 ml-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onStepFix(testCase, index, step);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Fix or modify this step"
+                            aria-label="Fix or modify this step"
+                          >
+                            <FiEdit className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -253,7 +253,7 @@ For each step in the test case:
         - AI Service analyzes with Claude Vision
         - Returns element positions and text
       - **Combines and ranks selectors:**
-        - Priority: data-testid (0.95) > ID (0.85) > aria-label (0.75) > text (0.60) > visual (0.40) > xpath (0.30)
+        - Priority: data-testid (0.95) > ID (0.85) > aria-label (0.75) > stable class (0.65) > text (0.60) > unstable class (0.40) > visual (0.40) > xpath (0.30)
       - Tries selectors in order until one works
 
 20. **Execute action based on step type**
@@ -388,6 +388,9 @@ The system uses a **multi-layered approach**:
 2. **DOM Analyzer**
    - Parses HTML structure
    - Extracts attributes (data-testid, id, class, aria-label)
+   - Intelligently detects stable vs unstable CSS classes
+   - Stable classes (semantic names, BEM): score 0.65
+   - Unstable classes (framework-generated): score 0.40
    - Matches text content
    - Generates CSS selectors
 
@@ -491,6 +494,12 @@ Gateway (Validation, Rate Limiting)
 ---
 
 This complete flow ensures robust, intelligent test automation from natural language user stories to executable test results.
+
+
+
+
+
+
 
 
 

@@ -248,9 +248,28 @@ The system uses a **hybrid approach** with the following priority:
 1. **Data attributes** (`data-testid`, `data-cy`) - Stability: 0.95
 2. **Stable IDs** - Stability: 0.85
 3. **Semantic attributes** (`aria-label`, `role`) - Stability: 0.75
-4. **Text content** - Stability: 0.60
-5. **Visual position** (from screenshot) - Stability: 0.40
-6. **XPath** (last resort) - Stability: 0.30
+4. **Stable CSS classes** (semantic class names like `login-button`, `submit-form`, BEM notation) - Stability: 0.65
+5. **Text content** - Stability: 0.60
+6. **Unstable CSS classes** (framework-generated classes like `sc-123abc`, Tailwind utilities) - Stability: 0.40
+7. **Visual position** (from screenshot) - Stability: 0.40
+8. **XPath** (last resort) - Stability: 0.30
+
+### Class Stability Detection
+
+The system intelligently detects stable vs unstable CSS classes:
+
+**Stable Classes** (score: 0.65):
+- Semantic names: `login-button`, `submit-form`, `cancel-btn`
+- BEM notation: `button-primary`, `card-header`, `button__text`
+- Descriptive names: `menu`, `navbar`, `sidebar`, `modal`, `dialog`
+
+**Unstable Classes** (score: 0.40):
+- Framework-generated: `sc-123abc`, `css-xyz789`
+- Index-based: `item-0`, `button-1`
+- Tailwind utilities: `mt-4`, `px-2`, `bg-blue-500`
+- State classes: `hover`, `active`, `focus`, `disabled`
+
+Framework-generated classes are still used as fallback selectors but with lower priority than semantic classes.
 
 ## Configuration
 
@@ -265,6 +284,11 @@ The system uses a **hybrid approach** with the following priority:
 **Test Executor:**
 - `AI_SERVICE_URL`: URL of AI service (default: `http://localhost:8000`)
 - `SCREENSHOTS_DIR`: Directory for screenshots
+- `PREVIEW_FRAME_INTERVAL_MS`: Minimum interval between frame captures in milliseconds (default: `50`)
+- `PREVIEW_SCREENSHOT_TYPE`: Screenshot format - `png` or `jpeg` (default: `jpeg`)
+- `PREVIEW_JPEG_QUALITY`: JPEG quality 0-100 (default: `85`)
+- `PREVIEW_FULL_PAGE`: Enable full-page screenshots - `true` or `false` (default: `false`)
+- `PREVIEW_MAX_HISTORY_FRAMES`: Maximum number of frames to store in history (default: `100`)
 
 **Gateway:**
 - `AI_SERVICE_URL`: URL of AI service

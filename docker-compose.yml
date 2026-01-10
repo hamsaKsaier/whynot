@@ -2,7 +2,7 @@ services:
   database:
     image: postgres:15-alpine
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-thundercode}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thundercode}
@@ -22,15 +22,15 @@ services:
       context: ./services/ai-service
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8010:8000"
     environment:
       - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - OPENAI_VISION_MODEL=${OPENAI_VISION_MODEL:-gpt-4o}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-opus-4-5-20251101}
+      - CORS_ORIGINS=http://localhost:3010,http://localhost:3011,http://localhost:5183
     volumes:
       - ./services/ai-service/app:/app/app
     restart: unless-stopped
@@ -45,7 +45,7 @@ services:
       context: .
       dockerfile: ./services/test-executor/Dockerfile
     ports:
-      - "3001:3001"
+      - "3011:3001"
     environment:
       - PW_TEST_SCREENSHOT_NO_FONTS_READY=1
       - PORT=3001
@@ -54,7 +54,10 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
       - NODE_ENV=production
       - DOCKER_ENV=true
-      - DOCKER_ENV=true
+      # Optimized timeouts for faster execution
+      - SCREENSHOT_TIMEOUT_MS=${SCREENSHOT_TIMEOUT_MS:-10000}
+      - NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS:-30000}
+      - NAVIGATION_MAX_TIMEOUT_MS=${NAVIGATION_MAX_TIMEOUT_MS:-60000}
     volumes:
       - ./services/test-executor/src:/app/src
       - screenshots:/app/screenshots
@@ -64,6 +67,15 @@ services:
       ai-service:
         condition: service_started
     restart: unless-stopped
+    # Resource limits to prevent resource exhaustion
+    deploy:
+      resources:
+        limits:
+          cpus: "${TEST_EXECUTOR_CPUS:-2.0}"
+          memory: ${TEST_EXECUTOR_MEMORY:-4G}
+        reservations:
+          cpus: "${TEST_EXECUTOR_CPUS_RESERVED:-1.0}"
+          memory: ${TEST_EXECUTOR_MEMORY_RESERVED:-2G}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
@@ -75,9 +87,10 @@ services:
       context: .
       dockerfile: ./gateway/Dockerfile
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
       - PORT=3000
+      - FRONTEND_URL=http://localhost:5183
       - AI_SERVICE_URL=http://ai-service:8000
       - TEST_EXECUTOR_URL=http://test-executor:3001
       - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
@@ -107,9 +120,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "5183:5173"
     environment:
-      - VITE_API_URL=http://localhost:3000/api
+      - VITE_API_URL=http://localhost:3010/api
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public

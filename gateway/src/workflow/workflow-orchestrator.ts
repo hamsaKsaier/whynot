@@ -354,7 +354,40 @@ export class WorkflowOrchestrator {
         )
       );
       logger.debug('Test cases generated successfully with page context', { count: response.data?.length || 0 });
-      return response.data;
+
+      // Log raw response from AI service for debugging
+      if (response.data && response.data.length > 0) {
+        const firstCase = response.data[0];
+        logger.debug('Raw response from AI service', {
+          responseKeys: Object.keys(firstCase || {}),
+          firstStepKeys: firstCase?.steps?.[0] ? Object.keys(firstCase.steps[0]) : [],
+          firstStepHasSuggestedSelectors: !!firstCase?.steps?.[0]?.suggested_selectors,
+          firstStepSuggestedSelectorsCount: firstCase?.steps?.[0]?.suggested_selectors?.length || 0
+        });
+      }
+
+      // Log suggested_selectors status for each step after receiving from AI service
+      const testCases: TestCase[] = response.data || [];
+      testCases.forEach((testCase, tcIdx) => {
+        logger.info(`Test case ${tcIdx + 1} received from AI service`, {
+          testCaseId: testCase.id,
+          name: testCase.name,
+          stepsCount: testCase.steps.length
+        });
+        testCase.steps.forEach((step, stepIdx) => {
+          const hasSuggestedSelectors = !!(step.suggested_selectors && step.suggested_selectors.length > 0);
+          const selectorCount = step.suggested_selectors?.length || 0;
+          logger.info(`  Step ${stepIdx + 1} suggested_selectors status`, {
+            stepId: step.id,
+            action: step.action,
+            hasSuggestedSelectors,
+            selectorCount,
+            selectors: hasSuggestedSelectors ? step.suggested_selectors?.slice(0, 2).map(s => `${s.type}="${s.value}"`) : []
+          });
+        });
+      });
+
+      return testCases;
     } catch (error: any) {
       const axiosError = error as AxiosError;
       logger.error('Failed to generate test cases with page context', error, {
@@ -432,6 +465,37 @@ export class WorkflowOrchestrator {
    * Execute test case using test executor service
    */
   async executeTest(testCase: TestCase, headless: boolean = true): Promise<ExecutionResult> {
+    // Log suggested_selectors status for each step before sending to test-executor
+    logger.info('Forwarding test case to test-executor', {
+      testCaseId: testCase.id,
+      stepsCount: testCase.steps.length
+    });
+    testCase.steps.forEach((step, idx) => {
+      const hasSuggestedSelectors = !!(step.suggested_selectors && step.suggested_selectors.length > 0);
+      const selectorCount = step.suggested_selectors?.length || 0;
+      logger.info(`Step ${idx + 1} suggested_selectors status`, {
+        stepId: step.id,
+        action: step.action,
+        hasSuggestedSelectors,
+        selectorCount,
+        selectors: hasSuggestedSelectors ? step.suggested_selectors?.slice(0, 2).map(s => `${s.type}="${s.value}"`) : []
+      });
+    });
+
+    // Log payload before sending to test-executor
+    try {
+      const payloadString = JSON.stringify(testCase);
+      logger.debug('Payload being sent to test-executor', {
+        payloadSize: payloadString.length,
+        firstStepKeys: testCase.steps[0] ? Object.keys(testCase.steps[0]) : [],
+        firstStepHasSuggestedSelectors: !!testCase.steps[0]?.suggested_selectors,
+        firstStepSuggestedSelectorsCount: testCase.steps[0]?.suggested_selectors?.length || 0,
+        samplePayload: payloadString.substring(0, 500) // First 500 chars
+      });
+    } catch (payloadError) {
+      logger.warn('Failed to serialize payload for logging', { error: payloadError });
+    }
+
     try {
       const response = await this.testExecutorCircuitBreaker.execute(() =>
         retryWithBackoff(

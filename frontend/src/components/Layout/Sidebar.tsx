@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  FiHome, 
-  FiFileText, 
-  FiPlay, 
-  FiSettings, 
-  FiChevronLeft, 
+import {
+  FiHome,
+  FiFolder,
+  FiFileText,
+  FiPlay,
+  FiSettings,
+  FiChevronLeft,
   FiChevronRight,
   FiZap,
   FiServer,
-  FiUsers
+  FiUsers,
+  FiGitBranch
 } from 'react-icons/fi';
 
 interface SidebarProps {
@@ -17,9 +19,9 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ 
-  collapsed = false, 
-  onToggleCollapse 
+export const Sidebar: React.FC<SidebarProps> = ({
+  collapsed = false,
+  onToggleCollapse
 }) => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
@@ -30,39 +32,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const menuItems = [
-    { 
-      icon: FiHome, 
-      label: 'Dashboard', 
+    {
+      icon: FiHome,
+      label: 'Dashboard',
       path: '/',
       badge: null
     },
-    { 
-      icon: FiFileText, 
-      label: 'Test Cases', 
+    {
+      icon: FiFolder,
+      label: 'Projects',
+      path: '/projects',
+      badge: null
+    },
+    {
+      icon: FiFileText,
+      label: 'Test Cases',
       path: '/test-cases',
       badge: null
     },
-    { 
-      icon: FiPlay, 
-      label: 'Test Runs', 
+    {
+      icon: FiPlay,
+      label: 'Test Runs',
       path: '/test-runs',
       badge: null
     },
-    { 
-      icon: FiServer, 
-      label: 'Environments', 
+    {
+      icon: FiGitBranch,
+      label: 'Architecture Flow',
+      path: '/architecture-flow',
+      badge: null
+    },
+    {
+      icon: FiServer,
+      label: 'Environments',
       path: '/environments',
       badge: null
     },
-    { 
-      icon: FiUsers, 
-      label: 'Personas', 
+    {
+      icon: FiUsers,
+      label: 'Personas',
       path: '/personas',
       badge: 'Coming Soon'
     },
-    { 
-      icon: FiSettings, 
-      label: 'Settings', 
+    {
+      icon: FiSettings,
+      label: 'Settings',
       path: '/settings',
       badge: null
     },
@@ -76,10 +90,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div 
-      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
-        isCollapsed ? 'w-16' : 'w-64'
-      }`}
+    <div
+      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'
+        }`}
     >
       {/* Logo/Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
@@ -123,16 +136,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
-            
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center px-3 py-2 rounded-lg transition-colors group ${
-                  active
-                    ? 'bg-primary-50 text-primary-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                className={`flex items-center px-3 py-2 rounded-lg transition-colors group ${active
+                  ? 'bg-primary-50 text-primary-700 font-medium'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
                 title={isCollapsed ? item.label : undefined}
               >
                 <Icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
@@ -170,6 +182,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </div>
   );
 };
+
+
+
 
 
 

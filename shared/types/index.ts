@@ -50,13 +50,43 @@ export interface UserStory {
 export interface ExecutionResult {
   execution_id: string;
   test_case_id: string;
-  status: 'running' | 'completed' | 'failed' | 'timeout';
+  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused';
   steps: StepResult[];
   total_duration_ms: number;
   screenshots: string[];
   error?: string;
   started_at: string;
   completed_at?: string;
+}
+
+export enum FailureCategory {
+  SELECTOR_FAILURE = 'selector_failure',
+  TIMING_FAILURE = 'timing_failure',
+  PAGE_LOAD_FAILURE = 'page_load_failure',
+  SELECTOR_INSTABILITY = 'selector_instability',
+  ELEMENT_MISSING = 'element_missing',
+  ELEMENT_NOT_VISIBLE = 'element_not_visible',
+  ELEMENT_NOT_INTERACTABLE = 'element_not_interactable',
+  ASSERTION_FAILURE = 'assertion_failure',
+  FUNCTIONAL_BUG = 'functional_bug',
+  UNKNOWN = 'unknown'
+}
+
+export interface FailureAnalysis {
+  category: FailureCategory;
+  confidence: number;
+  isSystemFailure: boolean;
+  reason: string;
+  suggestedActions: string[];
+  recoveryAttempted: boolean;
+  recoverySuccess?: boolean;
+}
+
+export interface PageState {
+  url: string;
+  title: string;
+  html_snippet?: string;
+  element_count?: number;
 }
 
 export interface StepResult {
@@ -67,12 +97,27 @@ export interface StepResult {
   execution_time_ms: number;
   element_found?: boolean;
   selector_used?: ElementSelector;
+  failure_analysis?: FailureAnalysis;
+  attempted_selectors?: ElementSelector[];
+  page_state?: PageState;
+  recovery_attempts?: number;
 }
 
 export interface ElementSelector {
-  type: 'data-testid' | 'id' | 'class' | 'text' | 'xpath' | 'css' | 'aria-label' | 'visual';
+  type: 'data-testid' | 'id' | 'class' | 'text' | 'xpath' | 'css' | 'aria-label' | 'visual' | 'name';
   value: string;
   stability_score: number;
   confidence?: number;
 }
 
+export interface SetupHook {
+  id: string;
+  name: string;
+  level: 'global' | 'suite' | 'test_case';
+  steps: TestStep[];
+  enabled: boolean;
+  test_case_id?: string | null;
+  folder_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}

@@ -34,3 +34,14 @@ CREATE TRIGGER update_selector_learning_updated_at BEFORE UPDATE ON selector_lea
 
 
 
+
+
+
+
+
+
+
+
+
+
+

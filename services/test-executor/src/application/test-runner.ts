@@ -1,39 +1,65 @@
-import { TestCase, ExecutionResult, StepResult } from '../domain/models';
+import { TestCase, ExecutionResult, StepResult, TestStep } from '../domain/models';
 import { PlaywrightController } from '../infrastructure/browser/playwright-controller';
 import { HybridSelector } from '../infrastructure/selectors/hybrid-selector';
 import { StepExecutor } from './step-executor';
+import { SetupExecutor } from './setup-executor';
+import { FailureReporter } from './failure-reporter';
+import { SelectorHealthMonitor } from './selector-health-monitor';
 import { BrowserStreamer } from '../infrastructure/browser/browser-streamer';
+import { BrowserPool } from '../infrastructure/browser/browser-pool';
 import { registerBrowserStream, unregisterBrowserStream } from '../api/websocket-handler';
+import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../../shared/logger/logger';
 
 const logger = createLogger('test-runner');
 
 export class TestRunner {
-  private browserController: PlaywrightController;
-  private hybridSelector: HybridSelector;
-  private stepExecutor: StepExecutor;
+  private aiServiceUrl: string;
+  private screenshotsDir: string;
+  private browserPool: BrowserPool;
+  private usePool: boolean;
+  private failureReporter: FailureReporter;
+  private selectorHealthMonitor: SelectorHealthMonitor;
 
   constructor(
     aiServiceUrl: string = 'http://localhost:8000',
-    screenshotsDir: string = './screenshots'
+    screenshotsDir: string = './screenshots',
+    usePool: boolean = true
   ) {
-    this.browserController = new PlaywrightController(screenshotsDir);
-    this.hybridSelector = new HybridSelector(aiServiceUrl);
-    this.stepExecutor = new StepExecutor(this.browserController, this.hybridSelector);
+    this.aiServiceUrl = aiServiceUrl;
+    this.screenshotsDir = screenshotsDir;
+    this.browserPool = BrowserPool.getInstance();
+    this.usePool = usePool;
+    this.failureReporter = new FailureReporter();
+    this.selectorHealthMonitor = new SelectorHealthMonitor();
   }
 
-  async runTest(testCase: TestCase, headless: boolean = true, providedExecutionId?: string): Promise<ExecutionResult> {
+  async runTest(
+    testCase: TestCase, 
+    headless: boolean = true, 
+    providedExecutionId?: string,
+    isolate: boolean = true // Default to isolated (fresh context per test)
+  ): Promise<ExecutionResult> {
     const executionId = providedExecutionId || uuidv4();
     const startedAt = new Date().toISOString();
     const stepResults: StepResult[] = [];
     const screenshots: string[] = [];
 
-    let status: 'running' | 'completed' | 'failed' | 'timeout' = 'running';
+    let status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused' = 'running';
     let error: string | undefined;
     let browserStreamer: BrowserStreamer | null = null;
+    let pooledContext: { context: any; page: any } | null = null;
+    let isolatedContext: any = null; // Track isolated context for cleanup
+    let testCaseModified = false; // Track if test case was modified during execution
 
-    // Helper function to send logs to both console and WebSocket
+      // Create fresh controller and executor for THIS test (no sharing!)
+      const browserController = new PlaywrightController(this.screenshotsDir);
+      const hybridSelector = new HybridSelector(this.aiServiceUrl);
+      const stepExecutor = new StepExecutor(browserController, hybridSelector, this.aiServiceUrl);
+      const setupExecutor = new SetupExecutor(stepExecutor);
+
+    // Helper function to send logs to console and WebSocket
     const sendLog = (level: 'info' | 'warn' | 'error' | 'debug', message: string, data?: any) => {
       console.log(message);
       if (browserStreamer) {
@@ -41,81 +67,139 @@ export class TestRunner {
       }
     };
 
-    sendLog('info', '\n🚀 ========================================');
-    sendLog('info', '🚀 TEST EXECUTION STARTED');
-    sendLog('info', '🚀 ========================================');
-    sendLog('info', `📝 Test Case: ${testCase.name}`);
-    sendLog('info', `🌐 Website: ${testCase.website_url}`);
-    sendLog('info', `📊 Total Steps: ${testCase.steps.length}`);
-    sendLog('info', `👁️  Mode: ${headless ? 'Headless' : 'Visible'}`);
-    sendLog('info', `🆔 Execution ID: ${executionId}`);
-    sendLog('info', '========================================\n');
+    sendLog('info', '\n🚀 TEST EXECUTION STARTED');
+    sendLog('info', `📝 Test: ${testCase.name}`);
+    sendLog('info', `🌐 URL: ${testCase.website_url}`);
+    sendLog('info', `📊 Steps: ${testCase.steps.length}`);
+    sendLog('info', `🆔 ID: ${executionId}`);
+    const modeText = isolate ? 'Isolated (fresh context)' : (this.usePool ? 'Pooled (shared context)' : 'Standard');
+    sendLog('info', `⚡ Mode: ${modeText}\n`);
 
     try {
-      sendLog('info', '🔧 TASK: Initializing browser...');
-      // Initialize browser
-      await this.browserController.initialize(headless);
-      sendLog('info', '✅ Browser initialized successfully\n');
+      sendLog('info', '🔧 Initializing browser...');
+      
+      if (isolate) {
+        // Create fresh isolated context (no cookies/storage from previous tests)
+        const browser = await this.browserPool.getBrowser();
+        isolatedContext = await browser.newContext({
+          viewport: { width: 1920, height: 1080 },
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          ignoreHTTPSErrors: true,
+          javaScriptEnabled: true,
+        });
+        const page = await isolatedContext.newPage();
+        page.setDefaultTimeout(30000);
+        page.setDefaultNavigationTimeout(30000);
+        browserController.setPage(page);
+        browserController.setContext(isolatedContext);
+        browserController.setBrowser(browser);
+        sendLog('info', '✅ Browser ready (isolated context)\n');
+      } else if (this.usePool) {
+        // Use browser pool for faster startup (shared context)
+        pooledContext = await this.browserPool.acquire();
+        browserController.setPage(pooledContext.page);
+        browserController.setContext(pooledContext.context);
+        sendLog('info', '✅ Browser ready (from pool)\n');
+      } else {
+        // Traditional initialization
+        await browserController.initialize(headless);
+        sendLog('info', '✅ Browser ready\n');
+      }
 
-      // Setup browser streaming (for logs in both modes, frames only in non-headless)
-      const page = this.browserController.getPage();
+      // Setup browser streaming
+      const page = browserController.getPage();
       if (page) {
         browserStreamer = new BrowserStreamer(page, executionId);
         registerBrowserStream(executionId, browserStreamer);
         logger.info('Browser streaming setup', { executionId, headless });
-        // Start streaming immediately, even without WebSocket connection
-        // Frames will be queued until WebSocket connects
         if (!headless) {
           await browserStreamer.startStreaming();
         }
       }
 
-      // Navigate to website first
-      sendLog('info', `🌐 TASK: Navigating to ${testCase.website_url}...`);
-      await this.browserController.navigate(testCase.website_url);
-      sendLog('info', '✅ Navigation completed\n');
-
-      // Notify streamer of navigation
-      if (browserStreamer) {
-        await browserStreamer.onNavigation(testCase.website_url);
+      // Execute setup hooks before test execution
+      const hooks = await setupExecutor.loadHooks(testCase.id);
+      if (hooks.length > 0) {
+        sendLog('info', `🔧 Loading ${hooks.length} setup hook(s)...`);
+        const setupResult = await setupExecutor.executeHooks(hooks, sendLog);
+        
+        if (!setupResult.success) {
+          status = 'failed';
+          error = `Setup hooks failed: ${setupResult.error}`;
+          sendLog('error', `❌ ${error}`);
+          throw new Error(error);
+        }
       }
 
-      // Execute each step
+      // Check selector health and auto-update test case if needed
+      try {
+        const updatedTestCase = await this.selectorHealthMonitor.autoUpdateTestCase(testCase, 0.7);
+        if (updatedTestCase) {
+          sendLog('info', '🧠 Auto-updated test case with proven selectors from learning database');
+          testCase = updatedTestCase;
+          testCaseModified = true;
+        }
+      } catch (error: any) {
+        sendLog('warn', `⚠️ Selector health check failed: ${error.message}`);
+        // Continue with original test case - health check is optional
+      }
+
+      // Navigate to website (skip if first step is navigate to same URL)
+      const firstStep = testCase.steps[0];
+      const skipInitialNav = firstStep?.action === 'navigate' && 
+        (firstStep.value || firstStep.target?.attributes?.href) === testCase.website_url;
+
+      if (!skipInitialNav) {
+        sendLog('info', `🌐 Navigating to ${testCase.website_url}...`);
+        await browserController.navigate(testCase.website_url);
+        // Navigation already waits for networkidle, no additional wait needed
+        sendLog('info', '✅ Navigation done\n');
+
+        // Don't take screenshot here - we'll get one from the first step if needed
+        // Only notify browser streamer of URL change (without screenshot)
+        if (browserStreamer) {
+          browserStreamer.sendUrlUpdate(testCase.website_url);
+        }
+      }
+
+      // Track if test case was modified during execution
+      const onStepUpdated = (updatedStep: TestStep) => {
+        testCaseModified = true;
+        // Update the step in the test case
+        const stepIndex = testCase.steps.findIndex(s => s.id === updatedStep.id);
+        if (stepIndex !== -1) {
+          testCase.steps[stepIndex] = updatedStep;
+        }
+      };
+
+      // Execute steps
       for (let i = 0; i < testCase.steps.length; i++) {
         const step = testCase.steps[i];
 
-        // Console log for step details
         sendLog('info', `\n📋 STEP ${i + 1}/${testCase.steps.length}: ${step.description || step.action}`);
-        sendLog('info', `   Action: ${step.action}`);
-        if (step.target) {
-          sendLog('info', `   Target: ${JSON.stringify(step.target, null, 2).replace(/\n/g, '\n   ')}`);
-        }
-        if (step.value) {
-          sendLog('info', `   Value: ${step.value}`);
-        }
-        if (step.expected_outcome) {
-          sendLog('info', `   Expected: ${step.expected_outcome}`);
-        }
+        logger.info('Executing step', { stepNumber: i + 1, action: step.action });
 
-        logger.info('Executing step', {
-          stepNumber: i + 1,
-          totalSteps: testCase.steps.length,
-          stepId: step.id,
-          action: step.action,
-          description: step.description
-        });
-
-        // Send step start event via WebSocket
         if (browserStreamer) {
           browserStreamer.sendStepStart(step, i);
         }
 
         try {
-          // Pass log function and test case ID to step executor
-          const stepResult = await this.stepExecutor.executeStep(step, i, sendLog, testCase.id);
+          const stepResult = await stepExecutor.executeStep(step, i, sendLog, testCase.id, browserStreamer, onStepUpdated, testCase);
           stepResults.push(stepResult);
 
-          // Send step complete event via WebSocket
+          // Capture frame after step (non-blocking for live preview)
+          // Note: step-executor already captured screenshot, this is just for live preview
+          if (browserStreamer) {
+            browserStreamer.captureFrameOnStepComplete(i);
+            if (step.action === 'navigate') {
+              const url = step.value || step.target?.attributes?.href;
+              if (url) {
+                browserStreamer.sendUrlUpdate(url);
+                // Don't call onNavigation here - it would duplicate the screenshot
+              }
+            }
+          }
+
           if (browserStreamer) {
             browserStreamer.sendStepComplete(stepResult, i);
           }
@@ -124,130 +208,159 @@ export class TestRunner {
             screenshots.push(stepResult.screenshot_path);
           }
 
-          // Console log step result
           if (stepResult.success) {
-            sendLog('info', `   ✅ Step ${i + 1} completed successfully (${stepResult.execution_time_ms}ms)`);
-            if (stepResult.selector_used) {
-              sendLog('info', `   Selector used: ${stepResult.selector_used.type} = "${stepResult.selector_used.value}"`);
-            }
+            sendLog('info', `   ✅ Step ${i + 1} passed (${stepResult.execution_time_ms}ms)`);
           } else {
-            sendLog('error', `   ❌ Step ${i + 1} failed (${stepResult.execution_time_ms}ms)`);
-            sendLog('error', `   Error: ${stepResult.error}`);
-          }
-
-          // If step failed, provide detailed error context
-          if (!stepResult.success) {
-            status = 'failed';
-            const stepContext = `Step ${i + 1}/${testCase.steps.length}`;
-            const actionContext = `Action: ${step.action}`;
-            const descriptionContext = step.description ? `Description: "${step.description}"` : '';
-            const elementContext = step.target ? `Target: ${JSON.stringify(step.target)}` : '';
-
-            error = `${stepContext} failed. ${actionContext}. ${descriptionContext} ${elementContext}. Error: ${stepResult.error || 'Unknown error'}`;
-
-            logger.error('Step execution failed', new Error(stepResult.error || 'Unknown error'), {
-              stepNumber: i + 1,
-              stepId: step.id,
-              action: step.action,
-              executionTimeMs: stepResult.execution_time_ms,
-              elementFound: stepResult.element_found
-            });
-
-            // Add suggestion based on error type
-            if (stepResult.error?.includes('element') || stepResult.error?.includes('selector')) {
-              error += ' Suggestion: Element may not be visible or selector may need adjustment.';
-            } else if (stepResult.error?.includes('timeout')) {
-              error += ' Suggestion: Page may be loading slowly or element may be dynamically loaded.';
+            sendLog('error', `   ❌ Step ${i + 1} failed: ${stepResult.error}`);
+            
+            // Report failure if classified
+            if (stepResult.failure_analysis) {
+              const analysis = stepResult.failure_analysis;
+              
+              // Check if recovery was attempted and succeeded
+              if (analysis.recoverySuccess === true) {
+                // Recovery succeeded - step should now be marked as success
+                // But if it's still false, recovery fixed selector but action failed
+                // In that case, we should continue and let the next attempt handle it
+                sendLog('info', `   ✅ Step ${i + 1} recovered, continuing...`);
+                // Continue to next step (don't break)
+              } else if (analysis.isSystemFailure === true && 
+                         analysis.recoveryAttempted === true &&
+                         analysis.recoverySuccess === false) {
+                // System failure, recovery attempted but failed
+                // Pause execution and wait for user input via chatbot
+                status = 'paused';
+                error = `Step ${i + 1} needs user assistance`;
+                if (browserStreamer?.sendAgentMessage) {
+                  browserStreamer.sendAgentMessage(i, 'needs_help', '💬 All recovery attempts failed. Opening chatbot for your assistance...');
+                }
+                // Track system failures
+                await this.failureReporter.trackSystemFailure(stepResult, analysis);
+                break; // Pause here
+              } else if (analysis.isSystemFailure === false) {
+                // Application bug - stop execution
+                const bugReport = await this.failureReporter.reportApplicationFailure(
+                  executionId,
+                  stepResult,
+                  analysis
+                );
+                if (bugReport) {
+                  sendLog('info', `   🐛 Bug Report: ${analysis.category} (${bugReport.severity} severity)`);
+                }
+                status = 'failed';
+                error = `Step ${i + 1} failed: ${stepResult.error}`;
+                break;
+              } else {
+                // Unknown or no analysis - track as system failure and continue
+                // (recovery might have been attempted but not properly marked)
+                if (analysis.isSystemFailure === true) {
+                  await this.failureReporter.trackSystemFailure(stepResult, analysis);
+                }
+                // Continue execution to see if next steps work
+                sendLog('warn', `   ⚠️ Step ${i + 1} failed but continuing execution...`);
+              }
+            } else {
+              // No analysis available - stop execution
+              status = 'failed';
+              error = `Step ${i + 1} failed: ${stepResult.error}`;
+              break;
             }
-
-            break;
-          } else {
-            logger.debug('Step execution succeeded', {
-              stepNumber: i + 1,
-              stepId: step.id,
-              executionTimeMs: stepResult.execution_time_ms
-            });
           }
         } catch (stepError: any) {
-          // Catch any unexpected errors during step execution
           status = 'failed';
-          const stepContext = `Step ${i + 1}/${testCase.steps.length}`;
-          error = `${stepContext} threw unexpected error: ${stepError.message || 'Unknown error'}`;
-
-          const errorStepResult = {
+          error = `Step ${i + 1} error: ${stepError.message}`;
+          stepResults.push({
             step_id: step.id || `step-${i + 1}`,
             success: false,
-            error: stepError.message || 'Unexpected error',
+            error: stepError.message,
             execution_time_ms: Date.now() - Date.parse(startedAt),
             element_found: false
-          };
-          stepResults.push(errorStepResult);
-
-          // Send step complete event for error case
+          });
           if (browserStreamer) {
-            browserStreamer.sendStepComplete(errorStepResult, i);
+            browserStreamer.sendStepComplete(stepResults[stepResults.length - 1], i);
           }
-
           break;
         }
       }
 
-      // If all steps passed, mark as completed
       if (status === 'running') {
         status = 'completed';
       }
 
     } catch (err: any) {
       status = 'failed';
+      logger.error('Test execution error', err);
 
-      logger.error('Test execution error', err, {
-        testCaseId: testCase.id,
-        stepsCompleted: stepResults.length,
-        totalSteps: testCase.steps.length
-      });
-
-      // Provide detailed error context
-      if (err.message?.includes('Page crashed') || err.message?.includes('browser')) {
-        error = `Browser error: ${err.message}. This may indicate a browser crash or resource issue.`;
-      } else if (err.message?.includes('timeout') || err.message?.includes('Timeout')) {
-        error = `Timeout error: ${err.message}. The operation took too long to complete.`;
-      } else if (err.message?.includes('navigation') || err.message?.includes('goto')) {
-        error = `Navigation error: ${err.message}. Failed to load the website. Check if the URL is correct and accessible.`;
+      if (err.message?.includes('timeout')) {
+        error = `Timeout: ${err.message}`;
+      } else if (err.message?.includes('navigation')) {
+        error = `Navigation failed: ${err.message}`;
       } else {
-        error = `Test execution failed: ${err.message || 'Unknown error occurred'}`;
+        error = `Execution failed: ${err.message}`;
       }
 
-      // Add context about what was being executed
       if (stepResults.length > 0) {
-        error += ` Failed after completing ${stepResults.length} of ${testCase.steps.length} steps.`;
-      } else {
-        error += ` Failed during initialization or navigation.`;
+        error += ` (completed ${stepResults.length}/${testCase.steps.length} steps)`;
       }
     } finally {
-      // Stop streaming and cleanup
+      // Cleanup
       if (browserStreamer) {
         browserStreamer.stopStreaming();
         // Send final result via WebSocket before cleanup
-        browserStreamer.sendFinalResult({
-          execution_id: executionId,
-          test_case_id: testCase.id,
-          status,
-          steps: stepResults,
-          total_duration_ms: stepResults.reduce((sum, sr) => sum + sr.execution_time_ms, 0),
-          screenshots,
-          error,
-          started_at: startedAt,
-          completed_at: new Date().toISOString()
-        });
+        if (!headless) {
+          try {
+            browserStreamer.sendFinalResult({
+              execution_id: executionId,
+              test_case_id: testCase.id,
+              status,
+              steps: stepResults,
+              total_duration_ms: stepResults.reduce((sum, sr) => sum + sr.execution_time_ms, 0),
+              screenshots,
+              error,
+              started_at: startedAt,
+              completed_at: new Date().toISOString()
+            });
+            // Give a moment for the message to be sent before cleanup
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error: any) {
+            logger.warn('Error sending final result via WebSocket', { error: error.message, executionId });
+          }
+        }
         unregisterBrowserStream(executionId);
       }
 
-      // Close browser with error handling
-      try {
-        await this.browserController.close();
+      // Release browser resources
+      if (isolate && isolatedContext) {
+        // Close isolated context (test isolation - fresh context per test)
+        try {
+          const page = browserController.getPage();
+          if (page && !page.isClosed()) {
+            await page.close();
+          }
+          if (isolatedContext) {
+            await isolatedContext.close();
+          }
+          logger.debug('Isolated context closed', { executionId });
+        } catch (closeError: any) {
+          logger.warn('Error closing isolated context', { error: closeError.message });
+        }
+      } else if (this.usePool && pooledContext) {
+        // Return to pool (don't close browser)
+        try {
+          const page = browserController.getPage();
+          if (page) {
+            await this.browserPool.release(pooledContext.context, page);
+          }
+        } catch (releaseError: any) {
+          logger.warn('Error releasing to pool', { error: releaseError.message });
+        }
+      } else {
+        // Close browser normally
+        try {
+          await browserController.close();
       } catch (closeError: any) {
         logger.warn('Error closing browser', { error: closeError.message });
-        // Don't throw - test result is more important than cleanup errors
+        }
       }
     }
 
@@ -255,27 +368,27 @@ export class TestRunner {
     const completedAt = new Date().toISOString();
 
     sendLog('info', '\n========================================');
-    sendLog('info', '📊 TEST EXECUTION SUMMARY');
-    sendLog('info', '========================================');
-    const statusDisplay = status === 'completed' ? '✅ COMPLETED' : status === 'failed' ? '❌ FAILED' : `⏸️  ${String(status).toUpperCase()}`;
-    sendLog('info', `Status: ${statusDisplay}`);
-    sendLog('info', `Total Duration: ${totalDuration}ms`);
-    sendLog('info', `Steps Completed: ${stepResults.length}/${testCase.steps.length}`);
-    sendLog('info', `Steps Passed: ${stepResults.filter(s => s.success).length}`);
-    sendLog('info', `Steps Failed: ${stepResults.filter(s => !s.success).length}`);
-    sendLog('info', `Screenshots Captured: ${screenshots.length}`);
-    if (error) {
-      sendLog('error', `Error: ${error}`);
-    }
+    sendLog('info', `📊 RESULT: ${status === 'completed' ? '✅ PASSED' : '❌ FAILED'}`);
+    sendLog('info', `Duration: ${totalDuration}ms | Steps: ${stepResults.filter(s => s.success).length}/${testCase.steps.length} passed`);
+    if (error) sendLog('error', `Error: ${error}`);
     sendLog('info', '========================================\n');
 
-    logger.info('Test execution finished', {
-      executionId,
-      status,
-      totalDurationMs: totalDuration,
-      stepsCount: stepResults.length,
-      screenshotsCount: screenshots.length
-    });
+    logger.info('Test execution finished', { executionId, status, totalDurationMs: totalDuration });
+
+    // Save updated test case if it was modified during execution
+    if (testCaseModified) {
+      try {
+        const testCaseRepository = new TestCaseRepository();
+        await testCaseRepository.update(testCase.id, { steps: testCase.steps });
+        logger.info('Test case updated with successful selectors from recovery', { testCaseId: testCase.id });
+        sendLog('info', `📝 Test case updated with successful selectors from recovery`);
+      } catch (updateError: any) {
+        logger.warn('Failed to update test case with successful selectors', { 
+          error: updateError.message, 
+          testCaseId: testCase.id 
+        });
+      }
+    }
 
     return {
       execution_id: executionId,
@@ -289,5 +402,23 @@ export class TestRunner {
       completed_at: completedAt
     };
   }
-}
 
+  /**
+   * Pre-warm the browser pool
+   */
+  async warmUp(): Promise<void> {
+    if (this.usePool) {
+      await this.browserPool.initialize();
+      logger.info('Browser pool warmed up', this.browserPool.getStats());
+    }
+  }
+
+  /**
+   * Shutdown the browser pool
+   */
+  async shutdown(): Promise<void> {
+    if (this.usePool) {
+      await this.browserPool.shutdown();
+    }
+  }
+}

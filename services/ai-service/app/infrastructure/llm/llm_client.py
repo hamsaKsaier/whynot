@@ -5,6 +5,7 @@ from typing import Optional
 from openai import OpenAI
 from anthropic import Anthropic
 import json
+import time
 
 
 class LLMClient:
@@ -54,11 +55,11 @@ class LLMClient:
             if not self.anthropic_client:
                 raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
             system_message = system_prompt or ""
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+            model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5-20251101")
             try:
                 response = self.anthropic_client.messages.create(
                     model=model,
-                    max_tokens=4096,
+                    max_tokens=8192,  # Increased to handle large JSON responses with many test steps
                     system=system_message,
                     messages=[{"role": "user", "content": prompt}]
                 )
@@ -68,8 +69,81 @@ class LLMClient:
         
         raise ValueError(f"No LLM provider configured. Provider: {self.provider}, Set OPENAI_API_KEY or ANTHROPIC_API_KEY")
     
+    def _fix_missing_commas_safe(self, text):
+        """Fix missing commas while respecting string boundaries"""
+        result = []
+        in_string = False
+        escape_next = False
+        i = 0
+        while i < len(text):
+            char = text[i]
+            if escape_next:
+                result.append(char)
+                escape_next = False
+                i += 1
+                continue
+            if char == '\\':
+                escape_next = True
+                result.append(char)
+                i += 1
+                continue
+            if char == '"':
+                in_string = not in_string
+                result.append(char)
+                i += 1
+                continue
+            if in_string:
+                result.append(char)
+                i += 1
+                continue
+            
+            # Outside strings: look for patterns that need commas
+            # Pattern: } or ] followed by whitespace and then " (new key)
+            if (char == '}' or char == ']') and i < len(text) - 1:
+                # Skip whitespace
+                j = i + 1
+                while j < len(text) and text[j] in ' \t\n\r':
+                    j += 1
+                if j < len(text) and text[j] == '"':
+                    # Check if there's already a comma between
+                    has_comma = False
+                    for k in range(i+1, j):
+                        if text[k] == ',':
+                            has_comma = True
+                            break
+                    if not has_comma:
+                        result.append(char)
+                        result.append(',')
+                        i += 1
+                        continue
+            
+            result.append(char)
+            i += 1
+        return ''.join(result)
+    
     def _extract_and_repair_json(self, response: str) -> dict:
         """Extract and repair JSON from LLM response"""
+        # #region agent log
+        try:
+            log_data = {
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "A",
+                "location": "llm_client.py:_extract_and_repair_json:entry",
+                "message": "Starting JSON extraction",
+                "data": {
+                    "original_response_length": len(response),
+                    "original_response_preview": response[:500] if len(response) > 500 else response,
+                    "original_response_suffix": response[-200:] if len(response) > 200 else ""
+                },
+                "timestamp": int(time.time() * 1000)
+            }
+            with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                f.write(json.dumps(log_data) + "\n")
+        except:
+            pass
+        # #endregion
+        
         original_response = response
         
         # Step 1: Remove markdown code blocks
@@ -92,10 +166,74 @@ class LLMClient:
             else:
                 raise ValueError(f"No JSON object found in response: {response[:200]}")
         
+        # #region agent log
+        try:
+            log_data = {
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "B",
+                "location": "llm_client.py:_extract_and_repair_json:extracted",
+                "message": "JSON extracted from response",
+                "data": {
+                    "extracted_json_length": len(json_str),
+                    "extracted_json_preview": json_str[:500] if len(json_str) > 500 else json_str,
+                    "extracted_json_suffix": json_str[-200:] if len(json_str) > 200 else ""
+                },
+                "timestamp": int(time.time() * 1000)
+            }
+            with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                f.write(json.dumps(log_data) + "\n")
+        except:
+            pass
+        # #endregion
+        
         # Step 3: Try parsing
         try:
-            return json.loads(json_str)
+            parsed = json.loads(json_str)
+            # #region agent log
+            try:
+                log_data = {
+                    "sessionId": "debug-session",
+                    "runId": "run1",
+                    "hypothesisId": "C",
+                    "location": "llm_client.py:_extract_and_repair_json:parse_success",
+                    "message": "JSON parsed successfully on first attempt",
+                    "data": {"parsed_keys": list(parsed.keys()) if isinstance(parsed, dict) else "not_dict"},
+                    "timestamp": int(time.time() * 1000)
+                }
+                with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                    f.write(json.dumps(log_data) + "\n")
+            except:
+                pass
+            # #endregion
+            return parsed
         except json.JSONDecodeError as e:
+            # #region agent log
+            error_pos = getattr(e, 'pos', 0)
+            error_msg = str(e)
+            try:
+                log_data = {
+                    "sessionId": "debug-session",
+                    "runId": "run1",
+                    "hypothesisId": "D",
+                    "location": "llm_client.py:_extract_and_repair_json:parse_error",
+                    "message": "JSON parse error detected",
+                    "data": {
+                        "error": error_msg,
+                        "error_position": error_pos,
+                        "error_line": json_str[:error_pos].count('\n') + 1,
+                        "error_column": error_pos - json_str[:error_pos].rfind('\n') - 1,
+                        "context_before": json_str[max(0, error_pos-100):error_pos],
+                        "context_after": json_str[error_pos:min(len(json_str), error_pos+100)]
+                    },
+                    "timestamp": int(time.time() * 1000)
+                }
+                with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                    f.write(json.dumps(log_data) + "\n")
+            except:
+                pass
+            # #endregion
+            
             # Step 4: Attempt JSON repair for common issues
             logging.warning(f"JSON parse error: {e}. Attempting repair...")
             
@@ -138,6 +276,15 @@ class LLMClient:
             
             json_str = ''.join(fixed_json)
             
+            # NEW: Fix missing commas between array elements and object properties
+            # Use regex patterns that work outside of strings
+            # First, fix obvious patterns: ] [ and } {
+            json_str = re.sub(r'\]\s*\[', '],[', json_str)
+            json_str = re.sub(r'\}\s*\{', '},{', json_str)
+            
+            # Fix missing commas between object properties using safe method
+            json_str = self._fix_missing_commas_safe(json_str)
+            
             # Try to fix unterminated JSON structures by counting braces/brackets
             brace_count = 0
             bracket_count = 0
@@ -176,9 +323,47 @@ class LLMClient:
             # Remove trailing commas before } or ]
             json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
             
+            # #region agent log
+            try:
+                log_data = {
+                    "sessionId": "debug-session",
+                    "runId": "run1",
+                    "hypothesisId": "E",
+                    "location": "llm_client.py:_extract_and_repair_json:before_second_parse",
+                    "message": "Attempting second parse after repair",
+                    "data": {
+                        "repaired_json_length": len(json_str),
+                        "repaired_json_preview": json_str[:500] if len(json_str) > 500 else json_str,
+                        "repaired_json_around_error": json_str[max(0, error_pos-200):min(len(json_str), error_pos+200)]
+                    },
+                    "timestamp": int(time.time() * 1000)
+                }
+                with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                    f.write(json.dumps(log_data) + "\n")
+            except:
+                pass
+            # #endregion
+            
             # Try parsing again
             try:
-                return json.loads(json_str)
+                parsed = json.loads(json_str)
+                # #region agent log
+                try:
+                    log_data = {
+                        "sessionId": "debug-session",
+                        "runId": "run1",
+                        "hypothesisId": "F",
+                        "location": "llm_client.py:_extract_and_repair_json:repair_success",
+                        "message": "JSON repair successful",
+                        "data": {"parsed_keys": list(parsed.keys()) if isinstance(parsed, dict) else "not_dict"},
+                        "timestamp": int(time.time() * 1000)
+                    }
+                    with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                        f.write(json.dumps(log_data) + "\n")
+                except:
+                    pass
+                # #endregion
+                return parsed
             except json.JSONDecodeError as e2:
                 # Log the problematic section with more context
                 error_pos = getattr(e2, 'pos', 0)
@@ -187,10 +372,84 @@ class LLMClient:
                 context = json_str[start_context:end_context]
                 line_num = json_str[:error_pos].count('\n') + 1
                 col_num = error_pos - json_str[:error_pos].rfind('\n') - 1
+                
+                # #region agent log
+                try:
+                    log_data = {
+                        "sessionId": "debug-session",
+                        "runId": "run1",
+                        "hypothesisId": "G",
+                        "location": "llm_client.py:_extract_and_repair_json:repair_failed",
+                        "message": "JSON repair failed after all attempts",
+                        "data": {
+                            "error": str(e2),
+                            "error_position": error_pos,
+                            "error_line": line_num,
+                            "error_column": col_num,
+                            "context": context,
+                            "original_response_length": len(original_response),
+                            "json_string_length": len(json_str),
+                            "original_response_preview": original_response[:500]
+                        },
+                        "timestamp": int(time.time() * 1000)
+                    }
+                    with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                        f.write(json.dumps(log_data) + "\n")
+                except:
+                    pass
+                # #endregion
+                
                 logging.error(f"JSON repair failed. Error at line {line_num}, column {col_num} (position {error_pos}): {e2}")
                 logging.error(f"Context (200 chars before/after): ...{context}...")
                 logging.error(f"Full response length: {len(original_response)} chars")
                 logging.error(f"JSON string length: {len(json_str)} chars")
+                
+                # Try one more aggressive repair: apply _fix_missing_commas_safe again
+                # Sometimes the first pass doesn't catch all cases
+                try:
+                    aggressive_fix = self._fix_missing_commas_safe(json_str)
+                    # Also try regex fixes one more time
+                    aggressive_fix = re.sub(r'\]\s*\[', '],[', aggressive_fix)
+                    aggressive_fix = re.sub(r'\}\s*\{', '},{', aggressive_fix)
+                    
+                    # Try parsing the aggressively fixed version
+                    parsed = json.loads(aggressive_fix)
+                    # #region agent log
+                    try:
+                        log_data = {
+                            "sessionId": "debug-session",
+                            "runId": "run1",
+                            "hypothesisId": "H",
+                            "location": "llm_client.py:_extract_and_repair_json:aggressive_repair_success",
+                            "message": "Aggressive JSON repair successful",
+                            "data": {"parsed_keys": list(parsed.keys()) if isinstance(parsed, dict) else "not_dict"},
+                            "timestamp": int(time.time() * 1000)
+                        }
+                        with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                            f.write(json.dumps(log_data) + "\n")
+                    except:
+                        pass
+                    # #endregion
+                    return parsed
+                except Exception as repair_error:
+                    # #region agent log
+                    try:
+                        log_data = {
+                            "sessionId": "debug-session",
+                            "runId": "run1",
+                            "hypothesisId": "I",
+                            "location": "llm_client.py:_extract_and_repair_json:aggressive_repair_failed",
+                            "message": "Aggressive repair also failed",
+                            "data": {"repair_error": str(repair_error)},
+                            "timestamp": int(time.time() * 1000)
+                        }
+                        with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
+                            f.write(json.dumps(log_data) + "\n")
+                    except:
+                        pass
+                    # #endregion
+                    pass
+                
                 raise ValueError(
                     f"Could not parse or repair JSON. Error at line {line_num}, column {col_num}: {e2}. "
                     f"Response preview: {original_response[:500]}"
@@ -238,13 +497,13 @@ class LLMClient:
             if not self.anthropic_client:
                 raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
             system_message = system_prompt or ""
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+            model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5-20251101")
             
             try:
                 # Anthropic vision API format
                 response = self.anthropic_client.messages.create(
                     model=model,
-                    max_tokens=4096,
+                    max_tokens=8192,  # Increased to handle large JSON responses with many test steps
                     system=system_message,
                     messages=[{
                         "role": "user",

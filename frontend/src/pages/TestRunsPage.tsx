@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FiFilter, FiSearch, FiCheckCircle, FiXCircle, FiClock } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
+import { TestAutomationChatbot } from '../components/Chatbot/TestAutomationChatbot';
 import type { ExecutionResult } from '../types';
 
 export const TestRunsPage: React.FC = () => {
@@ -133,9 +134,19 @@ export const TestRunsPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      <TestAutomationChatbot
+        context={{}}
+      />
     </div>
   );
 };
+
+
+
+
+
+
 
 
 

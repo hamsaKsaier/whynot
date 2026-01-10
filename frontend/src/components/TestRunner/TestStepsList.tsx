@@ -1,6 +1,14 @@
 import React from 'react';
-import { FiCheckCircle, FiXCircle, FiClock, FiPlay } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiClock, FiPlay, FiEdit } from 'react-icons/fi';
 import type { StepResult, TestStep } from '../../types';
+
+interface SelectorAttempt {
+  selector: any;
+  attemptNumber: number;
+  totalAttempts: number;
+  status: 'trying' | 'failed' | 'succeeded';
+  timestamp: number;
+}
 
 interface StepUpdate {
   stepIndex: number;
@@ -19,6 +27,17 @@ interface StepUpdate {
   };
   status: 'pending' | 'running' | 'completed';
   timestamp: number;
+  selectorAttempts?: SelectorAttempt[];
+  recoveryStart?: {
+    reason: string;
+    attemptedSelectors: any[];
+    timestamp: number;
+  };
+  recoverySuccess?: {
+    successfulSelector: any;
+    strategyUsed: string;
+    timestamp: number;
+  };
 }
 
 interface TestStepsListProps {
@@ -27,6 +46,7 @@ interface TestStepsListProps {
   stepUpdates?: Map<number, StepUpdate>; // Real-time step updates
   currentStepIndex?: number;
   onStepClick?: (index: number) => void;
+  onStepFix?: (index: number, step: TestStep) => void; // Callback when fix icon is clicked
 }
 
 export const TestStepsList: React.FC<TestStepsListProps> = ({
@@ -35,6 +55,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
   stepUpdates,
   currentStepIndex,
   onStepClick,
+  onStepFix,
 }) => {
   const getActionBadgeColor = (action: string) => {
     switch (action.toLowerCase()) {
@@ -203,7 +224,68 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                       Selector: {(stepUpdate?.stepResult?.selector_used || step.selector_used)?.type}
                     </p>
                   )}
+
+                  {/* Selector Attempts */}
+                  {stepUpdate?.selectorAttempts && stepUpdate.selectorAttempts.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="text-xs font-medium text-gray-600 mb-1">Selector Attempts:</div>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {stepUpdate.selectorAttempts
+                          .sort((a, b) => a.attemptNumber - b.attemptNumber)
+                          .map((attempt, idx) => (
+                            <div key={idx} className="text-xs flex items-center gap-1">
+                              {attempt.status === 'succeeded' ? (
+                                <span className="text-green-600">✅</span>
+                              ) : attempt.status === 'failed' ? (
+                                <span className="text-red-600">❌</span>
+                              ) : (
+                                <span className="text-blue-600 animate-pulse">🔄</span>
+                              )}
+                              <span className={attempt.status === 'succeeded' ? 'text-green-700 font-medium' : attempt.status === 'failed' ? 'text-red-700' : 'text-blue-700'}>
+                                {attempt.attemptNumber}/{attempt.totalAttempts}: {attempt.selector.type} = "{attempt.selector.value}"
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recovery Status */}
+                  {stepUpdate?.recoveryStart && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="text-xs font-medium text-blue-600 mb-1">🔄 Recovery Started</div>
+                      <div className="text-xs text-gray-600">{stepUpdate.recoveryStart.reason}</div>
+                    </div>
+                  )}
+
+                  {stepUpdate?.recoverySuccess && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="text-xs font-medium text-green-600 mb-1">✅ Recovery Successful</div>
+                      <div className="text-xs text-gray-700">
+                        Using: {stepUpdate.recoverySuccess.successfulSelector.type} = "{stepUpdate.recoverySuccess.successfulSelector.value}"
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Strategy: {stepUpdate.recoverySuccess.strategyUsed}
+                      </div>
+                    </div>
+                  )}
                 </div>
+                {/* Fix/Edit Icon */}
+                {testStep && onStepFix && (
+                  <div className="flex-shrink-0 ml-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStepFix(index, testStep);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      title="Fix or modify this step"
+                      aria-label="Fix or modify this step"
+                    >
+                      <FiEdit className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -212,6 +294,13 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
     </div>
   );
 };
+
+
+
+
+
+
+
 
 
 

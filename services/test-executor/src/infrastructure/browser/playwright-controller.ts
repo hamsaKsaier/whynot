@@ -20,67 +20,79 @@ export class PlaywrightController {
       fs.mkdirSync(screenshotsDir, { recursive: true });
     }
     // Disable font loading wait for screenshots to prevent timeouts
-    // This significantly improves screenshot performance
     if (!process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY) {
       process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY = '1';
     }
     // Read timeout configuration from environment
     this.navigationTimeout = parseInt(
-      process.env.NAVIGATION_TIMEOUT_MS || '60000',
+      process.env.NAVIGATION_TIMEOUT_MS || '30000',
       10
     );
     this.navigationMaxTimeout = parseInt(
-      process.env.NAVIGATION_MAX_TIMEOUT_MS || '120000',
+      process.env.NAVIGATION_MAX_TIMEOUT_MS || '60000',
       10
     );
     // Ensure timeouts are within reasonable bounds
-    this.navigationTimeout = Math.min(Math.max(this.navigationTimeout, 10000), this.navigationMaxTimeout);
-    this.navigationMaxTimeout = Math.min(Math.max(this.navigationMaxTimeout, 30000), 300000);
+    this.navigationTimeout = Math.min(Math.max(this.navigationTimeout, 5000), this.navigationMaxTimeout);
+    this.navigationMaxTimeout = Math.min(Math.max(this.navigationMaxTimeout, 10000), 120000);
   }
 
   async initialize(headless: boolean = true): Promise<void> {
     // In Docker, always use headless mode (no X server available)
-    // But we can still capture frames for live preview streaming
-    // The "headless" parameter here is for whether to show a window,
-    // but we always run headless in Docker and stream frames instead
     const isDocker = process.env.DOCKER_ENV === 'true' || fs.existsSync('/.dockerenv');
-    // ALWAYS use headless in Docker - no exceptions
     const actualHeadless = isDocker ? true : headless;
 
-    // Log for debugging
-    console.log('[PlaywrightController] initialize called', {
-      requestedHeadless: headless,
-      isDocker,
-      actualHeadless
-    });
+    logger.info('Initializing browser', { requestedHeadless: headless, isDocker, actualHeadless });
 
-    this.browser = await chromium.launch({
-      headless: actualHeadless,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-background-networking',
-        '--disable-background-timer-throttling',
-        '--disable-renderer-backgrounding',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-breakpad',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-features=TranslateUI',
-        '--disable-ipc-flooding-protection'
-      ]
-    });
+    try {
+      this.browser = await chromium.launch({
+        headless: actualHeadless,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+          '--disable-background-networking',
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-breakpad',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-extensions',
+          '--disable-plugins',
+          '--disable-sync',
+          '--disable-default-apps',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-site-isolation-trials',
+          '--disable-blink-features=AutomationControlled',
+          '--disable-font-subpixel-positioning',
+          '--disable-lcd-text',
+          '--memory-pressure-off'
+        ]
+      });
 
-    this.context = await this.browser.newContext({
-      viewport: { width: 1920, height: 1080 },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    });
+      this.context = await this.browser.newContext({
+        viewport: { width: 1920, height: 1080 },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ignoreHTTPSErrors: true,
+        javaScriptEnabled: true,
+      });
 
-    this.page = await this.context.newPage();
+      this.page = await this.context.newPage();
+      this.page.setDefaultTimeout(30000);
+      this.page.setDefaultNavigationTimeout(30000);
+      
+      logger.info('Browser initialized successfully');
+    } catch (error: any) {
+      logger.error('Browser initialization failed', { error: error.message });
+      throw error;
+    }
   }
 
   async navigate(url: string): Promise<void> {
@@ -88,86 +100,64 @@ export class PlaywrightController {
       throw new Error('Browser not initialized. Call initialize() first.');
     }
 
-    const waitStrategies: Array<'domcontentloaded' | 'load' | 'networkidle'> = [
-      'domcontentloaded',
-      'load',
-      'networkidle'
-    ];
+    // Use domcontentloaded for faster navigation (HTML parsed, don't wait for all resources)
+    const timeout = this.navigationTimeout;
 
-    let lastError: Error | null = null;
+    try {
+      logger.info('Attempting navigation', { url, strategy: 'domcontentloaded', timeout });
 
-    for (let attempt = 0; attempt < waitStrategies.length; attempt++) {
-      const strategy = waitStrategies[attempt];
-      // Use progressively shorter timeouts for fallback strategies
-      const timeout = attempt === 0
-        ? this.navigationTimeout
-        : Math.max(this.navigationTimeout / 2, 30000);
+      await this.page.goto(url, {
+        waitUntil: 'domcontentloaded', // Fast - only wait for HTML to be parsed
+        timeout
+      });
 
+      // Wait for network to be idle (no requests for 500ms) with short timeout
+      // This ensures page is stable for screenshots without waiting too long
       try {
-        logger.info('Attempting navigation', {
-          url,
-          strategy,
-          timeout,
-          attempt: attempt + 1,
-          totalAttempts: waitStrategies.length
+        await this.page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {
+          // If networkidle times out quickly, page might have continuous requests
+          // That's okay, just wait a bit for initial resources
+          return this.page!.waitForTimeout(500);
         });
+      } catch (e) {
+        // Ignore - proceed anyway
+      }
 
-        await this.page.goto(url, {
-          waitUntil: strategy,
-          timeout
-        });
-
-        // Wait a bit for any dynamic content
-        await this.page.waitForTimeout(2000);
-
-        logger.info('Navigation successful', {
-          url,
-          strategy,
-          attempt: attempt + 1
-        });
-
-        return; // Success, exit early
-      } catch (error: any) {
-        lastError = error;
-        logger.warn('Navigation attempt failed', {
-          url,
-          strategy,
-          timeout,
-          attempt: attempt + 1,
-          error: error.message
-        });
-
-        // If this is not the last strategy, continue to next
-        if (attempt < waitStrategies.length - 1) {
-          logger.info('Trying next wait strategy', {
-            nextStrategy: waitStrategies[attempt + 1]
-          });
-          continue;
+      logger.info('Navigation successful', { url });
+      return;
+    } catch (error: any) {
+      // Check if page is still valid after error
+      if (!this.page || this.page.isClosed()) {
+        if (this.context && this.context.browser()?.isConnected()) {
+          try {
+            this.page = await this.context.newPage();
+            this.page.setDefaultTimeout(30000);
+            this.page.setDefaultNavigationTimeout(30000);
+            logger.info('Page recreated after navigation error');
+          } catch (recoveryError: any) {
+            throw new Error(`Failed to recover page: ${recoveryError.message}`);
+          }
+        } else {
+          throw new Error(`Browser context is closed. Cannot recover: ${error.message}`);
         }
       }
+
+      // Check if we're actually on the target URL despite the error
+      const currentUrl = this.page.url();
+      if (currentUrl.includes(new URL(url).hostname)) {
+        logger.info('Navigation succeeded (URL matches despite error)', { url, currentUrl });
+        return;
+      }
+
+      throw new Error(`Failed to navigate to ${url}: ${error.message}`);
     }
-
-    // All strategies failed
-    const errorMessage = `Failed to navigate to ${url} after trying all wait strategies (domcontentloaded, load, networkidle). ` +
-      `Last error: ${lastError?.message || 'Unknown error'}. ` +
-      `Timeout used: ${this.navigationTimeout}ms. ` +
-      `The page may be loading too slowly or there may be network issues.`;
-
-    logger.error('Navigation failed after all attempts', {
-      url,
-      lastError: lastError?.message,
-      timeout: this.navigationTimeout
-    });
-
-    throw new Error(errorMessage);
   }
 
-  async takeScreenshot(stepId?: string): Promise<string> {
+  async takeScreenshot(stepId?: string, skipWait: boolean = false): Promise<string> {
     if (!this.page) {
       throw new Error('Browser not initialized.');
     }
 
-    // Check if page is closed
     if (this.page.isClosed()) {
       throw new Error('Page is closed, cannot take screenshot.');
     }
@@ -178,14 +168,34 @@ export class PlaywrightController {
       : `screenshot-${timestamp}.png`;
     const filepath = path.join(this.screenshotsDir, filename);
 
-    // Configurable screenshot timeout (default: 60s, max: 120s)
     const screenshotTimeout = Math.min(
-      Math.max(parseInt(process.env.SCREENSHOT_TIMEOUT_MS || '60000', 10), 10000),
-      120000
+      Math.max(parseInt(process.env.SCREENSHOT_TIMEOUT_MS || '10000', 10), 5000),
+      30000
     );
 
     try {
-      // Capture screenshot with explicit timeout passed directly to Playwright
+      if (this.page.isClosed()) {
+        throw new Error('Page is closed, cannot take screenshot.');
+      }
+
+      // Only wait for page stability if not explicitly skipped
+      // (e.g., after navigation we already waited)
+      if (!skipWait) {
+        try {
+          // Wait for page to be in a stable state before taking screenshot
+          // This prevents timeouts when page is still loading
+          await this.page.waitForLoadState('networkidle', { timeout: 2000 }).catch(() => {
+            // If networkidle times out, try domcontentloaded (faster)
+            return this.page!.waitForLoadState('domcontentloaded', { timeout: 1000 });
+          }).catch(() => {
+            // If both fail, wait a short time for page to stabilize
+            return this.page!.waitForTimeout(300);
+          });
+        } catch (e) {
+          // Ignore - proceed with screenshot anyway
+        }
+      }
+
       await this.page.screenshot({
         path: filepath,
         fullPage: false,
@@ -193,11 +203,13 @@ export class PlaywrightController {
       });
       return filepath;
     } catch (error: any) {
-      // Check if page became closed during screenshot
-      if (this.page.isClosed()) {
-        throw new Error('Page closed during screenshot capture.');
+      const isPageClosedError = error.message?.includes('closed') ||
+        error.message?.includes('Target page') ||
+        error.message?.includes('browser has been closed');
+
+      if (isPageClosedError) {
+        throw new Error('Page is closed, cannot take screenshot.');
       }
-      // Re-throw timeout or other errors
       throw error;
     }
   }
@@ -277,22 +289,95 @@ export class PlaywrightController {
   }
 
   async close(): Promise<void> {
-    if (this.page) {
-      await this.page.close();
-      this.page = null;
-    }
-    if (this.context) {
-      await this.context.close();
-      this.context = null;
-    }
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
+    try {
+      if (this.page) {
+        await this.page.close();
+        this.page = null;
+      }
+      if (this.context) {
+        await this.context.close();
+        this.context = null;
+      }
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
+      logger.info('Browser closed successfully');
+    } catch (error: any) {
+      logger.warn('Error during browser close', { error: error.message });
     }
   }
 
   getPage(): Page | null {
-    return this.page;
+    if (this.page && !this.page.isClosed()) {
+      return this.page;
+    }
+    return null;
+  }
+
+  /**
+   * Ensure page is valid, recover if needed
+   */
+  async ensurePage(): Promise<Page> {
+    if (this.page && !this.page.isClosed()) {
+      return this.page;
+    }
+
+    if (!this.context) {
+      throw new Error('Browser context is not initialized. Cannot recover page.');
+    }
+
+    if (!this.context.browser()?.isConnected()) {
+      throw new Error('Browser is disconnected. Cannot recover page.');
+    }
+
+    logger.info('Page is closed or null, creating new page for recovery');
+    try {
+      this.page = await this.context.newPage();
+      this.page.setDefaultTimeout(30000);
+      this.page.setDefaultNavigationTimeout(30000);
+      logger.info('New page created successfully for recovery');
+      return this.page;
+    } catch (error: any) {
+      logger.error('Failed to recover page', { error: error.message });
+      throw new Error(`Failed to recover page: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get browser context for pooling
+   */
+  getContext(): BrowserContext | null {
+    return this.context;
+  }
+
+  /**
+   * Get browser instance for pooling
+   */
+  getBrowser(): Browser | null {
+    return this.browser;
+  }
+
+  /**
+   * Set page from external source (for browser pool)
+   */
+  setPage(page: Page): void {
+    this.page = page;
+    this.page.setDefaultTimeout(30000);
+    this.page.setDefaultNavigationTimeout(30000);
+  }
+
+  /**
+   * Set context from external source (for browser pool)
+   */
+  setContext(context: BrowserContext): void {
+    this.context = context;
+  }
+
+  /**
+   * Set browser from external source (for browser pool)
+   */
+  setBrowser(browser: Browser): void {
+    this.browser = browser;
   }
 }
-

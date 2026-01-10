@@ -161,7 +161,140 @@ export class SelectorLearningRepository {
     );
     return result.length;
   }
+
+  /**
+   * Track selector attempt (success or failure)
+   */
+  async trackSelectorAttempt(
+    testCaseId: string,
+    stepId: string,
+    selector: ElementSelector,
+    success: boolean
+  ): Promise<void> {
+    return await transaction(async (client) => {
+      const existing = await client.query<SelectorLearningEntity>(
+        'SELECT * FROM selector_learning WHERE test_case_id = $1 AND step_id = $2',
+        [testCaseId, stepId]
+      );
+
+      if (existing.rows.length > 0) {
+        const existingSelectors = existing.rows[0].proven_selectors || [];
+        const selectorKey = `${selector.type}:${selector.value}`;
+        
+        const updatedSelectors = existingSelectors.map((sel: any) => {
+          if (sel.type === selector.type && sel.value === selector.value) {
+            const successCount = (sel.success_count || 0) + (success ? 1 : 0);
+            const failureCount = (sel.failure_count || 0) + (success ? 0 : 1);
+            const totalAttempts = successCount + failureCount;
+            const successRate = totalAttempts > 0 ? successCount / totalAttempts : 0;
+            
+            return {
+              ...sel,
+              success_count: successCount,
+              failure_count: failureCount,
+              success_rate: successRate,
+              last_attempted_at: new Date().toISOString()
+            };
+          }
+          return sel;
+        });
+
+        // Check if selector exists, if not add it
+        const selectorExists = updatedSelectors.some((sel: any) =>
+          sel.type === selector.type && sel.value === selector.value
+        );
+
+        if (!selectorExists) {
+          // Add new selector with initial stats
+          updatedSelectors.push({
+            ...selector,
+            success_count: success ? 1 : 0,
+            failure_count: success ? 0 : 1,
+            success_rate: success ? 1.0 : 0.0,
+            last_attempted_at: new Date().toISOString()
+          });
+        }
+
+        await client.query(
+          `UPDATE selector_learning 
+           SET proven_selectors = $1, 
+               last_attempted_at = NOW(),
+               updated_at = NOW()
+           WHERE test_case_id = $2 AND step_id = $3`,
+          [JSON.stringify(updatedSelectors), testCaseId, stepId]
+        );
+      } else {
+        // Create new record for tracking
+        const initialSelector = {
+          ...selector,
+          success_count: success ? 1 : 0,
+          failure_count: success ? 0 : 1,
+          success_rate: success ? 1.0 : 0.0,
+          last_attempted_at: new Date().toISOString()
+        };
+
+        await client.query(
+          `INSERT INTO selector_learning 
+           (test_case_id, step_id, target_description, proven_selectors, success_count, last_used_at, last_attempted_at)
+           VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
+           RETURNING *`,
+          [testCaseId, stepId, JSON.stringify({}), JSON.stringify([initialSelector])]
+        );
+      }
+    });
+  }
+
+  /**
+   * Get selectors with success rate above threshold
+   */
+  async getHighConfidenceSelectors(
+    testCaseId: string,
+    stepId: string,
+    minSuccessRate: number = 0.8
+  ): Promise<ElementSelector[]> {
+    const learning = await this.findByStep(testCaseId, stepId);
+    if (!learning || !learning.proven_selectors) {
+      return [];
+    }
+
+    return learning.proven_selectors
+      .filter((sel: any) => {
+        const successCount = sel.success_count || 0;
+        const failureCount = sel.failure_count || 0;
+        const totalAttempts = successCount + failureCount;
+        
+        if (totalAttempts === 0) {
+          // If no attempts tracked, use success_count from old format
+          return (sel.success_count || 0) > 0;
+        }
+        
+        const successRate = successCount / totalAttempts;
+        return successRate >= minSuccessRate;
+      })
+      .sort((a: any, b: any) => {
+        const rateA = a.success_rate || ((a.success_count || 0) / ((a.success_count || 0) + (a.failure_count || 0)) || 0);
+        const rateB = b.success_rate || ((b.success_count || 0) / ((b.success_count || 0) + (b.failure_count || 0)) || 0);
+        return rateB - rateA;
+      })
+      .map((sel: any) => ({
+        type: sel.type,
+        value: sel.value,
+        stability_score: sel.stability_score || 0.8,
+        confidence: sel.success_rate || ((sel.success_count || 0) / ((sel.success_count || 0) + (sel.failure_count || 0)) || 0)
+      })) as ElementSelector[];
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

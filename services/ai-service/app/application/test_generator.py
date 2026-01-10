@@ -1,8 +1,11 @@
 import uuid
 import json
+import logging
 from typing import List, Optional
 from app.domain.models import TestCase, TestStep, UserStory, ActionType, ElementDescription, ElementSelector
 from app.infrastructure.llm.llm_client import LLMClient
+
+logger = logging.getLogger(__name__)
 
 
 class TestGenerator:
@@ -146,7 +149,9 @@ IMPORTANT INSTRUCTIONS:
    - data-testid or data-cy attributes (stability_score: 0.95)
    - Stable ID attributes (stability_score: 0.85)
    - aria-label attributes (stability_score: 0.75)
+   - Stable CSS classes (stability_score: 0.65) - only if class name is semantic and stable (e.g., login-button, submit-form, button-primary, not framework-generated like sc-123abc, css-xyz789, or Tailwind utilities)
    - Text content (stability_score: 0.60)
+   - Unstable CSS classes (stability_score: 0.40) - framework-generated classes (use only if no better option)
    - XPath (stability_score: 0.30) - use as last resort
 
 Generate test cases following these rules:
@@ -160,7 +165,7 @@ Generate test cases following these rules:
    - expected_outcome: what should happen after this step
    - description: human-readable description of the step
    - suggested_selectors: array of 2 selectors (if element interaction), each with:
-     * type: string (data-testid, id, aria-label, text, xpath, css)
+     * type: string (data-testid, id, aria-label, class, text, xpath, css)
      * value: string (the actual selector value)
      * stability_score: number (0.0 to 1.0)
 
@@ -215,6 +220,25 @@ Example format:
               "stability_score": 0.60
             }}
           ]
+        }},
+        {{
+          "action": "click",
+          "target": {{"text": "Submit", "role": "button"}},
+          "value": null,
+          "expected_outcome": "Form is submitted",
+          "description": "Click the submit button",
+          "suggested_selectors": [
+            {{
+              "type": "class",
+              "value": ".submit-button",
+              "stability_score": 0.65
+            }},
+            {{
+              "type": "id",
+              "value": "#submit-btn",
+              "stability_score": 0.85
+            }}
+          ]
         }}
       ]
     }}
@@ -250,6 +274,27 @@ Example format:
         )
         
         # Parse response
+        # Log LLM response and check for suggested_selectors
+        test_cases_count = len(response.get("test_cases", [])) if isinstance(response, dict) else 0
+        logger.info(f"🎯 LLM response received: {test_cases_count} test case(s)")
+        
+        # Sample first step if available to check for suggested_selectors
+        if isinstance(response, dict) and response.get("test_cases"):
+            first_tc = response["test_cases"][0] if response["test_cases"] else {}
+            first_step = first_tc.get("steps", [{}])[0] if first_tc.get("steps") else {}
+            suggested_selectors = first_step.get("suggested_selectors")
+            if suggested_selectors is not None:
+                # Handle case where suggested_selectors might be None or empty list
+                if isinstance(suggested_selectors, list) and len(suggested_selectors) > 0:
+                    logger.info(f"   ✅ First step has {len(suggested_selectors)} suggested selector(s) from Claude")
+                    for idx, sel in enumerate(suggested_selectors, 1):
+                        logger.info(f"      {idx}. {sel.get('type', 'unknown')} = \"{sel.get('value', '')}\" (stability: {sel.get('stability_score', 0)})")
+                elif isinstance(suggested_selectors, list):
+                    logger.warning("   ⚠️  First step has suggested_selectors but it's an empty list")
+                else:
+                    logger.warning(f"   ⚠️  First step has suggested_selectors but it's not a list (type: {type(suggested_selectors)})")
+            else:
+                logger.warning("   ⚠️  First step does not have suggested_selectors in LLM response")
         test_cases = []
         test_cases_data = response.get("test_cases", [])
         
@@ -260,6 +305,25 @@ Example format:
         
         for idx, tc_data in enumerate(test_cases_data):
             test_case_id = f"test-{uuid.uuid4().hex[:8]}"
+            
+            # Log before parsing steps
+            steps_data_raw = tc_data.get("steps", [])
+            steps_count = len(steps_data_raw)
+            logger.info(f"📋 Processing test case {idx + 1}: {tc_data.get('name', 'Unnamed')} ({steps_count} step(s))")
+            
+            if steps_data_raw:
+                first_step_raw = steps_data_raw[0]
+                suggested_selectors = first_step_raw.get("suggested_selectors")
+                if suggested_selectors is not None:
+                    # Handle case where suggested_selectors might be None or empty list
+                    if isinstance(suggested_selectors, list) and len(suggested_selectors) > 0:
+                        logger.info(f"   ✅ First step has {len(suggested_selectors)} suggested selector(s) in raw data")
+                    elif isinstance(suggested_selectors, list):
+                        logger.warning("   ⚠️  First step has suggested_selectors but it's an empty list in raw data")
+                    else:
+                        logger.warning(f"   ⚠️  First step has suggested_selectors but it's not a list in raw data (type: {type(suggested_selectors)})")
+                else:
+                    logger.warning(f"   ⚠️  First step does not have suggested_selectors in raw data (keys: {list(first_step_raw.keys())})")
             
             steps = self._parse_test_steps_with_selectors(tc_data.get("steps", []))
             
@@ -300,9 +364,19 @@ Example format:
             # Parse suggested selectors
             suggested_selectors = None
             if step_data.get("suggested_selectors"):
+                raw_selectors = step_data.get("suggested_selectors", [])
+                logger.info(f"🎯 Parsing Claude's suggested selectors for {step_id} (action: {action_str}): {len(raw_selectors)} selector(s)")
+                for idx, sel in enumerate(raw_selectors, 1):
+                    sel_type = sel.get('type', 'unknown')
+                    sel_value = sel.get('value', '')
+                    sel_stability = sel.get('stability_score', 0)
+                    logger.info(f"   {idx}. {sel_type} = \"{sel_value}\" (stability: {sel_stability})")
+                
                 suggested_selectors = [
                     ElementSelector(**sel) for sel in step_data["suggested_selectors"]
                 ]
+            else:
+                logger.warning(f"⚠️  No suggested_selectors found for {step_id} (action: {action_str}). Available keys: {list(step_data.keys())}")
             
             test_step = TestStep(
                 id=step_id,
@@ -313,6 +387,13 @@ Example format:
                 description=step_data.get("description", ""),
                 suggested_selectors=suggested_selectors
             )
+            
+            # Log TestStep creation with suggested_selectors status
+            if suggested_selectors:
+                logger.info(f"✅ TestStep {step_id} created with {len(suggested_selectors)} suggested selector(s) attached")
+            else:
+                logger.info(f"ℹ️  TestStep {step_id} created without suggested selectors")
+            
             test_steps.append(test_step)
         
         return test_steps

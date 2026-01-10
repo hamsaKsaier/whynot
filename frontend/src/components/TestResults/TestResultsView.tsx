@@ -1,18 +1,20 @@
 import React from 'react';
 import { Card } from '../common/Card';
-import { FiCheckCircle, FiXCircle, FiClock, FiImage } from 'react-icons/fi';
-import type { ExecutionResult, TestCase } from '../../types';
+import { FiCheckCircle, FiXCircle, FiClock, FiImage, FiEdit } from 'react-icons/fi';
+import type { ExecutionResult, TestCase, TestStep } from '../../types';
 
 interface TestResultsViewProps {
   testCase: TestCase | null;
   executionResult: ExecutionResult | null;
   onViewScreenshots: () => void;
+  onStepFix?: (testCase: TestCase, stepIndex: number, step: TestStep) => void;
 }
 
 export const TestResultsView: React.FC<TestResultsViewProps> = ({
   testCase,
   executionResult,
   onViewScreenshots,
+  onStepFix,
 }) => {
   if (!executionResult) {
     return null;
@@ -162,6 +164,22 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                         </div>
                       )}
                     </div>
+                    {/* Fix/Edit Icon */}
+                    {testCase && correspondingStep && onStepFix && (
+                      <div className="flex-shrink-0 ml-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStepFix(testCase, index, correspondingStep);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Fix or modify this step"
+                          aria-label="Fix or modify this step"
+                        >
+                          <FiEdit className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -180,6 +198,13 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
     </Card>
   );
 };
+
+
+
+
+
+
+
 
 
 
