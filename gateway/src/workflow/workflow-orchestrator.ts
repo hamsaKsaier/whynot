@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
-import { TestCase, ExecutionResult, UserStory } from '../../shared/types';
+import { TestCase, ExecutionResult, UserStory, ActionType } from '../../shared/types';
+import type { PrerequisiteStep } from '../../shared/utils/create-edit-flow';
 import { retryWithBackoff } from '../../shared/utils/retry';
 import { CircuitBreaker } from '../../shared/utils/circuit-breaker';
 import { createLogger } from '../../shared/logger/logger';
@@ -31,7 +32,7 @@ export class WorkflowOrchestrator {
   /**
    * Capture page content (HTML + screenshot) before test generation
    */
-  async capturePageContent(websiteUrl: string): Promise<{
+  async capturePageContent(websiteUrl: string, prerequisiteSteps?: PrerequisiteStep[]): Promise<{
     html: string;
     screenshot_base64: string;
     url: string;
@@ -63,7 +64,7 @@ export class WorkflowOrchestrator {
             });
             return axios.post(
               `${this.testExecutorUrl}/api/capture-page`,
-              { website_url: websiteUrl },
+              { website_url: websiteUrl, prerequisite_steps: prerequisiteSteps ?? [] },
               {
                 headers: { 'Content-Type': 'application/json' },
                 timeout: captureTimeout
@@ -216,14 +217,21 @@ export class WorkflowOrchestrator {
       throw new Error('No test cases generated from user story');
     }
 
-    // For POC, use the first test case
+    // Use the first (highest priority) test case for execution
+    // All test cases are already prioritized by the AI service
     const testCase = testCases[0];
-    console.log(`   ✅ Generated ${testCases.length} test case(s)`);
+    console.log(`   ✅ Generated ${testCases.length} test case(s) (prioritized)`);
     console.log(`   📋 Selected test case: "${testCase.name}"`);
+    if (testCase.scenario_type) {
+      console.log(`   🏷️  Scenario: ${testCase.scenario_type} (risk: ${testCase.risk_level || 'unknown'}, priority: ${testCase.priority_score || 0})`);
+    }
     console.log(`   📊 Test steps: ${testCase.steps.length}\n`);
     logger.info('Generated test case', {
       testCaseId: testCase.id,
       name: testCase.name,
+      scenarioType: testCase.scenario_type,
+      riskLevel: testCase.risk_level,
+      priorityScore: testCase.priority_score,
       stepsCount: testCase.steps.length
     });
 
@@ -261,7 +269,10 @@ export class WorkflowOrchestrator {
    * Generate test cases with automatic page content capture
    * Attempts to capture page content first, then generates tests with context if successful
    */
-  async generateTestCasesWithPageCapture(userStory: UserStory): Promise<TestCase[]> {
+  async generateTestCasesWithPageCapture(userStory: UserStory, prerequisiteSteps?: PrerequisiteStep[], quickMode?: boolean): Promise<TestCase[]> {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'workflow-orchestrator.ts:generateTestCasesWithPageCapture', message: 'QuickMode received in orchestrator', data: { quickMode, quickModeType: typeof quickMode, quickModeUndefined: quickMode === undefined }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
+    // #endregion
     logger.info('Generating test cases with page capture', {
       websiteUrl: userStory.website_url
     });
@@ -273,7 +284,7 @@ export class WorkflowOrchestrator {
       logger.info('Attempting to capture page content', {
         websiteUrl: userStory.website_url
       });
-      pageContent = await this.capturePageContent(userStory.website_url);
+      pageContent = await this.capturePageContent(userStory.website_url, prerequisiteSteps);
       logger.info('Page content captured successfully', {
         url: pageContent.url,
         htmlLength: pageContent.html.length,
@@ -299,18 +310,35 @@ export class WorkflowOrchestrator {
 
     // Generate test cases with or without page context
     if (pageContent) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'workflow-orchestrator.ts:pageContent-branch', message: 'Calling generateTestCasesWithPageContext', data: { quickMode, hasPageContent: !!pageContent }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D2' }) }).catch(() => { });
+      // #endregion
       try {
-        return await this.generateTestCasesWithPageContext(userStory, pageContent);
+        return await this.generateTestCasesWithPageContext(userStory, pageContent, prerequisiteSteps, quickMode);
       } catch (error: any) {
-        logger.error('Failed to generate tests with page context, falling back', error, {
+        // CRITICAL FIX: Do NOT make expensive fallback call if:
+        // 1. Timeout occurred (already spent time/money)
+        // 2. Parsing error (API succeeded but format wrong)
+        // Only retry for truly recoverable temporary errors
+
+        if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+          logger.error('Request timed out - NOT making expensive fallback call to avoid double cost', {
+            websiteUrl: userStory.website_url,
+            error: error.message
+          });
+          throw error; // Re-throw to fail fast, don't retry
+        }
+
+        logger.error('Failed to generate tests with page context', error, {
           websiteUrl: userStory.website_url
         });
-        // Fallback to method without page context
-        return await this.generateTestCases(userStory);
+        // Only fall back for truly recoverable errors (not timeouts, not parsing errors)
+        // But even then, be cautious - this is expensive
+        throw error; // Don't automatically retry - let the caller decide
       }
     } else {
-      logger.info('Generating test cases without page context (fallback mode)');
-      return await this.generateTestCases(userStory);
+      logger.info('Generating test cases without page context (no page content available)');
+      return await this.generateTestCases(userStory, quickMode);
     }
   }
 
@@ -319,10 +347,16 @@ export class WorkflowOrchestrator {
    */
   async generateTestCasesWithPageContext(
     userStory: UserStory,
-    pageContent: { html: string; screenshot_base64: string; url: string }
+    pageContent: { html: string; screenshot_base64: string; url: string },
+    prerequisiteSteps?: PrerequisiteStep[],
+    quickMode?: boolean
   ): Promise<TestCase[]> {
     try {
       console.log(`   🤖 Using Claude Sonnet 4.5 with page context (HTML + Screenshot)`);
+      // #region agent log
+      const aiPayload = { ...userStory, screenshot_base64: '[REDACTED]', html: '[REDACTED]', quick_mode: quickMode ?? false };
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'workflow-orchestrator.ts:generateTestCasesWithPageContext', message: 'Payload being sent to AI service', data: { quick_mode_in_payload: quickMode ?? false, quickMode, aiPayloadKeys: Object.keys(aiPayload) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D3' }) }).catch(() => { });
+      // #endregion
       const response = await this.aiServiceCircuitBreaker.execute(() =>
         retryWithBackoff(
           () => axios.post(
@@ -330,11 +364,12 @@ export class WorkflowOrchestrator {
             {
               ...userStory,
               screenshot_base64: pageContent.screenshot_base64,
-              html: pageContent.html
+              html: pageContent.html,
+              quick_mode: quickMode ?? false
             },
             {
               headers: { 'Content-Type': 'application/json' },
-              timeout: 120000 // 120 second timeout for LLM calls with vision
+              timeout: 300000 // 300 second (5 min) timeout for LLM calls with vision and multi-scenario generation
             }
           ),
           {
@@ -353,13 +388,45 @@ export class WorkflowOrchestrator {
           }
         )
       );
-      logger.debug('Test cases generated successfully with page context', { count: response.data?.length || 0 });
+      // Handle new response format with validation
+      const responseData = response.data;
+      let testCases: TestCase[] = [];
+      let validationSummary: any = null;
+      let validationResults: any[] = [];
+
+      if (responseData.test_cases) {
+        // New format with validation
+        // CRITICAL FIX: Ensure test_cases is actually an array before assigning
+        if (Array.isArray(responseData.test_cases)) {
+          testCases = responseData.test_cases;
+        } else {
+          logger.error('test_cases is not an array in AI service response', {
+            type: typeof responseData.test_cases,
+            value: JSON.stringify(responseData.test_cases).substring(0, 500)
+          });
+          testCases = [];
+        }
+        validationSummary = responseData.validation_summary;
+        validationResults = Array.isArray(responseData.validation_results) ? responseData.validation_results : [];
+        logger.debug('Test cases generated with validation', {
+          count: testCases.length,
+          valid: validationSummary?.valid || 0,
+          invalid: validationSummary?.invalid || 0
+        });
+      } else if (Array.isArray(responseData)) {
+        // Legacy format (array of test cases)
+        testCases = responseData;
+        logger.debug('Test cases generated successfully with page context', { count: testCases.length });
+      } else {
+        logger.warn('Unexpected response format from AI service', { responseKeys: Object.keys(responseData || {}) });
+        testCases = [];
+      }
 
       // Log raw response from AI service for debugging
-      if (response.data && response.data.length > 0) {
-        const firstCase = response.data[0];
+      if (testCases.length > 0) {
+        const firstCase = testCases[0];
         logger.debug('Raw response from AI service', {
-          responseKeys: Object.keys(firstCase || {}),
+          responseKeys: Object.keys(responseData || {}),
           firstStepKeys: firstCase?.steps?.[0] ? Object.keys(firstCase.steps[0]) : [],
           firstStepHasSuggestedSelectors: !!firstCase?.steps?.[0]?.suggested_selectors,
           firstStepSuggestedSelectorsCount: firstCase?.steps?.[0]?.suggested_selectors?.length || 0
@@ -367,7 +434,14 @@ export class WorkflowOrchestrator {
       }
 
       // Log suggested_selectors status for each step after receiving from AI service
-      const testCases: TestCase[] = response.data || [];
+      // CRITICAL FIX: Ensure testCases is an array before calling forEach
+      if (!Array.isArray(testCases)) {
+        logger.error('testCases is not an array before forEach call', {
+          type: typeof testCases,
+          value: JSON.stringify(testCases).substring(0, 500)
+        });
+        testCases = [];
+      }
       testCases.forEach((testCase, tcIdx) => {
         logger.info(`Test case ${tcIdx + 1} received from AI service`, {
           testCaseId: testCase.id,
@@ -387,33 +461,89 @@ export class WorkflowOrchestrator {
         });
       });
 
+      // Prepend prerequisite steps to each test case and renumber
+      if (Array.isArray(prerequisiteSteps) && prerequisiteSteps.length > 0) {
+        testCases = testCases.map((tc) => {
+          const prereqAsTestSteps = prerequisiteSteps.map((p, i) => ({
+            id: 'step-prereq-' + (i + 1),
+            action: p.action === 'type' ? ActionType.TYPE : ActionType.CLICK,
+            target: { text: p.selector },
+            value: p.value,
+            description: p.action === 'click' ? 'Open form: ' + p.selector : 'Fill: ' + p.selector,
+            suggested_selectors: [{ type: 'text' as const, value: p.selector, stability_score: 0.6 }]
+          }));
+          const combined = [...prereqAsTestSteps, ...(tc.steps || [])];
+          const renumbered = combined.map((s, idx) => ({
+            ...s,
+            id: 'step-' + String(idx + 1).padStart(3, '0')
+          }));
+          return { ...tc, steps: renumbered };
+        });
+      }
+
       return testCases;
     } catch (error: any) {
       const axiosError = error as AxiosError;
       logger.error('Failed to generate test cases with page context', error, {
         websiteUrl: userStory.website_url,
-        statusCode: axiosError.response?.status
+        statusCode: axiosError.response?.status,
+        errorCode: axiosError.code
       });
-      // Fallback to old method
-      logger.info('Falling back to test generation without page context');
-      return this.generateTestCases(userStory);
+
+      // CRITICAL FIX: Do NOT make expensive fallback calls for:
+      // 1. Timeouts (we've already spent time/money)
+      // 2. Parsing errors (API succeeded but response format is wrong)
+      // Only retry for recoverable errors (temporary service unavailability)
+
+      // Check if it's a timeout - don't retry if we already timed out
+      if (axiosError.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        logger.error('Request timed out - NOT making expensive fallback call', {
+          websiteUrl: userStory.website_url,
+          timeoutMs: axiosError.config?.timeout
+        });
+        throw new Error(`Test generation timed out after ${axiosError.config?.timeout || 300000}ms. The AI service is taking too long to generate test cases.`);
+      }
+
+      // Check if it's a parsing error (successful response but wrong format)
+      // If response exists and is 200, it means API succeeded but parsing failed
+      if (axiosError.response?.status === 200) {
+        logger.error('API call succeeded but parsing failed - NOT making expensive fallback call', {
+          websiteUrl: userStory.website_url,
+          responseData: JSON.stringify(axiosError.response?.data).substring(0, 500)
+        });
+        throw new Error('AI service returned invalid response format. Cannot parse test cases.');
+      }
+
+      // Only retry for recoverable errors (5xx errors, network errors that might be temporary)
+      // But NOT for timeouts or parsing errors
+      if (axiosError.response?.status && axiosError.response.status >= 500 && axiosError.response.status < 600) {
+        // Temporary server error - might be recoverable, but still expensive to retry
+        logger.warn('Server error received - considering fallback (but this is expensive)', {
+          statusCode: axiosError.response.status
+        });
+        // Still expensive, but at least it's a different type of error
+        throw error; // Let the outer catch handle it if needed, but don't automatically retry
+      }
+
+      // For other errors, throw instead of making expensive fallback
+      throw error;
     }
   }
 
   /**
    * Generate test cases using AI service (without page context - backward compatibility)
    */
-  async generateTestCases(userStory: UserStory): Promise<TestCase[]> {
+  async generateTestCases(userStory: UserStory, quickMode?: boolean): Promise<TestCase[]> {
     try {
       console.log(`   🤖 Using Claude Sonnet 4.5 (without page context)`);
       const response = await this.aiServiceCircuitBreaker.execute(() =>
         retryWithBackoff(
           () => axios.post(
             `${this.aiServiceUrl}/api/generate-tests`,
-            userStory,
+            { ...userStory, quick_mode: quickMode ?? false },
             {
               headers: { 'Content-Type': 'application/json' },
-              timeout: 60000 // 60 second timeout for LLM calls
+              timeout: 180000 // 180 second (3 min) timeout for LLM calls without page context (multi-scenario can take time)
             }
           ),
           {
@@ -433,8 +563,30 @@ export class WorkflowOrchestrator {
           }
         )
       );
-      logger.debug('Test cases generated successfully', { count: response.data?.length || 0 });
-      return response.data;
+      // Handle new response format with validation (same as with page context)
+      const responseData = response.data;
+
+      let testCases: TestCase[] = [];
+      if (responseData.test_cases) {
+        // New format with validation
+        if (Array.isArray(responseData.test_cases)) {
+          testCases = responseData.test_cases;
+        } else {
+          logger.error('test_cases is not an array in generateTestCases response', {
+            type: typeof responseData.test_cases
+          });
+          testCases = [];
+        }
+      } else if (Array.isArray(responseData)) {
+        // Legacy format (array of test cases)
+        testCases = responseData;
+      } else {
+        logger.warn('Unexpected response format in generateTestCases', { responseKeys: Object.keys(responseData || {}) });
+        testCases = [];
+      }
+
+      logger.debug('Test cases generated successfully', { count: testCases.length });
+      return testCases;
     } catch (error: any) {
       const axiosError = error as AxiosError;
       logger.error('Failed to generate test cases', error, {

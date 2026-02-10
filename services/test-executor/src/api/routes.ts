@@ -288,13 +288,18 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
 
 router.post('/api/capture-page', async (req: Request, res: Response) => {
   try {
-    const { website_url } = req.body;
+    // Accept both 'url' and 'website_url' for backward compatibility (Phase 1)
+    const { website_url, url, prerequisite_steps } = req.body;
+    const targetUrl = url || website_url;
 
-    if (!website_url) {
-      return res.status(400).json({ error: 'website_url is required' });
+    if (!targetUrl) {
+      return res.status(400).json({ error: 'url or website_url is required' });
     }
 
-    logger.info('Capturing page content', { website_url });
+    const steps: Array<{ action: string; selector: string; value?: string }> =
+      Array.isArray(prerequisite_steps) ? prerequisite_steps : [];
+
+    logger.info('Capturing page content', { targetUrl, prerequisiteStepsCount: steps.length });
 
     // Create a temporary browser controller for page capture
     const screenshotsDir = process.env.SCREENSHOTS_DIR || './screenshots';
@@ -305,10 +310,31 @@ router.post('/api/capture-page', async (req: Request, res: Response) => {
       await browserController.initialize(true);
 
       // Navigate to website
-      await browserController.navigate(website_url);
+      await browserController.navigate(targetUrl);
 
       // Wait a bit for page to load
       await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Run prerequisite steps to open the create/edit dialog
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        try {
+          if (step.action === 'click') {
+            await browserController.click(step.selector);
+          } else if (step.action === 'type') {
+            await browserController.type(step.selector, step.value ?? '');
+          }
+          await new Promise((r) => setTimeout(r, 400));
+        } catch (stepErr: any) {
+          logger.warn('Prerequisite step failed', { index: i, step, error: stepErr.message });
+          throw new Error(`Prerequisite step ${i + 1} failed: ${stepErr.message}`);
+        }
+      }
+
+      // If we ran steps, wait for dialog/form to be visible
+      if (steps.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
 
       // Get HTML
       const html = await browserController.getPageHTML();
@@ -319,9 +345,10 @@ router.post('/api/capture-page', async (req: Request, res: Response) => {
       const screenshotBuffer = fs.readFileSync(screenshotPath);
       const screenshotBase64 = screenshotBuffer.toString('base64');
 
-      // Get current URL
+      // Get current URL and title
       const page = browserController.getPage();
-      const url = page ? page.url() : website_url;
+      const currentUrl = page ? page.url() : targetUrl;
+      const pageTitle = page ? await page.title() : '';
 
       // Clean up screenshot file
       try {
@@ -333,12 +360,15 @@ router.post('/api/capture-page', async (req: Request, res: Response) => {
       // Close browser
       await browserController.close();
 
-      logger.info('Page content captured successfully', { url, htmlLength: html.length });
+      logger.info('Page content captured successfully', { url: currentUrl, title: pageTitle, htmlLength: html.length });
 
+      // Return screenshot (not screenshot_base64) for compatibility with browser-tools (Phase 1)
       res.json({
         html,
-        screenshot_base64: screenshotBase64,
-        url
+        screenshot: screenshotBase64,
+        screenshot_base64: screenshotBase64, // Keep for backward compatibility
+        url: currentUrl,
+        title: pageTitle
       });
     } catch (error: any) {
       // Ensure browser is closed on error
@@ -350,7 +380,7 @@ router.post('/api/capture-page', async (req: Request, res: Response) => {
       throw error;
     }
   } catch (error: any) {
-    logger.error('Failed to capture page content', error, { website_url: req.body?.website_url });
+    logger.error('Failed to capture page content', error, { url: req.body?.url || req.body?.website_url });
     res.status(500).json({ error: error.message || 'Failed to capture page content' });
   }
 });
@@ -365,6 +395,52 @@ router.post('/api/detect-elements', async (req: Request, res: Response) => {
     res.json({ selectors });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Element detection failed' });
+  }
+});
+
+// Stop a running execution
+router.post('/api/executions/:executionId/stop', async (req: Request, res: Response) => {
+  try {
+    const { executionId } = req.params;
+
+    if (!executionId || !validateUUID(executionId)) {
+      return res.status(400).json({ error: 'Invalid execution ID' });
+    }
+
+    // Check if execution exists and is running
+    const execution = await executionRepository.findById(executionId);
+    if (!execution) {
+      return res.status(404).json({ error: 'Execution not found' });
+    }
+
+    if (execution.status !== 'running') {
+      return res.status(400).json({
+        error: `Execution is not running (current status: ${execution.status})`
+      });
+    }
+
+    // Stop the execution
+    await testRunner.stopExecution(executionId);
+
+    // Update execution status in database
+    await executionRepository.updateStatus(
+      executionId,
+      'cancelled',
+      new Date(),
+      'Test execution was cancelled by user'
+    );
+
+    logger.info('Execution stopped', { executionId });
+    res.json({
+      success: true,
+      message: 'Execution stopped successfully',
+      execution_id: executionId
+    });
+  } catch (error: any) {
+    logger.error('Failed to stop execution', error, {
+      executionId: req.params.executionId
+    });
+    res.status(500).json({ error: error.message || 'Failed to stop execution' });
   }
 });
 

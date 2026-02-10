@@ -17,7 +17,10 @@ import { ProjectRepository } from '../../shared/database/repositories/project-re
 import { UserStoryRepository } from '../../shared/database/repositories/user-story-repository';
 import { FolderRepository } from '../../shared/database/repositories/folder-repository';
 import { SetupHookRepository } from '../../shared/database/repositories/setup-hook-repository';
+import { VisualRegressionRepository } from '../../shared/database/repositories/visual-regression-repository';
 import type { TestCaseEntity } from '../../shared/database/repositories/test-case-repository';
+import type { ExecutionEntity, StepResultEntity } from '../../shared/database/repositories/execution-repository';
+import { ExecutionResult, StepResult } from '../../shared/types';
 import { query } from '../../shared/database/connection';
 
 dotenv.config();
@@ -38,6 +41,63 @@ function transformTestCaseEntity(entity: TestCaseEntity): TestCase {
     steps: steps,
     metadata: metadata
   };
+}
+
+/**
+ * Transform database entity to frontend ExecutionResult format
+ */
+function transformExecutionEntity(entity: ExecutionEntity, steps: StepResult[] = []): ExecutionResult {
+  return {
+    execution_id: entity.id,
+    test_case_id: entity.test_case_id,
+    status: entity.status as 'running' | 'completed' | 'failed' | 'timeout' | 'paused',
+    steps: steps,
+    total_duration_ms: entity.total_duration_ms ?? 0,
+    screenshots: entity.screenshots || [],
+    error: entity.error || undefined,
+    started_at: entity.started_at.toISOString(),
+    completed_at: entity.completed_at ? entity.completed_at.toISOString() : undefined
+  };
+}
+
+/**
+ * Transform step result entity to StepResult format
+ */
+function transformStepResultEntity(entity: StepResultEntity): StepResult {
+  const stepResult: StepResult = {
+    step_id: entity.step_id,
+    success: entity.success,
+    execution_time_ms: entity.execution_time_ms,
+    error: entity.error || undefined,
+    screenshot_path: entity.screenshot_path || undefined,
+    element_found: entity.element_found ?? undefined
+  };
+
+  // Parse JSONB selector_used field
+  if (entity.selector_used) {
+    if (typeof entity.selector_used === 'string') {
+      try {
+        stepResult.selector_used = JSON.parse(entity.selector_used);
+      } catch {
+        // If parsing fails, leave undefined
+      }
+    } else {
+      stepResult.selector_used = entity.selector_used;
+    }
+  }
+
+  return stepResult;
+}
+
+/**
+ * Transform execution with steps to ExecutionResult format
+ */
+function transformExecutionWithSteps(
+  execution: ExecutionEntity,
+  steps: StepResultEntity[]
+): ExecutionResult {
+  const transformedSteps = steps.map(transformStepResultEntity);
+  return transformExecutionEntity(execution, transformedSteps);
 }
 
 const app = express();
@@ -92,6 +152,7 @@ const projectRepository = new ProjectRepository();
 const userStoryRepository = new UserStoryRepository();
 const folderRepository = new FolderRepository();
 const setupHookRepository = new SetupHookRepository();
+const visualRegressionRepository = new VisualRegressionRepository();
 
 // Health check with detailed status
 app.get('/health', async (req, res) => {
@@ -204,7 +265,10 @@ app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), a
 
 // Generate tests only (without execution) (with rate limiting)
 app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.generateTests), asyncHandler(async (req, res) => {
-  const { website_url, user_story, additional_context, project_id, user_story_id } = req.body;
+  const { website_url, user_story, additional_context, project_id, user_story_id, prerequisite_steps, quick_mode } = req.body;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'gateway/main.ts:/api/generate-tests', message: 'Request body quick_mode received', data: { quick_mode_raw: quick_mode, quick_mode_type: typeof quick_mode, req_body_keys: Object.keys(req.body) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
+  // #endregion
 
   let sanitizedUrl: string;
   let sanitizedStory: string;
@@ -244,11 +308,18 @@ app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.gene
     websiteUrl: sanitizedUrl,
     hasAdditionalContext: !!sanitizedContext,
     projectId: project_id,
-    userStoryId: linkedUserStoryId
+    userStoryId: linkedUserStoryId,
+    quickMode: quick_mode
   });
 
   // Use method that captures page content first, then generates tests
-  const testCases = await orchestrator.generateTestCasesWithPageCapture(userStory);
+  // Note: generateTestCasesWithPageCapture returns TestCase[] (array)
+  // Validation info is handled internally by the orchestrator
+  const quickMode = quick_mode === true || quick_mode === 'true';
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'gateway/main.ts:before-orchestrator', message: 'QuickMode value before orchestrator call', data: { quickMode, quick_mode_raw: quick_mode, quick_mode_comparison_true: quick_mode === true, quick_mode_comparison_string: quick_mode === 'true' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C2' }) }).catch(() => { });
+  // #endregion
+  const testCases: TestCase[] = await orchestrator.generateTestCasesWithPageCapture(userStory, prerequisite_steps, quickMode);
 
   // Persist generated test cases with user_story_id link
   try {
@@ -273,7 +344,11 @@ app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.gene
     // Don't fail the request if DB persistence fails
   }
 
-  res.json({ test_cases: testCases, user_story_id: linkedUserStoryId });
+  // Return test cases (validation info is included in each test case's validation_result field if available)
+  res.json({
+    test_cases: testCases,
+    user_story_id: linkedUserStoryId
+  });
 }));
 
 // Execute a test case (test case already generated) (with stricter rate limiting)
@@ -363,7 +438,8 @@ app.get('/api/executions/:id', asyncHandler(async (req, res) => {
   if (!result) {
     throw createError('Execution not found', 404, 'NOT_FOUND');
   }
-  res.json(result);
+  const transformed = transformExecutionWithSteps(result.execution, result.steps);
+  res.json(transformed);
 }));
 
 // ==================== PROJECT ENDPOINTS ====================
@@ -669,7 +745,7 @@ app.delete('/api/setup-hooks/:id', asyncHandler(async (req, res) => {
 // Get setup hooks for a test case (includes global, suite, and test_case level)
 app.get('/api/test-cases/:testCaseId/setup-hooks', asyncHandler(async (req, res) => {
   const testCaseId = req.params.testCaseId;
-  
+
   // Verify test case exists
   const testCase = await testCaseRepository.findById(testCaseId);
   if (!testCase) {
@@ -803,8 +879,27 @@ app.get('/api/test-cases', asyncHandler(async (req, res) => {
 app.get('/api/executions', asyncHandler(async (req, res) => {
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-  const executions = await executionRepository.list(offset, limit);
-  res.json({ executions, offset, limit });
+  const status = req.query.status as string | undefined;
+  const search = req.query.search as string | undefined;
+
+  const filters = (status || search) ? {
+    status: status as 'completed' | 'failed' | 'running' | 'timeout' | 'paused' | undefined,
+    search: search
+  } : undefined;
+
+  const [executions, total] = await Promise.all([
+    executionRepository.list(offset, limit, filters),
+    executionRepository.count(filters)
+  ]);
+
+  const transformedExecutions = executions.map(entity => transformExecutionEntity(entity));
+
+  res.json({
+    executions: transformedExecutions,
+    total,
+    offset,
+    limit
+  });
 }));
 
 // Update test case
@@ -1181,6 +1276,352 @@ app.post('/api/chat/modify-test', asyncHandler(async (req, res) => {
   }
 }));
 
+// ==================== VISUAL REGRESSION ENDPOINTS ====================
+
+// Get baselines for a test case
+app.get('/api/test-cases/:id/baselines', asyncHandler(async (req, res) => {
+  const testCaseId = req.params.id;
+
+  // Verify test case exists
+  const testCase = await testCaseRepository.findById(testCaseId);
+  if (!testCase) {
+    throw createError('Test case not found', 404, 'NOT_FOUND');
+  }
+
+  const baselines = await visualRegressionRepository.getBaselinesByTestCase(testCaseId);
+  res.json({ baselines });
+}));
+
+// Get baseline history for a test case and step
+app.get('/api/test-cases/:testCaseId/baselines/:stepId', asyncHandler(async (req, res) => {
+  const testCaseId = req.params.testCaseId;
+  const stepId = req.params.stepId;
+
+  // Verify test case exists
+  const testCase = await testCaseRepository.findById(testCaseId);
+  if (!testCase) {
+    throw createError('Test case not found', 404, 'NOT_FOUND');
+  }
+
+  const baselines = await visualRegressionRepository.getBaselineHistory(testCaseId, stepId);
+  res.json({ baselines });
+}));
+
+// Create/update baseline (manual)
+app.post('/api/test-cases/:testCaseId/baselines', asyncHandler(async (req, res) => {
+  const testCaseId = req.params.testCaseId;
+  const { step_id, screenshot_path, execution_id } = req.body;
+
+  if (!step_id || !screenshot_path) {
+    throw createError('step_id and screenshot_path are required', 400, 'VALIDATION_ERROR');
+  }
+
+  // Verify test case exists
+  const testCase = await testCaseRepository.findById(testCaseId);
+  if (!testCase) {
+    throw createError('Test case not found', 404, 'NOT_FOUND');
+  }
+
+  // Calculate screenshot hash
+  const fs = require('fs');
+  const crypto = require('crypto');
+  if (!fs.existsSync(screenshot_path)) {
+    throw createError('Screenshot file not found', 404, 'NOT_FOUND');
+  }
+  const screenshotBuffer = fs.readFileSync(screenshot_path);
+  const screenshotHash = crypto.createHash('sha256').update(screenshotBuffer).digest('hex');
+
+  // Create baseline
+  const baseline = await visualRegressionRepository.createBaseline({
+    test_case_id: testCaseId,
+    step_id,
+    screenshot_path,
+    screenshot_hash: screenshotHash,
+    execution_id: execution_id || null,
+    is_locked: false,
+    created_by: 'system'
+  });
+
+  res.status(201).json({ success: true, baseline });
+}));
+
+// Lock/unlock baseline
+app.put('/api/test-cases/:testCaseId/baselines/:baselineId/lock', asyncHandler(async (req, res) => {
+  const baselineId = req.params.baselineId;
+  const { is_locked } = req.body;
+
+  if (typeof is_locked !== 'boolean') {
+    throw createError('is_locked must be a boolean', 400, 'VALIDATION_ERROR');
+  }
+
+  const success = await visualRegressionRepository.setBaselineLock(baselineId, is_locked);
+  if (!success) {
+    throw createError('Baseline not found', 404, 'NOT_FOUND');
+  }
+
+  res.json({ success: true, message: `Baseline ${is_locked ? 'locked' : 'unlocked'}` });
+}));
+
+// Get visual comparisons for an execution
+app.get('/api/executions/:id/visual-comparisons', asyncHandler(async (req, res) => {
+  const executionId = req.params.id;
+
+  // Verify execution exists
+  const execution = await executionRepository.findById(executionId);
+  if (!execution) {
+    throw createError('Execution not found', 404, 'NOT_FOUND');
+  }
+
+  const comparisons = await visualRegressionRepository.getComparisonsByExecution(executionId);
+  res.json({ comparisons });
+}));
+
+// Get all visual regressions (filtered, paginated)
+app.get('/api/visual-regressions', asyncHandler(async (req, res) => {
+  const { ignored, severity, limit = 50, offset = 0 } = req.query;
+
+  const options: any = {
+    limit: parseInt(limit as string, 10),
+    offset: parseInt(offset as string, 10)
+  };
+
+  if (ignored !== undefined) {
+    options.ignored = ignored === 'true';
+  }
+  if (severity) {
+    options.severity = severity as 'low' | 'medium' | 'high' | 'critical';
+  }
+
+  const regressions = await visualRegressionRepository.getRegressions(options);
+  res.json({ regressions });
+}));
+
+// Ignore/unignore a visual regression
+app.put('/api/visual-regressions/:id/ignore', asyncHandler(async (req, res) => {
+  const comparisonId = req.params.id;
+  const { ignored } = req.body;
+
+  if (typeof ignored !== 'boolean') {
+    throw createError('ignored must be a boolean', 400, 'VALIDATION_ERROR');
+  }
+
+  const comparison = await visualRegressionRepository.updateComparison(comparisonId, { ignored });
+  if (!comparison) {
+    throw createError('Visual comparison not found', 404, 'NOT_FOUND');
+  }
+
+  res.json({ success: true, comparison });
+}));
+
+// ==================== QA LOOP ENDPOINTS ====================
+// Proxy to qa-loop-executor service
+
+const qaLoopExecutorUrl = process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+
+// Start a new QA Loop session
+app.post('/api/qa-loop/sessions', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.post(
+      `${qaLoopExecutorUrl}/api/sessions`,
+      req.body,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 30000
+      }
+    );
+    res.status(201).json(response.data);
+  } catch (error: any) {
+    logger.error('Failed to start QA Loop session', { error: error.message });
+    if (error.response) {
+      res.status(error.response.status).json(error.response.data);
+    } else {
+      throw createError('Failed to start QA Loop session', 500, 'INTERNAL_ERROR');
+    }
+  }
+}));
+
+// List QA Loop sessions
+app.get('/api/qa-loop/sessions', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions`,
+      {
+        params: req.query,
+        timeout: 10000
+      }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    const details = error.response?.data?.details || error.response?.data?.error || error.message;
+    logger.error('Failed to list QA Loop sessions', { error: error.message, details });
+    if (error.response?.status && error.response.status !== 500) {
+      res.status(error.response.status).json(error.response.data);
+      return;
+    }
+    throw createError(
+      details ? `Failed to list QA Loop sessions: ${details}` : 'Failed to list QA Loop sessions',
+      500,
+      'INTERNAL_ERROR'
+    );
+  }
+}));
+
+// Get QA Loop session details
+app.get('/api/qa-loop/sessions/:id', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}`,
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      throw createError('QA Loop session not found', 404, 'NOT_FOUND');
+    }
+    logger.error('Failed to get QA Loop session', { error: error.message });
+    throw createError('Failed to get QA Loop session', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Pause QA Loop session
+app.post('/api/qa-loop/sessions/:id/pause', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.post(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/pause`,
+      {},
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      throw createError('QA Loop session not found or not active', 404, 'NOT_FOUND');
+    }
+    logger.error('Failed to pause QA Loop session', { error: error.message });
+    throw createError('Failed to pause QA Loop session', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Resume QA Loop session
+app.post('/api/qa-loop/sessions/:id/resume', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.post(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/resume`,
+      {},
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      throw createError('QA Loop session not found', 404, 'NOT_FOUND');
+    }
+    logger.error('Failed to resume QA Loop session', { error: error.message });
+    throw createError('Failed to resume QA Loop session', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Stop QA Loop session
+app.post('/api/qa-loop/sessions/:id/stop', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.post(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/stop`,
+      {},
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    logger.error('Failed to stop QA Loop session', { error: error.message });
+    throw createError('Failed to stop QA Loop session', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Run retest for a session
+app.post('/api/qa-loop/sessions/:id/retest', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.post(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/retest`,
+      req.body,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 30000
+      }
+    );
+    res.status(201).json(response.data);
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      throw createError('QA Loop session not found', 404, 'NOT_FOUND');
+    }
+    logger.error('Failed to start retest', { error: error.message });
+    throw createError('Failed to start retest', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Get test cases for a session
+app.get('/api/qa-loop/sessions/:id/test-cases', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/test-cases`,
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    logger.error('Failed to get QA Loop test cases', { error: error.message });
+    throw createError('Failed to get test cases', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Get bugs for a session
+app.get('/api/qa-loop/sessions/:id/bugs', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/bugs`,
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    logger.error('Failed to get QA Loop bugs', { error: error.message });
+    throw createError('Failed to get bugs', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Get explored pages for a session
+app.get('/api/qa-loop/sessions/:id/pages', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/pages`,
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    logger.error('Failed to get QA Loop pages', { error: error.message });
+    throw createError('Failed to get pages', 500, 'INTERNAL_ERROR');
+  }
+}));
+
+// Get test runs for a session
+app.get('/api/qa-loop/sessions/:id/test-runs', asyncHandler(async (req, res) => {
+  try {
+    const axios = require('axios');
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/test-runs`,
+      { timeout: 10000 }
+    );
+    res.json(response.data);
+  } catch (error: any) {
+    logger.error('Failed to get QA Loop test runs', { error: error.message });
+    throw createError('Failed to get test runs', 500, 'INTERNAL_ERROR');
+  }
+}));
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -1194,7 +1635,11 @@ app.get('/', (req, res) => {
       execute_test: 'POST /api/execute-test',
       chat_session: 'POST /api/chat/session',
       chat_message: 'POST /api/chat/message',
-      chat_session_get: 'GET /api/chat/session/:id'
+      chat_session_get: 'GET /api/chat/session/:id',
+      qa_loop_start: 'POST /api/qa-loop/sessions',
+      qa_loop_list: 'GET /api/qa-loop/sessions',
+      qa_loop_details: 'GET /api/qa-loop/sessions/:id',
+      qa_loop_retest: 'POST /api/qa-loop/sessions/:id/retest'
     },
     example_request: {
       url: '/api/run-test',

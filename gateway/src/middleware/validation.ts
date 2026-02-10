@@ -20,7 +20,7 @@ export function validate(schema: z.ZodSchema) {
             const path = Array.isArray(issue.path) ? issue.path.join('.') : String(issue.path || '');
             return `${path}: ${issue.message || 'Validation error'}`;
           });
-          
+
           throw createError(
             `Validation failed: ${errorMessages.join(', ')}`,
             400,
@@ -67,7 +67,7 @@ export function sanitizeText(text: string, maxLength: number = 10000): string {
   if (!text || typeof text !== 'string') {
     throw createError('Text must be a non-empty string', 400, 'VALIDATION_ERROR');
   }
-  
+
   if (text.length > maxLength) {
     throw createError(
       `Text exceeds maximum length of ${maxLength} characters`,
@@ -75,7 +75,7 @@ export function sanitizeText(text: string, maxLength: number = 10000): string {
       'VALIDATION_ERROR'
     );
   }
-  
+
   // Remove null bytes and other control characters (except newlines and tabs)
   return text.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
 }
@@ -116,7 +116,17 @@ export const schemas = {
     user_story: z.string()
       .min(10, 'User story must be at least 10 characters')
       .max(5000, 'User story must not exceed 5000 characters'),
-    additional_context: z.string().max(2000, 'Additional context must not exceed 2000 characters').optional()
+    additional_context: z.string().max(2000, 'Additional context must not exceed 2000 characters').optional(),
+    prerequisite_steps: z.array(
+      z.object({
+        action: z.enum(['click', 'type']),
+        selector: z.string().min(1),
+        value: z.string().optional()
+      })
+    ).optional(),
+    project_id: z.string().uuid().optional(),
+    user_story_id: z.string().uuid().optional(),
+    quick_mode: z.boolean().optional()
   }),
 
   executeTest: z.object({

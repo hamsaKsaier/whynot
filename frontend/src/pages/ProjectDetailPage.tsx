@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  FiArrowLeft,
   FiEdit2,
   FiTrash2,
   FiPlus,
@@ -9,15 +8,21 @@ import {
   FiPlay,
   FiGlobe,
   FiFolder,
+  FiCopy,
 } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { Alert } from '../components/common/Alert';
-import { Spinner } from '../components/common/Spinner';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { Modal, ModalFooter } from '../components/common/Modal';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { EmptyState } from '../components/common/EmptyState';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
+import { QuickActions } from '../components/common/QuickActions';
+import { useClipboard } from '../hooks/useClipboard';
+import { useFormAutoSave } from '../hooks/useFormAutoSave';
 import {
   getProject,
   updateProject,
@@ -48,6 +53,7 @@ const initialUserStoryFormData: UserStoryFormData = {
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { copyToClipboard } = useClipboard();
 
   const [project, setProject] = useState<ProjectWithStats | null>(null);
   const [userStories, setUserStories] = useState<UserStoryWithStats[]>([]);
@@ -70,6 +76,26 @@ export const ProjectDetailPage: React.FC = () => {
   );
   const [userStoryFormErrors, setUserStoryFormErrors] = useState<Partial<UserStoryFormData>>({});
   const [submittingUserStory, setSubmittingUserStory] = useState(false);
+  const [showDraftRestore, setShowDraftRestore] = useState(false);
+
+  // Auto-save user story form data
+  const { loadDraft, clearDraft, hasDraft } = useFormAutoSave(
+    editingUserStory ? `user-story-edit-${editingUserStory.id}` : `user-story-create-${id}`,
+    userStoryFormData,
+    {
+      enabled: isUserStoryModalOpen,
+      onRestore: (data: UserStoryFormData) => {
+        setUserStoryFormData(data);
+      },
+    }
+  );
+
+  // Check for draft when modal opens
+  useEffect(() => {
+    if (isUserStoryModalOpen && hasDraft() && !editingUserStory) {
+      setShowDraftRestore(true);
+    }
+  }, [isUserStoryModalOpen, hasDraft, editingUserStory]);
 
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -152,10 +178,17 @@ export const ProjectDetailPage: React.FC = () => {
 
   const openCreateUserStoryModal = () => {
     setEditingUserStory(null);
-    setUserStoryFormData({
-      ...initialUserStoryFormData,
-      website_url: project?.website_url || '',
-    });
+    // Try to load draft first
+    const draft = loadDraft();
+    if (draft) {
+      setUserStoryFormData(draft);
+      setShowDraftRestore(true);
+    } else {
+      setUserStoryFormData({
+        ...initialUserStoryFormData,
+        website_url: project?.website_url || '',
+      });
+    }
     setUserStoryFormErrors({});
     setIsUserStoryModalOpen(true);
   };
@@ -176,6 +209,7 @@ export const ProjectDetailPage: React.FC = () => {
     setEditingUserStory(null);
     setUserStoryFormData(initialUserStoryFormData);
     setUserStoryFormErrors({});
+    setShowDraftRestore(false);
   };
 
   const validateUserStoryForm = (): boolean => {
@@ -222,6 +256,7 @@ export const ProjectDetailPage: React.FC = () => {
           additional_context: userStoryFormData.additional_context.trim() || undefined,
         });
       }
+      clearDraft(); // Clear draft on successful submission
       closeUserStoryModal();
       fetchProjectData();
     } catch (err: any) {
@@ -258,8 +293,25 @@ export const ProjectDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Spinner size="lg" />
+      <div className="space-y-6">
+        <SkeletonLoader width="w-32" height="h-4" className="mb-4" />
+        <Card>
+          <div className="flex items-start gap-4">
+            <SkeletonLoader width="w-16" height="h-16" circle={true} />
+            <div className="flex-1 space-y-3">
+              <SkeletonLoader width="w-48" height="h-8" />
+              <SkeletonLoader width="w-full" height="h-4" />
+              <SkeletonLoader width="w-64" height="h-4" />
+            </div>
+          </div>
+        </Card>
+        <div className="page-section">
+          <SkeletonLoader width="w-40" height="h-6" className="mb-4" />
+          <div className="space-y-3">
+            <SkeletonLoader width="w-full" height="h-20" />
+            <SkeletonLoader width="w-full" height="h-20" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -278,17 +330,12 @@ export const ProjectDetailPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm">
-        <button
-          onClick={() => navigate('/projects')}
-          className="flex items-center gap-1 text-gray-500 hover:text-gray-700"
-        >
-          <FiArrowLeft className="h-4 w-4" />
-          Projects
-        </button>
-        <span className="text-gray-400">/</span>
-        <span className="text-gray-900 font-medium">{project.name}</span>
-      </div>
+      <Breadcrumbs
+        items={[
+          { label: 'Projects', path: '/projects', icon: <FiFolder className="h-4 w-4" /> },
+          { label: project.name },
+        ]}
+      />
 
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
 
@@ -362,9 +409,9 @@ export const ProjectDetailPage: React.FC = () => {
       </Card>
 
       {/* User Stories Section */}
-      <div>
+      <div className="page-section">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="section-title">
             User Stories ({userStories.length})
           </h2>
           <Button size="sm" onClick={openCreateUserStoryModal}>
@@ -375,24 +422,23 @@ export const ProjectDetailPage: React.FC = () => {
 
         {userStories.length === 0 ? (
           <Card>
-            <div className="text-center py-8">
-              <FiBook className="mx-auto h-10 w-10 text-gray-400" />
-              <h3 className="mt-2 text-md font-medium text-gray-900">No user stories yet</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Add user stories to generate test cases for this project.
-              </p>
-              <div className="mt-4">
+            <EmptyState
+              icon={<FiBook />}
+              title="No user stories yet"
+              description="Add user stories to generate test cases for this project"
+              action={
                 <Button size="sm" onClick={openCreateUserStoryModal}>
                   <FiPlus className="mr-1" />
                   Add User Story
                 </Button>
-              </div>
-            </div>
+              }
+              tip="Tip: User stories describe what users want to accomplish, and WhyNot will generate test cases from them"
+            />
           </Card>
         ) : (
           <div className="space-y-3">
             {userStories.map((userStory) => (
-              <Card key={userStory.id} className="hover:shadow-md transition-shadow">
+              <Card key={userStory.id} hoverable>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-start gap-3">
@@ -437,18 +483,31 @@ export const ProjectDetailPage: React.FC = () => {
                       <FiPlay className="mr-1" />
                       Generate Tests
                     </Button>
-                    <button
-                      onClick={() => openEditUserStoryModal(userStory)}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-                    >
-                      <FiEdit2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm({ isOpen: true, userStory })}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <FiTrash2 className="h-4 w-4" />
-                    </button>
+                    <QuickActions
+                      actions={[
+                        {
+                          label: 'Copy User Story ID',
+                          icon: <FiCopy className="h-4 w-4" />,
+                          onClick: () => {
+                            copyToClipboard(userStory.id, {
+                              successMessage: 'User story ID copied to clipboard',
+                            });
+                          },
+                        },
+                        {
+                          label: 'Edit',
+                          icon: <FiEdit2 className="h-4 w-4" />,
+                          onClick: () => openEditUserStoryModal(userStory),
+                        },
+                        {
+                          label: 'Delete',
+                          icon: <FiTrash2 className="h-4 w-4" />,
+                          onClick: () => setDeleteConfirm({ isOpen: true, userStory }),
+                          variant: 'danger',
+                        },
+                      ]}
+                      position="bottom-right"
+                    />
                   </div>
                 </div>
               </Card>

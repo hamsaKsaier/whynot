@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { TestCaseValidationBadge } from '../common/TestCaseValidationBadge';
+import { StatusBadge } from '../common/StatusBadge';
 import { FiChevronDown, FiChevronUp, FiPlay, FiTrash2, FiEdit } from 'react-icons/fi';
-import type { TestCase, TestStep } from '../../types';
+import type { TestCase, TestStep, ValidationResult, ValidationSummary } from '../../types';
 
 interface TestGenerationViewProps {
   testCases: TestCase[];
+  validationSummary?: ValidationSummary;
+  validationResults?: ValidationResult[];
   onRunTest: (testCase: TestCase, headless?: boolean) => void;
   onDelete?: (testCase: TestCase) => void;
   onStepFix?: (testCase: TestCase, stepIndex: number, step: TestStep) => void;
@@ -16,6 +20,8 @@ interface TestGenerationViewProps {
 
 export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
   testCases,
+  validationSummary,
+  validationResults,
   onRunTest,
   onDelete,
   onStepFix,
@@ -50,8 +56,80 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
     return icons[action.toLowerCase()] || '•';
   };
 
+  const getScenarioTypeBadge = (scenarioType?: string) => {
+    if (!scenarioType) return null;
+    
+    const colors = {
+      positive: 'bg-green-100 text-green-800 border-green-200',
+      negative: 'bg-red-100 text-red-800 border-red-200',
+      edge: 'bg-blue-100 text-blue-800 border-blue-200',
+    };
+    
+    const color = colors[scenarioType as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200';
+    
+    return (
+      <span className={`px-2 py-0.5 rounded text-xs font-medium border ${color}`}>
+        {scenarioType.charAt(0).toUpperCase() + scenarioType.slice(1)}
+      </span>
+    );
+  };
+
+  const getRiskLevelBadge = (riskLevel?: string) => {
+    if (!riskLevel) return null;
+    
+    const colors = {
+      high: 'bg-red-100 text-red-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      low: 'bg-gray-100 text-gray-800',
+    };
+    
+    const color = colors[riskLevel as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    
+    return (
+      <span className={`px-2 py-0.5 rounded text-xs font-medium ${color}`}>
+        Risk: {riskLevel}
+      </span>
+    );
+  };
+
+  const getValidationResult = (testCaseId: string): ValidationResult | undefined => {
+    return validationResults?.find(r => r.test_case_id === testCaseId);
+  };
+
   return (
     <Card title={`Generated Test Cases (${testCases.length})`} className="mb-6">
+      {/* Validation Summary */}
+      {validationSummary && (
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center gap-4 flex-wrap">
+            {validationSummary.valid > 0 && (
+              <div className="flex items-center gap-2">
+                <StatusBadge status="success" size="sm" />
+                <span className="text-sm text-gray-700">
+                  <span className="font-medium">{validationSummary.valid}</span> valid
+                </span>
+              </div>
+            )}
+            {validationSummary.warnings > 0 && (
+              <div className="flex items-center gap-2">
+                <StatusBadge status="warning" size="sm" />
+                <span className="text-sm text-gray-700">
+                  <span className="font-medium">{validationSummary.warnings}</span> warnings
+                </span>
+              </div>
+            )}
+            {validationSummary.invalid > 0 && (
+              <div className="flex items-center gap-2">
+                <StatusBadge status="error" size="sm" />
+                <span className="text-sm text-gray-700">
+                  <span className="font-medium">{validationSummary.invalid}</span> invalid
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
         {testCases.map((testCase) => (
           <div
@@ -60,7 +138,16 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
           >
             <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
               <div className="flex-1">
-                <h4 className="font-semibold text-gray-900">{testCase.name}</h4>
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-semibold text-gray-900">{testCase.name}</h4>
+                  {getScenarioTypeBadge(testCase.scenario_type)}
+                  {getRiskLevelBadge(testCase.risk_level)}
+                  {testCase.priority_score !== undefined && (
+                    <span className="text-xs text-gray-500">
+                      Priority: {testCase.priority_score}
+                    </span>
+                  )}
+                </div>
                 {testCase.description && (
                   <p className="text-sm text-gray-600 mt-1">{testCase.description}</p>
                 )}
@@ -69,6 +156,12 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <div className="relative">
+                  <TestCaseValidationBadge
+                    validationResult={getValidationResult(testCase.id)}
+                    testCaseId={testCase.id}
+                  />
+                </div>
                 <Button
                   size="sm"
                   onClick={() => onRunTest(testCase, headless)}

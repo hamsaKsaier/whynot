@@ -1,0 +1,330 @@
+# Thunder Code POC - Cursor Rules
+
+## Project Overview
+
+This is an AI-powered test automation tool that converts user stories into executable test cases. The project follows a **clean architecture** pattern with microservices:
+
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Gateway**: Node.js/TypeScript (Express) - Orchestrates workflows
+- **Test Executor**: Node.js/TypeScript - Browser automation with Playwright
+- **AI Service**: Python/FastAPI - Test generation using LLMs
+- **Database**: PostgreSQL 15+
+- **Containerization**: Docker Compose
+
+## Interaction Guidelines
+
+When I share ideas, be a caring critic: honest feedback serving my success, not validation or debate. Challenge when helpful, encourage when true.
+
+## Architecture Principles
+
+1. **Clean Architecture**: Separate domain, application, and infrastructure layers
+2. **Microservices**: Each service is independent with clear boundaries
+3. **Shared Types**: Common types live in `/shared/types/` and are imported by services
+4. **Error Handling**: Always use retry logic, circuit breakers, and proper error boundaries
+5. **Validation**: Use Zod for TypeScript validation, Pydantic for Python
+6. **Logging**: Use structured logging with request IDs and context
+
+## TypeScript Conventions
+
+### General Rules
+- **Strict Mode**: Always enabled (`strict: true` in tsconfig.json)
+- **No Unused Variables**: `noUnusedLocals` and `noUnusedParameters` enabled
+- **Module System**: 
+  - Frontend: ESNext modules
+  - Backend services: CommonJS
+- **Target**: ES2020
+- **File Naming**: 
+  - Use kebab-case for files: `test-runner.ts`, `element-detector.ts`
+  - Use PascalCase for React components: `TestRunner.tsx`, `BrowserPreview.tsx`
+  - Use camelCase for utilities and hooks: `useTestExecution.ts`, `debounce.ts`
+
+### Code Style
+- Use **interfaces** for type definitions (prefer over types unless you need unions/intersections)
+- Use **async/await** over promises chains
+- Always handle errors with try-catch blocks
+- Use **const** by default, only use `let` when reassignment is needed
+- Prefer **arrow functions** for callbacks and short functions
+- Use **destructuring** for object/array access when it improves readability
+
+### Type Definitions
+- Define shared types in `/shared/types/index.ts`
+- Service-specific types should be in the service's domain layer
+- Always export types that are used across modules
+- Use `interface` for object shapes, `type` for unions/intersections
+
+### Error Handling
+- Always use try-catch for async operations
+- Log errors with context using the shared logger
+- Return error objects with consistent structure
+- Use custom error classes when appropriate
+
+### Example TypeScript Pattern:
+```typescript
+// Good
+interface TestStep {
+  id: string;
+  action: ActionType;
+  elementDescription: string;
+}
+
+async function executeStep(step: TestStep): Promise<ExecutionResult> {
+  try {
+    const result = await performAction(step);
+    logger.info('Step executed', { stepId: step.id, result });
+    return result;
+  } catch (error) {
+    logger.error('Step execution failed', { stepId: step.id, error });
+    throw new ExecutionError('Failed to execute step', { step, error });
+  }
+}
+```
+
+## Python Conventions
+
+### General Rules
+- **Python Version**: 3.11+
+- **Style**: Follow PEP 8
+- **Type Hints**: Always use type hints for function parameters and return types
+- **Docstrings**: Use Google-style docstrings for classes and public methods
+- **Imports**: Group imports (stdlib, third-party, local) with blank lines
+
+### Code Style
+- Use **snake_case** for functions and variables
+- Use **PascalCase** for classes
+- Use **UPPER_CASE** for constants
+- Prefer **f-strings** for string formatting
+- Use **pathlib.Path** over os.path when possible
+- Use **dataclasses** or **Pydantic models** for data structures
+
+### FastAPI Patterns
+- Use **Pydantic models** for request/response validation
+- Use **dependency injection** for services
+- Always include proper error handling and status codes
+- Use async/await for I/O operations
+- Include health check endpoints
+
+### Example Python Pattern:
+```python
+from typing import List, Optional
+from pydantic import BaseModel
+from app.domain.models import TestCase
+
+class TestCaseRequest(BaseModel):
+    website_url: str
+    user_story: str
+    headless: bool = True
+
+async def generate_test_case(request: TestCaseRequest) -> TestCase:
+    """
+    Generate a test case from a user story.
+    
+    Args:
+        request: The test case generation request
+        
+    Returns:
+        Generated test case
+        
+    Raises:
+        ValidationError: If the request is invalid
+    """
+    try:
+        # Implementation
+        pass
+    except Exception as e:
+        logger.error(f"Failed to generate test case: {e}")
+        raise
+```
+
+## React/Frontend Conventions
+
+### Component Structure
+- Use **functional components** with hooks
+- Use **TypeScript** for all components
+- Use **Tailwind CSS** for styling (no inline styles unless necessary)
+- Keep components small and focused (single responsibility)
+- Extract reusable logic into **custom hooks**
+
+### File Organization
+- Components in `/src/components/` organized by feature
+- Hooks in `/src/hooks/`
+- Services/API calls in `/src/services/`
+- Types in `/src/types/`
+- Utils in `/src/utils/`
+
+### State Management
+- Use **React Context** for global state (ToastContext, etc.)
+- Use **local state** (useState) for component-specific state
+- Use **custom hooks** for complex state logic
+
+### Naming
+- Components: PascalCase (`TestRunner.tsx`)
+- Hooks: camelCase starting with `use` (`useTestExecution.ts`)
+- Utils: camelCase (`debounce.ts`, `dateFormat.ts`)
+- Constants: UPPER_SNAKE_CASE
+
+## File Structure Rules
+
+### Backend Services (Gateway, Test Executor)
+```
+service-name/
+├── src/
+│   ├── domain/          # Business models and entities
+│   ├── application/     # Use cases and business logic
+│   ├── infrastructure/  # External dependencies (DB, APIs)
+│   └── api/            # HTTP routes and controllers
+├── shared/             # Symlink to /shared
+└── package.json
+```
+
+### AI Service (Python)
+```
+services/ai-service/
+├── app/
+│   ├── domain/         # Business models
+│   ├── application/     # Use cases
+│   ├── infrastructure/ # LLM clients, external APIs
+│   └── api/           # FastAPI routes
+└── requirements.txt
+```
+
+### Frontend
+```
+frontend/
+├── src/
+│   ├── components/     # React components (organized by feature)
+│   ├── pages/         # Page components
+│   ├── hooks/         # Custom React hooks
+│   ├── services/      # API services
+│   ├── types/         # TypeScript types
+│   └── utils/         # Utility functions
+└── public/
+```
+
+## Database Conventions
+
+- Use **migrations** in `/services/database/migrations/` for schema changes
+- Always use **parameterized queries** to prevent SQL injection
+- Use the **shared database connection** from `/shared/database/`
+- Use **repositories** pattern for data access (in `/shared/database/repositories/`)
+- Always handle database errors gracefully
+
+## Docker & Deployment
+
+- Services run in Docker containers
+- Use environment variables for configuration (never hardcode)
+- Health checks are required for all services
+- Use Docker Compose for local development
+- Port mappings:
+  - Gateway: 3000 (host) -> 3000 (container)
+  - Test Executor: 3011 (host) -> 3001 (container)
+  - AI Service: 8010 (host) -> 8000 (container)
+  - Database: 5433 (host) -> 5432 (container)
+
+## Testing Guidelines
+
+- Write unit tests for business logic
+- Write integration tests for API endpoints
+- Use descriptive test names: `describe('TestRunner', () => { it('should execute all steps successfully', ...) })`
+- Mock external dependencies (LLM APIs, browser automation)
+- Test error cases and edge cases
+
+## Error Handling Patterns
+
+### TypeScript
+- Use try-catch for async operations
+- Log errors with context using shared logger
+- Return consistent error response structures
+- Use circuit breakers for external service calls
+
+### Python
+- Use try-except with specific exception types
+- Log errors with context
+- Return appropriate HTTP status codes
+- Use Pydantic validation for input validation
+
+## Logging Guidelines
+
+- Use the **shared logger** from `/shared/logger/logger.ts`
+- Include **request IDs** for request tracking
+- Use appropriate log levels: `debug`, `info`, `warn`, `error`
+- Include context in log messages (use objects, not string interpolation)
+- Example: `logger.info('Test execution started', { executionId, testCaseId })`
+
+## API Design
+
+- Use RESTful conventions
+- Return consistent response structures
+- Include proper HTTP status codes
+- Use Zod/Pydantic for request validation
+- Document endpoints (see `/docs/API.md`)
+
+## Element Detection Priority
+
+When working with element detection, follow this priority order:
+1. `data-testid`, `data-cy` (stability: 0.95)
+2. Stable IDs (stability: 0.85)
+3. Semantic attributes (`aria-label`, `role`) (stability: 0.75)
+4. Stable CSS classes (semantic names, BEM) (stability: 0.65)
+5. Text content (stability: 0.60)
+6. Unstable CSS classes (framework-generated) (stability: 0.40)
+7. Visual position (stability: 0.40)
+8. XPath (last resort) (stability: 0.30)
+
+## Code Review Checklist
+
+Before submitting code:
+- [ ] TypeScript: No unused variables/parameters
+- [ ] All errors are handled properly
+- [ ] Logging is included for important operations
+- [ ] Input validation is present
+- [ ] Types are properly defined
+- [ ] Code follows the architecture layers
+- [ ] No hardcoded values (use environment variables)
+- [ ] Database queries use parameterized statements
+
+## Common Patterns
+
+### Service Communication
+- Use HTTP for inter-service communication
+- Include retry logic with exponential backoff
+- Use circuit breakers for resilience
+- Handle timeouts appropriately
+
+### Shared Code
+- Put shared types in `/shared/types/`
+- Put shared utilities in `/shared/utils/`
+- Put shared database code in `/shared/database/`
+- Services symlink to `/shared` directory
+
+### Environment Variables
+- Never commit `.env` files
+- Use `.env.example` as a template
+- Document all environment variables
+- Use default values where appropriate
+
+## When Adding New Features
+
+1. **Identify the layer**: Domain, Application, or Infrastructure?
+2. **Define types first**: Add to `/shared/types/` if shared, or service-specific domain
+3. **Follow clean architecture**: Dependencies point inward (Infrastructure -> Application -> Domain)
+4. **Add error handling**: Always include proper error handling
+5. **Add logging**: Log important operations
+6. **Add validation**: Validate inputs using Zod/Pydantic
+7. **Update documentation**: Update relevant docs in `/docs/`
+
+## Performance Considerations
+
+- Use connection pooling for database connections
+- Implement rate limiting for API endpoints
+- Use caching where appropriate
+- Optimize database queries
+- Monitor and log performance metrics
+
+## Security Best Practices
+
+- Always validate and sanitize user input
+- Use parameterized queries (never string concatenation)
+- Store secrets in environment variables
+- Use HTTPS in production
+- Implement rate limiting
+- Validate all API inputs

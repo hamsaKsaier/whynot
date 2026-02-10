@@ -6,15 +6,24 @@ import { TestExecutionView } from '../components/TestRunner/TestExecutionView';
 import { TestAutomationChatbot } from '../components/Chatbot/TestAutomationChatbot';
 import { TestModificationConfirmationDialog } from '../components/common/TestModificationConfirmationDialog';
 import { Alert } from '../components/common/Alert';
+import { OnboardingFlow } from '../components/Onboarding/OnboardingFlow';
+import { useOnboarding } from '../hooks/useOnboarding';
+import { useToastContext } from '../contexts/ToastContext';
+import { TestGenerationLoader } from '../components/common/TestGenerationLoader';
+import { StatsCard } from '../components/common/StatsCard';
+import { SuccessAnimation } from '../components/common/SuccessAnimation';
 import {
   generateTestsWithContext,
   runTest,
   executeTest,
   deleteTestCase,
   updateTestCase,
+  getTestCases,
 } from '../services/api';
-import type { TestCase, ExecutionResult, RunTestResponse, TestStep } from '../types';
+import { FiCheckCircle, FiPlay, FiTrendingUp, FiActivity } from 'react-icons/fi';
+import type { TestCase, ExecutionResult, RunTestResponse, TestStep, ValidationSummary, ValidationResult } from '../types';
 import type { ChatContext } from '../services/chatbot-api';
+import type { PrerequisiteStep } from '../utils/createEditFlow';
 
 interface LocationState {
   testCase?: TestCase;
@@ -27,7 +36,12 @@ interface LocationState {
 
 export const HomePage: React.FC = () => {
   const location = useLocation();
+  const { isCompleted, isLoading: onboardingLoading } = useOnboarding();
+  const { success, error: showError, info } = useToastContext();
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [validationSummary, setValidationSummary] = useState<ValidationSummary | undefined>();
+  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -41,11 +55,59 @@ export const HomePage: React.FC = () => {
   const [modificationTestResult, setModificationTestResult] = useState<ExecutionResult | null>(null);
   const [isTestingModification, setIsTestingModification] = useState(false);
   const [isModificationConfirmationOpen, setIsModificationConfirmationOpen] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Statistics state
+  const [stats, setStats] = useState({
+    totalTestCases: 0,
+    totalTestRuns: 0,
+    successRate: 0,
+    recentActivity: 0,
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   // Initial values from navigation state
   const [initialProjectId, setInitialProjectId] = useState<string | undefined>();
   const [initialUserStoryId, setInitialUserStoryId] = useState<string | undefined>();
   const [initialWebsiteUrl, setInitialWebsiteUrl] = useState<string | undefined>();
+
+  // Fetch statistics
+  useEffect(() => {
+    fetchStatistics();
+  }, []);
+
+  const fetchStatistics = async () => {
+    setLoadingStats(true);
+    try {
+      const testCasesResponse = await getTestCases();
+      const totalTestCases = testCasesResponse.test_cases.length;
+
+      // Calculate success rate from test cases (simplified - in real app, would fetch from executions)
+      const successfulTests = testCasesResponse.test_cases.filter(
+        (tc) => (tc as TestCase & { validation_summary?: { overall_status?: string } }).validation_summary?.overall_status === 'passed'
+      ).length;
+      const successRate = totalTestCases > 0 ? (successfulTests / totalTestCases) * 100 : 0;
+
+      setStats({
+        totalTestCases,
+        totalTestRuns: 0, // Would fetch from executions API
+        successRate: Math.round(successRate),
+        recentActivity: 0, // Would calculate from recent executions
+      });
+    } catch (error) {
+      console.error('Failed to fetch statistics:', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  // Show onboarding for first-time users
+  useEffect(() => {
+    if (!onboardingLoading && !isCompleted) {
+      setShowOnboarding(true);
+    }
+  }, [onboardingLoading, isCompleted]);
 
   // Handle state passed from other pages
   useEffect(() => {
@@ -72,21 +134,44 @@ export const HomePage: React.FC = () => {
     websiteUrl: string,
     userStory: string,
     projectId?: string,
-    userStoryId?: string
+    userStoryId?: string,
+    prerequisiteSteps?: PrerequisiteStep[],
+    quickMode?: boolean
   ) => {
     setIsGenerating(true);
     setError(null);
     setTestCases([]);
     setExecutionResult(null);
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'HomePage.tsx:handleGenerateTests', message: 'Quick mode value before API call', data: { quickMode, quickModeType: typeof quickMode, booleanQuickMode: Boolean(quickMode) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+    // #endregion
     try {
       const response = await generateTestsWithContext({
         website_url: websiteUrl,
         user_story: userStory,
         project_id: projectId,
         user_story_id: userStoryId,
+        prerequisite_steps: prerequisiteSteps && prerequisiteSteps.length > 0 ? prerequisiteSteps : undefined,
+        quick_mode: Boolean(quickMode),
       });
       setTestCases(response.test_cases);
+
+      // Show validation feedback
+      if (response.validation_summary) {
+        const { valid, invalid, warnings } = response.validation_summary;
+        if (invalid > 0) {
+          const errorMsg = `${invalid} test case(s) have validation errors. Please review and fix them.`;
+          setError(errorMsg);
+          showError(errorMsg);
+        } else if (warnings > 0) {
+          info(`${warnings} validation warning(s) found`);
+        } else if (valid > 0) {
+          success(`Successfully generated ${valid} test case(s)`);
+        }
+      } else {
+        success(`Successfully generated ${response.test_cases.length} test case(s)`);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to generate tests');
     } finally {
@@ -211,11 +296,15 @@ export const HomePage: React.FC = () => {
   const handleTestModificationRequested = async (modifiedTestCase: TestCase) => {
     setPendingModification(modifiedTestCase);
     setIsTestingModification(true);
-    
+
     try {
       // Test the modified test case (execute in headless mode for quick test)
       const testResult = await executeTest(modifiedTestCase, true); // headless=true
-      setModificationTestResult(testResult);
+      setModificationTestResult(
+        testResult && 'steps' in testResult && Array.isArray(testResult.steps)
+          ? (testResult as ExecutionResult)
+          : null
+      );
       setIsModificationConfirmationOpen(true);
     } catch (error: any) {
       console.error('Failed to test modified test case:', error);
@@ -239,23 +328,26 @@ export const HomePage: React.FC = () => {
   // Handle accepting modification after successful test
   const handleAcceptModification = async () => {
     if (!pendingModification) return;
-    
+
     try {
       const updated = await updateTestCase(pendingModification.id, pendingModification);
       setIsModificationConfirmationOpen(false);
       setPendingModification(null);
       setModificationTestResult(null);
       setIsChatbotOpen(false);
-      
+
       // Update local state
       setTestCases(testCases.map(tc => tc.id === updated.id ? updated : tc));
       if (selectedTestCase?.id === updated.id) {
         setSelectedTestCase(updated);
       }
       setError(null);
+      success('Test case updated successfully');
     } catch (error: any) {
       console.error('Failed to update test case:', error);
-      setError(`Failed to update test case: ${error.message || 'Unknown error'}`);
+      const errorMsg = `Failed to update test case: ${error.message || 'Unknown error'}`;
+      setError(errorMsg);
+      showError(errorMsg);
     }
   };
 
@@ -296,7 +388,99 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
+      {/* Success Animation */}
+      {showSuccessAnimation && (
+        <SuccessAnimation
+          message={successMessage}
+          onComplete={() => {
+            setShowSuccessAnimation(false);
+            setSuccessMessage('');
+          }}
+        />
+      )}
+
+      {/* Statistics Dashboard */}
+      {!showOnboarding && (
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatsCard
+              title="Total Test Cases"
+              value={loadingStats ? '...' : stats.totalTestCases}
+              icon={<FiCheckCircle className="h-6 w-6" />}
+              onClick={() => window.location.href = '/test-cases'}
+            />
+            <StatsCard
+              title="Test Runs"
+              value={loadingStats ? '...' : stats.totalTestRuns}
+              icon={<FiPlay className="h-6 w-6" />}
+              onClick={() => window.location.href = '/test-runs'}
+            />
+            <StatsCard
+              title="Success Rate"
+              value={loadingStats ? '...' : `${stats.successRate}%`}
+              icon={<FiTrendingUp className="h-6 w-6" />}
+              trend={stats.successRate >= 80 ? 'up' : stats.successRate >= 50 ? 'neutral' : 'down'}
+            />
+            <StatsCard
+              title="Recent Activity"
+              value={loadingStats ? '...' : stats.recentActivity}
+              icon={<FiActivity className="h-6 w-6" />}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Flow */}
+      {showOnboarding && (
+        <OnboardingFlow
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
+
+      {error && (
+        <Alert
+          type="error"
+          title="Error"
+          message={error}
+          suggestions={
+            error.includes('generate') || error.includes('test case')
+              ? [
+                'Your user story might be too vague or unclear',
+                'The website URL might be inaccessible or invalid',
+                'There might be a network connectivity issue',
+                'Check that your API keys are configured correctly',
+              ]
+              : error.includes('execute') || error.includes('run')
+                ? [
+                  'The website might be temporarily unavailable',
+                  'The test case might have invalid selectors',
+                  'Check your browser console for more details',
+                  'Try running the test in headless mode',
+                ]
+                : []
+          }
+          actions={[
+            {
+              label: 'Try Again',
+              onClick: () => {
+                setError(null);
+                // Retry last action if possible
+                if (isGenerating) {
+                  // Could store last params and retry
+                }
+              },
+              variant: 'primary',
+            },
+            {
+              label: 'Dismiss',
+              onClick: () => setError(null),
+              variant: 'secondary',
+            },
+          ]}
+          onClose={() => setError(null)}
+        />
+      )}
 
       {!showExecutionView && (
         <>
@@ -310,14 +494,16 @@ export const HomePage: React.FC = () => {
           />
 
           {isGenerating && (
-            <div className="card text-center py-8">
-              <p className="text-gray-600">Generating test cases...</p>
-            </div>
+            <TestGenerationLoader
+              message="Creating intelligent test cases from your user story..."
+            />
           )}
 
           {testCases.length > 0 && !isRunning && (
             <TestGenerationView
               testCases={testCases}
+              validationSummary={validationSummary}
+              validationResults={validationResults}
               onRunTest={(testCase) => handleRunTestCase(testCase, headless)}
               onDelete={handleDeleteTestCase}
               onStepFix={handleStepFix}

@@ -7,6 +7,9 @@ from app.application.html_preprocessor import HTMLPreProcessor
 from app.application.selector_agents import StrategyAgent
 from app.application.chatbot import TestAutomationChatbot
 from app.application.chat_session import getSessionManager, ChatSession
+from app.application.scenario_prioritizer import ScenarioPrioritizer
+from app.application.test_case_validator import TestCaseValidator, ValidationResult
+from app.application.visual_diff_analyzer import VisualDiffAnalyzer
 from app.infrastructure.vision.vision_analyzer import VisionAnalyzer
 from app.infrastructure.llm.llm_client import LLMClient
 from datetime import datetime
@@ -20,12 +23,16 @@ class UserStoryWithPageContext(UserStory):
     """User story with optional page context"""
     screenshot_base64: Optional[str] = None
     html: Optional[str] = None
+    quick_mode: Optional[bool] = None
 
 router = APIRouter()
 test_generator = TestGenerator()
 vision_analyzer = VisionAnalyzer()
 html_preprocessor = HTMLPreProcessor()
 chatbot = TestAutomationChatbot()
+scenario_prioritizer = ScenarioPrioritizer()
+test_case_validator = TestCaseValidator()
+visual_diff_analyzer = VisualDiffAnalyzer()
 _strategy_agent = None
 
 def get_strategy_agent():
@@ -84,6 +91,15 @@ async def generate_tests(user_story: UserStoryWithPageContext):
             "screenshot_size": f"{(len(user_story.screenshot_base64) / 1024):.2f} KB" if user_story.screenshot_base64 else "N/A"
         })
         
+        # #region agent log
+        try:
+            import json as _json
+            log_data = {"location":"ai-service/routes.py:generate_tests","message":"Quick mode received in AI service","data":{"quick_mode":user_story.quick_mode,"quick_mode_type":str(type(user_story.quick_mode)),"has_page_context":has_page_context},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+            with open("/Users/takiacademy/whynot/.cursor/debug.log","a") as f:
+                f.write(_json.dumps(log_data)+"\n")
+        except: pass
+        # #endregion
+        
         if has_page_context:
             logger.info("Using page context for test generation (HTML + Screenshot)")
             # Log HTML preview (first 500 chars)
@@ -120,17 +136,31 @@ async def generate_tests(user_story: UserStoryWithPageContext):
                 logger.warning(f"Vision analysis failed, continuing without it: {str(e)}")
             
             logger.info("Calling generate_test_cases_with_page_context with cleaned HTML and screenshot")
+            raw_quick = getattr(user_story, 'quick_mode', None)
+            quick_mode = raw_quick is True or (isinstance(raw_quick, str) and raw_quick.lower() == 'true')
+            logger.info(f"Quick mode for generation: quick_mode={quick_mode}, raw={raw_quick}")
+            # #region agent log
+            try:
+                import json as _json
+                log_data = {"location":"ai-service/routes.py:before_generate","message":"Quick mode computed value","data":{"raw_quick":str(raw_quick),"raw_quick_type":str(type(raw_quick)),"quick_mode_computed":quick_mode,"raw_is_True":raw_quick is True,"raw_isinstance_str":isinstance(raw_quick,str)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"E2"}
+                with open("/Users/takiacademy/whynot/.cursor/debug.log","a") as f:
+                    f.write(_json.dumps(log_data)+"\n")
+            except: pass
+            # #endregion
             test_cases = await test_generator.generate_test_cases_with_page_context(
                 user_story,
                 user_story.screenshot_base64,
                 cleaned_html,
-                vision_analysis
+                vision_analysis,
+                quick_mode=quick_mode
             )
             logger.info(f"Generated {len(test_cases)} test case(s) with page context")
         else:
             # Fallback to old method without page context
             logger.warning("No page context provided, using fallback method without HTML/screenshot")
-            test_cases = await test_generator.generate_test_cases(user_story)
+            raw_quick = getattr(user_story, 'quick_mode', None)
+            quick_mode = raw_quick is True or (isinstance(raw_quick, str) and raw_quick.lower() == 'true')
+            test_cases = await test_generator.generate_test_cases(user_story, quick_mode=quick_mode)
             logger.info(f"Generated {len(test_cases)} test case(s) without page context")
         
         # Add metadata
@@ -138,11 +168,18 @@ async def generate_tests(user_story: UserStoryWithPageContext):
             if tc.metadata:
                 tc.metadata["generated_at"] = datetime.utcnow().isoformat()
         
+        # Prioritize test cases before returning
+        test_cases = scenario_prioritizer.prioritize(test_cases)
+        logger.info(f"Prioritized {len(test_cases)} test cases")
+        
         # Log suggested_selectors status for each step before returning
         for tc_idx, tc in enumerate(test_cases):
             logger.info(f"Test case {tc_idx + 1} ready to return", {
                 "test_case_id": tc.id,
                 "name": tc.name,
+                "scenario_type": tc.scenario_type,
+                "risk_level": tc.risk_level,
+                "priority_score": tc.priority_score,
                 "steps_count": len(tc.steps)
             })
             for step_idx, step in enumerate(tc.steps):
@@ -185,7 +222,39 @@ async def generate_tests(user_story: UserStoryWithPageContext):
             sample_json = json.dumps(serialized_cases[0], indent=2)
             logger.debug(f"Sample serialized test case JSON (first 2000 chars):\n{sample_json[:2000]}")
         
-        return serialized_cases
+        # Validate all test cases
+        validation_results = []
+        for tc in test_cases:
+            validation_result = test_case_validator.validate(tc)
+            validation_results.append({
+                "test_case_id": tc.id,
+                "is_valid": validation_result.is_valid,
+                "score": validation_result.score,
+                "errors": validation_result.errors,
+                "warnings": validation_result.warnings
+            })
+        
+        # Calculate validation summary
+        total = len(validation_results)
+        valid = sum(1 for r in validation_results if r["is_valid"])
+        invalid = total - valid
+        warnings_count = sum(len(r["warnings"]) for r in validation_results)
+        
+        validation_summary = {
+            "total": total,
+            "valid": valid,
+            "invalid": invalid,
+            "warnings": warnings_count
+        }
+        
+        logger.info(f"Validation complete: {valid}/{total} valid, {invalid} invalid, {warnings_count} warnings")
+        
+        # Return test cases with validation results
+        return {
+            "test_cases": serialized_cases,
+            "validation_summary": validation_summary,
+            "validation_results": validation_results
+        }
     except ValueError as e:
         # Handle configuration errors (missing API keys, etc.)
         error_msg = str(e)
@@ -639,5 +708,41 @@ async def modify_test_from_chat(request: dict):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to modify test from chat: {str(e)}"
+        )
+
+
+@router.post("/api/analyze-visual-diff")
+async def analyze_visual_diff(request: dict):
+    """Analyze visual differences between two screenshots"""
+    try:
+        baseline_screenshot_base64 = request.get('baseline_screenshot_base64')
+        current_screenshot_base64 = request.get('current_screenshot_base64')
+        pixel_diff_score = request.get('pixel_diff_score', 0.0)
+        context = request.get('context', {})
+        
+        if not baseline_screenshot_base64 or not current_screenshot_base64:
+            raise ValueError("Both baseline_screenshot_base64 and current_screenshot_base64 are required")
+        
+        # Analyze visual differences
+        analysis = await visual_diff_analyzer.analyze_visual_diff(
+            baseline_screenshot_base64=baseline_screenshot_base64,
+            current_screenshot_base64=current_screenshot_base64,
+            pixel_diff_score=float(pixel_diff_score),
+            context=context
+        )
+        
+        return analysis.to_dict()
+        
+    except ValueError as e:
+        logger.error(f"Invalid request for visual diff analysis: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Failed to analyze visual diff: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze visual diff: {str(e)}"
         )
 

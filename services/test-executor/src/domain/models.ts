@@ -62,14 +62,14 @@ export enum FailureCategory {
   TIMING_FAILURE = 'timing_failure',            // Element not ready yet
   PAGE_LOAD_FAILURE = 'page_load_failure',      // Page didn't load properly
   SELECTOR_INSTABILITY = 'selector_instability', // Selector worked before but not now
-  
+
   // Application failures (legitimate bugs - report to dev)
   ELEMENT_MISSING = 'element_missing',           // Element doesn't exist in DOM
   ELEMENT_NOT_VISIBLE = 'element_not_visible',  // Element exists but hidden
   ELEMENT_NOT_INTERACTABLE = 'element_not_interactable', // Can't click/type
   ASSERTION_FAILURE = 'assertion_failure',      // Expected state not met
   FUNCTIONAL_BUG = 'functional_bug',            // App logic error
-  
+
   // Ambiguous (needs analysis)
   UNKNOWN = 'unknown'
 }
@@ -99,18 +99,21 @@ export interface StepResult {
   execution_time_ms: number;
   element_found?: boolean;
   selector_used?: ElementSelector;
-  
+
   // Failure analysis fields
   failure_analysis?: FailureAnalysis;
   attempted_selectors?: ElementSelector[]; // All selectors we tried
   page_state?: PageState;
   recovery_attempts?: number;
+
+  // Visual regression fields
+  visual_comparison?: any; // VisualComparisonResult from shared/types
 }
 
 export interface ExecutionResult {
   execution_id: string;
   test_case_id: string;
-  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused';
+  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused' | 'cancelled';
   steps: StepResult[];
   total_duration_ms: number;
   screenshots: string[];

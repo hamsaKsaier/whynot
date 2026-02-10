@@ -32,6 +32,20 @@ export interface TestStep {
   suggested_selectors?: ElementSelector[];
 }
 
+export interface ValidationResult {
+  is_valid: boolean;
+  errors: string[];
+  warnings: string[];
+  score: number; // 0-100
+}
+
+export interface ValidationSummary {
+  total: number;
+  valid: number;
+  invalid: number;
+  warnings: number;
+}
+
 export interface TestCase {
   id: string;
   name: string;
@@ -39,6 +53,10 @@ export interface TestCase {
   steps: TestStep[];
   website_url: string;
   metadata?: Record<string, any>;
+  scenario_type?: string; // 'positive' | 'negative' | 'edge'
+  risk_level?: string; // 'high' | 'medium' | 'low'
+  priority_score?: number; // 0-100
+  validation_result?: ValidationResult;
 }
 
 export interface UserStory {
@@ -50,7 +68,7 @@ export interface UserStory {
 export interface ExecutionResult {
   execution_id: string;
   test_case_id: string;
-  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused';
+  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused' | 'cancelled';
   steps: StepResult[];
   total_duration_ms: number;
   screenshots: string[];
@@ -101,6 +119,7 @@ export interface StepResult {
   attempted_selectors?: ElementSelector[];
   page_state?: PageState;
   recovery_attempts?: number;
+  visual_comparison?: VisualComparisonResult;
 }
 
 export interface ElementSelector {
@@ -120,4 +139,59 @@ export interface SetupHook {
   folder_id?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+// Visual Regression Intelligence Types
+export interface VisualBaseline {
+  id: string;
+  test_case_id: string;
+  step_id: string;
+  screenshot_path: string;
+  screenshot_hash: string;
+  baseline_version: number;
+  execution_id?: string | null;
+  is_locked: boolean;
+  created_at: string;
+  created_by: string;
+}
+
+export interface AIVisualDiffAnalysis {
+  difference_types: string[];
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  descriptions: string[];
+  affected_areas?: Array<{
+    region: string;
+    description: string;
+  }>;
+  recommendations?: string[];
+}
+
+export interface VisualComparisonResult {
+  isRegression: boolean;
+  pixelDiffScore: number; // 0.0 to 1.0 (percentage of pixels different)
+  diffImagePath?: string;
+  aiAnalysis?: AIVisualDiffAnalysis;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  differences: string[]; // Human-readable descriptions
+}
+
+export interface VisualComparison {
+  id: string;
+  execution_id: string;
+  step_id: string;
+  baseline_id?: string | null;
+  current_screenshot_path: string;
+  diff_image_path?: string | null;
+  pixel_diff_score: number;
+  ai_diff_analysis?: AIVisualDiffAnalysis | null;
+  is_regression: boolean;
+  regression_severity?: 'low' | 'medium' | 'high' | 'critical' | null;
+  ignored: boolean;
+  created_at: string;
+}
+
+export interface ComparisonOptions {
+  pixelThreshold?: number; // Default: 0.01 (1%)
+  enableAIAnalysis?: boolean; // Default: true
+  generateDiffImage?: boolean; // Default: true
 }

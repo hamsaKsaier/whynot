@@ -56,6 +56,9 @@ class TestCase(BaseModel):
     description: str
     steps: List[TestStep]
     website_url: str
+    scenario_type: Optional[str] = None  # "positive", "negative", "edge"
+    risk_level: Optional[str] = None  # "high", "medium", "low"
+    priority_score: Optional[int] = None  # 0-100
     metadata: Optional[Dict[str, Any]] = None
 
 

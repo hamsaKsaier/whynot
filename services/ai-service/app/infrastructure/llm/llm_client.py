@@ -59,7 +59,7 @@ class LLMClient:
             try:
                 response = self.anthropic_client.messages.create(
                     model=model,
-                    max_tokens=8192,  # Increased to handle large JSON responses with many test steps
+                    max_tokens=16384,  # Increased to handle very large JSON responses with multiple scenarios
                     system=system_message,
                     messages=[{"role": "user", "content": prompt}]
                 )
@@ -450,6 +450,156 @@ class LLMClient:
                     # #endregion
                     pass
                 
+                # Try to detect and fix incomplete JSON (truncated field values)
+                # The error shows: "expected_outcome": "expected_" - an incomplete string value
+                try:
+                    before_error = json_str[:error_pos]
+                    
+                    # Find incomplete string values: patterns like "field": "incomplete_text without closing quote
+                    # Look backwards from error position to find the last opening quote of a string value
+                    last_quote_pos = before_error.rfind('"')
+                    if last_quote_pos >= 0:
+                        # Check if we're in a string value (there's a colon before the quote)
+                        before_quote = before_error[:last_quote_pos].rstrip()
+                        # Look for the colon that indicates this is a value, not a key
+                        if ':' in before_quote[-50:]:  # Check last 50 chars before quote
+                            # We're likely in an incomplete string value
+                            # Find where the incomplete string starts (after the opening quote)
+                            incomplete_value_start = last_quote_pos + 1
+                            
+                            # Close the incomplete string at the error position
+                            # Check what's at error_pos - if it's not a quote, we need to insert one
+                            incomplete_fix = json_str[:error_pos]
+                            if incomplete_fix[-1] != '"':
+                                incomplete_fix += '"'  # Close the incomplete string
+                            
+                            # Now close all incomplete structures
+                            # Count remaining open structures
+                            remaining_braces = incomplete_fix.count('{') - incomplete_fix.count('}')
+                            remaining_brackets = incomplete_fix.count('[') - incomplete_fix.count(']')
+                            
+                            # Close all remaining structures at the end
+                            incomplete_fix += ']' * max(0, remaining_brackets)
+                            incomplete_fix += '}' * max(0, remaining_braces)
+                            
+                            # Remove trailing commas before closing brackets
+                            incomplete_fix = re.sub(r',(\s*[}\]])', r'\1', incomplete_fix)
+                            
+                            # Try to parse the fixed version
+                            try:
+                                parsed = json.loads(incomplete_fix)
+                                logging.warning(f"Fixed incomplete JSON by closing truncated string field at position {error_pos}")
+                                return parsed
+                            except json.JSONDecodeError as fix_parse_error:
+                                logging.debug(f"First fix attempt failed: {fix_parse_error}, trying alternative")
+                                # If closing the string didn't work, the field might be too incomplete
+                                # Fall through to the alternative fix below
+                                # Alternative: Remove the incomplete field entirely
+                                # Find pattern: ,"field": "incomplete_text without closing quote
+                                # Try multiple patterns to catch different cases
+                                incomplete_field_patterns = [
+                                    r',\s*"([^"]+)":\s*"([^"]*)$',  # Pattern: ,"field": "incomplete (at end of string)
+                                    r'^\s*"([^"]+)":\s*"([^"]*)$',  # Pattern: "field": "incomplete (at start, no comma)
+                                    r',\s*"([^"]+)":\s*"([^"]+)$',  # Pattern: ,"field": "incomplete_no_quote (no closing quote)
+                                ]
+                                
+                                incomplete_match = None
+                                for pattern in incomplete_field_patterns:
+                                    incomplete_match = re.search(pattern, before_error, re.MULTILINE)
+                                    if incomplete_match:
+                                        break
+                                
+                                if incomplete_match:
+                                    field_name = incomplete_match.group(1)
+                                    incomplete_value = incomplete_match.group(2) if len(incomplete_match.groups()) > 1 else ''
+                                    logging.warning(f"Detected incomplete field '{field_name}' with incomplete value: '{incomplete_value}...'")
+                                    # Remove the incomplete field (everything from the comma before the field)
+                                    simple_fix = json_str[:incomplete_match.start()]
+                                    
+                                    # Close all structures
+                                    simple_braces = simple_fix.count('{') - simple_fix.count('}')
+                                    simple_brackets = simple_fix.count('[') - simple_fix.count(']')
+                                    simple_fix += ']' * max(0, simple_brackets)
+                                    simple_fix += '}' * max(0, simple_braces)
+                                    simple_fix = re.sub(r',(\s*[}\]])', r'\1', simple_fix)
+                                    
+                                    try:
+                                        parsed = json.loads(simple_fix)
+                                        logging.warning(f"Fixed incomplete JSON by removing truncated field '{field_name}'")
+                                        return parsed
+                                    except json.JSONDecodeError as alt_error:
+                                        logging.debug(f"Alternative fix also failed: {alt_error}")
+                                        pass
+                except Exception as incomplete_fix_error:
+                    logging.debug(f"Incomplete JSON fix attempt failed: {incomplete_fix_error}")
+                    pass
+                
+                # Last resort: Try to salvage partial JSON by removing the incomplete field
+                # This is better than failing completely
+                try:
+                    # Find the last incomplete field and remove it
+                    salvage_fix = json_str[:error_pos]
+                    
+                    # Look for the incomplete field pattern: ,"field": "incomplete (without closing quote)
+                    # Try multiple patterns to find incomplete fields
+                    incomplete_field_patterns = [
+                        r',\s*"([^"]+)":\s*"([^"]*)$',  # Pattern: ,"field": "incomplete
+                        r'"([^"]+)":\s*"([^"]*)$',     # Pattern: "field": "incomplete (at start of object)
+                        r',\s*"([^"]+)":\s*"[^"]*[^"]$', # Pattern: ,"field": "incomplete without quote
+                    ]
+                    
+                    salvage_match = None
+                    for pattern in incomplete_field_patterns:
+                        salvage_match = re.search(pattern, salvage_fix)
+                        if salvage_match:
+                            break
+                    
+                    if salvage_match:
+                        field_name = salvage_match.group(1) if len(salvage_match.groups()) > 0 else 'unknown'
+                        incomplete_value = salvage_match.group(2) if len(salvage_match.groups()) > 1 else ''
+                        logging.warning(f"Removing incomplete field '{field_name}' with incomplete value '{incomplete_value}...' to salvage JSON")
+                        # Remove the incomplete field (from comma or start to end of field)
+                        salvage_fix = salvage_fix[:salvage_match.start()]
+                    
+                    # Close all structures properly
+                    salvage_braces = salvage_fix.count('{') - salvage_fix.count('}')
+                    salvage_brackets = salvage_fix.count('[') - salvage_fix.count(']')
+                    salvage_fix += ']' * max(0, salvage_brackets)
+                    salvage_fix += '}' * max(0, salvage_braces)
+                    salvage_fix = re.sub(r',(\s*[}\]])', r'\1', salvage_fix)
+                    
+                    # Try to parse the salvaged JSON
+                    parsed = json.loads(salvage_fix)
+                    logging.warning(f"Salvaged incomplete JSON by removing truncated field (error at position {error_pos}, line {line_num})")
+                    return parsed
+                except json.JSONDecodeError as salvage_parse_error:
+                    logging.debug(f"Salvage parse failed: {salvage_parse_error}, trying manual fix for 'expected_outcome'")
+                    # Manual fix: Specifically handle the "expected_outcome": "expected_" case
+                    # Look for this exact pattern in the error context
+                    if 'expected_outcome' in str(e2) or 'expected_' in str(e2):
+                        # Find the incomplete expected_outcome field and remove it
+                        expected_outcome_pattern = r',\s*"expected_outcome":\s*"[^"]*$'
+                        expected_match = re.search(expected_outcome_pattern, json_str[:error_pos], re.MULTILINE)
+                        if expected_match:
+                            manual_fix = json_str[:expected_match.start()]
+                            # Close structures
+                            manual_braces = manual_fix.count('{') - manual_fix.count('}')
+                            manual_brackets = manual_fix.count('[') - manual_fix.count(']')
+                            manual_fix += ']' * max(0, manual_brackets)
+                            manual_fix += '}' * max(0, manual_braces)
+                            manual_fix = re.sub(r',(\s*[}\]])', r'\1', manual_fix)
+                            try:
+                                parsed = json.loads(manual_fix)
+                                logging.warning(f"Salvaged JSON by manually removing incomplete 'expected_outcome' field")
+                                return parsed
+                            except:
+                                pass
+                    logging.error(f"Could not salvage JSON: {salvage_parse_error}")
+                    pass
+                except Exception as salvage_error:
+                    logging.error(f"Salvage attempt failed with exception: {salvage_error}")
+                    pass
+                
                 raise ValueError(
                     f"Could not parse or repair JSON. Error at line {line_num}, column {col_num}: {e2}. "
                     f"Response preview: {original_response[:500]}"
@@ -457,8 +607,13 @@ class LLMClient:
     
     async def generate_json(self, prompt: str, system_prompt: Optional[str] = None) -> dict:
         """Generate JSON response from LLM"""
-        json_prompt = f"{prompt}\n\nRespond with valid JSON only, no markdown formatting."
+        json_prompt = f"{prompt}\n\nIMPORTANT: Respond with COMPLETE, valid JSON only. Ensure all field values are complete and properly closed. Do not truncate responses. No markdown formatting."
         response = await self.generate_completion(json_prompt, system_prompt)
+        
+        # Check if response might be truncated (very long responses can hit token limits)
+        if len(response) > 25000:
+            logging.warning(f"Received very long response ({len(response)} chars), may be truncated - attempting repair")
+        
         return self._extract_and_repair_json(response)
     
     async def generate_with_vision(
@@ -503,7 +658,7 @@ class LLMClient:
                 # Anthropic vision API format
                 response = self.anthropic_client.messages.create(
                     model=model,
-                    max_tokens=8192,  # Increased to handle large JSON responses with many test steps
+                    max_tokens=16384,  # Increased to handle very large JSON responses with multiple scenarios
                     system=system_message,
                     messages=[{
                         "role": "user",

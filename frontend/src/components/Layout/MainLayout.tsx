@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { ToastContainer } from '../common/ToastContainer';
+import { useToastContext } from '../../contexts/ToastContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -14,9 +16,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   browserPreview 
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { toasts, dismissToast } = useToastContext();
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Skip to main content */}
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
       {/* Header */}
       <Header />
 
@@ -31,11 +38,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {/* Content Area */}
         <div className="flex-1 flex overflow-hidden">
           {/* Main Content Pane */}
-          <div className={`flex-1 overflow-y-auto ${showBrowserPreview ? 'border-r border-gray-200' : ''}`}>
+          <main id="main-content" className={`flex-1 overflow-y-auto ${showBrowserPreview ? 'border-r border-gray-200' : ''}`} role="main">
             <div className="p-6">
               {children}
             </div>
-          </div>
+          </main>
 
           {/* Browser Preview Pane (Right) */}
           {showBrowserPreview && browserPreview && (
@@ -45,6 +52,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           )}
         </div>
       </div>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };

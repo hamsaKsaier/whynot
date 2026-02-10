@@ -1,0 +1,328 @@
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+const apiClient = axios.create({
+  baseURL: API_URL,
+  timeout: 60000, // 60 second timeout for long operations
+});
+
+// QA Loop Session types
+export interface QALoopSession {
+  id: string;
+  project_id: string | null;
+  target_url: string;
+  mode: 'explore' | 'retest' | 'smart_retest';
+  status: 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
+  quality_score: number;
+  quality_threshold: number;
+  iteration_count: number;
+  max_iterations: number;
+  pages_explored: number;
+  tests_generated: number;
+  bugs_found: number;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface QALoopPage {
+  id: string;
+  session_id: string;
+  url: string;
+  title: string | null;
+  page_type: string | null;
+  description: string | null;
+  is_explored: boolean;
+  explored_at: string | null;
+  created_at: string;
+}
+
+export interface QALoopTestCase {
+  id: string;
+  session_id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  priority: number;
+  steps: any[];
+  last_run_status: string | null;
+  created_at: string;
+}
+
+export interface QALoopBug {
+  id: string;
+  session_id: string;
+  title: string;
+  description: string | null;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string | null;
+  page_url: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface QALoopTestRun {
+  id: string;
+  session_id: string;
+  test_case_id: string;
+  test_case_name: string;
+  status: 'pending' | 'running' | 'passed' | 'failed' | 'skipped' | 'error';
+  duration_ms: number | null;
+  self_healed: boolean;
+  executed_at: string;
+}
+
+export interface LoginCredentials {
+  loginUrl?: string;        // URL to navigate to for login (defaults to targetUrl)
+  emailSelector?: string;   // CSS selector for email/username field
+  passwordSelector?: string; // CSS selector for password field
+  submitSelector?: string;  // CSS selector for submit button
+  email: string;            // The email/username value
+  password: string;         // The password value
+}
+
+export interface StartSessionRequest {
+  projectId?: string;
+  targetUrl: string;
+  mode?: 'explore' | 'retest' | 'smart_retest';
+  qualityThreshold?: number;
+  maxIterations?: number;
+  maxDurationHours?: number;
+  documentContext?: string;
+  config?: Record<string, any>;
+  loginCredentials?: LoginCredentials;
+  testPriority?: 'functional_first' | 'balanced' | 'security_first';
+  sourceSessionId?: string; // For continuing from an existing session
+}
+
+export interface SessionDetailsResponse {
+  session: QALoopSession;
+  pages: QALoopPage[];
+  testCases: QALoopTestCase[];
+  bugs: QALoopBug[];
+  notes: any[];
+  isActive: boolean;
+}
+
+// Start a new QA Loop session
+export async function startQALoopSession(request: StartSessionRequest): Promise<{
+  success: boolean;
+  session: QALoopSession;
+}> {
+  const response = await apiClient.post('/qa-loop/sessions', request);
+  return response.data;
+}
+
+// List QA Loop sessions
+export async function listQALoopSessions(params?: {
+  projectId?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{
+  sessions: QALoopSession[];
+  total: number;
+}> {
+  const response = await apiClient.get('/qa-loop/sessions', { params });
+  return response.data;
+}
+
+// Check for existing session by base URL (Phase 3)
+export async function checkExistingSession(targetUrl: string): Promise<{
+  exists: boolean;
+  session?: {
+    id: string;
+    testCaseCount: number;
+    bugsFound: number;
+    completedAt: string;
+  };
+}> {
+  const response = await apiClient.get('/qa-loop/sessions/check-existing', {
+    params: { baseUrl: targetUrl }
+  });
+  return response.data;
+}
+
+// Get QA Loop session details
+export async function getQALoopSession(sessionId: string): Promise<SessionDetailsResponse> {
+  const response = await apiClient.get(`/qa-loop/sessions/${sessionId}`);
+  return response.data;
+}
+
+// Pause QA Loop session
+export async function pauseQALoopSession(sessionId: string): Promise<{
+  success: boolean;
+  status: string;
+}> {
+  const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/pause`);
+  return response.data;
+}
+
+// Resume QA Loop session
+export async function resumeQALoopSession(sessionId: string): Promise<{
+  success: boolean;
+  status: string;
+}> {
+  const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/resume`);
+  return response.data;
+}
+
+// Stop QA Loop session
+export async function stopQALoopSession(sessionId: string): Promise<{
+  success: boolean;
+  status: string;
+}> {
+  const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/stop`);
+  return response.data;
+}
+
+// Run retest
+export async function runRetest(sessionId: string, mode: 'quick' | 'smart' = 'quick'): Promise<{
+  success: boolean;
+  retestSessionId: string;
+  mode: string;
+  status: string;
+}> {
+  const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/retest`, { mode });
+  return response.data;
+}
+
+// Get test cases for a session
+export async function getSessionTestCases(sessionId: string): Promise<{
+  testCases: QALoopTestCase[];
+}> {
+  const response = await apiClient.get(`/qa-loop/sessions/${sessionId}/test-cases`);
+  return response.data;
+}
+
+// Get bugs for a session
+export async function getSessionBugs(sessionId: string): Promise<{
+  bugs: QALoopBug[];
+}> {
+  const response = await apiClient.get(`/qa-loop/sessions/${sessionId}/bugs`);
+  return response.data;
+}
+
+// Get pages for a session
+export async function getSessionPages(sessionId: string): Promise<{
+  pages: QALoopPage[];
+}> {
+  const response = await apiClient.get(`/qa-loop/sessions/${sessionId}/pages`);
+  return response.data;
+}
+
+// Get test runs for a session
+export async function getSessionTestRuns(sessionId: string): Promise<{
+  testRuns: QALoopTestRun[];
+}> {
+  const response = await apiClient.get(`/qa-loop/sessions/${sessionId}/test-runs`);
+  return response.data;
+}
+
+// ==================== DOCUMENT API (Phase 7) ====================
+
+export interface QALoopDocument {
+  id: string;
+  filename: string;
+  fileType: string;
+  fileSizeBytes: number;
+  summary?: string;
+  chunkCount: number;
+  estimatedTokens?: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// Upload a document to a session
+export async function uploadDocument(
+  sessionId: string,
+  file: File
+): Promise<{
+  success: boolean;
+  document: QALoopDocument;
+}> {
+  // Read file content
+  const content = await file.text();
+  const contentBase64 = btoa(unescape(encodeURIComponent(content)));
+
+  const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/documents`, {
+    filename: file.name,
+    contentBase64
+  });
+
+  return response.data;
+}
+
+// List documents for a session
+export async function listDocuments(
+  sessionId: string,
+  activeOnly: boolean = false
+): Promise<{
+  documents: QALoopDocument[];
+}> {
+  const response = await apiClient.get(`/qa-loop/sessions/${sessionId}/documents`, {
+    params: { activeOnly }
+  });
+  return response.data;
+}
+
+// Get a specific document
+export async function getDocument(
+  sessionId: string,
+  documentId: string,
+  includeContent: boolean = false
+): Promise<{
+  document: QALoopDocument & { content?: string };
+}> {
+  const response = await apiClient.get(
+    `/qa-loop/sessions/${sessionId}/documents/${documentId}`,
+    { params: { includeContent } }
+  );
+  return response.data;
+}
+
+// Toggle document active state
+export async function toggleDocument(
+  sessionId: string,
+  documentId: string,
+  isActive: boolean
+): Promise<{
+  success: boolean;
+  isActive: boolean;
+}> {
+  const response = await apiClient.patch(
+    `/qa-loop/sessions/${sessionId}/documents/${documentId}`,
+    { isActive }
+  );
+  return response.data;
+}
+
+// Delete a document
+export async function deleteDocument(
+  sessionId: string,
+  documentId: string
+): Promise<{
+  success: boolean;
+}> {
+  const response = await apiClient.delete(
+    `/qa-loop/sessions/${sessionId}/documents/${documentId}`
+  );
+  return response.data;
+}
+
+// Get combined document context
+export async function getCombinedDocuments(
+  sessionId: string,
+  maxTokens?: number
+): Promise<{
+  context: string;
+  documentCount: number;
+  estimatedTokens: number;
+}> {
+  const response = await apiClient.get(
+    `/qa-loop/sessions/${sessionId}/documents/combined`,
+    { params: { maxTokens } }
+  );
+  return response.data;
+}

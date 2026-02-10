@@ -9,10 +9,21 @@ import { BrowserStreamer } from '../infrastructure/browser/browser-streamer';
 import { BrowserPool } from '../infrastructure/browser/browser-pool';
 import { registerBrowserStream, unregisterBrowserStream } from '../api/websocket-handler';
 import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
+import { BaselineManager } from './baseline-manager';
+import { VisualComparator } from './visual-comparator';
+import { VisualRegressionRepository } from '../../shared/database/repositories/visual-regression-repository';
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../../shared/logger/logger';
 
 const logger = createLogger('test-runner');
+
+interface ActiveExecution {
+  cancelled: boolean;
+  browserController?: any;
+  browserStreamer?: any;
+  isolatedContext?: any;
+  pooledContext?: { context: any; page: any } | null;
+}
 
 export class TestRunner {
   private aiServiceUrl: string;
@@ -21,6 +32,11 @@ export class TestRunner {
   private usePool: boolean;
   private failureReporter: FailureReporter;
   private selectorHealthMonitor: SelectorHealthMonitor;
+  private baselineManager?: BaselineManager;
+  private visualComparator?: VisualComparator;
+  private visualRegressionRepository?: VisualRegressionRepository;
+  private visualRegressionEnabled: boolean;
+  private activeExecutions: Map<string, ActiveExecution> = new Map();
 
   constructor(
     aiServiceUrl: string = 'http://localhost:8000',
@@ -33,6 +49,14 @@ export class TestRunner {
     this.usePool = usePool;
     this.failureReporter = new FailureReporter();
     this.selectorHealthMonitor = new SelectorHealthMonitor();
+    
+    // Initialize visual regression components
+    this.visualRegressionEnabled = process.env.VISUAL_REGRESSION_ENABLED !== 'false';
+    if (this.visualRegressionEnabled) {
+      this.visualRegressionRepository = new VisualRegressionRepository();
+      this.visualComparator = new VisualComparator(aiServiceUrl);
+      this.baselineManager = new BaselineManager(this.visualRegressionRepository, this.visualComparator);
+    }
   }
 
   async runTest(
@@ -46,15 +70,22 @@ export class TestRunner {
     const stepResults: StepResult[] = [];
     const screenshots: string[] = [];
 
-    let status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused' = 'running';
+    let status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused' | 'cancelled' = 'running';
     let error: string | undefined;
     let browserStreamer: BrowserStreamer | null = null;
     let pooledContext: { context: any; page: any } | null = null;
     let isolatedContext: any = null; // Track isolated context for cleanup
     let testCaseModified = false; // Track if test case was modified during execution
 
+    // Register this execution as active
+    const activeExecution: ActiveExecution = { cancelled: false };
+    this.activeExecutions.set(executionId, activeExecution);
+
       // Create fresh controller and executor for THIS test (no sharing!)
       const browserController = new PlaywrightController(this.screenshotsDir);
+      
+      // Store references for cancellation
+      activeExecution.browserController = browserController;
       const hybridSelector = new HybridSelector(this.aiServiceUrl);
       const stepExecutor = new StepExecutor(browserController, hybridSelector, this.aiServiceUrl);
       const setupExecutor = new SetupExecutor(stepExecutor);
@@ -98,6 +129,7 @@ export class TestRunner {
         // Use browser pool for faster startup (shared context)
         pooledContext = await this.browserPool.acquire();
         browserController.setPage(pooledContext.page);
+        activeExecution.pooledContext = pooledContext;
         browserController.setContext(pooledContext.context);
         sendLog('info', '✅ Browser ready (from pool)\n');
       } else {
@@ -111,6 +143,7 @@ export class TestRunner {
       if (page) {
         browserStreamer = new BrowserStreamer(page, executionId);
         registerBrowserStream(executionId, browserStreamer);
+        activeExecution.browserStreamer = browserStreamer;
         logger.info('Browser streaming setup', { executionId, headless });
         if (!headless) {
           await browserStreamer.startStreaming();
@@ -174,6 +207,14 @@ export class TestRunner {
 
       // Execute steps
       for (let i = 0; i < testCase.steps.length; i++) {
+        // Check for cancellation
+        if (activeExecution.cancelled) {
+          status = 'cancelled';
+          error = 'Test execution was cancelled by user';
+          sendLog('warn', '\n⚠️ Test execution cancelled');
+          break;
+        }
+
         const step = testCase.steps[i];
 
         sendLog('info', `\n📋 STEP ${i + 1}/${testCase.steps.length}: ${step.description || step.action}`);
@@ -202,6 +243,62 @@ export class TestRunner {
 
           if (browserStreamer) {
             browserStreamer.sendStepComplete(stepResult, i);
+          }
+
+          // Perform visual comparison if enabled and screenshot exists
+          if (this.visualRegressionEnabled && stepResult.screenshot_path && this.baselineManager) {
+            try {
+              const baseline = await this.baselineManager.getBaseline(testCase.id, step.id);
+              
+              if (baseline && this.visualComparator && this.visualRegressionRepository) {
+                sendLog('info', `   🔍 Comparing screenshot with baseline...`);
+                
+                // Compare screenshots
+                const comparison = await this.visualComparator.compareScreenshots(
+                  baseline.screenshot_path,
+                  stepResult.screenshot_path
+                );
+
+                // Store comparison result in database
+                await this.visualRegressionRepository.createComparison({
+                  execution_id: executionId,
+                  step_id: step.id,
+                  baseline_id: baseline.id,
+                  current_screenshot_path: stepResult.screenshot_path,
+                  diff_image_path: comparison.diffImagePath || null,
+                  pixel_diff_score: comparison.pixelDiffScore,
+                  ai_diff_analysis: comparison.aiAnalysis || null,
+                  is_regression: comparison.isRegression,
+                  regression_severity: comparison.severity,
+                  ignored: false
+                });
+
+                // Add visual comparison to step result
+                stepResult.visual_comparison = comparison;
+
+                if (comparison.isRegression) {
+                  const severityEmoji = comparison.severity === 'critical' ? '🔴' : 
+                                       comparison.severity === 'high' ? '🟠' : 
+                                       comparison.severity === 'medium' ? '🟡' : '🟢';
+                  sendLog('warn', `   ${severityEmoji} Visual regression detected (${comparison.severity}): ${comparison.differences.slice(0, 2).join(', ')}`);
+                  
+                  // Mark step as failed if regression severity is high or critical
+                  if (comparison.severity === 'critical' || comparison.severity === 'high') {
+                    stepResult.success = false;
+                    stepResult.error = `Visual regression detected: ${comparison.differences[0] || 'Significant visual differences found'}`;
+                  }
+                } else {
+                  sendLog('info', `   ✅ No visual regression detected`);
+                }
+              } else {
+                // No baseline exists yet - will be created after successful execution
+                logger.debug('No baseline found for step', { testCaseId: testCase.id, stepId: step.id });
+              }
+            } catch (visualError: any) {
+              logger.warn('Visual comparison failed', { error: visualError.message, stepId: step.id });
+              // Don't fail the step if visual comparison fails
+              sendLog('warn', `   ⚠️ Visual comparison failed: ${visualError.message}`);
+            }
           }
 
           if (stepResult.screenshot_path) {
@@ -304,6 +401,9 @@ export class TestRunner {
       }
     } finally {
       // Cleanup
+      // Remove from active executions
+      this.activeExecutions.delete(executionId);
+      
       if (browserStreamer) {
         browserStreamer.stopStreaming();
         // Send final result via WebSocket before cleanup
@@ -390,6 +490,43 @@ export class TestRunner {
       }
     }
 
+    // Promote execution screenshots as baselines if test passed and visual regression enabled
+    if (this.visualRegressionEnabled && status === 'completed' && stepResults.length > 0 && this.baselineManager) {
+      try {
+        // Collect step screenshots that exist
+        const stepScreenshots = stepResults
+          .filter(sr => sr.screenshot_path && sr.success)
+          .map(sr => ({
+            stepId: sr.step_id,
+            screenshotPath: sr.screenshot_path!
+          }));
+
+        if (stepScreenshots.length > 0) {
+          const createdBaselines = await this.baselineManager.promoteExecutionAsBaseline(
+            testCase.id,
+            executionId,
+            stepScreenshots
+          );
+
+          if (createdBaselines.length > 0) {
+            sendLog('info', `📸 ${createdBaselines.length} baseline(s) created from successful execution`);
+            logger.info('Baselines created from execution', {
+              testCaseId: testCase.id,
+              executionId,
+              baselineCount: createdBaselines.length
+            });
+          }
+        }
+      } catch (baselineError: any) {
+        logger.warn('Failed to promote execution as baseline', {
+          error: baselineError.message,
+          testCaseId: testCase.id,
+          executionId
+        });
+        // Don't fail execution if baseline promotion fails
+      }
+    }
+
     return {
       execution_id: executionId,
       test_case_id: testCase.id,
@@ -401,6 +538,36 @@ export class TestRunner {
       started_at: startedAt,
       completed_at: completedAt
     };
+  }
+
+  /**
+   * Stop a running execution
+   */
+  async stopExecution(executionId: string): Promise<void> {
+    const execution = this.activeExecutions.get(executionId);
+    if (!execution) {
+      throw new Error(`Execution ${executionId} not found or not running`);
+    }
+
+    logger.info('Stopping execution', { executionId });
+    execution.cancelled = true;
+
+    // Try to stop browser operations gracefully
+    try {
+      if (execution.browserStreamer) {
+        execution.browserStreamer.stopStreaming();
+      }
+      
+      if (execution.browserController) {
+        const page = execution.browserController.getPage();
+        if (page && !page.isClosed()) {
+          // Close page to stop any ongoing operations
+          await page.close().catch(() => {});
+        }
+      }
+    } catch (error: any) {
+      logger.warn('Error during execution stop', { error: error.message, executionId });
+    }
   }
 
   /**

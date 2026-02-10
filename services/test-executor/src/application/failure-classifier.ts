@@ -123,6 +123,27 @@ export class FailureClassifier {
     }
 
     if (error.includes('assertion') || error.includes('expected') || error.includes('verify')) {
+      // For assertions that failed due to selector issues (element not found), it's a system failure
+      // But if it's a URL-based assertion that failed (login verification), check the error
+      const isUrlAssertionFailure = error.includes('login') && error.includes('redirected');
+      const isElementNotFoundInAssertion = error.includes('element not found');
+      
+      if (isElementNotFoundInAssertion || isUrlAssertionFailure) {
+        // System failure - our selector/assertion logic failed
+        return {
+          category: FailureCategory.ASSERTION_FAILURE,
+          confidence: 0.85,
+          isSystemFailure: true,
+          reason: error.includes('login') 
+            ? 'Assertion failed: Login verification assertion should check URL instead of element'
+            : 'Assertion failed: Element not found - selector generation may have failed',
+          suggestedActions: error.includes('login') 
+            ? ['Check URL instead of element for login verification', 'Verify redirect occurred']
+            : ['Retry with different selector strategy', 'Use AI recovery', 'Check if assertion should verify URL instead of element'],
+          recoveryAttempted: false
+        };
+      }
+      
       return {
         category: FailureCategory.ASSERTION_FAILURE,
         confidence: 0.8,

@@ -45,6 +45,9 @@ export interface ChatContext {
   step_index?: number; // Position of step in test case
   step?: TestStep; // Full step object
   operation?: 'fix' | 'edit' | 'modify'; // Intent when opening
+  step_result?: any;
+  error_message?: string;
+  attempted_selectors?: any[];
 }
 
 /**

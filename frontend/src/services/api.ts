@@ -77,6 +77,53 @@ export const getExecutionResult = async (
   return response.data;
 };
 
+// Get all executions with pagination, filtering, and search
+export const getExecutions = async (options?: {
+  offset?: number;
+  limit?: number;
+  status?: 'completed' | 'failed' | 'running' | 'timeout' | 'paused';
+  search?: string;
+}): Promise<{
+  executions: ExecutionResult[];
+  total: number;
+  offset: number;
+  limit: number;
+}> => {
+  const params = new URLSearchParams();
+  if (options?.offset !== undefined) params.append('offset', String(options.offset));
+  if (options?.limit !== undefined) params.append('limit', String(options.limit));
+  if (options?.status) params.append('status', options.status);
+  if (options?.search) params.append('search', options.search);
+
+  const response = await apiClient.get<{
+    executions: ExecutionResult[];
+    total: number;
+    offset: number;
+    limit: number;
+  }>(`/executions?${params.toString()}`);
+  return response.data;
+};
+
+// Get execution by ID (alias for getExecutionResult, but more explicit)
+export const getExecutionById = async (
+  executionId: string
+): Promise<ExecutionResult> => {
+  const response = await apiClient.get<ExecutionResult>(
+    `/executions/${executionId}`
+  );
+  return response.data;
+};
+
+// Stop a running execution
+export const stopExecution = async (
+  executionId: string
+): Promise<{ success: boolean; message: string; execution_id: string }> => {
+  const response = await apiClient.post<{ success: boolean; message: string; execution_id: string }>(
+    `/executions/${executionId}/stop`
+  );
+  return response.data;
+};
+
 // Get test results (future use)
 export const getTestResults = async (
   executionId: string
@@ -239,6 +286,8 @@ export const deleteUserStory = async (id: string): Promise<void> => {
 export interface GenerateTestsWithContextRequest extends GenerateTestsRequest {
   project_id?: string;
   user_story_id?: string;
+  prerequisite_steps?: Array<{ action: 'click' | 'type'; selector: string; value?: string }>;
+  quick_mode?: boolean;
 }
 
 export interface GenerateTestsWithContextResponse extends GenerateTestsResponse {
@@ -249,6 +298,9 @@ export interface GenerateTestsWithContextResponse extends GenerateTestsResponse 
 export const generateTestsWithContext = async (
   request: GenerateTestsWithContextRequest
 ): Promise<GenerateTestsWithContextResponse> => {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api.ts:generateTestsWithContext', message: 'Request payload being sent', data: { quick_mode: request.quick_mode, quick_mode_type: typeof request.quick_mode, requestKeys: Object.keys(request) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
+  // #endregion
   const response = await apiClient.post<GenerateTestsWithContextResponse>(
     '/generate-tests',
     request
@@ -311,6 +363,95 @@ export const assignUserStoryToFolder = async (
   const response = await apiClient.put<{ success: boolean; message: string }>(
     `/user-stories/${userStoryId}/folder`,
     { folder_id: folderId }
+  );
+  return response.data;
+};
+
+// ==================== VISUAL REGRESSION ENDPOINTS ====================
+
+import type { VisualBaseline, VisualComparison } from '../types';
+
+// Get baselines for a test case
+export const getTestCaseBaselines = async (testCaseId: string): Promise<{ baselines: VisualBaseline[] }> => {
+  const response = await apiClient.get<{ baselines: VisualBaseline[] }>(
+    `/test-cases/${testCaseId}/baselines`
+  );
+  return response.data;
+};
+
+// Get baseline history for a test case and step
+export const getBaselineHistory = async (
+  testCaseId: string,
+  stepId: string
+): Promise<{ baselines: VisualBaseline[] }> => {
+  const response = await apiClient.get<{ baselines: VisualBaseline[] }>(
+    `/test-cases/${testCaseId}/baselines/${stepId}`
+  );
+  return response.data;
+};
+
+// Create/update baseline (manual)
+export const createBaseline = async (
+  testCaseId: string,
+  baselineData: { step_id: string; screenshot_path: string; execution_id?: string }
+): Promise<{ success: boolean; baseline: VisualBaseline }> => {
+  const response = await apiClient.post<{ success: boolean; baseline: VisualBaseline }>(
+    `/test-cases/${testCaseId}/baselines`,
+    baselineData
+  );
+  return response.data;
+};
+
+// Lock/unlock baseline
+export const setBaselineLock = async (
+  testCaseId: string,
+  baselineId: string,
+  isLocked: boolean
+): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.put<{ success: boolean; message: string }>(
+    `/test-cases/${testCaseId}/baselines/${baselineId}/lock`,
+    { is_locked: isLocked }
+  );
+  return response.data;
+};
+
+// Get visual comparisons for an execution
+export const getExecutionVisualComparisons = async (
+  executionId: string
+): Promise<{ comparisons: VisualComparison[] }> => {
+  const response = await apiClient.get<{ comparisons: VisualComparison[] }>(
+    `/executions/${executionId}/visual-comparisons`
+  );
+  return response.data;
+};
+
+// Get all visual regressions (filtered, paginated)
+export const getVisualRegressions = async (options?: {
+  ignored?: boolean;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  limit?: number;
+  offset?: number;
+}): Promise<{ regressions: VisualComparison[] }> => {
+  const params = new URLSearchParams();
+  if (options?.ignored !== undefined) params.append('ignored', String(options.ignored));
+  if (options?.severity) params.append('severity', options.severity);
+  if (options?.limit) params.append('limit', String(options.limit));
+  if (options?.offset) params.append('offset', String(options.offset));
+
+  const response = await apiClient.get<{ regressions: VisualComparison[] }>(
+    `/visual-regressions?${params.toString()}`
+  );
+  return response.data;
+};
+
+// Ignore/unignore a visual regression
+export const setVisualRegressionIgnored = async (
+  comparisonId: string,
+  ignored: boolean
+): Promise<{ success: boolean; comparison: VisualComparison }> => {
+  const response = await apiClient.put<{ success: boolean; comparison: VisualComparison }>(
+    `/visual-regressions/${comparisonId}/ignore`,
+    { ignored }
   );
   return response.data;
 };

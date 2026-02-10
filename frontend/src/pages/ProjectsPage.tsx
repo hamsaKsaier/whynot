@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiEdit2, FiTrash2, FiFolder, FiGlobe, FiBook } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiFolder, FiGlobe, FiBook, FiCopy } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { Alert } from '../components/common/Alert';
-import { Spinner } from '../components/common/Spinner';
+import { SkeletonCard } from '../components/common/SkeletonCard';
 import { Modal, ModalFooter } from '../components/common/Modal';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { EmptyState } from '../components/common/EmptyState';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { QuickActions } from '../components/common/QuickActions';
+import { useToastContext } from '../contexts/ToastContext';
+import { useClipboard } from '../hooks/useClipboard';
+import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
+import { useFormAutoSave } from '../hooks/useFormAutoSave';
 import {
   getProjects,
   createProject,
@@ -31,6 +38,10 @@ const initialFormData: ProjectFormData = {
 
 export const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { success, error: showError } = useToastContext();
+  const { copyToClipboard } = useClipboard();
+  const { optimisticCreate, optimisticUpdate, optimisticDelete } = useOptimisticUpdate<ProjectWithStats>();
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +54,26 @@ export const ProjectsPage: React.FC = () => {
     isOpen: boolean;
     project: ProjectWithStats | null;
   }>({ isOpen: false, project: null });
+  const [showDraftRestore, setShowDraftRestore] = useState(false);
+
+  // Auto-save form data
+  const { loadDraft, clearDraft, hasDraft } = useFormAutoSave(
+    editingProject ? `project-edit-${editingProject.id}` : 'project-create',
+    formData,
+    {
+      enabled: isModalOpen,
+      onRestore: (data) => {
+        setFormData(data);
+      },
+    }
+  );
+
+  // Check for draft when modal opens
+  useEffect(() => {
+    if (isModalOpen && hasDraft() && !editingProject) {
+      setShowDraftRestore(true);
+    }
+  }, [isModalOpen, hasDraft, editingProject]);
 
   useEffect(() => {
     fetchProjects();
@@ -63,7 +94,14 @@ export const ProjectsPage: React.FC = () => {
 
   const openCreateModal = () => {
     setEditingProject(null);
-    setFormData(initialFormData);
+    // Try to load draft first
+    const draft = loadDraft();
+    if (draft) {
+      setFormData(draft);
+      setShowDraftRestore(true);
+    } else {
+      setFormData(initialFormData);
+    }
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -84,6 +122,7 @@ export const ProjectsPage: React.FC = () => {
     setEditingProject(null);
     setFormData(initialFormData);
     setFormErrors({});
+    setShowDraftRestore(false);
   };
 
   const validateForm = (): boolean => {
@@ -116,22 +155,61 @@ export const ProjectsPage: React.FC = () => {
     setSubmitting(true);
     try {
       if (editingProject) {
-        await updateProject(editingProject.id, {
+        const optimisticProject: ProjectWithStats = {
+          ...editingProject,
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
           website_url: formData.website_url.trim() || undefined,
-        });
+        };
+        
+        const updatedProjects = await optimisticUpdate(
+          projects,
+          optimisticProject,
+          () => updateProject(editingProject.id, {
+            name: formData.name.trim(),
+            description: formData.description.trim() || undefined,
+            website_url: formData.website_url.trim() || undefined,
+          }).then(res => ({ ...res.project, user_story_count: editingProject.user_story_count })),
+          {
+            successMessage: 'Project updated successfully',
+            errorMessage: 'Failed to update project',
+          }
+        );
+        setProjects(updatedProjects);
+        setShowSuccessAnimation(true);
       } else {
-        await createProject({
+        const tempId = `temp-${Date.now()}`;
+        const optimisticProject: ProjectWithStats = {
+          id: tempId,
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
           website_url: formData.website_url.trim() || undefined,
-        });
+          user_story_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
+        const updatedProjects = await optimisticCreate(
+          projects,
+          optimisticProject,
+          () => createProject({
+            name: formData.name.trim(),
+            description: formData.description.trim() || undefined,
+            website_url: formData.website_url.trim() || undefined,
+          }).then(res => ({ ...res.project, user_story_count: 0 })),
+          {
+            successMessage: 'Project created successfully',
+            errorMessage: 'Failed to create project',
+          }
+        );
+        setProjects(updatedProjects);
+        setShowSuccessAnimation(true);
       }
+      clearDraft(); // Clear draft on successful submission
       closeModal();
-      fetchProjects();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to save project');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to save project';
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -142,10 +220,13 @@ export const ProjectsPage: React.FC = () => {
 
     try {
       await deleteProject(deleteConfirm.project.id);
+      success('Project deleted successfully');
       setDeleteConfirm({ isOpen: false, project: null });
       fetchProjects();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to delete project');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to delete project';
+      setError(errorMessage);
+      showError(errorMessage);
       setDeleteConfirm({ isOpen: false, project: null });
     }
   };
@@ -156,8 +237,17 @@ export const ProjectsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Spinner size="lg" />
+      <div className="space-y-6">
+        <div className="page-header flex items-center justify-between">
+          <div>
+            <SkeletonLoader width="w-48" height="h-8" className="mb-2" />
+            <SkeletonLoader width="w-64" height="h-4" />
+          </div>
+          <SkeletonLoader width="w-32" height="h-10" />
+        </div>
+        <div className="card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <SkeletonCard count={3} />
+        </div>
       </div>
     );
   }
@@ -165,10 +255,10 @@ export const ProjectsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="page-title">Projects</h1>
+          <p className="page-subtitle">
             Manage your testing projects and user stories
           </p>
         </div>
@@ -179,32 +269,57 @@ export const ProjectsPage: React.FC = () => {
       </div>
 
       {error && (
-        <Alert type="error" message={error} onClose={() => setError(null)} />
+        <Alert
+          type="error"
+          title="Error"
+          message={error}
+          suggestions={[
+            'Check your network connection',
+            'Verify that all services are running',
+            'Try refreshing the page',
+          ]}
+          actions={[
+            {
+              label: 'Retry',
+              onClick: () => {
+                setError(null);
+                fetchProjects();
+              },
+              variant: 'primary',
+            },
+            {
+              label: 'Dismiss',
+              onClick: () => setError(null),
+              variant: 'secondary',
+            },
+          ]}
+          onClose={() => setError(null)}
+        />
       )}
 
       {/* Projects Grid */}
       {projects.length === 0 ? (
         <Card>
-          <div className="text-center py-12">
-            <FiFolder className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-lg font-medium text-gray-900">No projects yet</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Get started by creating your first project.
-            </p>
-            <div className="mt-6">
+          <EmptyState
+            icon={<FiFolder />}
+            title="No projects yet"
+            description="Projects help you organize your test cases by application or feature"
+            action={
               <Button onClick={openCreateModal}>
                 <FiPlus className="mr-2" />
-                New Project
+                Create Your First Project
               </Button>
-            </div>
-          </div>
+            }
+            tip="Tip: Each project can have multiple user stories and test cases"
+          />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Card
               key={project.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
+              hoverable
+              clickable
               onClick={() => handleProjectClick(project)}
             >
               <div className="flex items-start justify-between">
@@ -223,24 +338,31 @@ export const ProjectsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditModal(project);
-                    }}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-                  >
-                    <FiEdit2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteConfirm({ isOpen: true, project });
-                    }}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <FiTrash2 className="h-4 w-4" />
-                  </button>
+                  <QuickActions
+                    actions={[
+                      {
+                        label: 'Copy Project ID',
+                        icon: <FiCopy className="h-4 w-4" />,
+                        onClick: () => {
+                          copyToClipboard(project.id, {
+                            successMessage: 'Project ID copied to clipboard',
+                          });
+                        },
+                      },
+                      {
+                        label: 'Edit',
+                        icon: <FiEdit2 className="h-4 w-4" />,
+                        onClick: () => openEditModal(project),
+                      },
+                      {
+                        label: 'Delete',
+                        icon: <FiTrash2 className="h-4 w-4" />,
+                        onClick: () => setDeleteConfirm({ isOpen: true, project }),
+                        variant: 'danger',
+                      },
+                    ]}
+                    position="bottom-right"
+                  />
                 </div>
               </div>
 

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  FiChevronLeft, 
-  FiChevronRight, 
-  FiRefreshCw, 
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiRefreshCw,
   FiHome,
   FiZoomIn,
   FiZoomOut,
@@ -27,6 +27,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
   onNavigate,
   onZoomChange,
   onBrowserChange,
+  onResolutionChange,
   currentBrowser = 'Chrome',
   currentResolution = '1920x1080',
   currentZoom = 100,

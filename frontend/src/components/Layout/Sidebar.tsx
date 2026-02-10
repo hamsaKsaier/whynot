@@ -11,8 +11,10 @@ import {
   FiZap,
   FiServer,
   FiUsers,
-  FiGitBranch
+  FiGitBranch,
+  FiKey
 } from 'react-icons/fi';
+import { Tooltip } from '../common/Tooltip';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -31,12 +33,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onToggleCollapse?.();
   };
 
-  const menuItems = [
+  const primaryMenuItems = [
     {
       icon: FiHome,
       label: 'Dashboard',
       path: '/',
       badge: null
+    },
+    {
+      icon: FiZap,
+      label: 'QA Loop',
+      path: '/qa-loop',
+      badge: 'NEW'
     },
     {
       icon: FiFolder,
@@ -45,21 +53,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: null
     },
     {
-      icon: FiFileText,
-      label: 'Test Cases',
-      path: '/test-cases',
-      badge: null
-    },
-    {
       icon: FiPlay,
       label: 'Test Runs',
       path: '/test-runs',
       badge: null
     },
+  ];
+
+  const secondaryMenuItems = [
     {
-      icon: FiGitBranch,
-      label: 'Architecture Flow',
-      path: '/architecture-flow',
+      icon: FiFileText,
+      label: 'Test Cases',
+      path: '/test-cases',
       badge: null
     },
     {
@@ -69,10 +74,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: null
     },
     {
-      icon: FiUsers,
-      label: 'Personas',
-      path: '/personas',
-      badge: 'Coming Soon'
+      icon: FiKey,
+      label: 'Webhooks',
+      path: '/webhooks',
+      badge: null
     },
     {
       icon: FiSettings,
@@ -99,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!isCollapsed && (
           <div className="flex items-center">
             <FiZap className="h-6 w-6 text-primary-600 mr-2" />
-            <span className="font-bold text-gray-900">Thunder Code</span>
+            <span className="font-bold text-gray-900">WhyNot</span>
           </div>
         )}
         {isCollapsed && (
@@ -125,42 +130,109 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Project
           </div>
           <div className="text-sm font-medium text-gray-900">
-            Thunder Code POC
+            WhyNot
           </div>
         </div>
       )}
 
       {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto py-4">
-        <div className="px-2 space-y-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
+      <nav className="flex-1 overflow-y-auto py-4" role="navigation" aria-label="Main navigation">
+        <div className="px-2 space-y-4">
+          {/* Primary Section */}
+          <div>
+            {!isCollapsed && (
+              <div className="px-3 mb-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Primary
+                </span>
+              </div>
+            )}
+            <div className="space-y-1">
+              {primaryMenuItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center px-3 py-2 rounded-lg transition-colors group ${active
-                  ? 'bg-primary-50 text-primary-700 font-medium'
-                  : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <Icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                {!isCollapsed && (
-                  <>
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge && (
-                      <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
-                        {item.badge}
-                      </span>
+                const linkContent = (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-colors group ${active
+                      ? 'bg-primary-50 text-primary-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
+                    {!isCollapsed && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
-              </Link>
-            );
-          })}
+                  </Link>
+                );
+
+                return isCollapsed ? (
+                  <Tooltip key={item.path} content={item.label} position="right">
+                    {linkContent}
+                  </Tooltip>
+                ) : (
+                  linkContent
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Secondary Section */}
+          <div>
+            {!isCollapsed && (
+              <div className="px-3 mb-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Secondary
+                </span>
+              </div>
+            )}
+            <div className="space-y-1">
+              {secondaryMenuItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+
+                const linkContent = (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-colors group ${active
+                      ? 'bg-primary-50 text-primary-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
+                    {!isCollapsed && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </Link>
+                );
+
+                return isCollapsed ? (
+                  <Tooltip key={item.path} content={item.label} position="right">
+                    {linkContent}
+                  </Tooltip>
+                ) : (
+                  linkContent
+                );
+              })}
+            </div>
+          </div>
         </div>
       </nav>
 

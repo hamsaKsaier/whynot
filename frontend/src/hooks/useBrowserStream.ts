@@ -67,28 +67,28 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
   const [finalResult, setFinalResult] = useState<any>(null);
   const [stepUpdates, setStepUpdates] = useState<Map<number, StepUpdate>>(new Map());
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([]);
-  
+
   // Frame history for time-travel debugging
   const [frameHistory, setFrameHistory] = useState<Map<number, BrowserFrame[]>>(new Map());
   const [currentStepIndex, setCurrentStepIndex] = useState<number | null>(null);
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
-  
+
   // Frame caching for performance
   const frameCache = useRef<Map<string, BrowserFrame>>(new Map());
   const maxCacheSize = 50;
-  
+
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
 
   const connect = useCallback(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:52',message:'connect() called',data:{executionId,enabled,wsUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:52', message: 'connect() called', data: { executionId, enabled, wsUrl }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B,C,D,E' }) }).catch(() => { });
     // #endregion
     if (!executionId || !enabled) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:55',message:'Connection skipped',data:{executionId,enabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:55', message: 'Connection skipped', data: { executionId, enabled }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
       // #endregion
       console.log('WebSocket connection skipped', { executionId, enabled });
       return;
@@ -101,7 +101,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
       : `ws://${window.location.hostname}:3011`);
     const wsUrlFull = `${wsBaseUrl}/ws/browser-stream/${executionId}`;
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:63',message:'WebSocket URL constructed',data:{wsUrlFull,wsBaseUrl,hostname:window.location.hostname,protocol:window.location.protocol,executionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:63', message: 'WebSocket URL constructed', data: { wsUrlFull, wsBaseUrl, hostname: window.location.hostname, protocol: window.location.protocol, executionId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,D' }) }).catch(() => { });
     // #endregion
     console.log('Attempting WebSocket connection', { wsUrlFull, executionId });
 
@@ -109,11 +109,11 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
     try {
       ws = new WebSocket(wsUrlFull);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:69',message:'WebSocket object created',data:{wsUrlFull,readyState:ws.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:69', message: 'WebSocket object created', data: { wsUrlFull, readyState: ws.readyState }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,D' }) }).catch(() => { });
       // #endregion
     } catch (err: any) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:72',message:'WebSocket creation failed',data:{error:err?.message,errorType:err?.constructor?.name,wsUrlFull},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:72', message: 'WebSocket creation failed', data: { error: err?.message, errorType: err?.constructor?.name, wsUrlFull }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
       // #endregion
       console.error('Failed to create WebSocket', err);
       setError(`Failed to create WebSocket connection: ${err.message}`);
@@ -122,7 +122,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
 
     ws.onopen = () => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:79',message:'WebSocket opened successfully',data:{executionId,wsUrlFull},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:79', message: 'WebSocket opened successfully', data: { executionId, wsUrlFull }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,D' }) }).catch(() => { });
       // #endregion
       console.log('WebSocket opened for browser streaming', { executionId, wsUrlFull });
       setIsConnected(true);
@@ -143,7 +143,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
             stepIndex: data.stepIndex,
             format: data.format || 'png',
           };
-          
+
           // Add to frame history if step index is available
           if (frame.stepIndex !== undefined) {
             setFrameHistory((prev) => {
@@ -153,31 +153,31 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
               }
               const stepFrames = newHistory.get(frame.stepIndex!)!;
               stepFrames.push(frame);
-              
+
               // Limit frames per step (keep last 10 frames per step)
               if (stepFrames.length > 10) {
                 stepFrames.shift();
               }
-              
+
               return newHistory;
             });
-            
+
             // Update current step index
             if (currentStepIndex !== frame.stepIndex) {
               setCurrentStepIndex(frame.stepIndex);
               setCurrentFrameIndex(0);
             }
           }
-          
+
           // Update current frame
           setCurrentFrame(frame);
-          
+
           // Cache frame for performance
           const cacheKey = `${frame.stepIndex ?? 'none'}-${frame.timestamp}`;
           if (frameCache.current.size >= maxCacheSize) {
             // Remove oldest entry
-            const firstKey = frameCache.current.keys().next().value;
-            frameCache.current.delete(firstKey);
+            const firstKey = frameCache.current.keys().next().value as string | undefined;
+            if (firstKey !== undefined) frameCache.current.delete(firstKey);
           }
           frameCache.current.set(cacheKey, frame);
         } else if (data.type === 'url') {
@@ -235,7 +235,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
           // Step execution started
           setCurrentStepIndex(data.stepIndex);
           setCurrentFrameIndex(0);
-          
+
           const stepUpdate: StepUpdate = {
             stepIndex: data.stepIndex,
             step: data.step,
@@ -270,7 +270,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
           });
         } else if (data.type === 'connected') {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:197',message:'Received connected message',data:{executionId:data.executionId,message:data.message,wsReadyState:ws.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:197', message: 'Received connected message', data: { executionId: data.executionId, message: data.message, wsReadyState: ws.readyState }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D,E' }) }).catch(() => { });
           // #endregion
           console.log('WebSocket connection confirmed by backend', { executionId: data.executionId, message: data.message });
           setIsConnected(true);
@@ -286,31 +286,28 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
           };
           setStepUpdates((prev: Map<number, StepUpdate>) => {
             const newMap = new Map(prev);
-            const existing = newMap.get(data.stepIndex) || {
+            const existing: StepUpdate = newMap.get(data.stepIndex) ?? {
               stepIndex: data.stepIndex,
               status: 'running',
               timestamp: Date.now()
             };
-            if (!existing.selectorAttempts) {
-              existing.selectorAttempts = [];
-            }
-            // Update or add attempt
-            const attemptIndex = existing.selectorAttempts.findIndex(
-              a => a.attemptNumber === attempt.attemptNumber && a.selector.type === attempt.selector.type && a.selector.value === attempt.selector.value
+            const selectorAttempts = existing.selectorAttempts ?? [];
+            const attemptIndex = selectorAttempts.findIndex(
+              (a: SelectorAttempt) => a.attemptNumber === attempt.attemptNumber && a.selector?.type === attempt.selector?.type && a.selector?.value === attempt.selector?.value
             );
             if (attemptIndex >= 0) {
-              existing.selectorAttempts[attemptIndex] = attempt;
+              selectorAttempts[attemptIndex] = attempt;
             } else {
-              existing.selectorAttempts.push(attempt);
+              selectorAttempts.push(attempt);
             }
-            newMap.set(data.stepIndex, existing);
+            newMap.set(data.stepIndex, { ...existing, selectorAttempts });
             return newMap;
           });
         } else if (data.type === 'selector_recovery_start') {
           // Recovery started
           setStepUpdates((prev: Map<number, StepUpdate>) => {
             const newMap = new Map(prev);
-            const existing = newMap.get(data.stepIndex) || {
+            const existing: StepUpdate = newMap.get(data.stepIndex) ?? {
               stepIndex: data.stepIndex,
               status: 'running',
               timestamp: Date.now()
@@ -327,7 +324,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
           // Recovery succeeded
           setStepUpdates((prev: Map<number, StepUpdate>) => {
             const newMap = new Map(prev);
-            const existing = newMap.get(data.stepIndex) || {
+            const existing: StepUpdate = newMap.get(data.stepIndex) ?? {
               stepIndex: data.stepIndex,
               status: 'running',
               timestamp: Date.now()
@@ -352,7 +349,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
           setAgentMessages((prev) => [...prev, agentMessage]);
         } else {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:202',message:'Unknown message type',data:{type:data.type,executionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:202', message: 'Unknown message type', data: { type: data.type, executionId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
           // #endregion
           console.log('Unknown WebSocket message type', data.type);
         }
@@ -373,7 +370,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
         timeStamp: err?.timeStamp,
         event: err?.constructor?.name
       };
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:194',message:'WebSocket error event',data:{executionId,wsUrlFull,errorDetails},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D,E'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:194', message: 'WebSocket error event', data: { executionId, wsUrlFull, errorDetails }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B,D,E' }) }).catch(() => { });
       // #endregion
       console.error('WebSocket error:', err);
       const errorMsg = `Failed to connect to WebSocket server at ${wsUrlFull}. The test may have completed or the server is not available.`;
@@ -383,7 +380,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
 
     ws.onclose = (event) => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:200',message:'WebSocket closed',data:{executionId,code:event.code,reason:event.reason,wasClean:event.wasClean,reconnectAttempts:reconnectAttempts.current,wsUrlFull},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D,E'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:200', message: 'WebSocket closed', data: { executionId, code: event.code, reason: event.reason, wasClean: event.wasClean, reconnectAttempts: reconnectAttempts.current, wsUrlFull }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B,D,E' }) }).catch(() => { });
       // #endregion
       setIsConnected(false);
       console.log('WebSocket closed', { executionId, code: event.code, reason: event.reason });
@@ -391,7 +388,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
       // Don't reconnect if closed normally or if test completed
       if (event.code === 1000 || event.code === 1001) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:206',message:'WebSocket closed normally',data:{code:event.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:206', message: 'WebSocket closed normally', data: { code: event.code }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) }).catch(() => { });
         // #endregion
         console.log('WebSocket closed normally, not reconnecting');
         return;
@@ -402,7 +399,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
         reconnectAttempts.current++;
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:213',message:'Scheduling reconnect',data:{attempt:reconnectAttempts.current,delay,executionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:213', message: 'Scheduling reconnect', data: { attempt: reconnectAttempts.current, delay, executionId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) }).catch(() => { });
         // #endregion
 
         reconnectTimeoutRef.current = setTimeout(() => {
@@ -411,7 +408,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
         }, delay);
       } else if (reconnectAttempts.current >= maxReconnectAttempts) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:220',message:'Max reconnect attempts reached',data:{executionId,attempts:reconnectAttempts.current,wsUrlFull},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D,E'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:220', message: 'Max reconnect attempts reached', data: { executionId, attempts: reconnectAttempts.current, wsUrlFull }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B,D,E' }) }).catch(() => { });
         // #endregion
         const errorMsg = `Failed to connect after ${maxReconnectAttempts} attempts. The test may have completed or the WebSocket server is not available.`;
         setError(errorMsg);
@@ -439,7 +436,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
 
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:290',message:'useEffect triggered',data:{enabled,executionId,hasWs:!!wsRef.current,wsReadyState:wsRef.current?.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:290', message: 'useEffect triggered', data: { enabled, executionId, hasWs: !!wsRef.current, wsReadyState: wsRef.current?.readyState }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
     // #endregion
     if (enabled && executionId) {
       connect();
@@ -449,7 +446,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
 
     return () => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useBrowserStream.ts:299',message:'useEffect cleanup',data:{executionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useBrowserStream.ts:299', message: 'useEffect cleanup', data: { executionId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
       // #endregion
       disconnect();
     };

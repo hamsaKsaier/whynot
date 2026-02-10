@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../common/Card';
-import { FiCheckCircle, FiXCircle, FiClock, FiImage, FiEdit } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiClock, FiImage, FiEdit, FiEye } from 'react-icons/fi';
 import type { ExecutionResult, TestCase, TestStep } from '../../types';
+import { VisualComparisonViewer } from '../VisualRegression/VisualComparisonViewer';
+import { getExecutionVisualComparisons } from '../../services/api';
 
 interface TestResultsViewProps {
   testCase: TestCase | null;
@@ -16,6 +18,39 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
   onViewScreenshots,
   onStepFix,
 }) => {
+  const [selectedComparison, setSelectedComparison] = useState<any>(null);
+  const [comparisonModalOpen, setComparisonModalOpen] = useState(false);
+  const [visualComparisons, setVisualComparisons] = useState<Record<string, any>>({});
+
+  // Load visual comparisons when execution result is available
+  React.useEffect(() => {
+    if (executionResult?.execution_id) {
+      loadVisualComparisons();
+    }
+  }, [executionResult?.execution_id]);
+
+  const loadVisualComparisons = async () => {
+    if (!executionResult?.execution_id) return;
+    try {
+      const response = await getExecutionVisualComparisons(executionResult.execution_id);
+      const comparisonMap: Record<string, any> = {};
+      response.comparisons.forEach((comp: any) => {
+        comparisonMap[comp.step_id] = comp;
+      });
+      setVisualComparisons(comparisonMap);
+    } catch (error) {
+      console.error('Failed to load visual comparisons:', error);
+    }
+  };
+
+  const handleViewVisualComparison = (stepId: string) => {
+    const comparison = visualComparisons[stepId];
+    if (comparison) {
+      setSelectedComparison(comparison);
+      setComparisonModalOpen(true);
+    }
+  };
+
   if (!executionResult) {
     return null;
   }
@@ -32,10 +67,13 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
       failed: 'bg-red-100 text-red-800',
       running: 'bg-blue-100 text-blue-800',
       timeout: 'bg-yellow-100 text-yellow-800',
+      paused: 'bg-gray-100 text-gray-800',
+      cancelled: 'bg-gray-100 text-gray-600',
     };
-    
+    const statusColors: Record<string, string> = colors;
+
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors[status] || colors.completed}`}>
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[status] || colors.completed}`}>
         {status.toUpperCase()}
       </span>
     );
@@ -121,15 +159,14 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
           <div className="space-y-2">
             {executionResult.steps.map((step, index) => {
               const correspondingStep = testCase?.steps.find(s => s.id === step.step_id);
-              
+
               return (
                 <div
                   key={step.step_id}
-                  className={`p-4 rounded-lg border-2 ${
-                    step.success
+                  className={`p-4 rounded-lg border-2 ${step.success
                       ? 'bg-green-50 border-green-200'
                       : 'bg-red-50 border-red-200'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
@@ -163,6 +200,46 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                           <span className="font-medium">Selector used:</span> {step.selector_used.type} - {step.selector_used.value}
                         </div>
                       )}
+                      {/* Visual Regression Indicator */}
+                      {(step.visual_comparison || visualComparisons[step.step_id]) && (() => {
+                        const comparison = step.visual_comparison || visualComparisons[step.step_id];
+                        const severity = comparison?.severity || comparison?.regression_severity || 'medium';
+                        const severityColors = {
+                          low: 'bg-green-100 text-green-800 border-green-300',
+                          medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+                          high: 'bg-orange-100 text-orange-800 border-orange-300',
+                          critical: 'bg-red-100 text-red-800 border-red-300',
+                        };
+                        const severityMap: Record<string, string> = severityColors;
+                        const isRegression = comparison?.isRegression || comparison?.is_regression;
+
+                        if (isRegression) {
+                          return (
+                            <div className={`mt-2 p-2 rounded border ${severityMap[String(severity)] ?? severityColors.medium}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <FiEye className="h-4 w-4" />
+                                  <span className="text-sm font-medium">
+                                    Visual Regression ({severity.toUpperCase()})
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => handleViewVisualComparison(step.step_id)}
+                                  className="text-xs underline hover:no-underline"
+                                >
+                                  View Details
+                                </button>
+                              </div>
+                              {comparison?.differences && comparison.differences.length > 0 && (
+                                <p className="text-xs mt-1">
+                                  {comparison.differences[0]}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                     {/* Fix/Edit Icon */}
                     {testCase && correspondingStep && onStepFix && (
@@ -186,6 +263,22 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
             })}
           </div>
         </div>
+
+        {/* Visual Comparison Viewer Modal */}
+        {selectedComparison && (
+          <VisualComparisonViewer
+            isOpen={comparisonModalOpen}
+            onClose={() => {
+              setComparisonModalOpen(false);
+              setSelectedComparison(null);
+            }}
+            comparison={selectedComparison}
+            baselineScreenshotPath={selectedComparison.baseline_id ? undefined : undefined}
+            currentScreenshotPath={selectedComparison.current_screenshot_path}
+            diffImagePath={selectedComparison.diff_image_path}
+            onUpdate={loadVisualComparisons}
+          />
+        )}
 
         {/* Error Summary */}
         {executionResult.error && (

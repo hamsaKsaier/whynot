@@ -21,15 +21,53 @@ class TestGenerator:
             self._llm_client = LLMClient()
         return self._llm_client
     
-    def _create_test_generation_prompt(self, user_story: str, website_url: str) -> str:
+    def _create_test_generation_prompt(self, user_story: str, website_url: str, quick_mode: bool = False) -> str:
         """Create prompt for test case generation"""
-        return f"""You are an expert test automation engineer. Given a user story, generate comprehensive test cases.
+        if quick_mode:
+            coverage_instruction = (
+                "Generate exactly ONE test case: the main positive (happy path) scenario for this user story. "
+                "Return a JSON object with a 'test_cases' array containing exactly one test case. "
+                "Do not generate negative or edge scenarios."
+            )
+            rules_line = "1. Focus on the single most important happy path"
+        else:
+            coverage_instruction = """Generate test cases in the following categories (generate at least one of each type):
+
+1. POSITIVE SCENARIOS (Happy Path) - Priority: HIGH
+   - Normal user flows that should work correctly
+   - Expected successful operations
+   - Typical user journeys
+   - These are the most important scenarios
+
+2. NEGATIVE SCENARIOS (Error Cases) - Priority: MEDIUM
+   - Invalid inputs and error conditions
+   - Failure cases that should be handled gracefully
+   - Error messages and validation
+   - Edge cases that should fail appropriately
+
+3. EDGE CASES (Boundary Conditions) - Priority: MEDIUM
+   - Boundary values and limits
+   - Extreme but valid inputs
+   - Unusual but valid scenarios
+   - Stress testing scenarios"""
+            rules_line = "1. Break down the user story into testable scenarios across all three types"
+
+        return f"""You are an expert test automation engineer. Given a user story, generate comprehensive test cases covering multiple scenarios.
 
 User Story: {user_story}
 Website URL: {website_url}
 
+{coverage_instruction}
+
+For each test case, include:
+- name: string (descriptive name)
+- description: string (what this test case validates)
+- scenario_type: "positive" | "negative" | "edge"
+- risk_level: "high" | "medium" | "low" (based on impact if this fails)
+- priority_score: number (0-100, higher = more critical to test)
+
 Generate test cases following these rules:
-1. Break down the user story into testable scenarios
+{rules_line}
 2. Each test case should have a clear name and description
 3. Each test case should have multiple atomic steps
 4. Each step should specify:
@@ -46,6 +84,9 @@ Generate test cases following these rules:
 Return a JSON array of test cases. Each test case should have:
 - name: string
 - description: string
+- scenario_type: "positive" | "negative" | "edge"
+- risk_level: "high" | "medium" | "low"
+- priority_score: number (0-100)
 - steps: array of step objects
 
 Each step object should have:
@@ -123,13 +164,51 @@ Example format:
         user_story: str, 
         website_url: str,
         html: str,
-        vision_analysis: Optional[dict] = None
+        vision_analysis: Optional[dict] = None,
+        quick_mode: bool = False
     ) -> str:
         """Create prompt for test case generation with page context"""
+        # #region agent log
+        try:
+            import json as _json
+            log_data = {"location":"test_generator.py:_create_test_generation_prompt_with_page_context","message":"QuickMode in prompt builder","data":{"quick_mode":quick_mode,"quick_mode_type":str(type(quick_mode))},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"E3"}
+            with open("/Users/takiacademy/whynot/.cursor/debug.log","a") as f:
+                f.write(_json.dumps(log_data)+"\n")
+        except: pass
+        # #endregion
         html_preview = html[:5000] if len(html) > 5000 else html  # Limit HTML preview
         vision_context = ""
         if vision_analysis:
             vision_context = f"\n\nVision Analysis Results:\n{json.dumps(vision_analysis, indent=2)}"
+
+        if quick_mode:
+            coverage_instruction = (
+                "Generate exactly ONE test case: the main positive (happy path) scenario for this user story. "
+                "Return a JSON object with a 'test_cases' array containing exactly one test case. "
+                "Do not generate negative or edge scenarios."
+            )
+            rules_line = "1. Focus on the single most important happy path"
+        else:
+            coverage_instruction = """Generate test cases in the following categories (generate at least one of each type):
+
+1. POSITIVE SCENARIOS (Happy Path) - Priority: HIGH
+   - Normal user flows that should work correctly
+   - Expected successful operations
+   - Typical user journeys
+   - These are the most important scenarios
+
+2. NEGATIVE SCENARIOS (Error Cases) - Priority: MEDIUM
+   - Invalid inputs and error conditions
+   - Failure cases that should be handled gracefully
+   - Error messages and validation
+   - Edge cases that should fail appropriately
+
+3. EDGE CASES (Boundary Conditions) - Priority: MEDIUM
+   - Boundary values and limits
+   - Extreme but valid inputs
+   - Unusual but valid scenarios
+   - Stress testing scenarios"""
+            rules_line = "1. Break down the user story into testable scenarios across all three types"
         
         return f"""You are an expert test automation engineer. Given a user story and the actual page content, generate comprehensive test cases.
 
@@ -154,8 +233,17 @@ IMPORTANT INSTRUCTIONS:
    - Unstable CSS classes (stability_score: 0.40) - framework-generated classes (use only if no better option)
    - XPath (stability_score: 0.30) - use as last resort
 
+{coverage_instruction}
+
+For each test case, include:
+- name: string (descriptive name)
+- description: string (what this test case validates)
+- scenario_type: "positive" | "negative" | "edge"
+- risk_level: "high" | "medium" | "low" (based on impact if this fails)
+- priority_score: number (0-100, higher = more critical to test)
+
 Generate test cases following these rules:
-1. Break down the user story into testable scenarios
+{rules_line}
 2. Each test case should have a clear name and description
 3. Each test case should have multiple atomic steps
 4. Each step should specify:
@@ -177,6 +265,9 @@ Generate test cases following these rules:
 Return a JSON array of test cases. Each test case should have:
 - name: string
 - description: string
+- scenario_type: "positive" | "negative" | "edge"
+- risk_level: "high" | "medium" | "low"
+- priority_score: number (0-100)
 - steps: array of step objects
 
 Each step object should have:
@@ -250,7 +341,8 @@ Example format:
         user_story: UserStory,
         screenshot_base64: str,
         html: str,
-        vision_analysis: Optional[dict] = None
+        vision_analysis: Optional[dict] = None,
+        quick_mode: bool = False
     ) -> List[TestCase]:
         """Generate test cases from user story with page context"""
         
@@ -263,7 +355,8 @@ Example format:
             user_story.story,
             user_story.website_url,
             html,
-            vision_analysis
+            vision_analysis,
+            quick_mode=quick_mode
         )
         
         # Get response from LLM with vision
@@ -333,6 +426,9 @@ Example format:
                 description=tc_data.get("description", ""),
                 steps=steps,
                 website_url=user_story.website_url,
+                scenario_type=tc_data.get("scenario_type"),
+                risk_level=tc_data.get("risk_level"),
+                priority_score=tc_data.get("priority_score"),
                 metadata={
                     "user_story": user_story.story,
                     "generated_at": None,  # Will be set by API layer
@@ -398,7 +494,7 @@ Example format:
         
         return test_steps
     
-    async def generate_test_cases(self, user_story: UserStory) -> List[TestCase]:
+    async def generate_test_cases(self, user_story: UserStory, quick_mode: bool = False) -> List[TestCase]:
         """Generate test cases from user story"""
         system_prompt = """You are an expert QA engineer specializing in test automation. 
         You generate comprehensive, executable test cases from user stories.
@@ -406,7 +502,8 @@ Example format:
         
         prompt = self._create_test_generation_prompt(
             user_story.story,
-            user_story.website_url
+            user_story.website_url,
+            quick_mode=quick_mode
         )
         
         # Get response from LLM

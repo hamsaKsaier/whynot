@@ -6,10 +6,21 @@ import { Button } from '../components/common/Button';
 import { Alert } from '../components/common/Alert';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { TestAutomationChatbot } from '../components/Chatbot/TestAutomationChatbot';
+import { EmptyState } from '../components/common/EmptyState';
+import { SkeletonCard } from '../components/common/SkeletonCard';
+import { QuickActions } from '../components/common/QuickActions';
+import { SuccessAnimation } from '../components/common/SuccessAnimation';
+import { useToastContext } from '../contexts/ToastContext';
+import { useClipboard } from '../hooks/useClipboard';
+import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getTestCases, updateTestCase, deleteTestCase } from '../services/api';
 import type { TestCase } from '../types';
 
 export const TestCasesPage: React.FC = () => {
+  const { success, error: showError } = useToastContext();
+  const { copyToClipboard } = useClipboard();
+  const { optimisticUpdate, optimisticDelete } = useOptimisticUpdate<TestCase>();
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,16 +65,35 @@ export const TestCasesPage: React.FC = () => {
 
   const handleSaveEdit = async (id: string) => {
     try {
-      const updated = await updateTestCase(id, {
+      const testCase = testCases.find(tc => tc.id === id);
+      if (!testCase) return;
+
+      const optimisticTestCase: TestCase = {
+        ...testCase,
         name: editName,
         description: editDescription,
-      });
-      setTestCases(testCases.map(tc => tc.id === id ? updated : tc));
+      };
+
+      const updatedTestCases = await optimisticUpdate(
+        testCases,
+        optimisticTestCase,
+        () => updateTestCase(id, {
+          name: editName,
+          description: editDescription,
+        }),
+        {
+          successMessage: 'Test case updated successfully',
+          errorMessage: 'Failed to update test case',
+        }
+      );
+      setTestCases(updatedTestCases);
       setEditingId(null);
       setEditName('');
       setEditDescription('');
+      setShowSuccessAnimation(true);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to update test case');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to update test case';
+      setError(errorMessage);
     }
   };
 
@@ -75,11 +105,21 @@ export const TestCasesPage: React.FC = () => {
     if (!deleteConfirm.testCase) return;
 
     try {
-      await deleteTestCase(deleteConfirm.testCase.id);
-      setTestCases(testCases.filter(tc => tc.id !== deleteConfirm.testCase!.id));
+      const updatedTestCases = await optimisticDelete(
+        testCases,
+        deleteConfirm.testCase.id,
+        () => deleteTestCase(deleteConfirm.testCase!.id),
+        {
+          successMessage: 'Test case deleted successfully',
+          errorMessage: 'Failed to delete test case',
+        }
+      );
+      setTestCases(updatedTestCases);
       setDeleteConfirm({ isOpen: false, testCase: null });
+      setShowSuccessAnimation(true);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to delete test case');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to delete test case';
+      setError(errorMessage);
       setDeleteConfirm({ isOpen: false, testCase: null });
     }
   };
@@ -99,10 +139,10 @@ export const TestCasesPage: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Test Cases</h1>
-          <p className="text-gray-600 mt-1">Manage and execute your saved test cases</p>
+          <h1 className="page-title">Test Cases</h1>
+          <p className="page-subtitle">Manage and execute your saved test cases</p>
         </div>
         <Button 
           className="flex items-center space-x-2"
@@ -116,25 +156,50 @@ export const TestCasesPage: React.FC = () => {
       {error && (
         <Alert
           type="error"
+          title="Error"
           message={error}
+          suggestions={[
+            'Check your network connection',
+            'Verify that the test case still exists',
+            'Try refreshing the page',
+          ]}
+          actions={[
+            {
+              label: 'Retry',
+              onClick: () => {
+                setError(null);
+                fetchTestCases();
+              },
+              variant: 'primary',
+            },
+            {
+              label: 'Dismiss',
+              onClick: () => setError(null),
+              variant: 'secondary',
+            },
+          ]}
           onClose={() => setError(null)}
         />
       )}
 
       {loading && testCases.length === 0 ? (
-        <Card className="text-center py-12">
-          <div className="flex items-center justify-center">
-            <svg className="animate-spin h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="ml-3 text-gray-600">Loading test cases...</span>
-          </div>
-        </Card>
+        <div className="card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <SkeletonCard count={3} />
+        </div>
       ) : testCases.length === 0 ? (
-        <Card className="text-center py-12">
-          <p className="text-gray-500 mb-4">No test cases yet</p>
-          <Button onClick={() => navigate('/')}>Create Your First Test Case</Button>
+        <Card>
+          <EmptyState
+            icon={<FiPlay />}
+            title="No test cases yet"
+            description="Test cases are generated from user stories. Create a project and add user stories to get started"
+            action={
+              <Button onClick={() => navigate('/')}>
+                <FiPlus className="mr-2" />
+                Create Your First Test Case
+              </Button>
+            }
+            tip="Tip: Navigate to a project, add a user story, then generate test cases"
+          />
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -143,7 +208,7 @@ export const TestCasesPage: React.FC = () => {
             const isRunning = runningTestId === testCase.id;
 
             return (
-              <Card key={testCase.id} className="p-4 hover:shadow-lg transition-shadow">
+              <Card key={testCase.id} className="p-4" hoverable>
                 {isEditing ? (
                   <div className="space-y-3">
                     <input

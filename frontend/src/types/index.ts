@@ -35,6 +35,9 @@ export interface TestCase {
   description: string;
   steps: TestStep[];
   website_url: string;
+  scenario_type?: 'positive' | 'negative' | 'edge';
+  risk_level?: 'high' | 'medium' | 'low';
+  priority_score?: number; // 0-100
   metadata?: Record<string, any>;
 }
 
@@ -87,12 +90,62 @@ export interface StepResult {
   attempted_selectors?: ElementSelector[];
   page_state?: PageState;
   recovery_attempts?: number;
+  visual_comparison?: VisualComparisonResult;
+}
+
+// Visual Regression Intelligence Types
+export interface VisualBaseline {
+  id: string;
+  test_case_id: string;
+  step_id: string;
+  screenshot_path: string;
+  screenshot_hash: string;
+  baseline_version: number;
+  execution_id?: string | null;
+  is_locked: boolean;
+  created_at: string;
+  created_by: string;
+}
+
+export interface AIVisualDiffAnalysis {
+  difference_types: string[];
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  descriptions: string[];
+  affected_areas?: Array<{
+    region: string;
+    description: string;
+  }>;
+  recommendations?: string[];
+}
+
+export interface VisualComparisonResult {
+  isRegression: boolean;
+  pixelDiffScore: number; // 0.0 to 1.0 (percentage of pixels different)
+  diffImagePath?: string;
+  aiAnalysis?: AIVisualDiffAnalysis;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  differences: string[]; // Human-readable descriptions
+}
+
+export interface VisualComparison {
+  id: string;
+  execution_id: string;
+  step_id: string;
+  baseline_id?: string | null;
+  current_screenshot_path: string;
+  diff_image_path?: string | null;
+  pixel_diff_score: number;
+  ai_diff_analysis?: AIVisualDiffAnalysis | null;
+  is_regression: boolean;
+  regression_severity?: 'low' | 'medium' | 'high' | 'critical' | null;
+  ignored: boolean;
+  created_at: string;
 }
 
 export interface ExecutionResult {
   execution_id: string;
   test_case_id: string;
-  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused';
+  status: 'running' | 'completed' | 'failed' | 'timeout' | 'paused' | 'cancelled';
   steps: StepResult[];
   total_duration_ms: number;
   screenshots: string[];
@@ -128,8 +181,25 @@ export interface GenerateTestsRequest {
   additional_context?: string;
 }
 
+export interface ValidationResult {
+  test_case_id: string;
+  is_valid: boolean;
+  score: number;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ValidationSummary {
+  total: number;
+  valid: number;
+  invalid: number;
+  warnings: number;
+}
+
 export interface GenerateTestsResponse {
   test_cases: TestCase[];
+  validation_summary?: ValidationSummary;
+  validation_results?: ValidationResult[];
 }
 
 // Flow visualization types

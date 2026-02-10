@@ -126,13 +126,73 @@ export class ExecutionRepository {
   }
 
   /**
-   * List all executions with pagination
+   * Get total count of executions
    */
-  async list(offset: number = 0, limit: number = 50): Promise<ExecutionEntity[]> {
-    return await query<ExecutionEntity>(
-      'SELECT * FROM executions ORDER BY started_at DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
-    );
+  async count(filters?: {
+    status?: string;
+    search?: string;
+  }): Promise<number> {
+    let queryStr = 'SELECT COUNT(*) as count FROM executions e';
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (filters?.status) {
+      conditions.push(`e.status = $${paramIndex++}`);
+      values.push(filters.status);
+    }
+
+    if (filters?.search) {
+      queryStr += ' LEFT JOIN test_cases tc ON e.test_case_id = tc.id';
+      conditions.push(`(e.id ILIKE $${paramIndex} OR e.test_case_id ILIKE $${paramIndex} OR tc.name ILIKE $${paramIndex})`);
+      values.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+
+    if (conditions.length > 0) {
+      queryStr += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    const result = await query<{ count: string }>(queryStr, values);
+    return parseInt(result[0]?.count || '0', 10);
+  }
+
+  /**
+   * List all executions with pagination, filtering, and search
+   */
+  async list(
+    offset: number = 0,
+    limit: number = 50,
+    filters?: {
+      status?: 'completed' | 'failed' | 'running' | 'timeout' | 'paused';
+      search?: string;
+    }
+  ): Promise<ExecutionEntity[]> {
+    let queryStr = 'SELECT e.* FROM executions e';
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (filters?.status) {
+      conditions.push(`e.status = $${paramIndex++}`);
+      values.push(filters.status);
+    }
+
+    if (filters?.search) {
+      queryStr += ' LEFT JOIN test_cases tc ON e.test_case_id = tc.id';
+      conditions.push(`(e.id ILIKE $${paramIndex} OR e.test_case_id ILIKE $${paramIndex} OR tc.name ILIKE $${paramIndex})`);
+      values.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+
+    if (conditions.length > 0) {
+      queryStr += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    queryStr += ` ORDER BY e.started_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    values.push(limit, offset);
+
+    return await query<ExecutionEntity>(queryStr, values);
   }
 
   /**

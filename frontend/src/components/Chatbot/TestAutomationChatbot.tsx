@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   createChatSession,
   sendChatMessage,
-  getChatSession,
   modifyTestFromChat,
   type ChatMessage,
   type ChatContext,
@@ -16,6 +15,8 @@ interface TestAutomationChatbotProps {
   onTestModificationRequested?: (modifiedTestCase: any) => void; // NEW: Request to test modification before saving
   autoOpen?: boolean;
   className?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
@@ -24,9 +25,20 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
   onTestModified,
   onTestModificationRequested,
   autoOpen = false,
-  className = ''
+  className = '',
+  isOpen: isOpenProp,
+  onClose: onCloseProp
 }) => {
-  const [isOpen, setIsOpen] = useState(autoOpen);
+  const [isOpenInternal, setIsOpenInternal] = useState(autoOpen);
+  const isOpen = isOpenProp !== undefined ? isOpenProp : isOpenInternal;
+  const handleClose = () => {
+    if (onCloseProp) onCloseProp();
+    else setIsOpenInternal(false);
+  };
+  const setOpen = (open: boolean) => {
+    if (open && onCloseProp === undefined) setIsOpenInternal(true);
+    else if (!open) handleClose();
+  };
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -34,7 +46,7 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
   const [isInitializing, setIsInitializing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string | null>(null);
-  
+
   // Keep ref in sync with state
   useEffect(() => {
     sessionIdRef.current = sessionId;
@@ -66,7 +78,7 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
       try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:56', message: 'createChatSession success', data: { sessionId: session.session_id || session.id, sessionKeys: Object.keys(session), hasMessages: !!session.messages }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { }); } catch (e) { }
       // #endregion
       // API returns session.id (not session.session_id)
-      const newSessionId = session.id || session.session_id;
+      const newSessionId = (session.id || session.session_id) ?? null;
       setSessionId(newSessionId);
       sessionIdRef.current = newSessionId;
       if (session.messages) {
@@ -102,13 +114,13 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
-    
+
     // Ensure session is initialized before sending
     if (!sessionId && !isInitializing) {
       await initializeSession();
       return; // Will retry after session is created
     }
-    
+
     if (!sessionId) {
       // Still initializing, wait a bit and try again
       setTimeout(() => handleSend(), 200);
@@ -159,14 +171,14 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
               context.step_index,
               context.step
             );
-            
+
             // Add message explaining what will happen
             setMessages(prev => [...prev, {
               role: 'assistant',
               content: 'I\'ve prepared the modifications. Testing them now to ensure they work...',
               timestamp: new Date().toISOString()
             }]);
-            
+
             // Request parent to test this modification (test-before-commit)
             if (onTestModificationRequested) {
               onTestModificationRequested(modifiedTestCase);
@@ -244,7 +256,7 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
     try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:166', message: 'handleQuickAction called', data: { action, currentSessionId: sessionIdRef.current, isInitializing }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { }); } catch (e) { }
     // #endregion
     setInput(action);
-    
+
     // Ensure session is initialized before sending
     if (!sessionIdRef.current && !isInitializing) {
       // #region agent log
@@ -252,14 +264,14 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
       // #endregion
       await initializeSession();
     }
-    
+
     // Wait for session to be ready, then auto-send
     const attemptSend = async (retries = 0) => {
       const currentSessionId = sessionIdRef.current;
       // #region agent log
       try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:176', message: 'attemptSend check', data: { retries, currentSessionId, isInitializing }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { }); } catch (e) { }
       // #endregion
-      
+
       if (!currentSessionId) {
         if (retries < 10) {
           setTimeout(() => attemptSend(retries + 1), 200);
@@ -274,20 +286,20 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
           return;
         }
       }
-      
+
       const userMessage: ChatMessage = {
         role: 'user',
         content: action.trim(),
         timestamp: new Date().toISOString()
       };
-      
+
       setMessages(prev => [...prev, userMessage]);
       setInput('');
       setIsLoading(true);
-      
+
       try {
         const response: ChatResponse = await sendChatMessage(currentSessionId, action.trim(), context);
-        
+
         if (response.success) {
           const assistantMessage: ChatMessage = {
             role: 'assistant',
@@ -300,11 +312,11 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
             }
           };
           setMessages(prev => [...prev, assistantMessage]);
-          
+
           if (response.generated_test && onTestGenerated) {
             onTestGenerated(response.generated_test);
           }
-          
+
           if (response.modifications && onTestModified) {
             onTestModified(response.modifications);
           }
@@ -326,7 +338,7 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
         setIsLoading(false);
       }
     };
-    
+
     // Start sending after a short delay to allow state updates
     setTimeout(() => attemptSend(), 300);
   };
@@ -334,7 +346,7 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
   if (!isOpen) {
     return (
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setOpen(true)}
         className={`fixed bottom-4 right-4 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition-colors ${className}`}
         title="Open AI Assistant"
       >
@@ -356,7 +368,7 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
           )}
         </div>
         <button
-          onClick={() => setIsOpen(false)}
+          onClick={() => setOpen(false)}
           className="text-white hover:text-gray-200"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,11 +388,10 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
-                  msg.role === 'user'
+                className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-800'
-                }`}
+                  }`}
               >
                 <div className="whitespace-pre-wrap">{msg.content}</div>
                 {msg.metadata?.actions && msg.metadata.actions.length > 0 && (

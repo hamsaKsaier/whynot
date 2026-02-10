@@ -58,9 +58,17 @@ services:
       - SCREENSHOT_TIMEOUT_MS=${SCREENSHOT_TIMEOUT_MS:-10000}
       - NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS:-30000}
       - NAVIGATION_MAX_TIMEOUT_MS=${NAVIGATION_MAX_TIMEOUT_MS:-60000}
+      # Visual Regression Settings
+      - VISUAL_REGRESSION_ENABLED=${VISUAL_REGRESSION_ENABLED:-true}
+      - VISUAL_REGRESSION_PIXEL_THRESHOLD=${VISUAL_REGRESSION_PIXEL_THRESHOLD:-0.01}
+      - VISUAL_REGRESSION_AI_ANALYSIS_ENABLED=${VISUAL_REGRESSION_AI_ANALYSIS_ENABLED:-true}
+      - VISUAL_REGRESSION_AUTO_BASELINE=${VISUAL_REGRESSION_AUTO_BASELINE:-true}
+      - VISUAL_REGRESSION_DIFF_DIR=/app/visual-diffs
     volumes:
       - ./services/test-executor/src:/app/src
+      - ./shared:/app/shared
       - screenshots:/app/screenshots
+      - visual-diffs:/app/visual-diffs
     depends_on:
       database:
         condition: service_healthy
@@ -82,6 +90,33 @@ services:
       timeout: 10s
       retries: 3
 
+  qa-loop-executor:
+    build:
+      context: .
+      dockerfile: ./services/qa-loop-executor/Dockerfile
+    ports:
+      - "3012:3002"
+    environment:
+      - PORT=3002
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - TEST_EXECUTOR_URL=http://test-executor:3001
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
+      - NODE_ENV=production
+    volumes:
+      - ./services/qa-loop-executor/src:/app/src
+      - ./shared:/app/shared
+    depends_on:
+      database:
+        condition: service_healthy
+      test-executor:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   gateway:
     build:
       context: .
@@ -93,6 +128,7 @@ services:
       - FRONTEND_URL=http://localhost:5183
       - AI_SERVICE_URL=http://ai-service:8000
       - TEST_EXECUTOR_URL=http://test-executor:3001
+      - QA_LOOP_EXECUTOR_URL=http://qa-loop-executor:3002
       - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
       - NODE_ENV=production
       - RATE_LIMIT_TEST_EXECUTION_MAX=${RATE_LIMIT_TEST_EXECUTION_MAX:-50}
@@ -107,6 +143,8 @@ services:
       ai-service:
         condition: service_started
       test-executor:
+        condition: service_started
+      qa-loop-executor:
         condition: service_started
     restart: unless-stopped
     healthcheck:
@@ -123,6 +161,8 @@ services:
       - "5183:5173"
     environment:
       - VITE_API_URL=http://localhost:3010/api
+      - VITE_WS_URL=ws://localhost:3011
+      - VITE_QA_LOOP_WS_URL=ws://localhost:3012
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
@@ -134,3 +174,4 @@ services:
 volumes:
   screenshots:
   postgres_data:
+  visual-diffs:

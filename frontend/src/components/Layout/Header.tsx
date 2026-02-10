@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { FiBell, FiSettings, FiUser, FiZap } from 'react-icons/fi';
+import { FiBell, FiSettings, FiUser, FiZap, FiHelpCircle } from 'react-icons/fi';
+import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
+import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 
 export const Header: React.FC = () => {
   const location = useLocation();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useKeyboardShortcut('/', () => setShortcutsOpen(true), { metaKey: true, ctrlKey: true });
 
   const getBreadcrumbs = () => {
     const paths = location.pathname.split('/').filter(Boolean);
@@ -34,7 +39,7 @@ export const Header: React.FC = () => {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6" role="banner">
       {/* Left: Breadcrumbs */}
       <div className="flex items-center space-x-2">
         <div className="flex items-center space-x-1 text-sm text-gray-600">
@@ -56,6 +61,16 @@ export const Header: React.FC = () => {
 
       {/* Right: Actions & User Menu */}
       <div className="flex items-center space-x-4">
+        {/* Keyboard Shortcuts */}
+        <button
+          onClick={() => setShortcutsOpen(true)}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Show keyboard shortcuts"
+          title="Keyboard shortcuts (Cmd/Ctrl + /)"
+        >
+          <FiHelpCircle className="h-5 w-5 text-gray-600" />
+        </button>
+
         {/* Upgrade Button */}
         <button className="px-4 py-1.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors">
           Upgrade
@@ -79,6 +94,7 @@ export const Header: React.FC = () => {
           </div>
         </button>
       </div>
+      <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </header>
   );
 };

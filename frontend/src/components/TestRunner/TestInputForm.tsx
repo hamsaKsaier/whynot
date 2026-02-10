@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiFolder, FiBook } from 'react-icons/fi';
-import { Input } from '../common/Input';
-import { Textarea } from '../common/Textarea';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
-import { Select } from '../common/Select';
-import { Modal, ModalFooter } from '../common/Modal';
+import { StepIndicator } from '../common/StepIndicator';
+import { TestInputFormStep1 } from './TestInputFormStep1';
+import { TestInputFormStep2 } from './TestInputFormStep2';
+import { TestInputFormStep3 } from './TestInputFormStep3';
+import { useFormAutoSave } from '../../hooks/useFormAutoSave';
+import { Modal } from '../common/Modal';
 import {
   getProjects,
   getUserStories,
@@ -14,13 +16,16 @@ import {
   ProjectWithStats,
   UserStoryWithStats,
 } from '../../services/api';
+import type { PrerequisiteStep } from '../../utils/createEditFlow';
 
 interface TestInputFormProps {
   onGenerateTests: (
     websiteUrl: string,
     userStory: string,
     projectId?: string,
-    userStoryId?: string
+    userStoryId?: string,
+    prerequisiteSteps?: PrerequisiteStep[],
+    quickMode?: boolean
   ) => void;
   onRunTest: (
     websiteUrl: string,
@@ -35,6 +40,8 @@ interface TestInputFormProps {
   initialWebsiteUrl?: string;
 }
 
+const STEPS = ['Select Project', 'Select User Story', 'Review & Execute'];
+
 export const TestInputForm: React.FC<TestInputFormProps> = ({
   onGenerateTests,
   onRunTest,
@@ -44,6 +51,9 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
   initialWebsiteUrl,
 }) => {
   const navigate = useNavigate();
+
+  // Step management
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Project and user story state
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
@@ -56,17 +66,40 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
   // Form state
   const [websiteUrl, setWebsiteUrl] = useState(initialWebsiteUrl || '');
   const [headless, setHeadless] = useState(false);
+  const [prerequisiteSteps, setPrerequisiteSteps] = useState<PrerequisiteStep[]>([]);
+  const [quickMode, setQuickMode] = useState(true);
   const [errors, setErrors] = useState<{
     project?: string;
     userStory?: string;
     websiteUrl?: string;
   }>({});
+  const [showDraftRestore, setShowDraftRestore] = useState(false);
 
-  // New user story modal
-  const [isNewUserStoryModalOpen, setIsNewUserStoryModalOpen] = useState(false);
-  const [newUserStoryText, setNewUserStoryText] = useState('');
-  const [newUserStoryContext, setNewUserStoryContext] = useState('');
-  const [creatingUserStory, setCreatingUserStory] = useState(false);
+  // Auto-save form data
+  const formData = {
+    selectedProjectId,
+    selectedUserStoryId,
+    websiteUrl,
+    headless,
+    currentStep,
+  };
+
+  const { loadDraft, clearDraft, hasDraft } = useFormAutoSave('test-input-form', formData, {
+    onRestore: (data) => {
+      if (data.selectedProjectId) setSelectedProjectId(data.selectedProjectId);
+      if (data.selectedUserStoryId) setSelectedUserStoryId(data.selectedUserStoryId);
+      if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
+      if (data.headless !== undefined) setHeadless(data.headless);
+      if (data.currentStep !== undefined) setCurrentStep(data.currentStep);
+    },
+  });
+
+  // Check for draft on mount
+  useEffect(() => {
+    if (hasDraft() && !initialProjectId && !initialUserStoryId) {
+      setShowDraftRestore(true);
+    }
+  }, [hasDraft, initialProjectId, initialUserStoryId]);
 
   // Load projects on mount
   useEffect(() => {
@@ -135,21 +168,32 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
     }
   };
 
-  const validate = () => {
+  const validateStep = (step: number): boolean => {
     const newErrors: { project?: string; userStory?: string; websiteUrl?: string } = {};
 
-    if (!selectedProjectId) {
-      newErrors.project = 'Please select a project';
-    }
-
-    if (!selectedUserStoryId) {
-      newErrors.userStory = 'Please select a user story';
-    }
-
-    if (!websiteUrl.trim()) {
-      newErrors.websiteUrl = 'Website URL is required';
-    } else if (!isValidUrl(websiteUrl)) {
-      newErrors.websiteUrl = 'Please enter a valid URL';
+    if (step === 0) {
+      if (!selectedProjectId) {
+        newErrors.project = 'Please select a project';
+      }
+    } else if (step === 1) {
+      if (!selectedProjectId) {
+        newErrors.project = 'Please select a project';
+      }
+      if (!selectedUserStoryId) {
+        newErrors.userStory = 'Please select a user story';
+      }
+    } else if (step === 2) {
+      if (!selectedProjectId) {
+        newErrors.project = 'Please select a project';
+      }
+      if (!selectedUserStoryId) {
+        newErrors.userStory = 'Please select a user story';
+      }
+      if (!websiteUrl.trim()) {
+        newErrors.websiteUrl = 'Website URL is required';
+      } else if (!isValidUrl(websiteUrl)) {
+        newErrors.websiteUrl = 'Please enter a valid URL';
+      }
     }
 
     setErrors(newErrors);
@@ -165,24 +209,41 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
     }
   };
 
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(Math.min(currentStep + 1, STEPS.length - 1));
+      // Clear errors when moving forward
+      setErrors({});
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep(Math.max(currentStep - 1, 0));
+    setErrors({});
+  };
+
   const getSelectedUserStoryText = (): string => {
     const userStory = userStories.find((us) => us.id === selectedUserStoryId);
     return userStory?.story || '';
   };
 
   const handleGenerateTests = () => {
-    if (validate()) {
+    if (validateStep(2)) {
+      clearDraft(); // Clear draft on successful submission
       onGenerateTests(
         websiteUrl.trim(),
         getSelectedUserStoryText(),
         selectedProjectId,
-        selectedUserStoryId
+        selectedUserStoryId,
+        prerequisiteSteps,
+        quickMode
       );
     }
   };
 
   const handleRunTest = () => {
-    if (validate()) {
+    if (validateStep(2)) {
+      clearDraft(); // Clear draft on successful submission
       onRunTest(
         websiteUrl.trim(),
         getSelectedUserStoryText(),
@@ -193,226 +254,160 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
     }
   };
 
-  const handleCreateUserStory = async () => {
-    if (!selectedProjectId || !newUserStoryText.trim()) return;
-
-    setCreatingUserStory(true);
-    try {
-      const response = await createUserStory(selectedProjectId, {
-        story: newUserStoryText.trim(),
-        website_url: websiteUrl.trim() || undefined,
-        additional_context: newUserStoryContext.trim() || undefined,
-      });
-
-      // Refresh user stories and select the new one
-      await fetchUserStories(selectedProjectId);
-      setSelectedUserStoryId(response.user_story.id);
-
-      // Close modal and reset form
-      setIsNewUserStoryModalOpen(false);
-      setNewUserStoryText('');
-      setNewUserStoryContext('');
-    } catch (error) {
-      console.error('Failed to create user story:', error);
-    } finally {
-      setCreatingUserStory(false);
+  const handleRestoreDraft = () => {
+    const draft = loadDraft();
+    if (draft) {
+      setShowDraftRestore(false);
     }
   };
 
-  const projectOptions = projects.map((p) => ({
-    value: p.id,
-    label: `${p.name}${p.user_story_count ? ` (${p.user_story_count} stories)` : ''}`,
-  }));
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftRestore(false);
+  };
 
-  const userStoryOptions = userStories.map((us) => ({
-    value: us.id,
-    label: us.story.length > 80 ? `${us.story.substring(0, 80)}...` : us.story,
-  }));
+  const handleCreateUserStory = async (story: string, context?: string) => {
+    if (!selectedProjectId) return;
+
+    const response = await createUserStory(selectedProjectId, {
+      story: story.trim(),
+      website_url: websiteUrl.trim() || undefined,
+      additional_context: context,
+    });
+
+    // Refresh user stories and select the new one
+    await fetchUserStories(selectedProjectId);
+    setSelectedUserStoryId(response.user_story.id);
+  };
+
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  const selectedUserStory = userStories.find((us) => us.id === selectedUserStoryId);
 
   return (
     <>
-      <Card title="Create Test" className="mb-6">
-        <div className="space-y-4">
-          {/* Project Selector */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Project <span className="text-red-500">*</span>
-              </label>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => navigate('/projects')}
-                className="text-xs"
-              >
-                <FiFolder className="mr-1 h-3 w-3" />
-                Manage Projects
-              </Button>
-            </div>
-            <Select
-              options={projectOptions}
-              value={selectedProjectId}
-              onChange={(value) => {
-                setSelectedProjectId(value);
-                setSelectedUserStoryId('');
-              }}
-              placeholder={loadingProjects ? 'Loading projects...' : 'Select a project'}
-              error={errors.project}
-              disabled={isLoading || loadingProjects}
-            />
-            {projects.length === 0 && !loadingProjects && (
-              <p className="mt-1 text-sm text-gray-500">
-                No projects found.{' '}
-                <button
-                  onClick={() => navigate('/projects')}
-                  className="text-primary-600 hover:underline"
-                >
-                  Create one
-                </button>
-              </p>
-            )}
-          </div>
-
-          {/* User Story Selector */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                User Story <span className="text-red-500">*</span>
-              </label>
-              {selectedProjectId && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsNewUserStoryModalOpen(true)}
-                  className="text-xs"
-                  disabled={!selectedProjectId}
-                >
-                  <FiPlus className="mr-1 h-3 w-3" />
-                  New Story
-                </Button>
-              )}
-            </div>
-            <Select
-              options={userStoryOptions}
-              value={selectedUserStoryId}
-              onChange={setSelectedUserStoryId}
-              placeholder={
-                !selectedProjectId
-                  ? 'Select a project first'
-                  : loadingUserStories
-                    ? 'Loading user stories...'
-                    : 'Select a user story'
-              }
-              error={errors.userStory}
-              disabled={isLoading || !selectedProjectId || loadingUserStories}
-            />
-            {selectedProjectId && userStories.length === 0 && !loadingUserStories && (
-              <p className="mt-1 text-sm text-gray-500">
-                No user stories in this project.{' '}
-                <button
-                  onClick={() => setIsNewUserStoryModalOpen(true)}
-                  className="text-primary-600 hover:underline"
-                >
-                  Add one
-                </button>
-              </p>
-            )}
-          </div>
-
-          {/* Selected User Story Preview */}
-          {selectedUserStoryId && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <FiBook className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-green-800">{getSelectedUserStoryText()}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Website URL */}
-          <Input
-            label="Website URL"
-            type="url"
-            placeholder="https://example.com"
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            error={errors.websiteUrl}
-            disabled={isLoading}
-            required
-          />
-
-          {/* Headless Mode */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="headless"
-              checked={headless}
-              onChange={(e) => setHeadless(e.target.checked)}
-              disabled={isLoading}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="headless" className="ml-2 text-sm text-gray-700">
-              Run in headless mode (no live preview)
-            </label>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3 pt-2">
-            <Button
-              onClick={handleGenerateTests}
-              disabled={isLoading}
-              variant="secondary"
-            >
-              Generate Tests
-            </Button>
-            <Button onClick={handleRunTest} disabled={isLoading} isLoading={isLoading}>
-              Run Test
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* New User Story Modal */}
+      {/* Draft Restore Modal */}
       <Modal
-        isOpen={isNewUserStoryModalOpen}
-        onClose={() => setIsNewUserStoryModalOpen(false)}
-        title="Add User Story"
-        size="lg"
+        isOpen={showDraftRestore}
+        onClose={handleDiscardDraft}
+        title="Restore Draft?"
+        size="sm"
       >
         <div className="space-y-4">
-          <Textarea
-            label="User Story"
-            placeholder="As a user, I want to..."
-            value={newUserStoryText}
-            onChange={(e) => setNewUserStoryText(e.target.value)}
-            rows={4}
-            required
-          />
-          <Textarea
-            label="Additional Context"
-            placeholder="Any additional requirements or context (optional)"
-            value={newUserStoryContext}
-            onChange={(e) => setNewUserStoryContext(e.target.value)}
-            rows={2}
-          />
+          <p className="text-sm text-gray-600">
+            We found a saved draft of your test form. Would you like to restore it?
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={handleDiscardDraft}
+              className="flex-1"
+            >
+              Discard
+            </Button>
+            <Button
+              onClick={handleRestoreDraft}
+              className="flex-1"
+            >
+              Restore Draft
+            </Button>
+          </div>
         </div>
-        <ModalFooter>
+      </Modal>
+
+      <Card title="Create Test" className="mb-6">
+        {/* Step Indicator */}
+        <div className="mb-6">
+          <StepIndicator steps={STEPS} currentStep={currentStep} />
+        </div>
+
+        {/* Step Content */}
+        <div className="min-h-[300px]">
+          {currentStep === 0 && (
+            <TestInputFormStep1
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              loadingProjects={loadingProjects}
+              error={errors.project}
+              onProjectChange={(projectId) => {
+                setSelectedProjectId(projectId);
+                setSelectedUserStoryId('');
+                setErrors({});
+              }}
+              disabled={isLoading}
+            />
+          )}
+
+          {currentStep === 1 && (
+            <TestInputFormStep2
+              userStories={userStories}
+              selectedUserStoryId={selectedUserStoryId}
+              loadingUserStories={loadingUserStories}
+              error={errors.userStory}
+              onUserStoryChange={(userStoryId) => {
+                setSelectedUserStoryId(userStoryId);
+                setErrors({});
+              }}
+              onCreateUserStory={handleCreateUserStory}
+              disabled={isLoading || !selectedProjectId}
+            />
+          )}
+
+          {currentStep === 2 && (
+            <TestInputFormStep3
+              project={selectedProject}
+              userStory={selectedUserStory}
+              websiteUrl={websiteUrl}
+              headless={headless}
+              error={errors.websiteUrl}
+              onWebsiteUrlChange={(url) => {
+                setWebsiteUrl(url);
+                setErrors({});
+              }}
+              onHeadlessChange={setHeadless}
+              onGenerateTests={handleGenerateTests}
+              onRunTest={handleRunTest}
+              prerequisiteSteps={prerequisiteSteps}
+              onPrerequisiteStepsChange={setPrerequisiteSteps}
+              quickMode={quickMode}
+              onQuickModeChange={setQuickMode}
+              isLoading={isLoading}
+              disabled={!selectedProjectId || !selectedUserStoryId}
+            />
+          )}
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 mt-6">
           <Button
             variant="secondary"
-            onClick={() => setIsNewUserStoryModalOpen(false)}
-            disabled={creatingUserStory}
+            onClick={handlePrevious}
+            disabled={currentStep === 0 || isLoading}
           >
-            Cancel
+            <FiChevronLeft className="mr-1" />
+            Previous
           </Button>
-          <Button
-            onClick={handleCreateUserStory}
-            isLoading={creatingUserStory}
-            disabled={!newUserStoryText.trim()}
-          >
-            Add User Story
-          </Button>
-        </ModalFooter>
-      </Modal>
+
+          {currentStep < STEPS.length - 1 ? (
+            <Button onClick={handleNext} disabled={isLoading}>
+              Next
+              <FiChevronRight className="ml-1" />
+            </Button>
+          ) : (
+            <div className="flex gap-3">
+              <Button
+                onClick={handleGenerateTests}
+                disabled={isLoading}
+                variant="secondary"
+              >
+                Generate Tests
+              </Button>
+              <Button onClick={handleRunTest} disabled={isLoading} isLoading={isLoading}>
+                Run Test
+              </Button>
+            </div>
+          )}
+        </div>
+      </Card>
     </>
   );
 };

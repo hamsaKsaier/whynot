@@ -29,6 +29,16 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400;
   }
+
+  /* Focus styles for keyboard navigation */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+
+  /* Skip to main content link */
+  .skip-to-main {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg;
+  }
 }
 
 @layer components {
@@ -96,6 +106,81 @@
 
   .status-pending {
     @apply bg-gray-100 text-gray-800;
+  }
+
+  /* Typography Hierarchy */
+  h1 {
+    @apply text-3xl font-bold text-gray-900;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold text-gray-900;
+  }
+
+  h3 {
+    @apply text-xl font-semibold text-gray-900;
+  }
+
+  h4 {
+    @apply text-lg font-medium text-gray-900;
+  }
+
+  /* Body text utilities */
+  .text-body {
+    @apply text-base text-gray-700;
+  }
+
+  .text-small {
+    @apply text-sm text-gray-600;
+  }
+
+  .text-tiny {
+    @apply text-xs text-gray-500;
+  }
+
+  /* Page-level spacing */
+  .page-header {
+    @apply mb-8;
+  }
+
+  .page-section {
+    @apply mb-6;
+  }
+
+  .page-subsection {
+    @apply mb-4;
+  }
+
+  /* Card spacing */
+  .card-grid {
+    @apply gap-6;
+  }
+
+  .card-spacing {
+    @apply p-6;
+  }
+
+  /* Form spacing */
+  .form-section {
+    @apply space-y-4;
+  }
+
+  .form-group {
+    @apply space-y-2;
+  }
+
+  /* Consistent section headers */
+  .section-title {
+    @apply text-xl font-semibold mb-4 text-gray-900;
+  }
+
+  /* Consistent page headers */
+  .page-title {
+    @apply text-2xl font-bold mb-2 text-gray-900;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-gray-600 mb-6;
   }
 }
 

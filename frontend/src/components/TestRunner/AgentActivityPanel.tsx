@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { FiLoader, FiCheckCircle, FiXCircle, FiAlertCircle, FiMessageCircle } from 'react-icons/fi';
+import { EmptyState } from '../common/EmptyState';
 
 export interface AgentMessage {
   stepIndex: number;
@@ -67,8 +68,14 @@ export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({
   if (displayMessages.length === 0) {
     return (
       <div className="h-full bg-white border-t border-gray-200 p-4">
-        <h3 className="font-semibold text-gray-900 mb-2">Agent Activity</h3>
-        <p className="text-sm text-gray-500">No agent activity yet. Agent will show analysis and recovery attempts here.</p>
+        <h3 className="font-semibold text-gray-900 mb-4">Agent Activity</h3>
+        <EmptyState
+          icon={<FiMessageCircle />}
+          title="No agent activity yet"
+          description="The agent will show real-time analysis and recovery attempts here during test execution"
+          tip="Tip: Start a test execution to see the agent in action"
+          className="py-8"
+        />
       </div>
     );
   }

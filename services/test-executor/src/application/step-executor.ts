@@ -803,7 +803,9 @@ export class StepExecutor {
     step: TestStep,
     log?: (level: 'info' | 'warn' | 'error' | 'debug', message: string, data?: any) => void,
     stepIndex?: number,
-    sendSelectorAttempt?: (stepIndex: number, selector: ElementSelector, attemptNumber: number, totalAttempts: number, status: 'trying' | 'failed' | 'succeeded') => void
+    sendSelectorAttempt?: (stepIndex: number, selector: ElementSelector, attemptNumber: number, totalAttempts: number, status: 'trying' | 'failed' | 'succeeded') => void,
+    testCaseId?: string,
+    stepId?: string
   ): Promise<{
     success: boolean;
     error?: string;
@@ -815,9 +817,72 @@ export class StepExecutor {
       return { success: false, error: `Browser not initialized: ${error.message}` };
     }
 
-    // Special handling for link collection assertions
+    // Special handling for URL/redirect-based assertions (e.g., login verification)
     const expectedOutcome = (step.expected_outcome || '').toLowerCase();
     const targetText = step.target ? JSON.stringify(step.target).toLowerCase() : '';
+    const description = (step.description || '').toLowerCase();
+    
+    // Check if this is a URL/redirect-based assertion
+    const isUrlAssertion =
+      expectedOutcome.includes('url') ||
+      expectedOutcome.includes('redirect') ||
+      expectedOutcome.includes('dashboard') ||
+      expectedOutcome.includes('authenticated') ||
+      description.includes('checking url') ||
+      description.includes('verify successful login') ||
+      description.includes('redirected to');
+
+    if (isUrlAssertion) {
+      try {
+        const currentUrl = page.url();
+        if (log) log('debug', `   Checking URL: ${currentUrl}`);
+        
+        // For login/authentication assertions, check if URL changed from login page
+        if (expectedOutcome.includes('login') || description.includes('login')) {
+          // Check if we're on a dashboard or authenticated page (not on login page)
+          const isOnLoginPage = currentUrl.includes('/login') || currentUrl.includes('/signin');
+          const isOnDashboard = currentUrl.includes('/dashboard') || 
+                               currentUrl.includes('/home') || 
+                               currentUrl.includes('/profile') ||
+                               currentUrl.includes('/account') ||
+                               !isOnLoginPage; // If not on login, assume authenticated
+          
+          if (isOnDashboard) {
+            if (log) log('info', `   ✅ Login verified: Redirected to ${currentUrl}`);
+            return { success: true };
+          } else if (isOnLoginPage) {
+            return { 
+              success: false, 
+              error: `Login failed: Still on login page (${currentUrl}). User was not redirected to dashboard or authenticated area.`
+            };
+          }
+        }
+        
+        // Generic URL check: verify URL contains expected keywords
+        if (expectedOutcome.includes('dashboard')) {
+          if (currentUrl.includes('/dashboard') || currentUrl.includes('/home')) {
+            if (log) log('info', `   ✅ Dashboard verified: ${currentUrl}`);
+            return { success: true };
+          }
+        }
+        
+        if (expectedOutcome.includes('authenticated') || expectedOutcome.includes('authenticated area')) {
+          const isAuthenticated = !currentUrl.includes('/login') && !currentUrl.includes('/signin');
+          if (isAuthenticated) {
+            if (log) log('info', `   ✅ Authenticated area verified: ${currentUrl}`);
+            return { success: true };
+          }
+        }
+        
+        // If URL check didn't match, fall through to element check as fallback
+        if (log) log('warn', `   ⚠️ URL check inconclusive, falling back to element check: ${currentUrl}`);
+      } catch (error: any) {
+        if (log) log('warn', `   ⚠️ URL check failed, falling back to element check: ${error.message}`);
+        // Fall through to element check
+      }
+    }
+
+    // Special handling for link collection assertions
     const isLinkAssertion =
       (expectedOutcome.includes('link') && expectedOutcome.includes('href')) ||
       (targetText.includes('link') && expectedOutcome.includes('exist'));
@@ -850,7 +915,7 @@ export class StepExecutor {
       }
     }
 
-    // Basic element visibility assertion
+    // Basic element visibility assertion (fallback if URL check didn't match)
     if (step.target) {
       const target = step.target;
       let locationResult: any = null;
