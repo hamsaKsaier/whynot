@@ -3,6 +3,7 @@ import { TestCase, ExecutionResult } from '../domain/models';
 import { TestRunner } from '../application/test-runner';
 import { DOMAnalyzer } from '../infrastructure/selectors/dom-analyzer';
 import { PlaywrightController } from '../infrastructure/browser/playwright-controller';
+import { browserSessionManager } from '../infrastructure/browser/browser-session-manager';
 import { createLogger } from '../../shared/logger/logger';
 import { ExecutionRepository } from '../../shared/database/repositories/execution-repository';
 import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
@@ -289,9 +290,43 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
 router.post('/api/capture-page', async (req: Request, res: Response) => {
   try {
     // Accept both 'url' and 'website_url' for backward compatibility (Phase 1)
-    const { website_url, url, prerequisite_steps } = req.body;
+    const { website_url, url, prerequisite_steps, contextId, captureCurrentPage, includeScreenshot } = req.body;
     const targetUrl = url || website_url;
 
+    // If contextId is provided, use persistent session (for QA Loop)
+    if (contextId) {
+      try {
+        if (captureCurrentPage) {
+          // Just capture current state without navigating
+          const result = await browserSessionManager.captureState(contextId);
+          if (result.error) {
+            return res.status(400).json({ error: result.error });
+          }
+          return res.json({
+            html: result.html,
+            screenshot: result.screenshot,
+            url: result.url,
+            title: result.title
+          });
+        } else if (targetUrl) {
+          // Navigate to URL in existing session
+          const result = await browserSessionManager.navigate(contextId, targetUrl);
+          return res.json({
+            html: result.html,
+            screenshot: result.screenshot,
+            url: result.url,
+            title: result.title
+          });
+        } else {
+          return res.status(400).json({ error: 'url is required when contextId is provided and captureCurrentPage is false' });
+        }
+      } catch (sessionError: any) {
+        logger.error('Session-based capture failed', { contextId, error: sessionError.message });
+        return res.status(500).json({ error: sessionError.message });
+      }
+    }
+
+    // Legacy behavior: create temporary browser for capture
     if (!targetUrl) {
       return res.status(400).json({ error: 'url or website_url is required' });
     }
@@ -387,8 +422,18 @@ router.post('/api/capture-page', async (req: Request, res: Response) => {
 
 router.post('/api/detect-elements', async (req: Request, res: Response) => {
   try {
-    const { html, screenshot_path, target_description } = req.body;
+    const { html, screenshot_path, target_description, contextId } = req.body;
 
+    // If contextId is provided, detect elements from live page
+    if (contextId) {
+      const elements = await browserSessionManager.detectElements(contextId);
+      if (elements.error) {
+        return res.status(400).json({ error: elements.error });
+      }
+      return res.json(elements);
+    }
+
+    // Legacy: analyze from HTML string
     const domAnalyzer = new DOMAnalyzer();
     const selectors = domAnalyzer.analyzeHTML(html, target_description);
 
@@ -454,6 +499,179 @@ router.get('/api/results/:id', async (req: Request, res: Response) => {
   } catch (error: any) {
     logger.error('Failed to fetch execution results', error);
     res.status(500).json({ error: error.message || 'Failed to fetch results' });
+  }
+});
+
+// ============================================================================
+// QA Loop Browser Session Endpoints
+// These endpoints maintain persistent browser sessions for login/exploration
+// ============================================================================
+
+/**
+ * Create or get a browser context for persistent session
+ */
+router.post('/api/context/create', async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    logger.info('Creating browser context', { sessionId });
+
+    await browserSessionManager.getOrCreateSession(sessionId);
+
+    res.json({
+      success: true,
+      contextId: sessionId,
+      message: 'Browser context created'
+    });
+  } catch (error: any) {
+    logger.error('Failed to create browser context', { error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Close a browser context
+ */
+router.post('/api/context/close', async (req: Request, res: Response) => {
+  try {
+    const { contextId } = req.body;
+
+    if (!contextId) {
+      return res.status(400).json({ error: 'contextId is required' });
+    }
+
+    logger.info('Closing browser context', { contextId });
+
+    await browserSessionManager.closeSession(contextId);
+
+    res.json({
+      success: true,
+      message: 'Browser context closed'
+    });
+  } catch (error: any) {
+    logger.error('Failed to close browser context', { error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Perform browser actions (click, type, scroll, goBack, screenshot)
+ * This is the main endpoint for QA Loop browser interactions
+ */
+router.post('/api/action', async (req: Request, res: Response) => {
+  try {
+    const { action, contextId, selector, value, direction, amount, clearFirst } = req.body;
+
+    if (!contextId) {
+      return res.status(400).json({ error: 'contextId is required' });
+    }
+
+    if (!action) {
+      return res.status(400).json({ error: 'action is required' });
+    }
+
+    logger.info('Executing browser action', { action, contextId, selector });
+
+    let result: any;
+
+    switch (action) {
+      case 'click':
+        if (!selector) {
+          return res.status(400).json({ error: 'selector is required for click action' });
+        }
+        result = await browserSessionManager.click(contextId, selector);
+        break;
+
+      case 'type':
+        if (!selector) {
+          return res.status(400).json({ error: 'selector is required for type action' });
+        }
+        result = await browserSessionManager.type(contextId, selector, value || '', clearFirst !== false);
+        break;
+
+      case 'scroll':
+        result = await browserSessionManager.scroll(contextId, direction || 'down', amount || 500);
+        break;
+
+      case 'goBack':
+        result = await browserSessionManager.goBack(contextId);
+        break;
+
+      case 'screenshot':
+        result = await browserSessionManager.getScreenshot(contextId);
+        break;
+
+      case 'captureState':
+        result = await browserSessionManager.captureState(contextId);
+        break;
+
+      case 'detectElements':
+        result = await browserSessionManager.detectElements(contextId);
+        break;
+
+      default:
+        return res.status(400).json({ error: `Unknown action: ${action}` });
+    }
+
+    if (result.error) {
+      logger.warn('Browser action failed', { action, contextId, error: result.error });
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('Browser action error', { error: error.message, action: req.body?.action });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Enhanced capture-page that works with persistent sessions
+ * Supports both new browser (no contextId) and existing session (with contextId)
+ */
+router.post('/api/capture-page-session', async (req: Request, res: Response) => {
+  try {
+    const { url, contextId, includeScreenshot } = req.body;
+
+    if (!url && !contextId) {
+      return res.status(400).json({ error: 'url or contextId is required' });
+    }
+
+    // If contextId provided, use existing session
+    if (contextId) {
+      if (url) {
+        // Navigate to URL in existing session
+        const result = await browserSessionManager.navigate(contextId, url);
+        res.json({
+          ...result,
+          contextId
+        });
+      } else {
+        // Just capture current state
+        const result = await browserSessionManager.captureState(contextId);
+        res.json({
+          ...result,
+          contextId
+        });
+      }
+    } else {
+      // Create temporary session, navigate, and return
+      const tempSessionId = `temp-${Date.now()}`;
+      try {
+        const result = await browserSessionManager.navigate(tempSessionId, url);
+        res.json(result);
+      } finally {
+        // Clean up temporary session
+        await browserSessionManager.closeSession(tempSessionId);
+      }
+    }
+  } catch (error: any) {
+    logger.error('Failed to capture page with session', { error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 

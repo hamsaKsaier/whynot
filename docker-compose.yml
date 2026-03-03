@@ -35,7 +35,7 @@ services:
       - ./services/ai-service/app:/app/app
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" 2>/dev/null && echo ok"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -85,7 +85,7 @@ services:
           cpus: "${TEST_EXECUTOR_CPUS_RESERVED:-1.0}"
           memory: ${TEST_EXECUTOR_MEMORY_RESERVED:-2G}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/health',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -112,7 +112,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/health',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -134,6 +134,14 @@ services:
       - RATE_LIMIT_TEST_EXECUTION_MAX=${RATE_LIMIT_TEST_EXECUTION_MAX:-50}
       - RATE_LIMIT_TEST_GENERATION_MAX=${RATE_LIMIT_TEST_GENERATION_MAX:-50}
       - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-200}
+      - JWT_SECRET=${JWT_SECRET:-change-me-to-a-long-random-string-before-production}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GITHUB_CALLBACK_URL=${GITHUB_CALLBACK_URL:-http://localhost:3010/api/auth/github/callback}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3010/api/auth/google/callback}
+      - SCREENSHOT_RETENTION_DAYS=${SCREENSHOT_RETENTION_DAYS:-30}
     volumes:
       - ./gateway/src:/app/src
       - ./shared:/app/shared
@@ -148,7 +156,7 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3

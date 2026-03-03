@@ -89,7 +89,8 @@ export function useQALoopStream({
         break;
 
       case 'tool_call':
-        setToolCalls(prev => [...prev, {
+        // Cap toolCalls at 50 to prevent unbounded memory growth
+        setToolCalls(prev => [...prev.slice(-49), {
           tool: event.data?.tool,
           input: event.data?.input,
           timestamp: event.timestamp
@@ -103,7 +104,9 @@ export function useQALoopStream({
           const updated = [...prev];
           const lastCall = updated[updated.length - 1];
           if (lastCall && lastCall.tool === event.data?.tool) {
-            lastCall.result = event.data?.result || event.data?.error;
+            // Truncate large result payloads to 500 chars
+            const raw = event.data?.result || event.data?.error;
+            lastCall.result = typeof raw === 'string' ? raw.slice(0, 500) : raw;
           }
           return updated;
         });
@@ -243,6 +246,10 @@ export function useQALoopStream({
 
     setIsConnected(false);
     reconnectAttempts.current = maxReconnectAttempts; // Prevent auto-reconnect
+    // Clear accumulated state to free memory
+    setToolCalls([]);
+    setCurrentScreenshot(null);
+    setEvents([]);
   }, []);
 
   // Connect when enabled and sessionId changes

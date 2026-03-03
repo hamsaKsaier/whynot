@@ -22,6 +22,10 @@ import type { TestCaseEntity } from '../../shared/database/repositories/test-cas
 import type { ExecutionEntity, StepResultEntity } from '../../shared/database/repositories/execution-repository';
 import { ExecutionResult, StepResult } from '../../shared/types';
 import { query } from '../../shared/database/connection';
+import { requireAuth } from '../middleware/auth';
+import * as authService from '../services/auth-service';
+import { WorkspaceRepository } from '../../shared/database/repositories/workspace-repository';
+import { startCleanupScheduler, runCleanup } from '../services/cleanup-service';
 
 dotenv.config();
 
@@ -113,7 +117,7 @@ app.use(cors({
   origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Workspace-ID'],
   exposedHeaders: ['X-Request-ID', 'RateLimit-*']
 }));
 // #region agent log
@@ -153,6 +157,7 @@ const userStoryRepository = new UserStoryRepository();
 const folderRepository = new FolderRepository();
 const setupHookRepository = new SetupHookRepository();
 const visualRegressionRepository = new VisualRegressionRepository();
+const workspaceRepository = new WorkspaceRepository();
 
 // Health check with detailed status
 app.get('/health', async (req, res) => {
@@ -203,6 +208,134 @@ app.get('/health', async (req, res) => {
   const statusCode = health.status === 'healthy' ? 200 : 503;
   res.status(statusCode).json(health);
 });
+
+// ==================== AUTH ROUTES (public — no auth middleware) ====================
+
+app.post('/api/auth/register', asyncHandler(async (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password || !name) {
+    throw createError('email, password, and name are required', 400, 'VALIDATION_ERROR');
+  }
+  const result = await authService.register(String(email), String(password), String(name));
+  res.status(201).json({ success: true, ...result });
+}));
+
+app.post('/api/auth/login', asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    throw createError('email and password are required', 400, 'VALIDATION_ERROR');
+  }
+  const result = await authService.login(String(email), String(password));
+  res.json({ success: true, ...result });
+}));
+
+app.post('/api/auth/logout', (_req, res) => {
+  // JWT is stateless; client drops the token
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+app.get('/api/auth/me', requireAuth, asyncHandler(async (req, res) => {
+  res.json({ success: true, user: req.user });
+}));
+
+app.get('/api/auth/github', (_req, res) => {
+  try {
+    res.redirect(authService.getGithubAuthUrl());
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/auth/github/callback', asyncHandler(async (req, res) => {
+  const { code } = req.query;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (!code || typeof code !== 'string') {
+    return res.redirect(`${frontendUrl}/login?error=no_code`);
+  }
+  try {
+    const result = await authService.handleGithubCallback(code);
+    res.redirect(`${frontendUrl}/auth/callback?token=${result.token}`);
+  } catch (err: any) {
+    logger.error('GitHub OAuth callback error', { error: err.message });
+    res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+  }
+}));
+
+app.get('/api/auth/google', (_req, res) => {
+  try {
+    res.redirect(authService.getGoogleAuthUrl());
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/auth/google/callback', asyncHandler(async (req, res) => {
+  const { code } = req.query;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (!code || typeof code !== 'string') {
+    return res.redirect(`${frontendUrl}/login?error=no_code`);
+  }
+  try {
+    const result = await authService.handleGoogleCallback(code);
+    res.redirect(`${frontendUrl}/auth/callback?token=${result.token}`);
+  } catch (err: any) {
+    logger.error('Google OAuth callback error', { error: err.message });
+    res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+  }
+}));
+
+// ==================== WORKSPACE ROUTES (require auth) ====================
+
+app.get('/api/workspaces', requireAuth, asyncHandler(async (req, res) => {
+  const workspaces = await workspaceRepository.findAllByUserId(req.user!.id);
+  res.json({ success: true, workspaces });
+}));
+
+app.post('/api/workspaces', requireAuth, asyncHandler(async (req, res) => {
+  const { name } = req.body;
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    throw createError('Workspace name is required', 400, 'VALIDATION_ERROR');
+  }
+  const workspace = await workspaceRepository.create({ name: name.trim(), owner_id: req.user!.id });
+  res.status(201).json({ success: true, workspace });
+}));
+
+app.get('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
+  const workspace = await workspaceRepository.findById(req.params.id);
+  if (!workspace || workspace.owner_id !== req.user!.id) {
+    throw createError('Workspace not found', 404, 'NOT_FOUND');
+  }
+  res.json({ success: true, workspace });
+}));
+
+app.put('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
+  const { name } = req.body;
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    throw createError('Workspace name is required', 400, 'VALIDATION_ERROR');
+  }
+  const workspace = await workspaceRepository.findById(req.params.id);
+  if (!workspace || workspace.owner_id !== req.user!.id) {
+    throw createError('Workspace not found', 404, 'NOT_FOUND');
+  }
+  const updated = await workspaceRepository.update(req.params.id, name.trim());
+  res.json({ success: true, workspace: updated });
+}));
+
+app.delete('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
+  const workspace = await workspaceRepository.findById(req.params.id);
+  if (!workspace || workspace.owner_id !== req.user!.id) {
+    throw createError('Workspace not found', 404, 'NOT_FOUND');
+  }
+  const count = await workspaceRepository.countByUserId(req.user!.id);
+  if (count <= 1) {
+    throw createError('Cannot delete your only workspace', 400, 'LAST_WORKSPACE');
+  }
+  await workspaceRepository.delete(req.params.id);
+  res.json({ success: true, message: 'Workspace deleted' });
+}));
+
+// ─── All routes below this line require a valid JWT ───────────────────────────
+app.use('/api', requireAuth);
 
 // Main workflow endpoint (with stricter rate limiting)
 app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), asyncHandler(async (req, res) => {
@@ -454,8 +587,8 @@ app.get('/api/projects', asyncHandler(async (req, res) => {
   // #region agent log
   try { fs.appendFileSync('/Users/takiacademy/whynot/.cursor/debug.log', JSON.stringify({ location: 'gateway/src/api/main.ts:356', message: 'Before database query', data: { offset, limit }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) + '\n'); } catch (e) { }
   // #endregion
-  const projects = await projectRepository.listWithStats(offset, limit);
-  const total = await projectRepository.count();
+  const projects = await projectRepository.listWithStats(offset, limit, req.workspaceId);
+  const total = await projectRepository.count(req.workspaceId);
   // #region agent log
   try { fs.appendFileSync('/Users/takiacademy/whynot/.cursor/debug.log', JSON.stringify({ location: 'gateway/src/api/main.ts:357', message: 'Projects endpoint handler exit', data: { projectsCount: projects.length, total }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) + '\n'); } catch (e) { }
   // #endregion
@@ -474,7 +607,8 @@ app.post('/api/projects', asyncHandler(async (req, res) => {
   const project = await projectRepository.create({
     name: name.trim(),
     description: description?.trim() || undefined,
-    website_url: website_url?.trim() || undefined
+    website_url: website_url?.trim() || undefined,
+    workspace_id: req.workspaceId
   });
 
   res.status(201).json({ success: true, project });
@@ -559,7 +693,8 @@ app.post('/api/projects/:id/user-stories', asyncHandler(async (req, res) => {
     project_id: projectId,
     story: story.trim(),
     website_url: website_url?.trim() || project.website_url || undefined,
-    additional_context: additional_context?.trim() || undefined
+    additional_context: additional_context?.trim() || undefined,
+    workspace_id: req.workspaceId
   });
 
   res.status(201).json({ success: true, user_story: userStory });
@@ -1653,6 +1788,12 @@ app.get('/', (req, res) => {
   });
 });
 
+// Manual cleanup trigger (protected by requireAuth middleware applied earlier)
+app.post('/api/cleanup/screenshots', requireAuth, asyncHandler(async (_req, res) => {
+  const result = runCleanup();
+  res.json({ success: true, deleted: result });
+}));
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
@@ -1662,5 +1803,8 @@ app.listen(PORT, () => {
     aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:8000',
     testExecutorUrl: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001'
   });
+
+  // Start screenshot cleanup scheduler (runs once on startup + every 24h)
+  startCleanupScheduler();
 });
 

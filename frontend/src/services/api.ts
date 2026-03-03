@@ -21,6 +21,41 @@ const apiClient = axios.create({
   timeout: 300000, // 5 minutes for test execution
 });
 
+// ─── Auth interceptors ────────────────────────────────────────────────────────
+
+/** Attach JWT Bearer token + active workspace ID to every request */
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers = config.headers || {};
+    (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+  const workspaceId = localStorage.getItem('active_workspace_id');
+  if (workspaceId) {
+    config.headers = config.headers || {};
+    (config.headers as Record<string, string>)['X-Workspace-ID'] = workspaceId;
+  }
+  return config;
+});
+
+/** On 401, clear token and redirect to /login (skip for auth-specific endpoints) */
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const url: string = error.config?.url || '';
+      const isAuthEndpoint = url.includes('/auth/');
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('auth_token');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Health check
 export const checkHealth = async (): Promise<boolean> => {
   try {

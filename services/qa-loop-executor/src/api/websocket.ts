@@ -11,6 +11,21 @@ const sessionClients = new Map<string, Set<WebSocket>>();
 // Map of session ID to event queues (for events before client connects)
 const sessionEventQueues = new Map<string, QALoopEvent[]>();
 
+// Track last-access timestamps for queue cleanup
+const queueTimestamps = new Map<string, number>();
+
+// Periodically evict queues that haven't been accessed in 30 minutes
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [sessionId, ts] of queueTimestamps) {
+    if (ts < cutoff) {
+      sessionEventQueues.delete(sessionId);
+      queueTimestamps.delete(sessionId);
+      logger.debug('Evicted stale event queue', { sessionId });
+    }
+  }
+}, 5 * 60 * 1000);
+
 export interface QALoopEvent {
   type: 'thinking' | 'tool_call' | 'tool_result' | 'progress' | 'error' |
   'iteration_start' | 'iteration_end' | 'page_discovered' | 'page_explored' |
@@ -108,15 +123,22 @@ export function emitToSession(sessionId: string, event: Omit<QALoopEvent, 'times
   const clients = sessionClients.get(sessionId);
 
   if (!clients || clients.size === 0) {
+    // Strip screenshot data from queued events — screenshots should not be buffered
+    const eventToQueue: QALoopEvent =
+      fullEvent.type === 'screenshot'
+        ? { ...fullEvent, data: { url: fullEvent.data?.url } }
+        : fullEvent;
+
     // Queue event for when client connects
     if (!sessionEventQueues.has(sessionId)) {
       sessionEventQueues.set(sessionId, []);
     }
     const queue = sessionEventQueues.get(sessionId)!;
-    queue.push(fullEvent);
+    queue.push(eventToQueue);
+    queueTimestamps.set(sessionId, Date.now());
 
-    // Limit queue size to prevent memory issues
-    if (queue.length > 1000) {
+    // Limit queue size to 100 to prevent memory growth
+    if (queue.length > 100) {
       queue.shift();
     }
     return;
@@ -156,6 +178,7 @@ export function getClientCount(sessionId: string): number {
  */
 export function cleanupSession(sessionId: string): void {
   sessionEventQueues.delete(sessionId);
+  queueTimestamps.delete(sessionId);
   const clients = sessionClients.get(sessionId);
   if (clients) {
     for (const client of clients) {

@@ -80,8 +80,9 @@ export class BrowserTools {
       }
 
       // Truncate HTML for context window
-      const truncatedHtml = result.html.length > 15000
-        ? result.html.substring(0, 15000) + '\n... (truncated)'
+      // COST OPTIMIZATION: Reduced from 15K to 5K chars
+      const truncatedHtml = result.html.length > 5000
+        ? result.html.substring(0, 5000) + '\n... (truncated)'
         : result.html;
 
       return {
@@ -139,7 +140,8 @@ export class BrowserTools {
           success: true,
           newUrl: pageState.url,
           urlChanged: pageState.url !== this.currentUrl,
-          html_preview: pageState.html?.substring(0, 10000)
+          // COST OPTIMIZATION: Reduced from 10K to 3K
+          html_preview: pageState.html?.substring(0, 3000)
         }
       };
     } catch (error: any) {

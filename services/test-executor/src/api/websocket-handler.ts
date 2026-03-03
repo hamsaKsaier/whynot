@@ -5,10 +5,28 @@ import { createLogger } from '../../shared/logger/logger';
 
 const logger = createLogger('websocket-handler');
 
+interface ActiveStream {
+  streamer: BrowserStreamer;
+  registeredAt: number;
+}
+
 // Store active streams by execution ID
-const activeStreams = new Map<string, BrowserStreamer>();
+const activeStreams = new Map<string, ActiveStream>();
 // Store pending WebSocket connections waiting for streamer
 const pendingConnections = new Map<string, WebSocket>();
+
+// Periodically evict streamers that have been registered for more than 15 minutes
+// (orphaned by tests that never called unregisterBrowserStream)
+setInterval(() => {
+  const cutoff = Date.now() - 15 * 60 * 1000;
+  for (const [id, entry] of activeStreams) {
+    if (entry.registeredAt < cutoff) {
+      logger.warn('Evicting stale browser stream', { executionId: id });
+      entry.streamer.cleanup();
+      activeStreams.delete(id);
+    }
+  }
+}, 10 * 60 * 1000);
 
 /**
  * Setup WebSocket server for browser streaming
@@ -60,11 +78,11 @@ export function setupWebSocketServer(server: any): void {
     logger.info('WebSocket connection established', { executionId });
 
     // Check if streamer already exists
-    const streamer = activeStreams.get(executionId);
-    if (streamer) {
+    const entry = activeStreams.get(executionId);
+    if (entry) {
       // Attach WebSocket to existing streamer
       // attachWebSocket will call startStreaming() if not already started
-      streamer.attachWebSocket(ws);
+      entry.streamer.attachWebSocket(ws);
       logger.info('WebSocket attached to existing streamer', { executionId });
     } else {
       // Store connection for later attachment
@@ -120,12 +138,12 @@ export function setupWebSocketServer(server: any): void {
     });
 
     // Send connection confirmation (only if streamer already exists)
-    if (streamer) {
+    if (entry) {
       try {
-        ws.send(JSON.stringify({ 
-          type: 'connected', 
+        ws.send(JSON.stringify({
+          type: 'connected',
           executionId,
-          message: 'Browser streaming connected' 
+          message: 'Browser streaming connected'
         }));
       } catch (error: any) {
         logger.warn('Failed to send connected message', { error: error.message, executionId });
@@ -140,9 +158,9 @@ export function setupWebSocketServer(server: any): void {
  * Register a browser streamer for an execution
  */
 export function registerBrowserStream(executionId: string, streamer: BrowserStreamer): void {
-  activeStreams.set(executionId, streamer);
+  activeStreams.set(executionId, { streamer, registeredAt: Date.now() });
   logger.debug('Browser stream registered', { executionId });
-  
+
   // Check if there's a pending WebSocket connection
   const pendingWs = pendingConnections.get(executionId);
   if (pendingWs && pendingWs.readyState === WebSocket.OPEN) {
@@ -157,16 +175,16 @@ export function registerBrowserStream(executionId: string, streamer: BrowserStre
  * Get active browser streamer
  */
 export function getBrowserStream(executionId: string): BrowserStreamer | undefined {
-  return activeStreams.get(executionId);
+  return activeStreams.get(executionId)?.streamer;
 }
 
 /**
  * Unregister a browser streamer
  */
 export function unregisterBrowserStream(executionId: string): void {
-  const streamer = activeStreams.get(executionId);
-  if (streamer) {
-    streamer.cleanup();
+  const entry = activeStreams.get(executionId);
+  if (entry) {
+    entry.streamer.cleanup();
     activeStreams.delete(executionId);
     logger.debug('Browser stream unregistered', { executionId });
   }

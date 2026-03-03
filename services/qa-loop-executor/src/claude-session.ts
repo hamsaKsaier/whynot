@@ -93,7 +93,8 @@ export class ClaudeSession {
       }));
 
       // Combine documents with a token limit
-      this.documentContext = combineDocuments(parsedDocs, 50000);
+      // COST OPTIMIZATION: Reduced from 50K to 10K tokens
+      this.documentContext = combineDocuments(parsedDocs, 10000);
 
       logger.info('Loaded document context', {
         sessionId: this.sessionId,
@@ -148,9 +149,10 @@ export class ClaudeSession {
 
     try {
       // Run conversation loop until Claude stops calling tools
+      // COST OPTIMIZATION: Reduced from 50 to 12 max loops
       let continueLoop = true;
       let loopCount = 0;
-      const maxLoops = 50; // Safety limit per iteration
+      const maxLoops = 12; // Reduced for cost savings
 
       while (continueLoop && loopCount < maxLoops) {
         loopCount++;

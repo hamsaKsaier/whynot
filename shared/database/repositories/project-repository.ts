@@ -13,6 +13,7 @@ export interface CreateProjectInput {
   name: string;
   description?: string;
   website_url?: string;
+  workspace_id?: string;
 }
 
 export interface UpdateProjectInput {
@@ -27,13 +28,14 @@ export class ProjectRepository {
    */
   async create(input: CreateProjectInput): Promise<ProjectEntity> {
     const result = await query<ProjectEntity>(
-      `INSERT INTO projects (name, description, website_url)
-       VALUES ($1, $2, $3)
+      `INSERT INTO projects (name, description, website_url, workspace_id)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [
         input.name,
         input.description || null,
-        input.website_url || null
+        input.website_url || null,
+        input.workspace_id || null
       ]
     );
 
@@ -53,9 +55,15 @@ export class ProjectRepository {
   }
 
   /**
-   * List all projects with pagination
+   * List all projects with pagination, optionally scoped to a workspace
    */
-  async list(offset: number = 0, limit: number = 50): Promise<ProjectEntity[]> {
+  async list(offset: number = 0, limit: number = 50, workspaceId?: string): Promise<ProjectEntity[]> {
+    if (workspaceId) {
+      return await query<ProjectEntity>(
+        'SELECT * FROM projects WHERE workspace_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+        [workspaceId, limit, offset]
+      );
+    }
     return await query<ProjectEntity>(
       'SELECT * FROM projects ORDER BY created_at DESC LIMIT $1 OFFSET $2',
       [limit, offset]
@@ -63,9 +71,16 @@ export class ProjectRepository {
   }
 
   /**
-   * Get total count of projects
+   * Get total count of projects, optionally scoped to a workspace
    */
-  async count(): Promise<number> {
+  async count(workspaceId?: string): Promise<number> {
+    if (workspaceId) {
+      const result = await query<{ count: string }>(
+        'SELECT COUNT(*) as count FROM projects WHERE workspace_id = $1',
+        [workspaceId]
+      );
+      return parseInt(result[0]?.count || '0', 10);
+    }
     const result = await query<{ count: string }>(
       'SELECT COUNT(*) as count FROM projects'
     );
@@ -139,17 +154,27 @@ export class ProjectRepository {
   }
 
   /**
-   * List all projects with user story counts
+   * List all projects with user story counts, optionally scoped to a workspace
    */
-  async listWithStats(offset: number = 0, limit: number = 50): Promise<(ProjectEntity & { user_story_count: number })[]> {
-    const result = await query<ProjectEntity & { user_story_count: string }>(
-      `SELECT p.*, 
-              (SELECT COUNT(*) FROM user_stories WHERE project_id = p.id) as user_story_count
-       FROM projects p
-       ORDER BY p.created_at DESC 
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
+  async listWithStats(offset: number = 0, limit: number = 50, workspaceId?: string): Promise<(ProjectEntity & { user_story_count: number })[]> {
+    const result = workspaceId
+      ? await query<ProjectEntity & { user_story_count: string }>(
+          `SELECT p.*,
+                  (SELECT COUNT(*) FROM user_stories WHERE project_id = p.id) as user_story_count
+           FROM projects p
+           WHERE p.workspace_id = $1
+           ORDER BY p.created_at DESC
+           LIMIT $2 OFFSET $3`,
+          [workspaceId, limit, offset]
+        )
+      : await query<ProjectEntity & { user_story_count: string }>(
+          `SELECT p.*,
+                  (SELECT COUNT(*) FROM user_stories WHERE project_id = p.id) as user_story_count
+           FROM projects p
+           ORDER BY p.created_at DESC
+           LIMIT $1 OFFSET $2`,
+          [limit, offset]
+        );
 
     return result.map(row => ({
       ...row,

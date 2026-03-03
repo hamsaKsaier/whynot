@@ -15,6 +15,7 @@ export interface CreateUserStoryInput {
   story: string;
   website_url?: string;
   additional_context?: string;
+  workspace_id?: string;
 }
 
 export interface UpdateUserStoryInput {
@@ -29,14 +30,15 @@ export class UserStoryRepository {
    */
   async create(input: CreateUserStoryInput): Promise<UserStoryEntity> {
     const result = await query<UserStoryEntity>(
-      `INSERT INTO user_stories (project_id, story, website_url, additional_context)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO user_stories (project_id, story, website_url, additional_context, workspace_id)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
         input.project_id,
         input.story,
         input.website_url || null,
-        input.additional_context || null
+        input.additional_context || null,
+        input.workspace_id || null
       ]
     );
 

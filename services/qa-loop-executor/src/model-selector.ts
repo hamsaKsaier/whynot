@@ -56,11 +56,13 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
 
 /**
  * Default model mapping for each focus area
+ * COST OPTIMIZED: Use Haiku for most tasks, Sonnet for complex ones
+ * AVOID OPUS: Too expensive ($15/$75 per M tokens)
  */
 export const FOCUS_AREA_MODELS: Record<FocusArea, ClaudeModel> = {
-  explore: 'claude-sonnet-4-20250514',    // Needs reasoning for exploration strategy
+  explore: 'claude-3-haiku-20240307',      // Haiku is sufficient for navigation
   chaos: 'claude-3-haiku-20240307',        // Simple tool calls for security testing
-  investigate: 'claude-3-opus-20240229',   // Complex root cause analysis
+  investigate: 'claude-sonnet-4-20250514', // Sonnet for analysis (NOT Opus - too expensive)
   retest: 'claude-3-haiku-20240307'        // Straightforward test execution
 };
 

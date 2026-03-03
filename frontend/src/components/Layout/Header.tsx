@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { FiBell, FiSettings, FiUser, FiZap, FiHelpCircle } from 'react-icons/fi';
+import { FiBell, FiSettings, FiHelpCircle, FiLogOut } from 'react-icons/fi';
 import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
+import { useAuth } from '../../contexts/AuthContext';
+import { WorkspaceSwitcher } from '../WorkspaceSwitcher';
 
 export const Header: React.FC = () => {
   const location = useLocation();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  /** Get up-to-two-letter initials from the user's name */
+  const initials = user
+    ? user.name
+        .split(' ')
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? '')
+        .join('')
+    : '?';
 
   useKeyboardShortcut('/', () => setShortcutsOpen(true), { metaKey: true, ctrlKey: true });
 
@@ -40,8 +52,10 @@ export const Header: React.FC = () => {
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6" role="banner">
-      {/* Left: Breadcrumbs */}
-      <div className="flex items-center space-x-2">
+      {/* Left: WorkspaceSwitcher + Breadcrumbs */}
+      <div className="flex items-center gap-3">
+        <WorkspaceSwitcher />
+        <span className="text-gray-300">|</span>
         <div className="flex items-center space-x-1 text-sm text-gray-600">
           {breadcrumbs.map((crumb, index) => (
             <React.Fragment key={crumb.path}>
@@ -87,12 +101,35 @@ export const Header: React.FC = () => {
           <FiSettings className="h-5 w-5 text-gray-600" />
         </button>
 
-        {/* User Avatar */}
-        <button className="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition-colors">
-          <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium">
-            HA
+        {/* User Avatar + Logout */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-2 py-1 rounded-lg">
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.name}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
+                {initials}
+              </div>
+            )}
+            {user && (
+              <span className="text-sm font-medium text-gray-700 hidden sm:block max-w-[120px] truncate">
+                {user.name}
+              </span>
+            )}
           </div>
-        </button>
+          <button
+            onClick={logout}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <FiLogOut className="h-4 w-4 text-gray-600" />
+          </button>
+        </div>
       </div>
       <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </header>
