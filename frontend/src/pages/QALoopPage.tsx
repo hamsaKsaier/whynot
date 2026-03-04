@@ -1,103 +1,55 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-
 /**
- * Safe URL part extractor — returns `fallback` instead of crashing the React
- * tree when `url` is malformed or missing (3.5).
+ * QALoopPage — orchestrates the QA Loop feature.
+ *
+ * After 5.1 decomposition this file holds only:
+ *  - form / UI-toggle state that is truly local to the page
+ *  - the "check existing session" side-effect (debounced URL probe)
+ *  - wiring between useSessionManager and the four sub-components
+ *
+ * Heavy data/API logic lives in useSessionManager.
+ * Heavy UI lives in SessionForm / SessionList / StatsBar / LiveMonitor.
  */
-function safeUrlPart(url: string | undefined | null, part: 'pathname' | 'hostname', fallback?: string): string {
+import React, { useState, useEffect, useCallback } from 'react';
+import { useToastContext } from '../contexts/ToastContext';
+import { Alert } from '../components/common/Alert';
+import { Card }  from '../components/common/Card';
+import { Button } from '../components/common/Button';
+import {
+  FiZap, FiGlobe, FiActivity, FiPlay, FiPause,
+  FiStopCircle, FiRefreshCw, FiTarget,
+} from 'react-icons/fi';
+
+import { checkExistingSession } from '../services/qa-loop-api';
+import { useSessionManager, StartSessionParams } from '../hooks/useSessionManager';
+
+import {
+  SessionForm,
+  SessionList,
+  StatsBar,
+  LiveMonitor,
+  ExistingSessionInfo,
+  ChaosResultsTab,
+  AnalysisTab,
+} from '../components/QALoop';
+
+// ── Inline ResultsTabs (was already local to QALoopPage, kept here) ────────────
+import { QALoopTestCase, QALoopBug, QALoopPage as QAPage } from '../services/qa-loop-api';
+import {
+  ChaosResult, ChaosSummary, RootCauseAnalysis, FailureCorrelation,
+} from '../components/QALoop';
+import {
+  FiFileText, FiAlertTriangle, FiShield, FiSearch, FiCheckCircle, FiClock,
+} from 'react-icons/fi';
+
+function safePathname(url: string | undefined | null, fallback?: string): string {
   try {
     if (!url) return fallback ?? '';
-    return new URL(url)[part] || fallback || url;
+    return new URL(url).pathname || fallback || url;
   } catch {
     return fallback ?? url ?? '';
   }
 }
-import { useToastContext } from '../contexts/ToastContext';
-import { Card } from '../components/common/Card';
-import { Button } from '../components/common/Button';
-import { Input } from '../components/common/Input';
-import { Textarea } from '../components/common/Textarea';
-import { Alert } from '../components/common/Alert';
-import {
-  startQALoopSession,
-  listQALoopSessions,
-  getQALoopSession,
-  pauseQALoopSession,
-  resumeQALoopSession,
-  stopQALoopSession,
-  runRetest,
-  checkExistingSession,
-  uploadDocument,
-  listDocuments,
-  deleteDocument,
-  toggleDocument,
-  QALoopSession,
-  QALoopTestCase,
-  QALoopBug,
-  QALoopPage as QAPage,
-  QALoopDocument
-} from '../services/qa-loop-api';
-import { useQALoopStream } from '../hooks/useQALoopStream';
-import {
-  ChaosResultsTab,
-  AnalysisTab,
-  QualityDashboard,
-  DocumentUpload,
-  ChaosResult,
-  ChaosSummary,
-  RootCauseAnalysis,
-  FailureCorrelation,
-  QualityScore,
-  RiskCounts,
-  IterationHistory,
-  UploadedDocument
-} from '../components/QALoop';
-import {
-  FiPlay,
-  FiPause,
-  FiStopCircle,
-  FiRefreshCw,
-  FiGlobe,
-  FiFileText,
-  FiAlertTriangle,
-  FiCheckCircle,
-  FiClock,
-  FiActivity,
-  FiTarget,
-  FiZap,
-  FiChevronDown,
-  FiChevronUp,
-  FiTerminal,
-  FiImage,
-  FiShield,
-  FiSearch,
-  FiBarChart2,
-  FiEye,
-  FiEyeOff,
-  FiLock,
-  FiUser,
-  FiInfo,
-  FiUpload,
-  FiTrash2,
-  FiToggleLeft,
-  FiToggleRight,
-  FiMaximize2,
-  FiMinimize2
-} from 'react-icons/fi';
 
-// Pure helpers — defined outside the component so they are never re-created (4.3)
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'running': return 'text-blue-500';
-    case 'completed': return 'text-green-500';
-    case 'paused': return 'text-yellow-500';
-    case 'failed': return 'text-red-500';
-    case 'cancelled': return 'text-gray-500';
-    default: return 'text-gray-400';
-  }
-}
-
-// Results Tabs Component with Chaos and Analysis
 const ResultsTabs: React.FC<{
   testCases: QALoopTestCase[];
   bugs: QALoopBug[];
@@ -110,75 +62,43 @@ const ResultsTabs: React.FC<{
 }> = ({ testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning }) => {
   const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'chaos' | 'analysis'>('tests');
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
+  const severityColor = (s: string) => {
+    switch (s) {
       case 'critical': return 'text-red-600 bg-red-100';
-      case 'high': return 'text-orange-600 bg-orange-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-blue-600 bg-blue-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'high':     return 'text-orange-600 bg-orange-100';
+      case 'medium':   return 'text-yellow-600 bg-yellow-100';
+      case 'low':      return 'text-blue-600 bg-blue-100';
+      default:         return 'text-gray-600 bg-gray-100';
     }
   };
 
-  const getStatusIcon = (status: string | null) => {
-    switch (status) {
-      case 'passed': return <FiCheckCircle className="text-green-500" />;
-      case 'failed': return <FiAlertTriangle className="text-red-500" />;
-      default: return <FiClock className="text-gray-400" />;
-    }
+  const statusIcon = (s: string | null) => {
+    if (s === 'passed') return <FiCheckCircle className="text-green-500" />;
+    if (s === 'failed') return <FiAlertTriangle className="text-red-500" />;
+    return <FiClock className="text-gray-400" />;
   };
 
-  const vulnerabilitiesCount = chaosResults.filter(r => r.vulnerabilityConfirmed).length;
+  const vulns = chaosResults.filter(r => r.vulnerabilityConfirmed).length;
+
+  const tab = (id: typeof activeTab, label: string, count: number, icon: React.ReactNode, activeClass: string) => (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={`pb-2 flex items-center gap-1 ${activeTab === id ? `border-b-2 ${activeClass} font-medium` : 'text-gray-500 hover:text-gray-700'}`}
+    >
+      {icon}
+      {label} ({count})
+    </button>
+  );
 
   return (
     <>
       <div className="border-b border-gray-200 mb-4">
         <nav className="flex gap-4 flex-wrap">
-          <button
-            onClick={() => setActiveTab('tests')}
-            className={`pb-2 flex items-center gap-1 ${activeTab === 'tests'
-              ? 'border-b-2 border-purple-500 text-purple-600 font-medium'
-              : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <FiFileText className="text-sm" />
-            Tests ({testCases.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('bugs')}
-            className={`pb-2 flex items-center gap-1 ${activeTab === 'bugs'
-              ? 'border-b-2 border-red-500 text-red-600 font-medium'
-              : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <FiAlertTriangle className="text-sm" />
-            Bugs ({bugs.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('pages')}
-            className={`pb-2 flex items-center gap-1 ${activeTab === 'pages'
-              ? 'border-b-2 border-blue-500 text-blue-600 font-medium'
-              : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <FiGlobe className="text-sm" />
-            Pages ({pages.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('chaos')}
-            className={`pb-2 flex items-center gap-1 ${activeTab === 'chaos'
-              ? 'border-b-2 border-orange-500 text-orange-600 font-medium'
-              : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <FiShield className="text-sm" />
-            Security ({vulnerabilitiesCount})
-          </button>
-          <button
-            onClick={() => setActiveTab('analysis')}
-            className={`pb-2 flex items-center gap-1 ${activeTab === 'analysis'
-              ? 'border-b-2 border-green-500 text-green-600 font-medium'
-              : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <FiSearch className="text-sm" />
-            Analysis ({analyses.length})
-          </button>
+          {tab('tests',    'Tests',    testCases.length, <FiFileText className="text-sm" />,     'border-purple-500 text-purple-600')}
+          {tab('bugs',     'Bugs',     bugs.length,      <FiAlertTriangle className="text-sm" />, 'border-red-500 text-red-600')}
+          {tab('pages',    'Pages',    pages.length,     <FiGlobe className="text-sm" />,         'border-blue-500 text-blue-600')}
+          {tab('chaos',    'Security', vulns,            <FiShield className="text-sm" />,        'border-orange-500 text-orange-600')}
+          {tab('analysis', 'Analysis', analyses.length,  <FiSearch className="text-sm" />,        'border-green-500 text-green-600')}
         </nav>
       </div>
 
@@ -186,535 +106,210 @@ const ResultsTabs: React.FC<{
         {activeTab === 'tests' && (
           <div className="space-y-2">
             {testCases.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No test cases generated yet
-              </div>
-            ) : (
-              testCases.map((tc) => (
-                <div key={tc.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(tc.last_run_status)}
-                      <span className="font-medium text-gray-900">{tc.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
-                        {tc.category}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        P{tc.priority}
-                      </span>
-                    </div>
+              <div className="text-center py-8 text-gray-500">No test cases generated yet</div>
+            ) : testCases.map(tc => (
+              <div key={tc.id} className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {statusIcon(tc.last_run_status)}
+                    <span className="font-medium text-gray-900">{tc.name}</span>
                   </div>
-                  {tc.description && (
-                    <p className="text-sm text-gray-500 mt-1 ml-6">{tc.description}</p>
-                  )}
-                  <div className="text-xs text-gray-400 mt-1 ml-6 flex items-center gap-3">
-                    <span>{tc.steps?.length || 0} steps</span>
-                    {tc.last_run_status && (
-                      <span className={tc.last_run_status === 'passed' ? 'text-green-500' : 'text-red-500'}>
-                        Last: {tc.last_run_status}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">{tc.category}</span>
+                    <span className="text-xs text-gray-400">P{tc.priority}</span>
                   </div>
                 </div>
-              ))
-            )}
+                {tc.description && <p className="text-sm text-gray-500 mt-1 ml-6">{tc.description}</p>}
+                <div className="text-xs text-gray-400 mt-1 ml-6 flex items-center gap-3">
+                  <span>{tc.steps?.length || 0} steps</span>
+                  {tc.last_run_status && (
+                    <span className={tc.last_run_status === 'passed' ? 'text-green-500' : 'text-red-500'}>
+                      Last: {tc.last_run_status}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {activeTab === 'bugs' && (
           <div className="space-y-2">
             {bugs.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No bugs found yet - that's a good sign!
-              </div>
-            ) : (
-              bugs.map((bug) => (
-                <div key={bug.id} className="p-3 bg-gray-50 rounded-lg border-l-4 border-red-400">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900">{bug.title}</span>
-                    <span className={`text-xs px-2 py-1 rounded ${getSeverityColor(bug.severity)}`}>
-                      {bug.severity}
-                    </span>
-                  </div>
-                  {bug.description && (
-                    <p className="text-sm text-gray-500 mt-1">{bug.description}</p>
-                  )}
-                  <div className="text-xs text-gray-400 mt-2 flex items-center gap-3">
-                    {bug.category && <span>{bug.category}</span>}
-                    {bug.page_url && (
-                      <span className="truncate max-w-xs">{new URL(bug.page_url).pathname}</span>
-                    )}
-                    <span className={bug.status === 'open' ? 'text-red-500' : 'text-green-500'}>
-                      {bug.status}
-                    </span>
-                  </div>
+              <div className="text-center py-8 text-gray-500">No bugs found yet — that's a good sign!</div>
+            ) : bugs.map(bug => (
+              <div key={bug.id} className="p-3 bg-gray-50 rounded-lg border-l-4 border-red-400">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-900">{bug.title}</span>
+                  <span className={`text-xs px-2 py-1 rounded ${severityColor(bug.severity)}`}>{bug.severity}</span>
                 </div>
-              ))
-            )}
+                {bug.description && <p className="text-sm text-gray-500 mt-1">{bug.description}</p>}
+                <div className="text-xs text-gray-400 mt-2 flex items-center gap-3">
+                  {bug.category && <span>{bug.category}</span>}
+                  {bug.page_url && <span className="truncate max-w-xs">{safePathname(bug.page_url)}</span>}
+                  <span className={bug.status === 'open' ? 'text-red-500' : 'text-green-500'}>{bug.status}</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {activeTab === 'pages' && (
           <div className="space-y-2">
             {pages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No pages explored yet
-              </div>
-            ) : (
-              pages.map((page) => (
-                <div key={page.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {page.is_explored ? (
-                        <FiCheckCircle className="text-green-500" />
-                      ) : (
-                        <FiClock className="text-yellow-500" />
-                      )}
-                      <span className="font-medium text-gray-900 truncate max-w-md">
-                        {page.title || safeUrlPart(page.url, 'pathname', page.url)}
-                      </span>
-                    </div>
-                    {page.page_type && (
-                      <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">
-                        {page.page_type}
-                      </span>
-                    )}
+              <div className="text-center py-8 text-gray-500">No pages explored yet</div>
+            ) : pages.map(page => (
+              <div key={page.id} className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {page.is_explored
+                      ? <FiCheckCircle className="text-green-500" />
+                      : <FiClock className="text-yellow-500" />
+                    }
+                    <span className="font-medium text-gray-900 truncate max-w-md">
+                      {page.title || safePathname(page.url, page.url)}
+                    </span>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1 ml-6 truncate">
-                    {page.url}
-                  </div>
-                  {page.description && (
-                    <p className="text-sm text-gray-500 mt-1 ml-6">{page.description}</p>
+                  {page.page_type && (
+                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">{page.page_type}</span>
                   )}
                 </div>
-              ))
-            )}
+                <div className="text-xs text-gray-400 mt-1 ml-6 truncate">{page.url}</div>
+                {page.description && <p className="text-sm text-gray-500 mt-1 ml-6">{page.description}</p>}
+              </div>
+            ))}
           </div>
         )}
 
         {activeTab === 'chaos' && (
-          <ChaosResultsTab
-            results={chaosResults}
-            summary={chaosSummary}
-            isRunning={isRunning}
-          />
+          <ChaosResultsTab results={chaosResults} summary={chaosSummary} isRunning={isRunning} />
         )}
-
         {activeTab === 'analysis' && (
-          <AnalysisTab
-            analyses={analyses}
-            correlations={correlations}
-          />
+          <AnalysisTab analyses={analyses} correlations={correlations} />
         )}
       </div>
     </>
   );
 };
 
+// ── Status helpers ─────────────────────────────────────────────────────────────
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'running':   return 'text-blue-500';
+    case 'completed': return 'text-green-500';
+    case 'paused':    return 'text-yellow-500';
+    case 'failed':    return 'text-red-500';
+    case 'cancelled': return 'text-gray-500';
+    default:          return 'text-gray-400';
+  }
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 export const QALoopPage: React.FC = () => {
   const { success, error: showError } = useToastContext();
 
-  // Form state
-  const [targetUrl, setTargetUrl] = useState('');
+  // ── Session manager (data / API / stream) ──────────────────────────────────
+  const {
+    sessions, activeSession,
+    sessionTestCases, sessionBugs, sessionPages,
+    chaosResults, chaosSummary, analyses, correlations,
+    qualityScore, risks, iterationHistory,
+    documents, isStarting, isLoadingSessions,
+    handleStartSession, handlePauseSession, handleResumeSession,
+    handleStopSession, handleRetest, handleSelectSession,
+    handleUploadDocument, handleDeleteDocument, handleToggleDocument,
+    isConnected, currentScreenshot, currentUrl, thinkingText,
+    toolCalls, iteration, pagesExplored, testsGenerated,
+    streamBugsFound, wsError,
+  } = useSessionManager({ onSuccess: success, onError: showError });
+
+  // ── Form state (local — only this page + SessionForm need it) ───────────────
+  const [targetUrl,        setTargetUrl]        = useState('');
   const [qualityThreshold, setQualityThreshold] = useState(80);
-  const [maxIterations, setMaxIterations] = useState(100);
-  const [documentContext, setDocumentContext] = useState('');
-
-  // Login credentials state (Phase 2)
-  const [useLogin, setUseLogin] = useState(false);
+  const [maxIterations,    setMaxIterations]    = useState(100);
+  const [documentContext,  setDocumentContext]  = useState('');
+  const [useLogin,         setUseLogin]         = useState(false);
   const [loginCredentials, setLoginCredentials] = useState({
-    email: '',
-    password: '',
-    loginUrl: '',
-    emailSelector: '',
-    passwordSelector: '',
-    submitSelector: ''
+    email: '', password: '', loginUrl: '',
+    emailSelector: '', passwordSelector: '', submitSelector: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword,  setShowPassword]  = useState(false);
+  const [testPriority,  setTestPriority]  = useState<'functional_first' | 'balanced' | 'security_first'>('functional_first');
+  const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
+  const [useExisting,   setUseExisting]   = useState(false);
 
-  // Test priority state (Phase 5)
-  const [testPriority, setTestPriority] = useState<'functional_first' | 'balanced' | 'security_first'>('functional_first');
-
-  // Existing session state (Phase 3)
-  const [existingSession, setExistingSession] = useState<{
-    id: string;
-    testCaseCount: number;
-    bugsFound: number;
-    completedAt: string;
-  } | null>(null);
-  const [useExisting, setUseExisting] = useState(false);
-
-  // Documents state (Phase 4)
-  const [documents, setDocuments] = useState<QALoopDocument[]>([]);
-
-  // Session state
-  const [sessions, setSessions] = useState<QALoopSession[]>([]);
-  const [activeSession, setActiveSession] = useState<QALoopSession | null>(null);
-  const [sessionTestCases, setSessionTestCases] = useState<QALoopTestCase[]>([]);
-  const [sessionBugs, setSessionBugs] = useState<QALoopBug[]>([]);
-  const [sessionPages, setSessionPages] = useState<QAPage[]>([]);
-
-  // Phase 3-5 state
-  const [chaosResults, setChaosResults] = useState<ChaosResult[]>([]);
-  const [chaosSummary, setChaosSummary] = useState<ChaosSummary | undefined>();
-  const [analyses, setAnalyses] = useState<RootCauseAnalysis[]>([]);
-  const [correlations, setCorrelations] = useState<FailureCorrelation[]>([]);
-  const [qualityScore, setQualityScore] = useState<QualityScore>({
-    overall: 0,
-    breakdown: { coverage: 0, stability: 0, security: 100, accessibility: 0, performance: 0 },
-    trend: 'stable',
-    scoreDelta: 0
-  });
-  const [risks, setRisks] = useState<RiskCounts>({ critical: 0, high: 0, medium: 0, low: 0 });
-  const [iterationHistory, setIterationHistory] = useState<IterationHistory[]>([]);
-
-  // UI state
-  const [isStarting, setIsStarting] = useState(false);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
-  const [showAdvanced, setShowAdvanced] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(
+  // ── UI-toggle state ────────────────────────────────────────────────────────
+  const [showAdvanced,          setShowAdvanced]          = useState(true);
+  const [showOnboarding,        setShowOnboarding]        = useState(
     () => !localStorage.getItem('qa-loop-onboarding-seen')
   );
+  const [showThinking,          setShowThinking]          = useState(true);
+  const [showToolCalls,         setShowToolCalls]         = useState(true);
+  const [showQualityDashboard,  setShowQualityDashboard]  = useState(true);
+  const [expandedPreview,       setExpandedPreview]       = useState(false);
 
   const dismissOnboarding = useCallback(() => {
     localStorage.setItem('qa-loop-onboarding-seen', '1');
     setShowOnboarding(false);
   }, []);
-  const [showThinking, setShowThinking] = useState(true);
-  const [showToolCalls, setShowToolCalls] = useState(true);
-  const [showQualityDashboard, setShowQualityDashboard] = useState(true);
-  const [expandedPreview, setExpandedPreview] = useState(false);
 
-  // Cache for completed/cancelled session details — these never change so
-  // repeated clicks cost zero network (4.6)
-  const completedSessionCache = useRef<Map<string, any>>(new Map());
-
-  // WebSocket stream
-  const {
-    isConnected,
-    currentScreenshot,
-    currentUrl,
-    thinkingText,
-    toolCalls,
-    iteration,
-    pagesDiscovered,
-    pagesExplored,
-    testsGenerated,
-    bugsFound,
-    sessionStatus,
-    error: wsError,
-    clearEvents
-  } = useQALoopStream({
-    sessionId: activeSession?.id,
-    enabled: activeSession?.status === 'running'
-  });
-
-  // Load sessions on mount
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  // Poll for session updates only when WebSocket is NOT connected (fallback)
-  // When WebSocket is live it streams the same data — polling is redundant (4.1)
-  useEffect(() => {
-    if (activeSession && activeSession.status === 'running' && !isConnected) {
-      const interval = setInterval(() => {
-        loadSessionDetails(activeSession.id);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [activeSession?.id, activeSession?.status, isConnected]);
-
-  // Check for existing sessions when target URL changes.
-  // AbortController cancels any in-flight request when the URL changes again
-  // so stale responses from previous keystrokes are never applied (4.7)
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const checkUrl = async () => {
-      if (!targetUrl || targetUrl.length < 10) {
-        setExistingSession(null);
-        return;
-      }
-
-      try {
-        const result = await checkExistingSession(targetUrl, { signal: controller.signal });
-        if (!controller.signal.aborted) {
-          if (result.exists && result.session) {
-            setExistingSession(result.session);
-          } else {
-            setExistingSession(null);
-          }
-        }
-      } catch (err: any) {
-        if (!controller.signal.aborted) {
-          setExistingSession(null);
-        }
-      }
-    };
-
-    const debounceTimer = setTimeout(checkUrl, 500);
-    return () => {
-      clearTimeout(debounceTimer);
-      controller.abort(); // Cancel any in-flight request on cleanup (4.7)
-    };
-  }, [targetUrl]);
-
-  // Load documents when session changes (Phase 4)
+  // Reset form "existing session" prompt when a new session becomes active
   useEffect(() => {
     if (activeSession) {
-      loadDocuments(activeSession.id);
-    } else {
-      setDocuments([]);
+      setExistingSession(null);
+      setUseExisting(false);
     }
   }, [activeSession?.id]);
 
-  const loadDocuments = async (sessionId: string) => {
-    try {
-      const result = await listDocuments(sessionId);
-      setDocuments(result.documents || []);
-    } catch {
-      // Silently fail - documents may not be available
-    }
-  };
+  // Debounced check for existing sessions on the entered URL (4.7 — AbortController)
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const handleUploadDocument = async (file: File) => {
-    if (!activeSession) return;
-    try {
-      await uploadDocument(activeSession.id, file);
-      await loadDocuments(activeSession.id);
-      success('Document uploaded');
-    } catch (err: any) {
-      showError('Failed to upload document');
-    }
-  };
-
-  const handleDeleteDocument = async (docId: string) => {
-    if (!activeSession) return;
-    try {
-      await deleteDocument(activeSession.id, docId);
-      setDocuments(docs => docs.filter(d => d.id !== docId));
-      success('Document deleted');
-    } catch (err: any) {
-      showError('Failed to delete document');
-    }
-  };
-
-  const handleToggleDocument = async (docId: string, isActive: boolean) => {
-    if (!activeSession) return;
-    try {
-      await toggleDocument(activeSession.id, docId, isActive);
-      setDocuments(docs => docs.map(d =>
-        d.id === docId ? { ...d, is_active: isActive } : d
-      ));
-    } catch (err: any) {
-      showError('Failed to toggle document');
-    }
-  };
-
-  const loadSessions = async () => {
-    setIsLoadingSessions(true);
-    try {
-      const { sessions } = await listQALoopSessions({ limit: 20 });
-      setSessions(sessions);
-
-      // Check if there's a running session
-      const runningSession = sessions.find(s => s.status === 'running');
-      if (runningSession) {
-        setActiveSession(runningSession);
-        loadSessionDetails(runningSession.id);
-      }
-    } catch (err: any) {
-      showError('Failed to load sessions');
-    } finally {
-      setIsLoadingSessions(false);
-    }
-  };
-
-  const loadSessionDetails = async (sessionId: string) => {
-    try {
-      // Return cached data for completed/cancelled sessions — they never change (4.6)
-      if (completedSessionCache.current.has(sessionId)) {
-        const cached = completedSessionCache.current.get(sessionId)!;
-        applySessionDetails(cached);
-        return;
-      }
-
-      const details = await getQALoopSession(sessionId);
-
-      // Store in cache if the session has reached a terminal state (4.6)
-      const status = details.session?.status;
-      if (status === 'completed' || status === 'cancelled' || status === 'failed') {
-        completedSessionCache.current.set(sessionId, details);
-      }
-
-      applySessionDetails(details);
-    } catch (err: any) {
-      console.error('Failed to load session details:', err);
-    }
-  };
-
-  /** Apply fetched session details to component state. Shared by the live
-   *  fetch path and the completed-session cache path (4.6). */
-  const applySessionDetails = (details: any) => {
-    setActiveSession(details.session);
-    setSessionTestCases(details.testCases || []);
-    setSessionBugs(details.bugs || []);
-    setSessionPages(details.pages || []);
-
-    if (details.session) {
-      const session = details.session;
-      const bugs = details.bugs || [];
-      setRisks({
-        critical: bugs.filter((b: any) => b.severity === 'critical').length,
-        high: bugs.filter((b: any) => b.severity === 'high').length,
-        medium: bugs.filter((b: any) => b.severity === 'medium').length,
-        low: bugs.filter((b: any) => b.severity === 'low').length
-      });
-
-      const pages = details.pages || [];
-      const tests = details.testCases || [];
-      const exploredCount = pages.filter((p: any) => p.is_explored).length;
-      const coverageScore = pages.length > 0 ? Math.round((exploredCount / pages.length) * 100) : 0;
-      const passingTests = tests.filter((t: any) => t.last_run_status === 'passed').length;
-      const stabilityScore = tests.length > 0 ? Math.round((passingTests / tests.length) * 100) : 100;
-      const securityBugsArr = bugs.filter((b: any) => b.category === 'security');
-      const securityScore = Math.max(0, 100 - (
-        securityBugsArr.filter((b: any) => b.severity === 'critical').length * 25 +
-        securityBugsArr.filter((b: any) => b.severity === 'high').length * 15
-      ));
-
-      setQualityScore({
-        overall: session.quality_score || 0,
-        breakdown: { coverage: coverageScore, stability: stabilityScore, security: securityScore, accessibility: 80, performance: 80 },
-        trend: 'stable',
-        scoreDelta: 0
-      });
-
-      if (session.iteration_count > 0) {
-        setIterationHistory(prev => {
-          const newEntry = { iteration: session.iteration_count, score: session.quality_score || 0, focus: 'explore', timestamp: new Date().toISOString() };
-          return [...prev.filter((h: any) => h.iteration !== session.iteration_count), newEntry].slice(-10);
-        });
-      }
-    }
-
-    const securityBugs = (details.bugs || []).filter((b: any) => b.category === 'security');
-    setChaosResults(securityBugs.map((bug: any) => ({
-      id: bug.id,
-      pageUrl: bug.page_url || '',
-      attackCategory: bug.bug_type || 'security',
-      attackName: bug.title,
-      payloadUsed: '',
-      result: 'vulnerable' as const,
-      vulnerabilityConfirmed: true,
-      severity: bug.severity,
-      confidence: 0.8,
-      reproductionSteps: bug.reproduction_steps || []
-    })));
-  };
-
-  const handleStartSession = async () => {
-    if (!targetUrl) {
-      showError('Please enter a target URL');
-      return;
-    }
-
-    setIsStarting(true);
-    clearEvents();
-
-    try {
-      // Build login credentials if enabled
-      const loginCreds = useLogin && loginCredentials.email && loginCredentials.password
-        ? {
-          email: loginCredentials.email,
-          password: loginCredentials.password,
-          loginUrl: loginCredentials.loginUrl || undefined,
-          emailSelector: loginCredentials.emailSelector || undefined,
-          passwordSelector: loginCredentials.passwordSelector || undefined,
-          submitSelector: loginCredentials.submitSelector || undefined
+    const check = async () => {
+      if (!targetUrl || targetUrl.length < 10) { setExistingSession(null); return; }
+      try {
+        const result = await checkExistingSession(targetUrl, { signal: controller.signal });
+        if (!controller.signal.aborted) {
+          setExistingSession(result.exists && result.session ? result.session : null);
         }
-        : undefined;
+      } catch {
+        if (!controller.signal.aborted) setExistingSession(null);
+      }
+    };
 
-      const { session } = await startQALoopSession({
-        targetUrl,
-        qualityThreshold,
-        maxIterations,
-        documentContext: documentContext || undefined,
-        loginCredentials: loginCreds,
-        testPriority,
-        sourceSessionId: useExisting && existingSession ? existingSession.id : undefined
-      });
+    const timer = setTimeout(check, 500);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [targetUrl]);
 
-      setActiveSession(session);
-      success('QA Loop session started!');
-      loadSessions();
+  // Build start params and delegate to session manager
+  const onStartClick = useCallback(() => {
+    if (!targetUrl) { showError('Please enter a target URL'); return; }
+    const loginCreds = useLogin && loginCredentials.email && loginCredentials.password
+      ? {
+          email:             loginCredentials.email,
+          password:          loginCredentials.password,
+          loginUrl:          loginCredentials.loginUrl          || undefined,
+          emailSelector:     loginCredentials.emailSelector     || undefined,
+          passwordSelector:  loginCredentials.passwordSelector  || undefined,
+          submitSelector:    loginCredentials.submitSelector     || undefined,
+        }
+      : undefined;
+    handleStartSession({
+      targetUrl,
+      qualityThreshold,
+      maxIterations,
+      documentContext: documentContext || undefined,
+      loginCredentials: loginCreds,
+      testPriority,
+      sourceSessionId: useExisting && existingSession ? existingSession.id : undefined,
+    });
+  }, [
+    targetUrl, qualityThreshold, maxIterations, documentContext,
+    useLogin, loginCredentials, testPriority, useExisting, existingSession,
+    handleStartSession, showError,
+  ]);
 
-      // Reset existing session state
-      setExistingSession(null);
-      setUseExisting(false);
-    } catch (err: any) {
-      showError(err.message || 'Failed to start session');
-    } finally {
-      setIsStarting(false);
-    }
-  };
-
-  // Wrap session-action handlers in useCallback so child components only
-  // re-render when their actual dependency (activeSession) changes (4.3)
-  const handlePauseSession = useCallback(async () => {
-    if (!activeSession) return;
-    try {
-      await pauseQALoopSession(activeSession.id);
-      setActiveSession({ ...activeSession, status: 'paused' });
-      success('Session paused');
-    } catch (err: any) {
-      showError('Failed to pause session');
-    }
-  }, [activeSession, success, showError]);
-
-  const handleResumeSession = useCallback(async () => {
-    if (!activeSession) return;
-    try {
-      await resumeQALoopSession(activeSession.id);
-      setActiveSession({ ...activeSession, status: 'running' });
-      success('Session resumed');
-    } catch (err: any) {
-      showError('Failed to resume session');
-    }
-  }, [activeSession, success, showError]);
-
-  const handleStopSession = useCallback(async () => {
-    if (!activeSession) return;
-    try {
-      await stopQALoopSession(activeSession.id);
-      setActiveSession({ ...activeSession, status: 'cancelled' });
-      success('Session stopped');
-      loadSessions();
-    } catch (err: any) {
-      showError('Failed to stop session');
-    }
-  }, [activeSession, success, showError]);
-
-  const handleRetest = useCallback(async (mode: 'quick' | 'smart') => {
-    if (!activeSession) return;
-    try {
-      const result = await runRetest(activeSession.id, mode);
-      success(`${mode === 'quick' ? 'Quick' : 'Smart'} retest started!`);
-      loadSessionDetails(result.retestSessionId);
-    } catch (err: any) {
-      showError('Failed to start retest');
-    }
-  }, [activeSession, success, showError]);
-
-  const handleSelectSession = useCallback((session: QALoopSession) => {
-    setActiveSession(session);
-    loadSessionDetails(session.id);
-    clearEvents();
-  }, [clearEvents]);
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div>
       <div>
@@ -738,29 +333,22 @@ export const QALoopPage: React.FC = () => {
                   <FiZap className="text-primary-600" /> How QA Loop works
                 </h3>
                 <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
-                  <div className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">1</span>
-                    <div>
-                      <p className="font-medium text-gray-800">Enter a URL</p>
-                      <p className="text-xs text-gray-500">Any public or internal app</p>
-                    </div>
-                  </div>
-                  <div className="hidden sm:block text-gray-300 self-center">→</div>
-                  <div className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">2</span>
-                    <div>
-                      <p className="font-medium text-gray-800">AI explores overnight</p>
-                      <p className="text-xs text-gray-500">Clicks, forms, edge cases</p>
-                    </div>
-                  </div>
-                  <div className="hidden sm:block text-gray-300 self-center">→</div>
-                  <div className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">3</span>
-                    <div>
-                      <p className="font-medium text-gray-800">See results</p>
-                      <p className="text-xs text-gray-500">Bugs, tests, quality score</p>
-                    </div>
-                  </div>
+                  {[
+                    { n: '1', title: 'Enter a URL',          sub: 'Any public or internal app' },
+                    { n: '2', title: 'AI explores overnight', sub: 'Clicks, forms, edge cases' },
+                    { n: '3', title: 'See results',           sub: 'Bugs, tests, quality score' },
+                  ].map(({ n, title, sub }, i) => (
+                    <React.Fragment key={n}>
+                      {i > 0 && <div className="hidden sm:block text-gray-300 self-center">→</div>}
+                      <div className="flex items-start gap-2">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">{n}</span>
+                        <div>
+                          <p className="font-medium text-gray-800">{title}</p>
+                          <p className="text-xs text-gray-500">{sub}</p>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
               <button
@@ -774,570 +362,137 @@ export const QALoopPage: React.FC = () => {
           </div>
         )}
 
+        {/* Two-column layout when a session is active, single-column otherwise */}
         <div className={activeSession ? 'grid grid-cols-1 lg:grid-cols-3 gap-6' : 'max-w-3xl mx-auto space-y-6'}>
-          {/* Left Column - Start Form & Sessions */}
+
+          {/* Left column — form + session list */}
           <div className="space-y-6">
-            {/* Start New Session */}
-            <Card className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FiPlay className="text-green-500" />
-                Start New Exploration
-              </h2>
+            <SessionForm
+              targetUrl={targetUrl}             setTargetUrl={setTargetUrl}
+              qualityThreshold={qualityThreshold} setQualityThreshold={setQualityThreshold}
+              maxIterations={maxIterations}       setMaxIterations={setMaxIterations}
+              documentContext={documentContext}    setDocumentContext={setDocumentContext}
+              testPriority={testPriority}         setTestPriority={setTestPriority}
+              showAdvanced={showAdvanced}         setShowAdvanced={setShowAdvanced}
+              useLogin={useLogin}                 setUseLogin={setUseLogin}
+              loginCredentials={loginCredentials} setLoginCredentials={setLoginCredentials}
+              showPassword={showPassword}         setShowPassword={setShowPassword}
+              existingSession={existingSession}
+              useExisting={useExisting}           setUseExisting={setUseExisting}
+              documents={documents}
+              activeSession={activeSession}
+              onUpload={handleUploadDocument}
+              onDelete={handleDeleteDocument}
+              onToggle={handleToggleDocument}
+              isStarting={isStarting}
+              onStart={onStartClick}
+            />
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Target URL
-                  </label>
-                  <Input
-                    id="target-url-input"
-                    type="url"
-                    placeholder="https://example.com"
-                    value={targetUrl}
-                    onChange={(e) => setTargetUrl(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Existing Session Prompt (Phase 3) */}
-                {existingSession && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <FiRefreshCw className="text-blue-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-900">
-                          Previous run found for this URL
-                        </p>
-                        <p className="text-xs text-blue-700 mt-1">
-                          {existingSession.testCaseCount} test cases | {existingSession.bugsFound} bugs | Last run: {new Date(existingSession.completedAt).toLocaleDateString()}
-                        </p>
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            type="button"
-                            onClick={() => setUseExisting(true)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${useExisting
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                              }`}
-                          >
-                            Continue from last run
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setUseExisting(false)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!useExisting
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                              }`}
-                          >
-                            Start fresh
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-                >
-                  {showAdvanced ? <FiChevronUp /> : <FiChevronDown />}
-                  Advanced Options
-                </button>
-
-                {showAdvanced && (
-                  <div className="space-y-4 pt-2 border-t border-gray-200">
-                    {/* Test Priority (Phase 5) */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                        Test Priority
-                        <span className="group relative">
-                          <FiInfo className="text-gray-400 cursor-help" size={14} />
-                          <span className="invisible group-hover:visible absolute left-0 top-6 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10">
-                            <strong>Functional First:</strong> Focus on exploring functionality before security testing<br />
-                            <strong>Balanced:</strong> Mix of exploration, security, and stability<br />
-                            <strong>Security First:</strong> Start security testing earlier
-                          </span>
-                        </span>
-                      </label>
-                      <select
-                        value={testPriority}
-                        onChange={(e) => setTestPriority(e.target.value as any)}
-                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="functional_first">Functional First (recommended)</option>
-                        <option value="balanced">Balanced</option>
-                        <option value="security_first">Security First</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quality Threshold (%)
-                      </label>
-                      <Input
-                        type="number"
-                        min={50}
-                        max={100}
-                        value={qualityThreshold}
-                        onChange={(e) => setQualityThreshold(Number(e.target.value))}
-                        className="w-full"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Max Iterations
-                      </label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={1000}
-                        value={maxIterations}
-                        onChange={(e) => setMaxIterations(Number(e.target.value))}
-                        className="w-full"
-                      />
-                    </div>
-
-                    {/* Login Credentials (Phase 2) */}
-                    <div className="border border-gray-200 rounded-lg p-3">
-                      <button
-                        type="button"
-                        onClick={() => setUseLogin(!useLogin)}
-                        className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700"
-                      >
-                        {useLogin ? <FiToggleRight className="text-blue-500" size={20} /> : <FiToggleLeft className="text-gray-400" size={20} />}
-                        <FiLock className="text-gray-500" size={14} />
-                        Login (optional)
-                      </button>
-
-                      {useLogin && (
-                        <div className="mt-3 space-y-3">
-                          <p className="text-xs text-gray-500">
-                            Use a test account only. Credentials are sent securely to the test runner.
-                          </p>
-
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Email / Username</label>
-                            <div className="relative">
-                              <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-                              <Input
-                                type="text"
-                                placeholder="test@example.com"
-                                value={loginCredentials.email}
-                                onChange={(e) => setLoginCredentials(prev => ({ ...prev, email: e.target.value }))}
-                                className="w-full pl-9"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Password</label>
-                            <div className="relative">
-                              <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-                              <Input
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="••••••••"
-                                value={loginCredentials.password}
-                                onChange={(e) => setLoginCredentials(prev => ({ ...prev, password: e.target.value }))}
-                                className="w-full pl-9 pr-10"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                              >
-                                {showPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Login URL (optional)</label>
-                            <Input
-                              type="text"
-                              placeholder="Leave empty to use target URL"
-                              value={loginCredentials.loginUrl}
-                              onChange={(e) => setLoginCredentials(prev => ({ ...prev, loginUrl: e.target.value }))}
-                              className="w-full text-sm"
-                            />
-                          </div>
-
-                          <details className="text-xs">
-                            <summary className="text-gray-500 cursor-pointer hover:text-gray-700">
-                              Custom selectors (advanced)
-                            </summary>
-                            <div className="mt-2 space-y-2">
-                              <Input
-                                type="text"
-                                placeholder="Email selector (e.g., input[name='email'])"
-                                value={loginCredentials.emailSelector}
-                                onChange={(e) => setLoginCredentials(prev => ({ ...prev, emailSelector: e.target.value }))}
-                                className="w-full text-xs"
-                              />
-                              <Input
-                                type="text"
-                                placeholder="Password selector"
-                                value={loginCredentials.passwordSelector}
-                                onChange={(e) => setLoginCredentials(prev => ({ ...prev, passwordSelector: e.target.value }))}
-                                className="w-full text-xs"
-                              />
-                              <Input
-                                type="text"
-                                placeholder="Submit button selector"
-                                value={loginCredentials.submitSelector}
-                                onChange={(e) => setLoginCredentials(prev => ({ ...prev, submitSelector: e.target.value }))}
-                                className="w-full text-xs"
-                              />
-                            </div>
-                          </details>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quick Context (paste)
-                      </label>
-                      <Textarea
-                        placeholder="Paste API docs, user stories, or business rules here..."
-                        value={documentContext}
-                        onChange={(e) => setDocumentContext(e.target.value)}
-                        rows={4}
-                        className="w-full"
-                      />
-                    </div>
-
-                    {/* Document Upload (Phase 4) */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Documents (upload files)
-                      </label>
-                      <DocumentUpload
-                        sessionId={activeSession?.id}
-                        documents={documents as any}
-                        onUpload={handleUploadDocument}
-                        onDelete={handleDeleteDocument}
-                        onToggle={handleToggleDocument}
-                        disabled={!activeSession}
-                      />
-                      {!activeSession && (
-                        <p className="text-xs text-gray-500 mt-1">Start a session to upload documents</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-2">
-                        Upload PRDs, specs, or documentation to help the AI understand your application.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleStartSession}
-                  disabled={isStarting || !targetUrl}
-                  className="w-full"
-                >
-                  {isStarting ? (
-                    <span className="flex items-center gap-2">
-                      <FiActivity className="animate-spin" />
-                      Starting...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <FiPlay />
-                      Start Exploration
-                    </span>
-                  )}
-                </Button>
-              </div>
-            </Card>
-
-            {/* Recent Sessions */}
-            <Card className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FiClock className="text-blue-500" />
-                Recent Sessions
-              </h2>
-
-              {isLoadingSessions ? (
-                <div className="text-center py-4 text-gray-500">Loading...</div>
-              ) : sessions.length === 0 ? (
-                <div className="text-center py-8">
-                  <FiClock className="h-8 w-8 text-gray-200 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400 mb-3">No sessions yet</p>
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById('target-url-input');
-                      el?.focus();
-                      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }}
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
-                  >
-                    Start your first exploration →
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {sessions.map((session) => (
-                    <button
-                      key={session.id}
-                      onClick={() => handleSelectSession(session)}
-                      className={`w-full text-left p-3 rounded-lg border transition-all ${activeSession?.id === session.id
-                        ? 'border-purple-500 bg-purple-50 shadow-md ring-1 ring-purple-300'
-                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900 truncate">
-                          {safeUrlPart(session.target_url, 'hostname', session.target_url)}
-                        </span>
-                        <span className={`text-xs font-medium ${getStatusColor(session.status)}`}>
-                          {session.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                        <span>{session.pages_explored} pages</span>
-                        <span>{session.tests_generated} tests</span>
-                        <span>{session.bugs_found} bugs</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </Card>
+            <SessionList
+              sessions={sessions}
+              activeSession={activeSession}
+              isLoading={isLoadingSessions}
+              onSelect={handleSelectSession}
+            />
           </div>
 
-          {/* Right Column - Live View (only when session is active) */}
+          {/* Right column — live view (only when a session is selected) */}
           {activeSession && (
             <div className="lg:col-span-2 space-y-6">
-              <>
-                {/* Session Header */}
-                <Card className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                        <FiGlobe className="text-purple-500" />
-                        {activeSession.target_url}
-                      </h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                        <span className={`flex items-center gap-1 ${getStatusColor(activeSession.status)}`}>
-                          <FiActivity className={activeSession.status === 'running' ? 'animate-pulse' : ''} />
-                          {activeSession.status}
-                        </span>
-                        <span>Iteration {iteration || activeSession.iteration_count}</span>
-                        <span>Quality: {activeSession.quality_score}%</span>
-                        {isConnected && <span className="text-green-500">Live</span>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {activeSession.status === 'running' && (
-                        <Button variant="secondary" onClick={handlePauseSession}>
-                          <FiPause className="mr-1" /> Pause
-                        </Button>
-                      )}
-                      {activeSession.status === 'paused' && (
-                        <Button variant="secondary" onClick={handleResumeSession}>
-                          <FiPlay className="mr-1" /> Resume
-                        </Button>
-                      )}
-                      {(activeSession.status === 'running' || activeSession.status === 'paused') && (
-                        <Button variant="danger" onClick={handleStopSession}>
-                          <FiStopCircle className="mr-1" /> Stop
-                        </Button>
-                      )}
-                      {activeSession.status === 'completed' && (
-                        <div className="flex gap-2">
-                          <Button variant="secondary" onClick={() => handleRetest('quick')}>
-                            <FiRefreshCw className="mr-1" /> Quick Retest
-                          </Button>
-                          <Button variant="secondary" onClick={() => handleRetest('smart')}>
-                            <FiTarget className="mr-1" /> Smart Retest
-                          </Button>
-                        </div>
-                      )}
+              {/* Session header */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <FiGlobe className="text-purple-500" />
+                      {activeSession.target_url}
+                    </h3>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                      <span className={`flex items-center gap-1 ${getStatusColor(activeSession.status)}`}>
+                        <FiActivity className={activeSession.status === 'running' ? 'animate-pulse' : ''} />
+                        {activeSession.status}
+                      </span>
+                      <span>Iteration {iteration || activeSession.iteration_count}</span>
+                      <span>Quality: {activeSession.quality_score}%</span>
+                      {isConnected && <span className="text-green-500">Live</span>}
                     </div>
                   </div>
-                </Card>
-
-                {/* Stats Cards - Responsive grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
-                  <Card className="p-4 text-center">
-                    <FiGlobe className="mx-auto text-2xl text-blue-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900">
-                      {pagesExplored.length || activeSession.pages_explored}
-                    </div>
-                    <div className="text-xs text-gray-500">Pages Explored</div>
-                  </Card>
-                  <Card className="p-4 text-center">
-                    <FiFileText className="mx-auto text-2xl text-green-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900">
-                      {testsGenerated.length || activeSession.tests_generated}
-                    </div>
-                    <div className="text-xs text-gray-500">Tests Generated</div>
-                  </Card>
-                  <Card className="p-4 text-center">
-                    <FiAlertTriangle className="mx-auto text-2xl text-red-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900">
-                      {bugsFound.length || activeSession.bugs_found}
-                    </div>
-                    <div className="text-xs text-gray-500">Bugs Found</div>
-                  </Card>
-                  <Card className="p-4 text-center">
-                    <FiShield className="mx-auto text-2xl text-orange-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900">
-                      {chaosResults.filter(r => r.vulnerabilityConfirmed).length}
-                    </div>
-                    <div className="text-xs text-gray-500">Vulnerabilities</div>
-                  </Card>
-                  <Card className="p-4 text-center cursor-pointer hover:bg-gray-50" onClick={() => setShowQualityDashboard(!showQualityDashboard)}>
-                    <FiBarChart2 className="mx-auto text-2xl text-purple-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900">
-                      {qualityScore.overall}%
-                    </div>
-                    <div className="text-xs text-gray-500">Quality Score</div>
-                  </Card>
-                </div>
-
-                {/* Quality Dashboard (collapsible) */}
-                {showQualityDashboard && (
-                  <Card className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <FiBarChart2 className="text-purple-500" />
-                      Quality Dashboard
-                      <button
-                        onClick={() => setShowQualityDashboard(false)}
-                        className="ml-auto text-sm text-gray-500 hover:text-gray-700"
-                      >
-                        Hide
-                      </button>
-                    </h3>
-                    <QualityDashboard
-                      qualityScore={qualityScore}
-                      risks={risks}
-                      iterationHistory={iterationHistory}
-                      currentIteration={iteration || activeSession.iteration_count}
-                      targetThreshold={qualityThreshold}
-                    />
-                  </Card>
-                )}
-
-                {/* Live Browser Preview & AI Thinking */}
-                <div className={`grid gap-6 ${expandedPreview ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
-                  {/* Browser Preview */}
-                  <Card className={`p-4 ${expandedPreview ? 'col-span-full' : ''}`}>
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <FiImage className="text-blue-500" />
-                      Live Browser Preview
-                      <button
-                        onClick={() => setExpandedPreview(!expandedPreview)}
-                        className="ml-auto text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-100"
-                        title={expandedPreview ? 'Minimize' : 'Maximize'}
-                      >
-                        {expandedPreview ? <FiMinimize2 size={16} /> : <FiMaximize2 size={16} />}
-                      </button>
-                    </h3>
-                    <div className={`bg-gray-100 rounded-lg overflow-hidden ${expandedPreview ? 'h-96' : 'aspect-video'}`}>
-                      {currentScreenshot ? (
-                        <img
-                          src={currentScreenshot}
-                          alt="Browser preview"
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                          {activeSession.status === 'running' ? (
-                            <>
-                              <FiActivity className="text-2xl mb-2 animate-pulse text-blue-500" />
-                              <span className="text-sm">Preview will appear after the first page loads...</span>
-                            </>
-                          ) : (
-                            <>
-                              <FiImage className="text-2xl mb-2 opacity-50" />
-                              <span className="text-sm">No preview available</span>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    {currentUrl && (
-                      <div className="mt-2 text-xs text-gray-500 truncate">
-                        {currentUrl}
+                  <div className="flex items-center gap-2">
+                    {activeSession.status === 'running' && (
+                      <Button variant="secondary" onClick={handlePauseSession}>
+                        <FiPause className="mr-1" /> Pause
+                      </Button>
+                    )}
+                    {activeSession.status === 'paused' && (
+                      <Button variant="secondary" onClick={handleResumeSession}>
+                        <FiPlay className="mr-1" /> Resume
+                      </Button>
+                    )}
+                    {(activeSession.status === 'running' || activeSession.status === 'paused') && (
+                      <Button variant="danger" onClick={handleStopSession}>
+                        <FiStopCircle className="mr-1" /> Stop
+                      </Button>
+                    )}
+                    {activeSession.status === 'completed' && (
+                      <div className="flex gap-2">
+                        <Button variant="secondary" onClick={() => handleRetest('quick')}>
+                          <FiRefreshCw className="mr-1" /> Quick Retest
+                        </Button>
+                        <Button variant="secondary" onClick={() => handleRetest('smart')}>
+                          <FiTarget className="mr-1" /> Smart Retest
+                        </Button>
                       </div>
                     )}
-                  </Card>
-
-                  {/* AI Thinking - hidden when preview is expanded */}
-                  {!expandedPreview && (
-                    <Card className="p-4">
-                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <FiTerminal className="text-green-500" />
-                        AI Thinking
-                        <button
-                          onClick={() => setShowThinking(!showThinking)}
-                          className="ml-auto text-sm text-gray-500 hover:text-gray-700"
-                        >
-                          {showThinking ? 'Hide' : 'Show'}
-                        </button>
-                      </h3>
-                      {showThinking && (
-                        <div className="h-48 overflow-y-auto bg-gray-900 rounded-lg p-3 font-mono text-xs text-green-400">
-                          {thinkingText || 'Waiting for AI response...'}
-                        </div>
-                      )}
-                    </Card>
-                  )}
+                  </div>
                 </div>
+              </Card>
 
-                {/* Tool Calls */}
-                <Card className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <FiActivity className="text-purple-500" />
-                    Recent Tool Calls
-                    <button
-                      onClick={() => setShowToolCalls(!showToolCalls)}
-                      className="ml-auto text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      {showToolCalls ? 'Hide' : 'Show'}
-                    </button>
-                  </h3>
-                  {showToolCalls && (
-                    <div className="max-h-48 overflow-y-auto space-y-2">
-                      {toolCalls.length === 0 ? (
-                        <div className="text-gray-500 text-sm">No tool calls yet</div>
-                      ) : (
-                        toolCalls.slice(-10).reverse().map((call, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded">
-                            <span className="font-mono text-purple-600">{call.tool}</span>
-                            {call.result && (
-                              <span className="text-green-500">✓</span>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </Card>
+              {/* Stats + Quality Dashboard */}
+              <StatsBar
+                activeSession={activeSession}
+                pagesExplored={pagesExplored}
+                testsGenerated={testsGenerated}
+                bugsFound={streamBugsFound}
+                chaosResults={chaosResults}
+                qualityScore={qualityScore}
+                risks={risks}
+                iterationHistory={iterationHistory}
+                iteration={iteration}
+                qualityThreshold={qualityThreshold}
+                showQualityDashboard={showQualityDashboard}
+                onToggleQualityDashboard={() => setShowQualityDashboard(v => !v)}
+              />
 
-                {/* Results Tabs */}
-                <Card className="p-4">
-                  <ResultsTabs
-                    testCases={sessionTestCases}
-                    bugs={sessionBugs}
-                    pages={sessionPages}
-                    chaosResults={chaosResults}
-                    chaosSummary={chaosSummary}
-                    analyses={analyses}
-                    correlations={correlations}
-                    isRunning={activeSession.status === 'running'}
-                  />
-                </Card>
-              </>
+              {/* Live browser preview + AI thinking + tool calls */}
+              <LiveMonitor
+                currentScreenshot={currentScreenshot}
+                currentUrl={currentUrl}
+                thinkingText={thinkingText}
+                toolCalls={toolCalls}
+                isRunning={activeSession.status === 'running'}
+                showThinking={showThinking}       setShowThinking={setShowThinking}
+                showToolCalls={showToolCalls}     setShowToolCalls={setShowToolCalls}
+                expandedPreview={expandedPreview} setExpandedPreview={setExpandedPreview}
+              />
+
+              {/* Results tabs */}
+              <Card className="p-4">
+                <ResultsTabs
+                  testCases={sessionTestCases}
+                  bugs={sessionBugs}
+                  pages={sessionPages}
+                  chaosResults={chaosResults}
+                  chaosSummary={chaosSummary}
+                  analyses={analyses}
+                  correlations={correlations}
+                  isRunning={activeSession.status === 'running'}
+                />
+              </Card>
             </div>
           )}
         </div>
 
-        {/* Error Alert */}
+        {/* WebSocket error toast */}
         {wsError && (
           <Alert type="error" className="fixed bottom-4 right-4 max-w-md">
             {wsError}
