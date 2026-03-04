@@ -20,8 +20,10 @@ export interface QualityScore {
     coverage: number;
     stability: number;
     security: number;
-    accessibility: number;
-    performance: number;
+    /** null = not yet measured (no real data available) */
+    accessibility: number | null;
+    /** null = not yet measured (no real data available) */
+    performance: number | null;
   };
   trend: 'improving' | 'stable' | 'declining';
   scoreDelta: number;
@@ -115,6 +117,15 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       case 'declining': return 'text-red-500';
       default: return 'text-gray-400';
     }
+  };
+
+  // 6.5 — static map avoids dynamic class-name interpolation that Tailwind purges
+  const iconColorClass: Record<string, string> = {
+    blue:   'text-blue-500',
+    green:  'text-green-500',
+    red:    'text-red-500',
+    purple: 'text-purple-500',
+    yellow: 'text-yellow-500',
   };
 
   const getScoreColor = (score: number) => {
@@ -218,15 +229,19 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           const score = qualityScore.breakdown[key as keyof typeof qualityScore.breakdown];
           return (
             <div key={key} className="text-center">
-              <Icon className={`mx-auto text-lg text-${color}-500 mb-1`} />
+              {/* 6.5 — use static map, never interpolate class names at runtime */}
+              <Icon className={`mx-auto text-lg ${iconColorClass[color] ?? 'text-gray-500'} mb-1`} />
               <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${getScoreBarColor(score)}`}
-                  style={{ width: `${score}%` }}
+                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-gray-300 dark:bg-gray-600'}`}
+                  style={{ width: `${score !== null ? score : 0}%` }}
                 />
               </div>
               <div className="text-xs text-gray-500 mt-1">{label}</div>
-              <div className={`text-sm font-medium ${getScoreColor(score)}`}>{score}%</div>
+              {/* 6.4 — null means no real data: show N/A instead of a made-up number */}
+              <div className={`text-sm font-medium ${score !== null ? getScoreColor(score) : 'text-gray-400'}`}>
+                {score !== null ? `${score}%` : 'N/A'}
+              </div>
             </div>
           );
         })}

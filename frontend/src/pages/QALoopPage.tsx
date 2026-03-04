@@ -215,6 +215,10 @@ export const QALoopPage: React.FC = () => {
     chaosResults, chaosSummary, analyses, correlations,
     qualityScore, risks, iterationHistory,
     documents, isStarting, isLoadingSessions,
+    isLoadingDetails,            // 6.3
+    hasMoreSessions,             // 6.6
+    isLoadingMoreSessions,       // 6.6
+    loadMoreSessions,            // 6.6
     handleStartSession, handlePauseSession, handleResumeSession,
     handleStopSession, handleRetest, handleSelectSession,
     handleUploadDocument, handleDeleteDocument, handleToggleDocument,
@@ -238,6 +242,12 @@ export const QALoopPage: React.FC = () => {
   const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
   const [useExisting,   setUseExisting]   = useState(false);
 
+  // ── 6.2: Stop-session confirmation state ──────────────────────────────────
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
+
+  // ── 6.1: WS error auto-dismiss state ──────────────────────────────────────
+  const [wsErrorDismissed, setWsErrorDismissed] = useState(false);
+
   // ── UI-toggle state ────────────────────────────────────────────────────────
   const [showAdvanced,          setShowAdvanced]          = useState(true);
   const [showOnboarding,        setShowOnboarding]        = useState(
@@ -259,7 +269,17 @@ export const QALoopPage: React.FC = () => {
       setExistingSession(null);
       setUseExisting(false);
     }
+    // 6.2 — cancel any pending stop-confirmation when the active session changes
+    setShowStopConfirm(false);
   }, [activeSession?.id]);
+
+  // 6.1 — auto-dismiss the WS error alert after 8 s; reset on new error
+  useEffect(() => {
+    if (!wsError) return;
+    setWsErrorDismissed(false);
+    const timer = setTimeout(() => setWsErrorDismissed(true), 8_000);
+    return () => clearTimeout(timer);
+  }, [wsError]);
 
   // Debounced check for existing sessions on the entered URL (4.7 — AbortController)
   useEffect(() => {
@@ -393,12 +413,25 @@ export const QALoopPage: React.FC = () => {
               activeSession={activeSession}
               isLoading={isLoadingSessions}
               onSelect={handleSelectSession}
+              hasMore={hasMoreSessions}
+              isLoadingMore={isLoadingMoreSessions}
+              onLoadMore={loadMoreSessions}
             />
           </div>
 
           {/* Right column — live view (only when a session is selected) */}
           {activeSession && (
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6 relative">
+              {/* 6.3 — loading overlay while session details are being fetched */}
+              {isLoadingDetails && (
+                <div className="absolute inset-0 bg-white/60 dark:bg-gray-900/60 flex items-center justify-center z-10 rounded-lg backdrop-blur-sm">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-md">
+                    <FiRefreshCw className="animate-spin text-purple-500" />
+                    <span className="text-sm font-medium">Loading session…</span>
+                  </div>
+                </div>
+              )}
+
               {/* Session header */}
               <Card className="p-4">
                 <div className="flex items-center justify-between">
@@ -428,10 +461,26 @@ export const QALoopPage: React.FC = () => {
                         <FiPlay className="mr-1" /> Resume
                       </Button>
                     )}
+                    {/* 6.2 — confirm before stopping a long-running session */}
                     {(activeSession.status === 'running' || activeSession.status === 'paused') && (
-                      <Button variant="danger" onClick={handleStopSession}>
-                        <FiStopCircle className="mr-1" /> Stop
-                      </Button>
+                      showStopConfirm ? (
+                        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                          <span className="text-sm text-red-700 font-medium">Stop session?</span>
+                          <Button
+                            variant="danger"
+                            onClick={() => { setShowStopConfirm(false); handleStopSession(); }}
+                          >
+                            Yes, stop
+                          </Button>
+                          <Button variant="secondary" onClick={() => setShowStopConfirm(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="danger" onClick={() => setShowStopConfirm(true)}>
+                          <FiStopCircle className="mr-1" /> Stop
+                        </Button>
+                      )
                     )}
                     {activeSession.status === 'completed' && (
                       <div className="flex gap-2">
@@ -492,11 +541,14 @@ export const QALoopPage: React.FC = () => {
           )}
         </div>
 
-        {/* WebSocket error toast */}
-        {wsError && (
-          <Alert type="error" className="fixed bottom-4 right-4 max-w-md">
-            {wsError}
-          </Alert>
+        {/* 6.1 — WebSocket error toast: auto-dismisses after 8 s, has built-in close button */}
+        {wsError && !wsErrorDismissed && (
+          <Alert
+            type="error"
+            message={wsError}
+            onClose={() => setWsErrorDismissed(true)}
+            className="fixed bottom-4 right-4 max-w-md z-50 shadow-lg"
+          />
         )}
       </div>
     </div>

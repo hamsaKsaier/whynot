@@ -31,6 +31,10 @@ export interface SessionListProps {
   activeSession: QALoopSession | null;
   isLoading: boolean;
   onSelect: (session: QALoopSession) => void;
+  /** 6.6 — pagination */
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export const SessionList: React.FC<SessionListProps> = ({
@@ -38,6 +42,9 @@ export const SessionList: React.FC<SessionListProps> = ({
   activeSession,
   isLoading,
   onSelect,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }) => (
   <Card className="p-6">
     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -89,6 +96,17 @@ export const SessionList: React.FC<SessionListProps> = ({
             </div>
           </button>
         ))}
+
+        {/* 6.6 — Load more */}
+        {hasMore && (
+          <button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="w-full mt-1 py-2 text-sm text-center text-primary-600 hover:text-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingMore ? 'Loading…' : 'Load more'}
+          </button>
+        )}
       </div>
     )}
   </Card>
