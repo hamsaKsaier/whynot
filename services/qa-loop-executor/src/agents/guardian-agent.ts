@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
+// Anthropic import removed — GuardianAgent uses rule-based scoring only
+// and never calls this.client; the SDK dependency was dead code (5.8).
 import { createLogger } from '../../../shared/logger/logger';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { emitToSession } from '../api/websocket';
@@ -161,7 +162,8 @@ export interface GuardianConfig {
 export class GuardianAgent {
   private sessionId: string;
   private repository: QALoopRepository;
-  private client: Anthropic;
+  // NOTE: this.client was removed in 5.8 — GuardianAgent uses rule-based scoring
+  // and never made Anthropic API calls; the field was dead code.
   private previousScore: QualityScore | null = null;
   private budgetTracking: BudgetStatus;
   private config: GuardianConfig;
@@ -170,14 +172,6 @@ export class GuardianAgent {
     this.sessionId = sessionId;
     this.repository = new QALoopRepository();
     this.config = config || {};
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (apiKey) {
-      this.client = new Anthropic({ apiKey });
-    } else {
-      logger.warn('ANTHROPIC_API_KEY not set');
-      this.client = null as any;
-    }
 
     this.budgetTracking = {
       totalTokens: 0,

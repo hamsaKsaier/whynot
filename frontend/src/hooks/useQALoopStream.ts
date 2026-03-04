@@ -17,7 +17,7 @@ interface UseQALoopStreamOptions {
 
 interface UseQALoopStreamReturn {
   isConnected: boolean;
-  events: QALoopEvent[];
+  // `events` removed in 5.8 — it was returned but never destructured by any consumer
   currentScreenshot: string | null;
   currentUrl: string | null;
   thinkingText: string;
@@ -40,7 +40,7 @@ export function useQALoopStream({
   wsUrl
 }: UseQALoopStreamOptions): UseQALoopStreamReturn {
   const [isConnected, setIsConnected] = useState(false);
-  const [events, setEvents] = useState<QALoopEvent[]>([]);
+  // `events` state removed in 5.8 — was accumulated but never consumed by any component
   const [currentScreenshot, setCurrentScreenshot] = useState<string | null>(null);
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [thinkingText, setThinkingText] = useState('');
@@ -64,7 +64,6 @@ export function useQALoopStream({
   const baseWsUrl = wsUrl || import.meta.env.VITE_QA_LOOP_WS_URL || 'ws://localhost:3012';
 
   const clearEvents = useCallback(() => {
-    setEvents([]);
     setThinkingText('');
     setToolCalls([]);
     setCurrentScreenshot(null);
@@ -82,8 +81,6 @@ export function useQALoopStream({
   }, []);
 
   const processEvent = useCallback((event: QALoopEvent) => {
-    setEvents(prev => [...prev.slice(-100), event]); // Keep last 100 events
-
     switch (event.type) {
       case 'connected':
         setIsConnected(true);
@@ -259,7 +256,6 @@ export function useQALoopStream({
     // Clear accumulated state to free memory
     setToolCalls([]);
     setCurrentScreenshot(null);
-    setEvents([]);
   }, []);
 
   // Connect when enabled and sessionId changes
@@ -275,7 +271,6 @@ export function useQALoopStream({
 
   return {
     isConnected,
-    events,
     currentScreenshot,
     currentUrl,
     thinkingText,

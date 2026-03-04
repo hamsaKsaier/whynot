@@ -76,6 +76,13 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
   // ── Loading flags ────────────────────────────────────────────────────────────
   const [isStarting, setIsStarting] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false); // 6.3
+  const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false); // 6.6
+
+  // ── Pagination state (6.6) ───────────────────────────────────────────────────
+  const SESSION_PAGE_SIZE = 20;
+  const [hasMoreSessions, setHasMoreSessions] = useState(false);
+  const [sessionsOffset, setSessionsOffset] = useState(0);
 
   // Cache for completed/cancelled session details — never change so zero cost (4.6)
   const completedSessionCache = useRef<Map<string, any>>(new Map());
@@ -130,9 +137,10 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
         secBugs.filter(b => b.severity === 'high').length * 15
       ));
 
+      // 6.4 — accessibility & performance have no real data source yet; show N/A
       setQualityScore({
         overall: session.quality_score || 0,
-        breakdown: { coverage: coverageScore, stability: stabilityScore, security: securityScore, accessibility: 80, performance: 80 },
+        breakdown: { coverage: coverageScore, stability: stabilityScore, security: securityScore, accessibility: null, performance: null },
         trend: 'stable',
         scoreDelta: 0,
       });
@@ -168,6 +176,7 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
 
   // ── loadSessionDetails ───────────────────────────────────────────────────────
   const loadSessionDetails = useCallback(async (sessionId: string) => {
+    setIsLoadingDetails(true); // 6.3 — spinner while switching sessions
     try {
       // Return cached data for terminal sessions — they never change (4.6)
       if (completedSessionCache.current.has(sessionId)) {
@@ -185,6 +194,8 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
       applySessionDetails(details);
     } catch (err: any) {
       console.error('Failed to load session details:', err);
+    } finally {
+      setIsLoadingDetails(false);
     }
   }, [applySessionDetails]);
 
@@ -202,8 +213,11 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
   const loadSessions = useCallback(async () => {
     setIsLoadingSessions(true);
     try {
-      const { sessions: list } = await listQALoopSessions({ limit: 20 });
+      // 6.6 — reset pagination to page 1
+      const { sessions: list, total } = await listQALoopSessions({ limit: SESSION_PAGE_SIZE, offset: 0 });
       setSessions(list);
+      setSessionsOffset(SESSION_PAGE_SIZE);
+      setHasMoreSessions(list.length < total);
 
       const runningSession = list.find(s => s.status === 'running');
       if (runningSession) {
@@ -216,6 +230,23 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
       setIsLoadingSessions(false);
     }
   }, [loadSessionDetails, onError]);
+
+  // ── loadMoreSessions (6.6) ────────────────────────────────────────────────────
+  const loadMoreSessions = useCallback(async () => {
+    if (isLoadingMoreSessions || !hasMoreSessions) return;
+    setIsLoadingMoreSessions(true);
+    try {
+      const { sessions: list, total } = await listQALoopSessions({ limit: SESSION_PAGE_SIZE, offset: sessionsOffset });
+      setSessions(prev => [...prev, ...list]);
+      const newOffset = sessionsOffset + list.length;
+      setSessionsOffset(newOffset);
+      setHasMoreSessions(newOffset < total);
+    } catch {
+      onError('Failed to load more sessions');
+    } finally {
+      setIsLoadingMoreSessions(false);
+    }
+  }, [isLoadingMoreSessions, hasMoreSessions, sessionsOffset, onError]);
 
   // ── Session actions ──────────────────────────────────────────────────────────
   const handleStartSession = useCallback(async (params: StartSessionParams) => {
@@ -373,6 +404,11 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
     // Loading
     isStarting,
     isLoadingSessions,
+    isLoadingDetails,        // 6.3
+    isLoadingMoreSessions,   // 6.6
+    // Pagination (6.6)
+    hasMoreSessions,
+    loadMoreSessions,
     // Actions
     loadSessions,
     loadSessionDetails,
