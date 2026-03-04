@@ -26,8 +26,10 @@ router.get('/health', (req: Request, res: Response) => {
 // Start a new QA Loop session
 router.post('/api/sessions', async (req: Request, res: Response) => {
   try {
+    const workspaceId = req.headers['x-workspace-id'] as string | undefined;
     const {
       projectId,
+      workspace_id: bodyWorkspaceId,
       targetUrl,
       mode = 'explore',
       qualityThreshold = 80,
@@ -44,6 +46,9 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'targetUrl is required' });
     }
 
+    // Prefer header over body, fallback to body field
+    const resolvedWorkspaceId = workspaceId || bodyWorkspaceId || undefined;
+
     // Create session in database with extended config
     const sessionConfig = {
       ...config,
@@ -53,6 +58,7 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
 
     const session = await qaLoopRepository.createSession({
       projectId,
+      workspaceId: resolvedWorkspaceId,
       targetUrl,
       mode,
       qualityThreshold,
@@ -85,9 +91,10 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
 
     activeSessions.set(session.id, orchestrator);
 
-    // Start exploration asynchronously
+    // Start exploration asynchronously; clean up the entry if the orchestrator crashes (3.3)
     orchestrator.start().catch(error => {
       logger.error('QA Loop failed', { sessionId: session.id, error: error.message });
+      activeSessions.delete(session.id);
     });
 
     res.status(201).json({
@@ -110,12 +117,16 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
 // List all sessions
 router.get('/api/sessions', async (req: Request, res: Response) => {
   try {
-    const { projectId, status, limit = 20, offset = 0 } = req.query;
+    const workspaceId = req.headers['x-workspace-id'] as string | undefined;
+    const { projectId, workspace_id: queryWorkspaceId, status, limit = 20, offset = 0 } = req.query;
     const limitNum = Math.min(Math.max(Number(limit) || 20, 1), 100);
     const offsetNum = Math.max(Number(offset) || 0, 0);
 
+    const resolvedWorkspaceId = workspaceId || (queryWorkspaceId as string) || undefined;
+
     const sessions = await qaLoopRepository.listSessions({
       projectId: projectId as string,
+      workspaceId: resolvedWorkspaceId,
       status: status as string,
       limit: limitNum,
       offset: offsetNum
@@ -134,11 +145,14 @@ router.get('/api/sessions', async (req: Request, res: Response) => {
 // Check for existing session by base URL (Phase 3)
 router.get('/api/sessions/check-existing', async (req: Request, res: Response) => {
   try {
-    const { baseUrl } = req.query;
+    const workspaceId = req.headers['x-workspace-id'] as string | undefined;
+    const { baseUrl, workspace_id: queryWorkspaceId } = req.query;
 
     if (!baseUrl || typeof baseUrl !== 'string') {
       return res.status(400).json({ error: 'baseUrl query parameter is required' });
     }
+
+    const resolvedWorkspaceId = workspaceId || (queryWorkspaceId as string) || undefined;
 
     // Normalize to get origin (protocol + host)
     let normalizedUrl: string;
@@ -148,7 +162,7 @@ router.get('/api/sessions/check-existing', async (req: Request, res: Response) =
       normalizedUrl = baseUrl; // Use as-is if not a valid URL
     }
 
-    const existing = await qaLoopRepository.findLatestCompletedByBaseUrl(normalizedUrl);
+    const existing = await qaLoopRepository.findLatestCompletedByBaseUrl(normalizedUrl, resolvedWorkspaceId);
 
     if (existing) {
       res.json({
@@ -173,7 +187,8 @@ router.get('/api/sessions/check-existing', async (req: Request, res: Response) =
 router.get('/api/sessions/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const session = await qaLoopRepository.getSession(id);
+    const workspaceId = req.headers['x-workspace-id'] as string | undefined;
+    const session = await qaLoopRepository.getSession(id, workspaceId);
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
@@ -383,6 +398,7 @@ router.get('/api/sessions/:id/test-runs', async (req: Request, res: Response) =>
 router.post('/api/sessions/:id/documents', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const workspaceId = req.headers['x-workspace-id'] as string | undefined;
     const { filename, content, contentBase64 } = req.body;
 
     if (!filename) {
@@ -393,18 +409,19 @@ router.post('/api/sessions/:id/documents', async (req: Request, res: Response) =
       return res.status(400).json({ error: 'content or contentBase64 is required' });
     }
 
-    // Verify session exists
-    const session = await qaLoopRepository.getSession(id);
+    // Verify session exists and belongs to this workspace
+    const session = await qaLoopRepository.getSession(id, workspaceId);
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    // Decode content if base64
-    let documentContent: string;
+    // Pass raw Buffer so binary files (PDFs) are not corrupted by
+    // a lossy .toString('utf-8') conversion — parseDocument accepts Buffer (5.7)
+    let documentContent: string | Buffer;
     if (contentBase64) {
-      documentContent = Buffer.from(contentBase64, 'base64').toString('utf-8');
+      documentContent = Buffer.from(contentBase64, 'base64');
     } else {
-      documentContent = content;
+      documentContent = content as string;
     }
 
     // Parse the document
@@ -472,6 +489,52 @@ router.get('/api/sessions/:id/documents', async (req: Request, res: Response) =>
   } catch (error: any) {
     logger.error('Failed to list documents', { error: error.message });
     res.status(500).json({ error: 'Failed to list documents' });
+  }
+});
+
+// Get combined document context for a session (for system prompt).
+// MUST be defined BEFORE /:docId so Express matches the literal "combined" path
+// instead of treating it as a docId parameter (3.7).
+router.get('/api/sessions/:id/documents/combined', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { maxTokens } = req.query;
+
+    const documents = await qaLoopRepository.getDocuments(id, { activeOnly: true });
+
+    if (documents.length === 0) {
+      return res.json({ context: '', documentCount: 0, estimatedTokens: 0 });
+    }
+
+    // Convert to ParsedDocument format
+    const parsedDocs: ParsedDocument[] = documents.map(doc => ({
+      filename: doc.filename,
+      fileType: doc.file_type as any,
+      fileSizeBytes: doc.file_size_bytes,
+      content: doc.content || '',
+      summary: doc.summary || '',
+      chunks: [],
+      chunkCount: doc.chunk_count || 1,
+      metadata: {
+        headings: [],
+        wordCount: (doc.content || '').split(/\s+/).length,
+        characterCount: (doc.content || '').length,
+        estimatedTokens: Math.ceil((doc.content || '').length / 4),
+        hasCodeBlocks: false,
+        hasTables: false
+      }
+    }));
+
+    const combined = combineDocuments(parsedDocs, parseInt(maxTokens as string) || 50000);
+
+    res.json({
+      context: combined,
+      documentCount: documents.length,
+      estimatedTokens: Math.ceil(combined.length / 4)
+    });
+  } catch (error: any) {
+    logger.error('Failed to get combined documents', { error: error.message });
+    res.status(500).json({ error: 'Failed to get combined documents' });
   }
 });
 
@@ -554,51 +617,25 @@ router.delete('/api/sessions/:id/documents/:docId', async (req: Request, res: Re
   }
 });
 
-// Get combined document context for a session (for system prompt)
-router.get('/api/sessions/:id/documents/combined', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { maxTokens } = req.query;
-
-    const documents = await qaLoopRepository.getDocuments(id, { activeOnly: true });
-
-    if (documents.length === 0) {
-      return res.json({ context: '', documentCount: 0, estimatedTokens: 0 });
-    }
-
-    // Convert to ParsedDocument format
-    const parsedDocs: ParsedDocument[] = documents.map(doc => ({
-      filename: doc.filename,
-      fileType: doc.file_type as any,
-      fileSizeBytes: doc.file_size_bytes,
-      content: doc.content || '',
-      summary: doc.summary || '',
-      chunks: [],
-      chunkCount: doc.chunk_count || 1,
-      metadata: {
-        headings: [],
-        wordCount: (doc.content || '').split(/\s+/).length,
-        characterCount: (doc.content || '').length,
-        estimatedTokens: Math.ceil((doc.content || '').length / 4),
-        hasCodeBlocks: false,
-        hasTables: false
-      }
-    }));
-
-    const combined = combineDocuments(parsedDocs, parseInt(maxTokens as string) || 50000);
-
-    res.json({
-      context: combined,
-      documentCount: documents.length,
-      estimatedTokens: Math.ceil(combined.length / 4)
-    });
-  } catch (error: any) {
-    logger.error('Failed to get combined documents', { error: error.message });
-    res.status(500).json({ error: 'Failed to get combined documents' });
-  }
-});
-
 // Mount webhook routes last so /api/sessions and other session routes are matched first (webhook has auth middleware)
 router.use('/api', webhookRoutes);
+
+/**
+ * Called by index.ts SIGTERM/SIGINT handlers to gracefully stop all running
+ * orchestrators before the process exits (3.1).
+ */
+export async function shutdownActiveSessions(): Promise<void> {
+  logger.info('Graceful shutdown: stopping all active sessions', { count: activeSessions.size });
+  const shutdownPromises = Array.from(activeSessions.entries()).map(async ([sessionId, orchestrator]) => {
+    try {
+      await orchestrator.stop();
+      logger.info('Session stopped on shutdown', { sessionId });
+    } catch (error: any) {
+      logger.warn('Failed to stop session on shutdown', { sessionId, error: error.message });
+    }
+  });
+  await Promise.allSettled(shutdownPromises);
+  activeSessions.clear();
+}
 
 export default router;

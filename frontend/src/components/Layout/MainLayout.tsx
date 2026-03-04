@@ -10,12 +10,13 @@ interface MainLayoutProps {
   browserPreview?: React.ReactNode;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ 
-  children, 
+export const MainLayout: React.FC<MainLayoutProps> = ({
+  children,
   showBrowserPreview = false,
-  browserPreview 
+  browserPreview
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toasts, dismissToast } = useToastContext();
 
   return (
@@ -25,28 +26,45 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         Skip to main content
       </a>
       {/* Header */}
-      <Header />
+      <Header onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar 
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
+        {/* Mobile overlay */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Sidebar — drawer on mobile, static on desktop */}
+        <div
+          className={`
+            fixed lg:static inset-y-0 left-0 z-30
+            transform transition-transform duration-300
+            ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          `}
+        >
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onMobileClose={() => setMobileMenuOpen(false)}
+          />
+        </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden min-w-0">
           {/* Main Content Pane */}
           <main id="main-content" className={`flex-1 overflow-y-auto ${showBrowserPreview ? 'border-r border-gray-200' : ''}`} role="main">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {children}
             </div>
           </main>
 
           {/* Browser Preview Pane (Right) */}
           {showBrowserPreview && browserPreview && (
-            <div className="w-1/2 border-l border-gray-200 bg-white overflow-hidden">
+            <div className="w-1/2 border-l border-gray-200 bg-white overflow-hidden hidden md:block">
               {browserPreview}
             </div>
           )}

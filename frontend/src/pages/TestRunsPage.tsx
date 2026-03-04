@@ -48,7 +48,10 @@ export const TestRunsPage: React.FC = () => {
       setExecutions(response.executions);
       setTotal(response.total);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to fetch executions');
+      const raw = err.response?.data?.error || err.message || '';
+      // Never expose internal stack traces or function errors to the user
+      const isTechnical = raw.includes('is not a function') || raw.includes('TypeError') || raw.includes('Cannot read') || raw.includes('undefined');
+      setError(isTechnical ? 'Unable to load test runs. The service may still be starting up — please try again in a moment.' : raw || 'Failed to fetch test runs');
     } finally {
       setLoading(false);
     }

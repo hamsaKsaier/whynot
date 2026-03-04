@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiTrendingUp, FiTrendingDown } from 'react-icons/fi';
+import { FiTrendingUp, FiTrendingDown, FiChevronRight } from 'react-icons/fi';
 import { Card } from './Card';
 
 interface StatsCardProps {
@@ -39,14 +39,19 @@ export const StatsCard: React.FC<StatsCardProps> = ({
 
   return (
     <Card
-      className={`p-4 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`p-4 group ${onClick ? 'cursor-pointer' : ''} ${className}`}
       onClick={onClick}
       hoverable={!!onClick}
       clickable={!!onClick}
     >
       <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 mb-1">
+            <p className="text-sm font-medium text-gray-600">{title}</p>
+            {onClick && (
+              <FiChevronRight className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+            )}
+          </div>
           <p className="text-2xl font-bold text-gray-900">{formatValue(value)}</p>
           {change && (
             <div
@@ -77,7 +82,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           )}
         </div>
         {icon && (
-          <div className="p-3 bg-primary-50 rounded-lg flex-shrink-0 ml-4">
+          <div className="p-3 bg-primary-50 group-hover:bg-primary-100 rounded-lg flex-shrink-0 ml-4 transition-colors">
             <div className="text-primary-600">{icon}</div>
           </div>
         )}

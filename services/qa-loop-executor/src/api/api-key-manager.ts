@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import { getPool } from '../../../shared/database/connection';
 import { createLogger } from '../../../shared/logger/logger';
 
 const logger = createLogger('api-key-manager');
@@ -56,9 +57,9 @@ const KEY_SECRET_LENGTH = 32;
 export class APIKeyManager {
   private pool: Pool;
 
+  // Use the shared singleton pool (4.2); accept an override only for tests
   constructor(pool?: Pool) {
-    const connectionString = process.env.DATABASE_URL || 'postgresql://thundercode:thundercode@localhost:5433/thundercode';
-    this.pool = pool || new Pool({ connectionString });
+    this.pool = pool || getPool();
   }
 
   /**

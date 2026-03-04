@@ -270,9 +270,6 @@ export class WorkflowOrchestrator {
    * Attempts to capture page content first, then generates tests with context if successful
    */
   async generateTestCasesWithPageCapture(userStory: UserStory, prerequisiteSteps?: PrerequisiteStep[], quickMode?: boolean): Promise<TestCase[]> {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'workflow-orchestrator.ts:generateTestCasesWithPageCapture', message: 'QuickMode received in orchestrator', data: { quickMode, quickModeType: typeof quickMode, quickModeUndefined: quickMode === undefined }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
-    // #endregion
     logger.info('Generating test cases with page capture', {
       websiteUrl: userStory.website_url
     });
@@ -310,9 +307,6 @@ export class WorkflowOrchestrator {
 
     // Generate test cases with or without page context
     if (pageContent) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'workflow-orchestrator.ts:pageContent-branch', message: 'Calling generateTestCasesWithPageContext', data: { quickMode, hasPageContent: !!pageContent }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D2' }) }).catch(() => { });
-      // #endregion
       try {
         return await this.generateTestCasesWithPageContext(userStory, pageContent, prerequisiteSteps, quickMode);
       } catch (error: any) {
@@ -352,11 +346,7 @@ export class WorkflowOrchestrator {
     quickMode?: boolean
   ): Promise<TestCase[]> {
     try {
-      console.log(`   🤖 Using Claude Sonnet 4.5 with page context (HTML + Screenshot)`);
-      // #region agent log
-      const aiPayload = { ...userStory, screenshot_base64: '[REDACTED]', html: '[REDACTED]', quick_mode: quickMode ?? false };
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'workflow-orchestrator.ts:generateTestCasesWithPageContext', message: 'Payload being sent to AI service', data: { quick_mode_in_payload: quickMode ?? false, quickMode, aiPayloadKeys: Object.keys(aiPayload) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D3' }) }).catch(() => { });
-      // #endregion
+      logger.info('Generating with page context (HTML + screenshot)', { quickMode });
       const response = await this.aiServiceCircuitBreaker.execute(() =>
         retryWithBackoff(
           () => axios.post(

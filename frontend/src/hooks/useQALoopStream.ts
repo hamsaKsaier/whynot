@@ -57,6 +57,9 @@ export function useQALoopStream({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
+  // O(1) dedup sets that shadow the pagesDiscovered/pagesExplored arrays (4.4)
+  const pagesDiscoveredSet = useRef<Set<string>>(new Set());
+  const pagesExploredSet = useRef<Set<string>>(new Set());
 
   const baseWsUrl = wsUrl || import.meta.env.VITE_QA_LOOP_WS_URL || 'ws://localhost:3012';
 
@@ -73,6 +76,9 @@ export function useQALoopStream({
     setIteration(0);
     setSessionStatus(null);
     setError(null);
+    // Reset the O(1) dedup Sets to stay in sync with the cleared arrays (4.4)
+    pagesDiscoveredSet.current.clear();
+    pagesExploredSet.current.clear();
   }, []);
 
   const processEvent = useCallback((event: QALoopEvent) => {
@@ -132,17 +138,21 @@ export function useQALoopStream({
 
       case 'page_discovered':
         if (event.data?.url) {
-          setPagesDiscovered(prev =>
-            prev.includes(event.data.url) ? prev : [...prev, event.data.url]
-          );
+          // O(1) dedup via Set ref instead of O(n) Array.includes (4.4)
+          if (!pagesDiscoveredSet.current.has(event.data.url)) {
+            pagesDiscoveredSet.current.add(event.data.url);
+            setPagesDiscovered(prev => [...prev, event.data.url]);
+          }
         }
         break;
 
       case 'page_explored':
         if (event.data?.url) {
-          setPagesExplored(prev =>
-            prev.includes(event.data.url) ? prev : [...prev, event.data.url]
-          );
+          // O(1) dedup via Set ref instead of O(n) Array.includes (4.4)
+          if (!pagesExploredSet.current.has(event.data.url)) {
+            pagesExploredSet.current.add(event.data.url);
+            setPagesExplored(prev => [...prev, event.data.url]);
+          }
         }
         break;
 

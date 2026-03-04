@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FiPlus, FiEdit, FiTrash2, FiGlobe } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiPlus, FiEdit, FiTrash2, FiServer, FiZap } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -12,6 +13,7 @@ interface Environment {
 }
 
 export const EnvironmentsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -104,10 +106,34 @@ export const EnvironmentsPage: React.FC = () => {
       )}
 
       {environments.length === 0 ? (
-        <Card className="text-center py-12">
-          <FiGlobe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 mb-4">No environments configured</p>
-          <Button onClick={() => setShowAddForm(true)}>Create Environment</Button>
+        <Card className="text-center py-14 px-8">
+          <div className="flex justify-center mb-4">
+            <div className="h-14 w-14 rounded-xl bg-primary-50 flex items-center justify-center">
+              <FiServer className="h-7 w-7 text-primary-500" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No environments yet</h3>
+          <p className="text-gray-500 mb-2 max-w-md mx-auto text-sm leading-relaxed">
+            Environments let you save base URLs for different deployment stages — Production, Staging, Local —
+            so the QA Loop can test across your pipeline without re-typing URLs every time.
+          </p>
+          <p className="text-xs text-gray-400 mb-8">
+            Environments are optional. You can always paste a URL directly into QA Loop.
+          </p>
+          <div className="flex justify-center gap-3">
+            <Button onClick={() => setShowAddForm(true)}>
+              <FiPlus className="mr-2 h-4 w-4" />
+              Add Environment
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => navigate('/qa-loop')}
+              className="flex items-center gap-2"
+            >
+              <FiZap className="h-4 w-4" />
+              Skip — go to QA Loop
+            </Button>
+          </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

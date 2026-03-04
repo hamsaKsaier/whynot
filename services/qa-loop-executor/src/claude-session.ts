@@ -3,10 +3,13 @@ import { createLogger } from '../../shared/logger/logger';
 import { LoopConfig } from './loop-orchestrator';
 import { ToolExecutor } from './tool-executor';
 import { emitToSession } from './api/websocket';
-import { getToolDefinitions } from './tools/tool-definitions';
+import { getToolsForFocusArea } from './tools/tool-definitions';
 import { ClaudeModel, calculateCost, getModelDisplayName, MODEL_CAPABILITIES } from './model-selector';
 import { QALoopRepository } from './repositories/qa-loop-repository';
 import { combineDocuments, ParsedDocument } from './document-parser';
+
+/** Mirror of FocusArea from loop-orchestrator (defined here to avoid a circular import). */
+type FocusArea = 'explore' | 'chaos' | 'retest' | 'investigate';
 
 const logger = createLogger('claude-session');
 
@@ -45,9 +48,19 @@ export class ClaudeSession {
   private abortController: AbortController | null = null;
   private tools: Anthropic.Tool[];
   private repository: QALoopRepository;
-  private documentContext: string | null = null;
+  /**
+   * `undefined`  = not yet loaded (will load on first runIteration call)
+   * `null`       = loaded but no documents found
+   * `string`     = loaded document content
+   */
+  private documentContext: string | null | undefined = undefined;
 
-  constructor(sessionId: string, config: LoopConfig) {
+  constructor(
+    sessionId: string,
+    config: LoopConfig,
+    focusArea: FocusArea = 'explore',
+    preloadedDocumentContext?: string | null
+  ) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY environment variable is not set');
@@ -57,8 +70,20 @@ export class ClaudeSession {
     this.sessionId = sessionId;
     this.config = config;
     this.toolExecutor = new ToolExecutor(sessionId, config);
-    this.tools = getToolDefinitions();
+
+    // Select tools based on the current focus area (2.2: tool filtering)
+    const tools = getToolsForFocusArea(focusArea);
+    // Add cache_control to the last tool so the entire tools array is cached (2.1: prompt caching)
+    if (tools.length > 0) {
+      (tools[tools.length - 1] as any).cache_control = { type: 'ephemeral' };
+    }
+    this.tools = tools;
     this.repository = new QALoopRepository();
+
+    // Accept pre-loaded document context to avoid a DB round-trip per iteration (2.6)
+    if (preloadedDocumentContext !== undefined) {
+      this.documentContext = preloadedDocumentContext;
+    }
   }
 
   /**
@@ -103,7 +128,7 @@ export class ClaudeSession {
       });
     } catch (error: any) {
       logger.warn('Failed to load document context', { error: error.message });
-      this.documentContext = null;
+      this.documentContext = null; // null = loaded (with failure), won't retry
     }
   }
 
@@ -113,8 +138,8 @@ export class ClaudeSession {
   ): Promise<IterationResult> {
     this.abortController = new AbortController();
 
-    // Load document context if not already loaded (Phase 7)
-    if (this.documentContext === null) {
+    // Load document context if not already loaded (Phase 7 / 2.6: cache per orchestrator run)
+    if (this.documentContext === undefined) {
       await this.loadDocumentContext();
     }
 
@@ -164,11 +189,19 @@ export class ClaudeSession {
           model
         });
 
-        // Make the API call with streaming using dynamic model
+        // Make the API call with streaming using dynamic model.
+        // Pass system as a content-block array so Anthropic prompt caching applies
+        // to the (static) system prompt across iterations.
         const stream = await this.client.messages.stream({
           model,
           max_tokens: maxTokens,
-          system: this.buildSystemPrompt(),
+          system: [
+            {
+              type: 'text',
+              text: this.buildSystemPrompt(),
+              cache_control: { type: 'ephemeral' }
+            }
+          ] as any,
           tools: this.tools,
           messages
         });

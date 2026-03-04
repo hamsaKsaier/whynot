@@ -1,11 +1,7 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || '/api';
-
-const apiClient = axios.create({
-  baseURL: API_URL,
-  timeout: 60000, // 60 second timeout for long operations
-});
+// Re-use the authenticated axios instance from api.ts so every request
+// automatically carries the JWT Bearer token + X-Workspace-ID header
+// and respects the 401 → redirect-to-login interceptor.
+import { apiClient } from './api';
 
 // QA Loop Session types
 export interface QALoopSession {
@@ -57,6 +53,10 @@ export interface QALoopBug {
   description: string | null;
   severity: 'low' | 'medium' | 'high' | 'critical';
   category: string | null;
+  // bug_type and reproduction_steps exist in the DB but were missing from the
+  // interface, causing attackCategory to always fall back to 'security' (5.9)
+  bug_type: string | null;
+  reproduction_steps: any[];
   page_url: string | null;
   status: string;
   created_at: string;
@@ -129,7 +129,11 @@ export async function listQALoopSessions(params?: {
 }
 
 // Check for existing session by base URL (Phase 3)
-export async function checkExistingSession(targetUrl: string): Promise<{
+// Accepts an optional AbortSignal so callers can cancel stale in-flight requests (4.7)
+export async function checkExistingSession(
+  targetUrl: string,
+  options?: { signal?: AbortSignal }
+): Promise<{
   exists: boolean;
   session?: {
     id: string;
@@ -139,7 +143,8 @@ export async function checkExistingSession(targetUrl: string): Promise<{
   };
 }> {
   const response = await apiClient.get('/qa-loop/sessions/check-existing', {
-    params: { baseUrl: targetUrl }
+    params: { baseUrl: targetUrl },
+    signal: options?.signal
   });
   return response.data;
 }
@@ -222,19 +227,22 @@ export async function getSessionTestRuns(sessionId: string): Promise<{
 
 // ==================== DOCUMENT API (Phase 7) ====================
 
+// Field names match the snake_case columns returned by the executor API (5.6)
 export interface QALoopDocument {
   id: string;
   filename: string;
-  fileType: string;
-  fileSizeBytes: number;
+  file_type: string;
+  file_size_bytes: number;
   summary?: string;
-  chunkCount: number;
-  estimatedTokens?: number;
-  isActive: boolean;
-  createdAt: string;
+  chunk_count: number;
+  estimated_tokens?: number;
+  is_active: boolean;
+  created_at: string;
 }
 
-// Upload a document to a session
+// Upload a document to a session.
+// Uses arrayBuffer() → Uint8Array → btoa() so binary files (PDFs, images) are
+// not corrupted by the old file.text() + btoa(unescape(...)) approach (5.7)
 export async function uploadDocument(
   sessionId: string,
   file: File
@@ -242,9 +250,14 @@ export async function uploadDocument(
   success: boolean;
   document: QALoopDocument;
 }> {
-  // Read file content
-  const content = await file.text();
-  const contentBase64 = btoa(unescape(encodeURIComponent(content)));
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  // Build a binary string byte-by-byte so btoa() handles all values 0-255
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const contentBase64 = btoa(binary);
 
   const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/documents`, {
     filename: file.name,

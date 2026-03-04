@@ -2,13 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs';
 import { WorkflowOrchestrator } from '../workflow/workflow-orchestrator';
 import { UserStory, TestCase } from '../../shared/types';
 import { errorHandler, asyncHandler, createError } from '../middleware/error-handler';
 import { requestLogger } from '../middleware/request-logger';
 import { validate, schemas, sanitizeUrl, sanitizeText } from '../middleware/validation';
-import { apiRateLimiter, testExecutionRateLimiter, testGenerationRateLimiter } from '../middleware/rate-limit';
+import { apiRateLimiter, testExecutionRateLimiter, testGenerationRateLimiter, qaLoopSessionRateLimiter } from '../middleware/rate-limit';
 import { createLogger } from '../../shared/logger/logger';
 import { metrics } from '../../shared/utils/metrics';
 import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
@@ -109,10 +108,7 @@ const PORT = process.env.PORT || 3000;
 const logger = createLogger('gateway');
 
 // Middleware
-// #region agent log
 const corsOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
-try { fs.appendFileSync('/Users/takiacademy/whynot/.cursor/debug.log', JSON.stringify({ location: 'gateway/src/api/main.ts:46', message: 'CORS origin configuration', data: { corsOrigin, frontendUrlEnv: process.env.FRONTEND_URL, defaultUsed: !process.env.FRONTEND_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) + '\n'); } catch (e) { }
-// #endregion
 app.use(cors({
   origin: corsOrigin,
   credentials: true,
@@ -120,17 +116,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Workspace-ID'],
   exposedHeaders: ['X-Request-ID', 'RateLimit-*']
 }));
-// #region agent log
-app.use((req, res, next) => {
-  if (req.path === '/api/projects' || req.path.startsWith('/api/projects')) {
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'gateway/src/api/main.ts:57', message: 'Projects request received', data: { method: req.method, path: req.path, origin: req.headers.origin, allowedOrigin: corsOrigin, originMatches: req.headers.origin === corsOrigin, headers: Object.keys(req.headers) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-    if (req.method === 'OPTIONS') {
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'gateway/src/api/main.ts:60', message: 'OPTIONS preflight request', data: { origin: req.headers.origin, allowedOrigin: corsOrigin, accessControlRequestMethod: req.headers['access-control-request-method'] }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
-    }
-  }
-  next();
-});
-// #endregion
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -360,10 +345,10 @@ app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), a
     durationMs: result.executionResult.total_duration_ms
   });
 
-  // Persist test case and execution
+  // Persist test case and execution (scoped to the requesting workspace)
   try {
-    await testCaseRepository.create(result.testCase);
-    await executionRepository.create(result.executionResult);
+    await testCaseRepository.create(result.testCase, req.workspaceId);
+    await executionRepository.create(result.executionResult, req.workspaceId);
     logger.debug('Test case and execution persisted to database');
   } catch (dbError: any) {
     logger.error('Failed to persist to database', dbError);
@@ -399,9 +384,6 @@ app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), a
 // Generate tests only (without execution) (with rate limiting)
 app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.generateTests), asyncHandler(async (req, res) => {
   const { website_url, user_story, additional_context, project_id, user_story_id, prerequisite_steps, quick_mode } = req.body;
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'gateway/main.ts:/api/generate-tests', message: 'Request body quick_mode received', data: { quick_mode_raw: quick_mode, quick_mode_type: typeof quick_mode, req_body_keys: Object.keys(req.body) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-  // #endregion
 
   let sanitizedUrl: string;
   let sanitizedStory: string;
@@ -449,16 +431,13 @@ app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.gene
   // Note: generateTestCasesWithPageCapture returns TestCase[] (array)
   // Validation info is handled internally by the orchestrator
   const quickMode = quick_mode === true || quick_mode === 'true';
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'gateway/main.ts:before-orchestrator', message: 'QuickMode value before orchestrator call', data: { quickMode, quick_mode_raw: quick_mode, quick_mode_comparison_true: quick_mode === true, quick_mode_comparison_string: quick_mode === 'true' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C2' }) }).catch(() => { });
-  // #endregion
   const testCases: TestCase[] = await orchestrator.generateTestCasesWithPageCapture(userStory, prerequisite_steps, quickMode);
 
-  // Persist generated test cases with user_story_id link
+  // Persist generated test cases with user_story_id link (scoped to workspace)
   try {
     for (const testCase of testCases) {
       // Create test case with user_story_id if available
-      const created = await testCaseRepository.create(testCase);
+      const created = await testCaseRepository.create(testCase, req.workspaceId);
 
       // Update the test case to link to user story if we have one
       if (linkedUserStoryId && created) {
@@ -493,10 +472,10 @@ app.post('/api/execute-test', testExecutionRateLimiter, validate(schemas.execute
 
   // Ensure test case exists in database before execution
   try {
-    const existingTestCase = await testCaseRepository.findById(testCase.id);
+    const existingTestCase = await testCaseRepository.findById(testCase.id, req.workspaceId);
     if (!existingTestCase) {
       logger.info('Test case not found in database, persisting it first', { testCaseId: testCase.id });
-      await testCaseRepository.create(testCase);
+      await testCaseRepository.create(testCase, req.workspaceId);
       logger.debug('Test case persisted to database');
     }
   } catch (dbError: any) {
@@ -517,7 +496,7 @@ app.post('/api/execute-test', testExecutionRateLimiter, validate(schemas.execute
   const isStartingStatus = (executionResult as any).status === 'starting' || (executionResult as any).message?.includes('Connect to WebSocket');
   if (!isStartingStatus) {
     try {
-      await executionRepository.create(executionResult);
+      await executionRepository.create(executionResult, req.workspaceId);
       logger.debug('Execution result persisted to database');
     } catch (dbError: any) {
       logger.error('Failed to persist execution to database', dbError);
@@ -557,7 +536,7 @@ app.get('/api/debug/rate-limits', (req, res) => {
 
 // Get test case by ID
 app.get('/api/test-cases/:id', asyncHandler(async (req, res) => {
-  const entity = await testCaseRepository.findById(req.params.id);
+  const entity = await testCaseRepository.findById(req.params.id, req.workspaceId);
   if (!entity) {
     throw createError('Test case not found', 404, 'NOT_FOUND');
   }
@@ -565,13 +544,14 @@ app.get('/api/test-cases/:id', asyncHandler(async (req, res) => {
   res.json(testCase);
 }));
 
-// Get execution by ID with step results
+// Get execution by ID with step results (scoped to the authenticated workspace)
 app.get('/api/executions/:id', asyncHandler(async (req, res) => {
-  const result = await executionRepository.findByIdWithSteps(req.params.id);
-  if (!result) {
+  const execution = await executionRepository.findById(req.params.id, req.workspaceId);
+  if (!execution) {
     throw createError('Execution not found', 404, 'NOT_FOUND');
   }
-  const transformed = transformExecutionWithSteps(result.execution, result.steps);
+  const steps = await executionRepository.findStepResults(req.params.id);
+  const transformed = transformExecutionWithSteps(execution, steps);
   res.json(transformed);
 }));
 
@@ -579,19 +559,10 @@ app.get('/api/executions/:id', asyncHandler(async (req, res) => {
 
 // List all projects
 app.get('/api/projects', asyncHandler(async (req, res) => {
-  // #region agent log
-  try { fs.appendFileSync('/Users/takiacademy/whynot/.cursor/debug.log', JSON.stringify({ location: 'gateway/src/api/main.ts:353', message: 'Projects endpoint handler entry', data: { offset: req.query.offset, limit: req.query.limit, origin: req.headers.origin }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) + '\n'); } catch (e) { }
-  // #endregion
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-  // #region agent log
-  try { fs.appendFileSync('/Users/takiacademy/whynot/.cursor/debug.log', JSON.stringify({ location: 'gateway/src/api/main.ts:356', message: 'Before database query', data: { offset, limit }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) + '\n'); } catch (e) { }
-  // #endregion
   const projects = await projectRepository.listWithStats(offset, limit, req.workspaceId);
   const total = await projectRepository.count(req.workspaceId);
-  // #region agent log
-  try { fs.appendFileSync('/Users/takiacademy/whynot/.cursor/debug.log', JSON.stringify({ location: 'gateway/src/api/main.ts:357', message: 'Projects endpoint handler exit', data: { projectsCount: projects.length, total }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) + '\n'); } catch (e) { }
-  // #endregion
   res.json({ projects, offset, limit, total });
 }));
 
@@ -881,8 +852,8 @@ app.delete('/api/setup-hooks/:id', asyncHandler(async (req, res) => {
 app.get('/api/test-cases/:testCaseId/setup-hooks', asyncHandler(async (req, res) => {
   const testCaseId = req.params.testCaseId;
 
-  // Verify test case exists
-  const testCase = await testCaseRepository.findById(testCaseId);
+  // Verify test case exists within this workspace
+  const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
     throw createError('Test case not found', 404, 'NOT_FOUND');
   }
@@ -1001,26 +972,27 @@ app.delete('/api/folders/:id', asyncHandler(async (req, res) => {
 
 // ==================== TEST CASE ENDPOINTS ====================
 
-// List test cases
+// List test cases (scoped to the authenticated workspace)
 app.get('/api/test-cases', asyncHandler(async (req, res) => {
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-  const entities = await testCaseRepository.list(offset, limit);
+  const entities = await testCaseRepository.list(offset, limit, req.workspaceId);
   const testCases = entities.map(transformTestCaseEntity);
   res.json({ test_cases: testCases, offset, limit });
 }));
 
-// List executions
+// List executions (scoped to the authenticated workspace)
 app.get('/api/executions', asyncHandler(async (req, res) => {
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
   const status = req.query.status as string | undefined;
   const search = req.query.search as string | undefined;
 
-  const filters = (status || search) ? {
+  const filters = {
     status: status as 'completed' | 'failed' | 'running' | 'timeout' | 'paused' | undefined,
-    search: search
-  } : undefined;
+    search,
+    workspaceId: req.workspaceId
+  };
 
   const [executions, total] = await Promise.all([
     executionRepository.list(offset, limit, filters),
@@ -1037,10 +1009,16 @@ app.get('/api/executions', asyncHandler(async (req, res) => {
   });
 }));
 
-// Update test case
+// Update test case (verify workspace ownership first)
 app.put('/api/test-cases/:id', validate(schemas.executeTest), asyncHandler(async (req, res) => {
   const id = req.params.id;
   const updates = req.body;
+
+  // Verify the test case belongs to this workspace before mutating
+  const existing = await testCaseRepository.findById(id, req.workspaceId);
+  if (!existing) {
+    throw createError('Test case not found', 404, 'NOT_FOUND');
+  }
 
   logger.info('Updating test case', { testCaseId: id });
   const updated = await testCaseRepository.update(id, updates);
@@ -1052,9 +1030,15 @@ app.put('/api/test-cases/:id', validate(schemas.executeTest), asyncHandler(async
   res.json({ success: true, test_case: testCase });
 }));
 
-// Delete test case
+// Delete test case (verify workspace ownership first)
 app.delete('/api/test-cases/:id', asyncHandler(async (req, res) => {
   const id = req.params.id;
+
+  // Verify the test case belongs to this workspace before deleting
+  const existing = await testCaseRepository.findById(id, req.workspaceId);
+  if (!existing) {
+    throw createError('Test case not found', 404, 'NOT_FOUND');
+  }
 
   logger.info('Deleting test case', { testCaseId: id });
   const deleted = await testCaseRepository.delete(id);
@@ -1070,7 +1054,9 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
   logger.info('Fetching flow data for visualization');
 
   try {
-    // Fetch all projects
+    // ── Batch fetch everything in 5 queries instead of N*M queries (4.5) ──────
+
+    // 1. All projects
     const projects = await query<any>(`
       SELECT id, name, description, website_url, created_at, updated_at
       FROM projects
@@ -1079,172 +1065,167 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
 
     const flowData: any[] = [];
 
-    for (const project of projects) {
-      // Fetch folders for this project
-      const folders = await query<any>(`
+    if (projects.length > 0) {
+      const projectIds = projects.map((p: any) => p.id);
+
+      // 2. All folders for all projects in one query
+      const allFolders = await query<any>(`
         SELECT id, project_id, name, color, created_at, updated_at
         FROM user_story_folders
-        WHERE project_id = $1
+        WHERE project_id = ANY($1)
         ORDER BY name ASC
-      `, [project.id]);
+      `, [projectIds]);
 
-      // Fetch user stories for this project (including folder_id)
-      const userStories = await query<any>(`
+      // 3. All user stories for all projects in one query
+      const allUserStories = await query<any>(`
         SELECT id, project_id, story, website_url, additional_context, folder_id, created_at, updated_at
         FROM user_stories
-        WHERE project_id = $1
+        WHERE project_id = ANY($1)
         ORDER BY created_at DESC
-      `, [project.id]);
+      `, [projectIds]);
 
-      const projectUserStories: any[] = [];
+      const userStoryIds = allUserStories.map((s: any) => s.id);
 
-      for (const userStory of userStories) {
-        // Fetch test suites for this user story
-        const testSuites = await query<any>(`
-          SELECT id, user_story_id, name, description, created_at, updated_at
-          FROM test_suites
-          WHERE user_story_id = $1
-          ORDER BY created_at DESC
-        `, [userStory.id]);
+      // 4 & 5. All test suites + their test cases in two queries
+      const allTestSuites = userStoryIds.length > 0 ? await query<any>(`
+        SELECT id, user_story_id, name, description, created_at, updated_at
+        FROM test_suites
+        WHERE user_story_id = ANY($1)
+        ORDER BY created_at DESC
+      `, [userStoryIds]) : [];
 
-        const userStoryTestSuites: any[] = [];
+      const testSuiteIds = allTestSuites.map((ts: any) => ts.id);
 
-        for (const testSuite of testSuites) {
-          // Fetch test cases for this test suite
-          const testCases = await query<any>(`
-            SELECT id, name, description, website_url, user_story, steps, metadata, created_at, updated_at
-            FROM test_cases
-            WHERE test_suite_id = $1
-            ORDER BY created_at DESC
-          `, [testSuite.id]);
+      const allTestCaseRows = (testSuiteIds.length > 0 || userStoryIds.length > 0) ? await query<any>(`
+        SELECT id, name, description, website_url, user_story, steps, metadata,
+               test_suite_id, user_story_id, created_at, updated_at
+        FROM test_cases
+        WHERE test_suite_id = ANY($1) OR (user_story_id = ANY($2) AND test_suite_id IS NULL)
+        ORDER BY created_at DESC
+      `, [testSuiteIds.length ? testSuiteIds : [''], userStoryIds.length ? userStoryIds : ['']]) : [];
 
-          const testSuiteTestCases = testCases.map((tc: any) => {
-            const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
-            const metadata = typeof tc.metadata === 'string' ? JSON.parse(tc.metadata) : (tc.metadata || {});
-            return {
-              test_case: transformTestCaseEntity({
-                id: tc.id,
-                name: tc.name,
-                description: tc.description || '',
-                website_url: tc.website_url,
-                user_story: tc.user_story,
-                steps: steps,
-                metadata: metadata,
-                created_at: tc.created_at,
-                updated_at: tc.updated_at
-              }),
-              steps: steps || []
-            };
-          });
-
-          userStoryTestSuites.push({
-            test_suite: testSuite,
-            test_cases: testSuiteTestCases
-          });
-        }
-
-        // Also fetch test cases directly linked to user story (without test suite)
-        const directTestCases = await query<any>(`
-          SELECT id, name, description, website_url, user_story, steps, metadata, created_at, updated_at
-          FROM test_cases
-          WHERE user_story_id = $1 AND test_suite_id IS NULL
-          ORDER BY created_at DESC
-        `, [userStory.id]);
-
-        const directTestCasesFormatted = directTestCases.map((tc: any) => {
-          const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
-          const metadata = typeof tc.metadata === 'string' ? JSON.parse(tc.metadata) : (tc.metadata || {});
-          return {
-            test_case: transformTestCaseEntity({
-              id: tc.id,
-              name: tc.name,
-              description: tc.description || '',
-              website_url: tc.website_url,
-              user_story: tc.user_story,
-              steps: steps,
-              metadata: metadata,
-              created_at: tc.created_at,
-              updated_at: tc.updated_at
-            }),
-            steps: steps || []
-          };
-        });
-
-        projectUserStories.push({
-          user_story: userStory,
-          test_suites: userStoryTestSuites,
-          test_cases: directTestCasesFormatted
-        });
-      }
-
-      // Also handle test cases with user_story text but no user_story_id (backward compatibility)
-      const orphanTestCases = await query<any>(`
+      // 6. Orphan test cases (backward compatibility — per-project website_url filter)
+      const projectWebsiteUrls = projects.map((p: any) => p.website_url).filter(Boolean);
+      const allOrphanTestCases = projectWebsiteUrls.length > 0 ? await query<any>(`
         SELECT id, name, description, website_url, user_story, steps, metadata, created_at, updated_at
         FROM test_cases
-        WHERE user_story_id IS NULL 
-          AND user_story IS NOT NULL 
+        WHERE user_story_id IS NULL
+          AND user_story IS NOT NULL
           AND user_story != ''
-          AND website_url = COALESCE($1, website_url)
+          AND website_url = ANY($1)
         ORDER BY created_at DESC
-      `, [project.website_url || null]);
+      `, [projectWebsiteUrls]) : [];
 
-      if (orphanTestCases.length > 0) {
-        // Group by user_story text
-        const groupedByStory: Record<string, any[]> = {};
-        for (const tc of orphanTestCases) {
-          const storyText = tc.user_story;
-          if (!groupedByStory[storyText]) {
-            groupedByStory[storyText] = [];
-          }
-          groupedByStory[storyText].push(tc);
-        }
+      // ── Build in-memory maps for O(1) grouping ────────────────────────────
 
-        for (const [storyText, testCases] of Object.entries(groupedByStory)) {
-          const orphanUserStory = {
-            id: `orphan-${project.id}-${storyText.substring(0, 50)}`,
-            project_id: project.id,
-            story: storyText,
-            website_url: testCases[0].website_url,
-            additional_context: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
+      // folders by project_id
+      const foldersByProject = new Map<string, any[]>();
+      for (const f of allFolders) {
+        if (!foldersByProject.has(f.project_id)) foldersByProject.set(f.project_id, []);
+        foldersByProject.get(f.project_id)!.push(f);
+      }
 
-          const formattedTestCases = testCases.map((tc: any) => {
-            const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
-            const metadata = typeof tc.metadata === 'string' ? JSON.parse(tc.metadata) : (tc.metadata || {});
-            return {
-              test_case: transformTestCaseEntity({
-                id: tc.id,
-                name: tc.name,
-                description: tc.description || '',
-                website_url: tc.website_url,
-                user_story: tc.user_story,
-                steps: steps,
-                metadata: metadata,
-                created_at: tc.created_at,
-                updated_at: tc.updated_at
-              }),
-              steps: steps || []
-            };
-          });
+      // user stories by project_id
+      const storiesByProject = new Map<string, any[]>();
+      for (const s of allUserStories) {
+        if (!storiesByProject.has(s.project_id)) storiesByProject.set(s.project_id, []);
+        storiesByProject.get(s.project_id)!.push(s);
+      }
 
-          projectUserStories.push({
-            user_story: orphanUserStory,
-            test_suites: [],
-            test_cases: formattedTestCases
-          });
+      // test suites by user_story_id
+      const suitesByStory = new Map<string, any[]>();
+      for (const ts of allTestSuites) {
+        if (!suitesByStory.has(ts.user_story_id)) suitesByStory.set(ts.user_story_id, []);
+        suitesByStory.get(ts.user_story_id)!.push(ts);
+      }
+
+      // test cases by test_suite_id and by user_story_id (direct, no suite)
+      const casesBySuite = new Map<string, any[]>();
+      const directCasesByStory = new Map<string, any[]>();
+      for (const tc of allTestCaseRows) {
+        if (tc.test_suite_id) {
+          if (!casesBySuite.has(tc.test_suite_id)) casesBySuite.set(tc.test_suite_id, []);
+          casesBySuite.get(tc.test_suite_id)!.push(tc);
+        } else if (tc.user_story_id) {
+          if (!directCasesByStory.has(tc.user_story_id)) directCasesByStory.set(tc.user_story_id, []);
+          directCasesByStory.get(tc.user_story_id)!.push(tc);
         }
       }
 
-      flowData.push({
-        project: project,
-        folders: folders,
-        user_stories: projectUserStories
-      });
+      // orphan test cases by website_url
+      const orphansByUrl = new Map<string, any[]>();
+      for (const tc of allOrphanTestCases) {
+        const url = tc.website_url || '';
+        if (!orphansByUrl.has(url)) orphansByUrl.set(url, []);
+        orphansByUrl.get(url)!.push(tc);
+      }
+
+      // Helper to map a raw tc row → { test_case, steps }
+      const formatTc = (tc: any) => {
+        const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
+        const metadata = typeof tc.metadata === 'string' ? JSON.parse(tc.metadata) : (tc.metadata || {});
+        return {
+          test_case: transformTestCaseEntity({
+            id: tc.id, name: tc.name, description: tc.description || '',
+            website_url: tc.website_url, user_story: tc.user_story,
+            steps, metadata, created_at: tc.created_at, updated_at: tc.updated_at
+          }),
+          steps: steps || []
+        };
+      };
+
+      // ── Assemble response ─────────────────────────────────────────────────
+
+      for (const project of projects) {
+        const folders = foldersByProject.get(project.id) || [];
+        const userStories = storiesByProject.get(project.id) || [];
+        const projectUserStories: any[] = [];
+
+        for (const userStory of userStories) {
+          const suites = suitesByStory.get(userStory.id) || [];
+          const userStoryTestSuites = suites.map((ts: any) => ({
+            test_suite: ts,
+            test_cases: (casesBySuite.get(ts.id) || []).map(formatTc)
+          }));
+
+          const directTestCases = (directCasesByStory.get(userStory.id) || []).map(formatTc);
+
+          projectUserStories.push({
+            user_story: userStory,
+            test_suites: userStoryTestSuites,
+            test_cases: directTestCases
+          });
+        }
+
+        // Orphan test cases for this project's website_url
+        const projectOrphans = project.website_url ? (orphansByUrl.get(project.website_url) || []) : [];
+        const groupedByStory: Record<string, any[]> = {};
+        for (const tc of projectOrphans) {
+          const key = tc.user_story;
+          if (!groupedByStory[key]) groupedByStory[key] = [];
+          groupedByStory[key].push(tc);
+        }
+        for (const [storyText, tcs] of Object.entries(groupedByStory)) {
+          projectUserStories.push({
+            user_story: {
+              id: `orphan-${project.id}-${storyText.substring(0, 50)}`,
+              project_id: project.id,
+              story: storyText,
+              website_url: tcs[0].website_url,
+              additional_context: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            },
+            test_suites: [],
+            test_cases: tcs.map(formatTc)
+          });
+        }
+
+        flowData.push({ project, folders, user_stories: projectUserStories });
+      }
     }
 
-    // If no projects exist, create structure from test cases directly (backward compatibility)
+    // If no projects exist, build from test cases directly (backward compatibility)
     if (flowData.length === 0) {
       const allTestCases = await query<any>(`
         SELECT id, name, description, website_url, user_story, steps, metadata, created_at, updated_at
@@ -1254,17 +1235,12 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
       `);
 
       if (allTestCases.length > 0) {
-        // Group by website_url and user_story
         const grouped: Record<string, Record<string, any[]>> = {};
         for (const tc of allTestCases) {
           const url = tc.website_url || 'default';
           const story = tc.user_story;
-          if (!grouped[url]) {
-            grouped[url] = {};
-          }
-          if (!grouped[url][story]) {
-            grouped[url][story] = [];
-          }
+          if (!grouped[url]) grouped[url] = {};
+          if (!grouped[url][story]) grouped[url][story] = [];
           grouped[url][story].push(tc);
         }
 
@@ -1279,48 +1255,35 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
           };
 
           const projectUserStories: any[] = [];
-
           for (const [storyText, testCases] of Object.entries(stories)) {
-            const userStory = {
-              id: `orphan-${defaultProject.id}-${storyText.substring(0, 50)}`,
-              project_id: defaultProject.id,
-              story: storyText,
-              website_url: websiteUrl !== 'default' ? websiteUrl : null,
-              additional_context: null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-
-            const formattedTestCases = testCases.map((tc: any) => {
-              const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
-              const metadata = typeof tc.metadata === 'string' ? JSON.parse(tc.metadata) : (tc.metadata || {});
-              return {
-                test_case: transformTestCaseEntity({
-                  id: tc.id,
-                  name: tc.name,
-                  description: tc.description || '',
-                  website_url: tc.website_url,
-                  user_story: tc.user_story,
-                  steps: steps,
-                  metadata: metadata,
-                  created_at: tc.created_at,
-                  updated_at: tc.updated_at
-                }),
-                steps: steps || []
-              };
-            });
-
+            const steps0 = typeof testCases[0].steps === 'string' ? JSON.parse(testCases[0].steps) : testCases[0].steps;
             projectUserStories.push({
-              user_story: userStory,
+              user_story: {
+                id: `orphan-${defaultProject.id}-${storyText.substring(0, 50)}`,
+                project_id: defaultProject.id,
+                story: storyText,
+                website_url: websiteUrl !== 'default' ? websiteUrl : null,
+                additional_context: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              },
               test_suites: [],
-              test_cases: formattedTestCases
+              test_cases: testCases.map((tc: any) => {
+                const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
+                const metadata = typeof tc.metadata === 'string' ? JSON.parse(tc.metadata) : (tc.metadata || {});
+                return {
+                  test_case: transformTestCaseEntity({
+                    id: tc.id, name: tc.name, description: tc.description || '',
+                    website_url: tc.website_url, user_story: tc.user_story,
+                    steps, metadata, created_at: tc.created_at, updated_at: tc.updated_at
+                  }),
+                  steps: steps || []
+                };
+              })
             });
           }
 
-          flowData.push({
-            project: defaultProject,
-            user_stories: projectUserStories
-          });
+          flowData.push({ project: defaultProject, user_stories: projectUserStories });
         }
       }
     }
@@ -1417,8 +1380,8 @@ app.post('/api/chat/modify-test', asyncHandler(async (req, res) => {
 app.get('/api/test-cases/:id/baselines', asyncHandler(async (req, res) => {
   const testCaseId = req.params.id;
 
-  // Verify test case exists
-  const testCase = await testCaseRepository.findById(testCaseId);
+  // Verify test case exists within this workspace
+  const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
     throw createError('Test case not found', 404, 'NOT_FOUND');
   }
@@ -1432,8 +1395,8 @@ app.get('/api/test-cases/:testCaseId/baselines/:stepId', asyncHandler(async (req
   const testCaseId = req.params.testCaseId;
   const stepId = req.params.stepId;
 
-  // Verify test case exists
-  const testCase = await testCaseRepository.findById(testCaseId);
+  // Verify test case exists within this workspace
+  const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
     throw createError('Test case not found', 404, 'NOT_FOUND');
   }
@@ -1451,8 +1414,8 @@ app.post('/api/test-cases/:testCaseId/baselines', asyncHandler(async (req, res) 
     throw createError('step_id and screenshot_path are required', 400, 'VALIDATION_ERROR');
   }
 
-  // Verify test case exists
-  const testCase = await testCaseRepository.findById(testCaseId);
+  // Verify test case exists within this workspace
+  const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
     throw createError('Test case not found', 404, 'NOT_FOUND');
   }
@@ -1501,8 +1464,8 @@ app.put('/api/test-cases/:testCaseId/baselines/:baselineId/lock', asyncHandler(a
 app.get('/api/executions/:id/visual-comparisons', asyncHandler(async (req, res) => {
   const executionId = req.params.id;
 
-  // Verify execution exists
-  const execution = await executionRepository.findById(executionId);
+  // Verify execution exists within this workspace
+  const execution = await executionRepository.findById(executionId, req.workspaceId);
   if (!execution) {
     throw createError('Execution not found', 404, 'NOT_FOUND');
   }
@@ -1549,212 +1512,364 @@ app.put('/api/visual-regressions/:id/ignore', asyncHandler(async (req, res) => {
 }));
 
 // ==================== QA LOOP ENDPOINTS ====================
-// Proxy to qa-loop-executor service
+// All routes: authenticated, workspace-scoped, rate-limited where appropriate.
+
+import axios from 'axios';
 
 const qaLoopExecutorUrl = process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
 
-// Start a new QA Loop session
-app.post('/api/qa-loop/sessions', asyncHandler(async (req, res) => {
+/**
+ * Build the standard headers forwarded to the QA Loop executor so it can
+ * enforce workspace isolation and trace the calling user.
+ */
+function qaLoopHeaders(req: express.Request): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (req.workspaceId) headers['X-Workspace-ID'] = req.workspaceId;
+  if (req.user?.id)   headers['X-User-ID']      = req.user.id;
+  return headers;
+}
+
+/**
+ * Validate that a targetUrl is a public HTTP/HTTPS URL and not an internal
+ * network address (SSRF protection).
+ */
+function validateTargetUrl(url: string): void {
+  let parsed: URL;
   try {
-    const axios = require('axios');
-    const response = await axios.post(
-      `${qaLoopExecutorUrl}/api/sessions`,
-      req.body,
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 30000
+    parsed = new URL(url);
+  } catch {
+    throw createError('targetUrl must be a valid URL', 400, 'VALIDATION_ERROR');
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw createError('targetUrl must use http or https', 400, 'VALIDATION_ERROR');
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  // Block localhost and loopback
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+    throw createError('targetUrl may not point to localhost', 400, 'VALIDATION_ERROR');
+  }
+  // Block private IPv4 ranges (RFC 1918) and link-local / metadata endpoints
+  const privateRanges = [
+    /^10\./,
+    /^192\.168\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^169\.254\./,   // link-local / AWS metadata
+    /^0\./,
+  ];
+  if (privateRanges.some(r => r.test(hostname))) {
+    throw createError('targetUrl may not point to a private network address', 400, 'VALIDATION_ERROR');
+  }
+}
+
+/** Uniform error forwarder for all QA Loop proxy calls */
+function forwardQALoopError(error: any, label: string, res: express.Response): void {
+  logger.error(`QA Loop proxy error: ${label}`, { message: error.message, status: error.response?.status });
+  if (error.response) {
+    res.status(error.response.status).json(error.response.data);
+  } else {
+    res.status(500).json({ error: label, details: 'Service unavailable' });
+  }
+}
+
+// ── Circuit Breaker (3.9) ──────────────────────────────────────────────────────
+// Lightweight three-state circuit breaker (CLOSED → OPEN → HALF_OPEN) for all
+// QA Loop executor proxy calls.  Prevents cascading failures when the executor
+// service is down or overwhelmed.
+
+type CBState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+
+class CircuitBreaker {
+  private state: CBState = 'CLOSED';
+  private failures = 0;
+  private lastFailureTime = 0;
+
+  constructor(
+    private readonly name: string,
+    private readonly failureThreshold = 5,   // open after this many consecutive failures
+    private readonly recoveryTimeMs  = 30_000 // try again after 30 s
+  ) {}
+
+  /** Execute `fn` through the circuit breaker. Throws if the circuit is OPEN. */
+  async call<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.state === 'OPEN') {
+      const elapsed = Date.now() - this.lastFailureTime;
+      if (elapsed < this.recoveryTimeMs) {
+        throw Object.assign(
+          new Error(`Circuit breaker [${this.name}] is OPEN — service unavailable`),
+          { isCircuitOpen: true }
+        );
       }
-    );
-    res.status(201).json(response.data);
-  } catch (error: any) {
-    logger.error('Failed to start QA Loop session', { error: error.message });
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      throw createError('Failed to start QA Loop session', 500, 'INTERNAL_ERROR');
+      // Transition to HALF_OPEN and let one probe through
+      this.state = 'HALF_OPEN';
+      logger.info(`Circuit breaker [${this.name}] HALF_OPEN — probing service`);
+    }
+
+    try {
+      const result = await fn();
+      this.onSuccess();
+      return result;
+    } catch (error: any) {
+      this.onFailure(error);
+      throw error;
     }
   }
-}));
 
-// List QA Loop sessions
-app.get('/api/qa-loop/sessions', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
-    const response = await axios.get(
-      `${qaLoopExecutorUrl}/api/sessions`,
-      {
-        params: req.query,
-        timeout: 10000
+  private onSuccess(): void {
+    if (this.state !== 'CLOSED') {
+      logger.info(`Circuit breaker [${this.name}] CLOSED — service recovered`);
+    }
+    this.state = 'CLOSED';
+    this.failures = 0;
+  }
+
+  private onFailure(error: any): void {
+    // Don't count client errors (4xx) as circuit-breaker failures
+    const status = error.response?.status;
+    if (status && status >= 400 && status < 500) return;
+
+    this.failures++;
+    this.lastFailureTime = Date.now();
+
+    if (this.failures >= this.failureThreshold) {
+      if (this.state !== 'OPEN') {
+        logger.warn(`Circuit breaker [${this.name}] OPEN after ${this.failures} failures`);
       }
-    );
-    res.json(response.data);
+      this.state = 'OPEN';
+    }
+  }
+}
+
+/** Single shared breaker for the QA Loop executor service */
+const qaLoopBreaker = new CircuitBreaker('qa-loop-executor');
+
+/**
+ * Wrap a QA Loop proxy call with the circuit breaker.
+ * Returns 503 when the circuit is open rather than waiting for a timeout.
+ */
+async function withQALoopBreaker<T>(
+  res: express.Response,
+  label: string,
+  fn: () => Promise<T>
+): Promise<T | void> {
+  try {
+    return await qaLoopBreaker.call(fn);
   } catch (error: any) {
-    const details = error.response?.data?.details || error.response?.data?.error || error.message;
-    logger.error('Failed to list QA Loop sessions', { error: error.message, details });
-    if (error.response?.status && error.response.status !== 500) {
-      res.status(error.response.status).json(error.response.data);
+    if (error.isCircuitOpen) {
+      res.status(503).json({ error: 'QA Loop service temporarily unavailable — circuit open', details: label });
       return;
     }
-    throw createError(
-      details ? `Failed to list QA Loop sessions: ${details}` : 'Failed to list QA Loop sessions',
-      500,
-      'INTERNAL_ERROR'
-    );
+    forwardQALoopError(error, label, res);
   }
+}
+
+// ── Session lifecycle ──────────────────────────────────────────────────────────
+
+// Start a new QA Loop session  (rate-limited: 5/hour per IP)
+app.post('/api/qa-loop/sessions', requireAuth, qaLoopSessionRateLimiter, asyncHandler(async (req, res) => {
+  const { targetUrl } = req.body;
+  if (!targetUrl) throw createError('targetUrl is required', 400, 'VALIDATION_ERROR');
+  validateTargetUrl(targetUrl);
+
+  await withQALoopBreaker(res, 'Failed to start QA Loop session', async () => {
+    const response = await axios.post(
+      `${qaLoopExecutorUrl}/api/sessions`,
+      { ...req.body, workspaceId: req.workspaceId },
+      { headers: qaLoopHeaders(req), timeout: 30000 }
+    );
+    res.status(201).json(response.data);
+  });
 }));
 
-// Get QA Loop session details
-app.get('/api/qa-loop/sessions/:id', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+// List QA Loop sessions (workspace-filtered)
+app.get('/api/qa-loop/sessions', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to list QA Loop sessions', async () => {
+    const response = await axios.get(`${qaLoopExecutorUrl}/api/sessions`, {
+      params: { ...req.query, workspaceId: req.workspaceId },
+      headers: qaLoopHeaders(req),
+      timeout: 10000
+    });
+    res.json(response.data);
+  });
+}));
+
+// Check for an existing session by base URL (workspace-filtered)
+app.get('/api/qa-loop/sessions/check-existing', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to check existing session', async () => {
+    const response = await axios.get(`${qaLoopExecutorUrl}/api/sessions/check-existing`, {
+      params: { ...req.query, workspaceId: req.workspaceId },
+      headers: qaLoopHeaders(req),
+      timeout: 10000
+    });
+    res.json(response.data);
+  });
+}));
+
+// Get session details
+app.get('/api/qa-loop/sessions/:id', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to get QA Loop session', async () => {
     const response = await axios.get(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}`,
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw createError('QA Loop session not found', 404, 'NOT_FOUND');
-    }
-    logger.error('Failed to get QA Loop session', { error: error.message });
-    throw createError('Failed to get QA Loop session', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Pause QA Loop session
-app.post('/api/qa-loop/sessions/:id/pause', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+// Pause session
+app.post('/api/qa-loop/sessions/:id/pause', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to pause QA Loop session', async () => {
     const response = await axios.post(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/pause`,
       {},
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw createError('QA Loop session not found or not active', 404, 'NOT_FOUND');
-    }
-    logger.error('Failed to pause QA Loop session', { error: error.message });
-    throw createError('Failed to pause QA Loop session', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Resume QA Loop session
-app.post('/api/qa-loop/sessions/:id/resume', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+// Resume session
+app.post('/api/qa-loop/sessions/:id/resume', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to resume QA Loop session', async () => {
     const response = await axios.post(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/resume`,
       {},
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw createError('QA Loop session not found', 404, 'NOT_FOUND');
-    }
-    logger.error('Failed to resume QA Loop session', { error: error.message });
-    throw createError('Failed to resume QA Loop session', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Stop QA Loop session
-app.post('/api/qa-loop/sessions/:id/stop', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+// Stop session
+app.post('/api/qa-loop/sessions/:id/stop', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to stop QA Loop session', async () => {
     const response = await axios.post(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/stop`,
       {},
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    logger.error('Failed to stop QA Loop session', { error: error.message });
-    throw createError('Failed to stop QA Loop session', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Run retest for a session
-app.post('/api/qa-loop/sessions/:id/retest', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+// Run retest
+app.post('/api/qa-loop/sessions/:id/retest', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to start retest', async () => {
     const response = await axios.post(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/retest`,
       req.body,
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 30000
-      }
+      { headers: qaLoopHeaders(req), timeout: 30000 }
     );
     res.status(201).json(response.data);
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw createError('QA Loop session not found', 404, 'NOT_FOUND');
-    }
-    logger.error('Failed to start retest', { error: error.message });
-    throw createError('Failed to start retest', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Get test cases for a session
-app.get('/api/qa-loop/sessions/:id/test-cases', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+// ── Session data sub-resources ─────────────────────────────────────────────────
+
+app.get('/api/qa-loop/sessions/:id/test-cases', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to get test cases', async () => {
     const response = await axios.get(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/test-cases`,
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    logger.error('Failed to get QA Loop test cases', { error: error.message });
-    throw createError('Failed to get test cases', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Get bugs for a session
-app.get('/api/qa-loop/sessions/:id/bugs', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+app.get('/api/qa-loop/sessions/:id/bugs', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to get bugs', async () => {
     const response = await axios.get(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/bugs`,
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    logger.error('Failed to get QA Loop bugs', { error: error.message });
-    throw createError('Failed to get bugs', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Get explored pages for a session
-app.get('/api/qa-loop/sessions/:id/pages', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+app.get('/api/qa-loop/sessions/:id/pages', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to get pages', async () => {
     const response = await axios.get(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/pages`,
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    logger.error('Failed to get QA Loop pages', { error: error.message });
-    throw createError('Failed to get pages', 500, 'INTERNAL_ERROR');
-  }
+  });
 }));
 
-// Get test runs for a session
-app.get('/api/qa-loop/sessions/:id/test-runs', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
+app.get('/api/qa-loop/sessions/:id/test-runs', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to get test runs', async () => {
     const response = await axios.get(
       `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/test-runs`,
-      { timeout: 10000 }
+      { headers: qaLoopHeaders(req), timeout: 10000 }
     );
     res.json(response.data);
-  } catch (error: any) {
-    logger.error('Failed to get QA Loop test runs', { error: error.message });
-    throw createError('Failed to get test runs', 500, 'INTERNAL_ERROR');
-  }
+  });
+}));
+
+// ── Document management ────────────────────────────────────────────────────────
+
+// Combined document context must come BEFORE /:docId to avoid route shadowing
+app.get('/api/qa-loop/sessions/:id/documents/combined', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to get combined documents', async () => {
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents/combined`,
+      { params: req.query, headers: qaLoopHeaders(req), timeout: 10000 }
+    );
+    res.json(response.data);
+  });
+}));
+
+app.get('/api/qa-loop/sessions/:id/documents', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to list documents', async () => {
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents`,
+      { params: req.query, headers: qaLoopHeaders(req), timeout: 10000 }
+    );
+    res.json(response.data);
+  });
+}));
+
+app.post('/api/qa-loop/sessions/:id/documents', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to upload document', async () => {
+    const response = await axios.post(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents`,
+      req.body,
+      { headers: qaLoopHeaders(req), timeout: 30000 }
+    );
+    res.status(201).json(response.data);
+  });
+}));
+
+app.get('/api/qa-loop/sessions/:id/documents/:docId', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to get document', async () => {
+    const response = await axios.get(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents/${req.params.docId}`,
+      { params: req.query, headers: qaLoopHeaders(req), timeout: 10000 }
+    );
+    res.json(response.data);
+  });
+}));
+
+app.patch('/api/qa-loop/sessions/:id/documents/:docId', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to update document', async () => {
+    const response = await axios.patch(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents/${req.params.docId}`,
+      req.body,
+      { headers: qaLoopHeaders(req), timeout: 10000 }
+    );
+    res.json(response.data);
+  });
+}));
+
+app.delete('/api/qa-loop/sessions/:id/documents/:docId', requireAuth, asyncHandler(async (req, res) => {
+  await withQALoopBreaker(res, 'Failed to delete document', async () => {
+    const response = await axios.delete(
+      `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents/${req.params.docId}`,
+      { headers: qaLoopHeaders(req), timeout: 10000 }
+    );
+    res.json(response.data);
+  });
 }));
 
 // Root endpoint

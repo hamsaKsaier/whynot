@@ -2,6 +2,7 @@ import { createLogger } from '../../shared/logger/logger';
 import { QALoopRepository, QALoopTestCase, QALoopPage } from './repositories/qa-loop-repository';
 import { emitToSession } from './api/websocket';
 import { DetectiveAgent, RootCauseAnalysis, TestFailure } from './agents/detective-agent';
+import { DEFAULT_CONFIG } from './config/optimization-config';
 import axios from 'axios';
 import crypto from 'crypto';
 
@@ -126,48 +127,45 @@ export class RetestExecutor {
         }
       }
 
-      // Run each test case
-      for (let i = 0; i < testCases.length; i++) {
-        const testCase = testCases[i];
+      // Run test cases in parallel batches using maxConcurrentTests (4.8)
+      const maxConcurrent = DEFAULT_CONFIG.parallel.maxConcurrentTests || 2;
 
+      /** Execute one test case: run → emit result → persist to DB */
+      const runOne = async (testCase: QALoopTestCase, index: number): Promise<TestRunResult> => {
         emitToSession(this.sessionId, {
           type: 'progress',
-          data: {
-            phase: 'testing',
-            current: i + 1,
-            total: testCases.length,
-            testCase: testCase.name
-          }
+          data: { phase: 'testing', current: index + 1, total: testCases.length, testCase: testCase.name }
         });
 
         const result = await this.executeTestCase(testCase);
-        results.push(result);
 
-        // Emit individual result
         emitToSession(this.sessionId, {
           type: 'tool_result',
-          data: {
-            tool: 'test_execution',
-            testCase: testCase.name,
-            status: result.status,
-            selfHealed: result.selfHealed
-          }
+          data: { tool: 'test_execution', testCase: testCase.name, status: result.status, selfHealed: result.selfHealed }
         });
 
-        // Save test run to database
         await this.repository.addTestRun(this.sessionId, testCase.id, {
           status: result.status,
           durationMs: result.duration,
           stepsTotal: testCase.steps.length,
-          stepsCompleted: result.failureStep !== undefined
-            ? result.failureStep
-            : testCase.steps.length,
+          stepsCompleted: result.failureStep !== undefined ? result.failureStep : testCase.steps.length,
           failureStepIndex: result.failureStep,
           failureReason: result.failureReason,
           failureType: result.failureType,
           selfHealed: result.selfHealed,
           healedSelectors: result.healedSelectors
         });
+
+        return result;
+      };
+
+      // Process in concurrent batches of maxConcurrent (linear → parallel, 4.8)
+      for (let batch = 0; batch < testCases.length; batch += maxConcurrent) {
+        const chunk = testCases.slice(batch, batch + maxConcurrent);
+        const batchResults = await Promise.all(
+          chunk.map((tc, idx) => runOne(tc, batch + idx))
+        );
+        results.push(...batchResults);
       }
 
       const duration = Date.now() - startTime;

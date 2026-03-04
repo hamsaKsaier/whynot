@@ -1,4 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+
+/**
+ * Safe URL part extractor — returns `fallback` instead of crashing the React
+ * tree when `url` is malformed or missing (3.5).
+ */
+function safeUrlPart(url: string | undefined | null, part: 'pathname' | 'hostname', fallback?: string): string {
+  try {
+    if (!url) return fallback ?? '';
+    return new URL(url)[part] || fallback || url;
+  } catch {
+    return fallback ?? url ?? '';
+  }
+}
 import { useToastContext } from '../contexts/ToastContext';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -72,6 +85,18 @@ import {
   FiMinimize2
 } from 'react-icons/fi';
 
+// Pure helpers — defined outside the component so they are never re-created (4.3)
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'running': return 'text-blue-500';
+    case 'completed': return 'text-green-500';
+    case 'paused': return 'text-yellow-500';
+    case 'failed': return 'text-red-500';
+    case 'cancelled': return 'text-gray-500';
+    default: return 'text-gray-400';
+  }
+}
+
 // Results Tabs Component with Chaos and Analysis
 const ResultsTabs: React.FC<{
   testCases: QALoopTestCase[];
@@ -107,7 +132,7 @@ const ResultsTabs: React.FC<{
 
   return (
     <>
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
+      <div className="border-b border-gray-200 mb-4">
         <nav className="flex gap-4 flex-wrap">
           <button
             onClick={() => setActiveTab('tests')}
@@ -166,11 +191,11 @@ const ResultsTabs: React.FC<{
               </div>
             ) : (
               testCases.map((tc) => (
-                <div key={tc.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div key={tc.id} className="p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(tc.last_run_status)}
-                      <span className="font-medium text-gray-900 dark:text-white">{tc.name}</span>
+                      <span className="font-medium text-gray-900">{tc.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
@@ -206,9 +231,9 @@ const ResultsTabs: React.FC<{
               </div>
             ) : (
               bugs.map((bug) => (
-                <div key={bug.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border-l-4 border-red-400">
+                <div key={bug.id} className="p-3 bg-gray-50 rounded-lg border-l-4 border-red-400">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900 dark:text-white">{bug.title}</span>
+                    <span className="font-medium text-gray-900">{bug.title}</span>
                     <span className={`text-xs px-2 py-1 rounded ${getSeverityColor(bug.severity)}`}>
                       {bug.severity}
                     </span>
@@ -239,7 +264,7 @@ const ResultsTabs: React.FC<{
               </div>
             ) : (
               pages.map((page) => (
-                <div key={page.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div key={page.id} className="p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {page.is_explored ? (
@@ -247,8 +272,8 @@ const ResultsTabs: React.FC<{
                       ) : (
                         <FiClock className="text-yellow-500" />
                       )}
-                      <span className="font-medium text-gray-900 dark:text-white truncate max-w-md">
-                        {page.title || new URL(page.url).pathname}
+                      <span className="font-medium text-gray-900 truncate max-w-md">
+                        {page.title || safeUrlPart(page.url, 'pathname', page.url)}
                       </span>
                     </div>
                     {page.page_type && (
@@ -348,11 +373,23 @@ export const QALoopPage: React.FC = () => {
   // UI state
   const [isStarting, setIsStarting] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem('qa-loop-onboarding-seen')
+  );
+
+  const dismissOnboarding = useCallback(() => {
+    localStorage.setItem('qa-loop-onboarding-seen', '1');
+    setShowOnboarding(false);
+  }, []);
   const [showThinking, setShowThinking] = useState(true);
   const [showToolCalls, setShowToolCalls] = useState(true);
   const [showQualityDashboard, setShowQualityDashboard] = useState(true);
   const [expandedPreview, setExpandedPreview] = useState(false);
+
+  // Cache for completed/cancelled session details — these never change so
+  // repeated clicks cost zero network (4.6)
+  const completedSessionCache = useRef<Map<string, any>>(new Map());
 
   // WebSocket stream
   const {
@@ -379,39 +416,50 @@ export const QALoopPage: React.FC = () => {
     loadSessions();
   }, []);
 
-  // Poll for session updates when active
+  // Poll for session updates only when WebSocket is NOT connected (fallback)
+  // When WebSocket is live it streams the same data — polling is redundant (4.1)
   useEffect(() => {
-    if (activeSession && activeSession.status === 'running') {
+    if (activeSession && activeSession.status === 'running' && !isConnected) {
       const interval = setInterval(() => {
         loadSessionDetails(activeSession.id);
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [activeSession?.id, activeSession?.status]);
+  }, [activeSession?.id, activeSession?.status, isConnected]);
 
-  // Check for existing sessions when target URL changes (Phase 3)
+  // Check for existing sessions when target URL changes.
+  // AbortController cancels any in-flight request when the URL changes again
+  // so stale responses from previous keystrokes are never applied (4.7)
   useEffect(() => {
+    const controller = new AbortController();
+
     const checkUrl = async () => {
       if (!targetUrl || targetUrl.length < 10) {
         setExistingSession(null);
         return;
       }
 
-      // Debounce - only check after user stops typing
       try {
-        const result = await checkExistingSession(targetUrl);
-        if (result.exists && result.session) {
-          setExistingSession(result.session);
-        } else {
+        const result = await checkExistingSession(targetUrl, { signal: controller.signal });
+        if (!controller.signal.aborted) {
+          if (result.exists && result.session) {
+            setExistingSession(result.session);
+          } else {
+            setExistingSession(null);
+          }
+        }
+      } catch (err: any) {
+        if (!controller.signal.aborted) {
           setExistingSession(null);
         }
-      } catch {
-        setExistingSession(null);
       }
     };
 
     const debounceTimer = setTimeout(checkUrl, 500);
-    return () => clearTimeout(debounceTimer);
+    return () => {
+      clearTimeout(debounceTimer);
+      controller.abort(); // Cancel any in-flight request on cleanup (4.7)
+    };
   }, [targetUrl]);
 
   // Load documents when session changes (Phase 4)
@@ -487,83 +535,85 @@ export const QALoopPage: React.FC = () => {
 
   const loadSessionDetails = async (sessionId: string) => {
     try {
-      const details = await getQALoopSession(sessionId);
-      setActiveSession(details.session);
-      setSessionTestCases(details.testCases || []);
-      setSessionBugs(details.bugs || []);
-      setSessionPages(details.pages || []);
-
-      // Update quality score from session
-      if (details.session) {
-        const session = details.session;
-        // Calculate risks from bugs
-        const bugs = details.bugs || [];
-        setRisks({
-          critical: bugs.filter(b => b.severity === 'critical').length,
-          high: bugs.filter(b => b.severity === 'high').length,
-          medium: bugs.filter(b => b.severity === 'medium').length,
-          low: bugs.filter(b => b.severity === 'low').length
-        });
-
-        // Update quality score
-        const pages = details.pages || [];
-        const tests = details.testCases || [];
-        const exploredCount = pages.filter(p => p.is_explored).length;
-        const coverageScore = pages.length > 0 ? Math.round((exploredCount / pages.length) * 100) : 0;
-        const passingTests = tests.filter(t => t.last_run_status === 'passed').length;
-        const stabilityScore = tests.length > 0 ? Math.round((passingTests / tests.length) * 100) : 100;
-        const securityBugs = bugs.filter(b => b.category === 'security');
-        const securityScore = Math.max(0, 100 - (securityBugs.filter(b => b.severity === 'critical').length * 25 + securityBugs.filter(b => b.severity === 'high').length * 15));
-
-        setQualityScore({
-          overall: session.quality_score || 0,
-          breakdown: {
-            coverage: coverageScore,
-            stability: stabilityScore,
-            security: securityScore,
-            accessibility: 80,
-            performance: 80
-          },
-          trend: 'stable',
-          scoreDelta: 0
-        });
-
-        // Add to iteration history
-        if (session.iteration_count > 0) {
-          setIterationHistory(prev => {
-            const newEntry = {
-              iteration: session.iteration_count,
-              score: session.quality_score || 0,
-              focus: 'explore',
-              timestamp: new Date().toISOString()
-            };
-            // Keep last 10 entries
-            const updated = [...prev.filter(h => h.iteration !== session.iteration_count), newEntry];
-            return updated.slice(-10);
-          });
-        }
+      // Return cached data for completed/cancelled sessions — they never change (4.6)
+      if (completedSessionCache.current.has(sessionId)) {
+        const cached = completedSessionCache.current.get(sessionId)!;
+        applySessionDetails(cached);
+        return;
       }
 
-      // Load chaos results and analyses if available
-      // These would come from extended API endpoints
-      // For now, extract security bugs as chaos results
-      const securityBugs = (details.bugs || []).filter(b => b.category === 'security');
-      setChaosResults(securityBugs.map(bug => ({
-        id: bug.id,
-        pageUrl: bug.page_url || '',
-        attackCategory: bug.bug_type || 'security',
-        attackName: bug.title,
-        payloadUsed: '',
-        result: 'vulnerable' as const,
-        vulnerabilityConfirmed: true,
-        severity: bug.severity,
-        confidence: 0.8,
-        reproductionSteps: bug.reproduction_steps || []
-      })));
+      const details = await getQALoopSession(sessionId);
 
+      // Store in cache if the session has reached a terminal state (4.6)
+      const status = details.session?.status;
+      if (status === 'completed' || status === 'cancelled' || status === 'failed') {
+        completedSessionCache.current.set(sessionId, details);
+      }
+
+      applySessionDetails(details);
     } catch (err: any) {
       console.error('Failed to load session details:', err);
     }
+  };
+
+  /** Apply fetched session details to component state. Shared by the live
+   *  fetch path and the completed-session cache path (4.6). */
+  const applySessionDetails = (details: any) => {
+    setActiveSession(details.session);
+    setSessionTestCases(details.testCases || []);
+    setSessionBugs(details.bugs || []);
+    setSessionPages(details.pages || []);
+
+    if (details.session) {
+      const session = details.session;
+      const bugs = details.bugs || [];
+      setRisks({
+        critical: bugs.filter((b: any) => b.severity === 'critical').length,
+        high: bugs.filter((b: any) => b.severity === 'high').length,
+        medium: bugs.filter((b: any) => b.severity === 'medium').length,
+        low: bugs.filter((b: any) => b.severity === 'low').length
+      });
+
+      const pages = details.pages || [];
+      const tests = details.testCases || [];
+      const exploredCount = pages.filter((p: any) => p.is_explored).length;
+      const coverageScore = pages.length > 0 ? Math.round((exploredCount / pages.length) * 100) : 0;
+      const passingTests = tests.filter((t: any) => t.last_run_status === 'passed').length;
+      const stabilityScore = tests.length > 0 ? Math.round((passingTests / tests.length) * 100) : 100;
+      const securityBugsArr = bugs.filter((b: any) => b.category === 'security');
+      const securityScore = Math.max(0, 100 - (
+        securityBugsArr.filter((b: any) => b.severity === 'critical').length * 25 +
+        securityBugsArr.filter((b: any) => b.severity === 'high').length * 15
+      ));
+
+      setQualityScore({
+        overall: session.quality_score || 0,
+        breakdown: { coverage: coverageScore, stability: stabilityScore, security: securityScore, accessibility: 80, performance: 80 },
+        trend: 'stable',
+        scoreDelta: 0
+      });
+
+      if (session.iteration_count > 0) {
+        setIterationHistory(prev => {
+          const newEntry = { iteration: session.iteration_count, score: session.quality_score || 0, focus: 'explore', timestamp: new Date().toISOString() };
+          return [...prev.filter((h: any) => h.iteration !== session.iteration_count), newEntry].slice(-10);
+        });
+      }
+    }
+
+    const securityBugs = (details.bugs || []).filter((b: any) => b.category === 'security');
+    setChaosResults(securityBugs.map((bug: any) => ({
+      id: bug.id,
+      pageUrl: bug.page_url || '',
+      attackCategory: bug.bug_type || 'security',
+      attackName: bug.title,
+      payloadUsed: '',
+      result: 'vulnerable' as const,
+      vulnerabilityConfirmed: true,
+      severity: bug.severity,
+      confidence: 0.8,
+      reproductionSteps: bug.reproduction_steps || []
+    })));
   };
 
   const handleStartSession = async () => {
@@ -612,7 +662,9 @@ export const QALoopPage: React.FC = () => {
     }
   };
 
-  const handlePauseSession = async () => {
+  // Wrap session-action handlers in useCallback so child components only
+  // re-render when their actual dependency (activeSession) changes (4.3)
+  const handlePauseSession = useCallback(async () => {
     if (!activeSession) return;
     try {
       await pauseQALoopSession(activeSession.id);
@@ -621,9 +673,9 @@ export const QALoopPage: React.FC = () => {
     } catch (err: any) {
       showError('Failed to pause session');
     }
-  };
+  }, [activeSession, success, showError]);
 
-  const handleResumeSession = async () => {
+  const handleResumeSession = useCallback(async () => {
     if (!activeSession) return;
     try {
       await resumeQALoopSession(activeSession.id);
@@ -632,9 +684,9 @@ export const QALoopPage: React.FC = () => {
     } catch (err: any) {
       showError('Failed to resume session');
     }
-  };
+  }, [activeSession, success, showError]);
 
-  const handleStopSession = async () => {
+  const handleStopSession = useCallback(async () => {
     if (!activeSession) return;
     try {
       await stopQALoopSession(activeSession.id);
@@ -644,67 +696,101 @@ export const QALoopPage: React.FC = () => {
     } catch (err: any) {
       showError('Failed to stop session');
     }
-  };
+  }, [activeSession, success, showError]);
 
-  const handleRetest = async (mode: 'quick' | 'smart') => {
+  const handleRetest = useCallback(async (mode: 'quick' | 'smart') => {
     if (!activeSession) return;
     try {
       const result = await runRetest(activeSession.id, mode);
       success(`${mode === 'quick' ? 'Quick' : 'Smart'} retest started!`);
-      // Load the new retest session
       loadSessionDetails(result.retestSessionId);
     } catch (err: any) {
       showError('Failed to start retest');
     }
-  };
+  }, [activeSession, success, showError]);
 
-  const handleSelectSession = (session: QALoopSession) => {
+  const handleSelectSession = useCallback((session: QALoopSession) => {
     setActiveSession(session);
     loadSessionDetails(session.id);
     clearEvents();
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'running': return 'text-blue-500';
-      case 'completed': return 'text-green-500';
-      case 'paused': return 'text-yellow-500';
-      case 'failed': return 'text-red-500';
-      case 'cancelled': return 'text-gray-500';
-      default: return 'text-gray-400';
-    }
-  };
+  }, [clearEvents]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div>
+      <div>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <FiZap className="text-purple-500" />
             QA Loop
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-gray-600 mt-2">
             Autonomous exploration and testing powered by AI. Point at a URL, let it explore overnight.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* First-run onboarding banner */}
+        {showOnboarding && !activeSession && (
+          <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-primary-200 bg-gradient-to-r from-primary-50 to-purple-50 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <FiZap className="text-primary-600" /> How QA Loop works
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
+                  <div className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">1</span>
+                    <div>
+                      <p className="font-medium text-gray-800">Enter a URL</p>
+                      <p className="text-xs text-gray-500">Any public or internal app</p>
+                    </div>
+                  </div>
+                  <div className="hidden sm:block text-gray-300 self-center">→</div>
+                  <div className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">2</span>
+                    <div>
+                      <p className="font-medium text-gray-800">AI explores overnight</p>
+                      <p className="text-xs text-gray-500">Clicks, forms, edge cases</p>
+                    </div>
+                  </div>
+                  <div className="hidden sm:block text-gray-300 self-center">→</div>
+                  <div className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">3</span>
+                    <div>
+                      <p className="font-medium text-gray-800">See results</p>
+                      <p className="text-xs text-gray-500">Bugs, tests, quality score</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={dismissOnboarding}
+                className="flex-shrink-0 text-xs text-gray-400 hover:text-gray-600 transition-colors mt-0.5"
+                aria-label="Dismiss"
+              >
+                Got it ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className={activeSession ? 'grid grid-cols-1 lg:grid-cols-3 gap-6' : 'max-w-3xl mx-auto space-y-6'}>
           {/* Left Column - Start Form & Sessions */}
           <div className="space-y-6">
             {/* Start New Session */}
             <Card className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FiPlay className="text-green-500" />
                 Start New Exploration
               </h2>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Target URL
                   </label>
                   <Input
+                    id="target-url-input"
                     type="url"
                     placeholder="https://example.com"
                     value={targetUrl}
@@ -715,14 +801,14 @@ export const QALoopPage: React.FC = () => {
 
                 {/* Existing Session Prompt (Phase 3) */}
                 {existingSession && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start gap-3">
                       <FiRefreshCw className="text-blue-500 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        <p className="text-sm font-medium text-blue-900">
                           Previous run found for this URL
                         </p>
-                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        <p className="text-xs text-blue-700 mt-1">
                           {existingSession.testCaseCount} test cases | {existingSession.bugsFound} bugs | Last run: {new Date(existingSession.completedAt).toLocaleDateString()}
                         </p>
                         <div className="flex gap-2 mt-3">
@@ -731,7 +817,7 @@ export const QALoopPage: React.FC = () => {
                             onClick={() => setUseExisting(true)}
                             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${useExisting
                                 ? 'bg-blue-600 text-white'
-                                : 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-700'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                               }`}
                           >
                             Continue from last run
@@ -741,7 +827,7 @@ export const QALoopPage: React.FC = () => {
                             onClick={() => setUseExisting(false)}
                             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!useExisting
                                 ? 'bg-blue-600 text-white'
-                                : 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-700'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                               }`}
                           >
                             Start fresh
@@ -755,17 +841,17 @@ export const QALoopPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
                 >
                   {showAdvanced ? <FiChevronUp /> : <FiChevronDown />}
                   Advanced Options
                 </button>
 
                 {showAdvanced && (
-                  <div className="space-y-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="space-y-4 pt-2 border-t border-gray-200">
                     {/* Test Priority (Phase 5) */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                         Test Priority
                         <span className="group relative">
                           <FiInfo className="text-gray-400 cursor-help" size={14} />
@@ -779,7 +865,7 @@ export const QALoopPage: React.FC = () => {
                       <select
                         value={testPriority}
                         onChange={(e) => setTestPriority(e.target.value as any)}
-                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="functional_first">Functional First (recommended)</option>
                         <option value="balanced">Balanced</option>
@@ -788,7 +874,7 @@ export const QALoopPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Quality Threshold (%)
                       </label>
                       <Input
@@ -802,7 +888,7 @@ export const QALoopPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Max Iterations
                       </label>
                       <Input
@@ -816,11 +902,11 @@ export const QALoopPage: React.FC = () => {
                     </div>
 
                     {/* Login Credentials (Phase 2) */}
-                    <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+                    <div className="border border-gray-200 rounded-lg p-3">
                       <button
                         type="button"
                         onClick={() => setUseLogin(!useLogin)}
-                        className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700 dark:text-gray-300"
+                        className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700"
                       >
                         {useLogin ? <FiToggleRight className="text-blue-500" size={20} /> : <FiToggleLeft className="text-gray-400" size={20} />}
                         <FiLock className="text-gray-500" size={14} />
@@ -829,12 +915,12 @@ export const QALoopPage: React.FC = () => {
 
                       {useLogin && (
                         <div className="mt-3 space-y-3">
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-gray-500">
                             Use a test account only. Credentials are sent securely to the test runner.
                           </p>
 
                           <div>
-                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Email / Username</label>
+                            <label className="block text-xs text-gray-600 mb-1">Email / Username</label>
                             <div className="relative">
                               <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
                               <Input
@@ -848,7 +934,7 @@ export const QALoopPage: React.FC = () => {
                           </div>
 
                           <div>
-                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Password</label>
+                            <label className="block text-xs text-gray-600 mb-1">Password</label>
                             <div className="relative">
                               <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
                               <Input
@@ -869,7 +955,7 @@ export const QALoopPage: React.FC = () => {
                           </div>
 
                           <div>
-                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Login URL (optional)</label>
+                            <label className="block text-xs text-gray-600 mb-1">Login URL (optional)</label>
                             <Input
                               type="text"
                               placeholder="Leave empty to use target URL"
@@ -880,7 +966,7 @@ export const QALoopPage: React.FC = () => {
                           </div>
 
                           <details className="text-xs">
-                            <summary className="text-gray-500 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                            <summary className="text-gray-500 cursor-pointer hover:text-gray-700">
                               Custom selectors (advanced)
                             </summary>
                             <div className="mt-2 space-y-2">
@@ -912,7 +998,7 @@ export const QALoopPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Quick Context (paste)
                       </label>
                       <Textarea
@@ -926,22 +1012,12 @@ export const QALoopPage: React.FC = () => {
 
                     {/* Document Upload (Phase 4) */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Documents (upload files)
                       </label>
                       <DocumentUpload
                         sessionId={activeSession?.id}
-                        documents={documents.map(d => ({
-                          id: d.id,
-                          filename: d.filename,
-                          fileType: d.file_type,
-                          fileSizeBytes: d.file_size_bytes,
-                          summary: d.summary || undefined,
-                          chunkCount: d.chunk_count,
-                          estimatedTokens: d.estimated_tokens || undefined,
-                          isActive: d.is_active,
-                          createdAt: d.created_at
-                        }))}
+                        documents={documents as any}
                         onUpload={handleUploadDocument}
                         onDelete={handleDeleteDocument}
                         onToggle={handleToggleDocument}
@@ -979,7 +1055,7 @@ export const QALoopPage: React.FC = () => {
 
             {/* Recent Sessions */}
             <Card className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FiClock className="text-blue-500" />
                 Recent Sessions
               </h2>
@@ -987,7 +1063,20 @@ export const QALoopPage: React.FC = () => {
               {isLoadingSessions ? (
                 <div className="text-center py-4 text-gray-500">Loading...</div>
               ) : sessions.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">No sessions yet</div>
+                <div className="text-center py-8">
+                  <FiClock className="h-8 w-8 text-gray-200 mx-auto mb-3" />
+                  <p className="text-sm text-gray-400 mb-3">No sessions yet</p>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('target-url-input');
+                      el?.focus();
+                      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                  >
+                    Start your first exploration →
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {sessions.map((session) => (
@@ -995,13 +1084,13 @@ export const QALoopPage: React.FC = () => {
                       key={session.id}
                       onClick={() => handleSelectSession(session)}
                       className={`w-full text-left p-3 rounded-lg border transition-all ${activeSession?.id === session.id
-                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-md ring-1 ring-purple-300 dark:ring-purple-600'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
+                        ? 'border-purple-500 bg-purple-50 shadow-md ring-1 ring-purple-300'
+                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                         }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {new URL(session.target_url).hostname}
+                        <span className="text-sm font-medium text-gray-900 truncate">
+                          {safeUrlPart(session.target_url, 'hostname', session.target_url)}
                         </span>
                         <span className={`text-xs font-medium ${getStatusColor(session.status)}`}>
                           {session.status}
@@ -1019,15 +1108,15 @@ export const QALoopPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* Middle Column - Live View */}
-          <div className="lg:col-span-2 space-y-6">
-            {activeSession ? (
+          {/* Right Column - Live View (only when session is active) */}
+          {activeSession && (
+            <div className="lg:col-span-2 space-y-6">
               <>
                 {/* Session Header */}
                 <Card className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                         <FiGlobe className="text-purple-500" />
                         {activeSession.target_url}
                       </h3>
@@ -1075,35 +1164,35 @@ export const QALoopPage: React.FC = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
                   <Card className="p-4 text-center">
                     <FiGlobe className="mx-auto text-2xl text-blue-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-2xl font-bold text-gray-900">
                       {pagesExplored.length || activeSession.pages_explored}
                     </div>
                     <div className="text-xs text-gray-500">Pages Explored</div>
                   </Card>
                   <Card className="p-4 text-center">
                     <FiFileText className="mx-auto text-2xl text-green-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-2xl font-bold text-gray-900">
                       {testsGenerated.length || activeSession.tests_generated}
                     </div>
                     <div className="text-xs text-gray-500">Tests Generated</div>
                   </Card>
                   <Card className="p-4 text-center">
                     <FiAlertTriangle className="mx-auto text-2xl text-red-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-2xl font-bold text-gray-900">
                       {bugsFound.length || activeSession.bugs_found}
                     </div>
                     <div className="text-xs text-gray-500">Bugs Found</div>
                   </Card>
                   <Card className="p-4 text-center">
                     <FiShield className="mx-auto text-2xl text-orange-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-2xl font-bold text-gray-900">
                       {chaosResults.filter(r => r.vulnerabilityConfirmed).length}
                     </div>
                     <div className="text-xs text-gray-500">Vulnerabilities</div>
                   </Card>
-                  <Card className="p-4 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => setShowQualityDashboard(!showQualityDashboard)}>
+                  <Card className="p-4 text-center cursor-pointer hover:bg-gray-50" onClick={() => setShowQualityDashboard(!showQualityDashboard)}>
                     <FiBarChart2 className="mx-auto text-2xl text-purple-500 mb-2" />
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-2xl font-bold text-gray-900">
                       {qualityScore.overall}%
                     </div>
                     <div className="text-xs text-gray-500">Quality Score</div>
@@ -1113,7 +1202,7 @@ export const QALoopPage: React.FC = () => {
                 {/* Quality Dashboard (collapsible) */}
                 {showQualityDashboard && (
                   <Card className="p-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <FiBarChart2 className="text-purple-500" />
                       Quality Dashboard
                       <button
@@ -1137,18 +1226,18 @@ export const QALoopPage: React.FC = () => {
                 <div className={`grid gap-6 ${expandedPreview ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                   {/* Browser Preview */}
                   <Card className={`p-4 ${expandedPreview ? 'col-span-full' : ''}`}>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                       <FiImage className="text-blue-500" />
                       Live Browser Preview
                       <button
                         onClick={() => setExpandedPreview(!expandedPreview)}
-                        className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="ml-auto text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-100"
                         title={expandedPreview ? 'Minimize' : 'Maximize'}
                       >
                         {expandedPreview ? <FiMinimize2 size={16} /> : <FiMaximize2 size={16} />}
                       </button>
                     </h3>
-                    <div className={`bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden ${expandedPreview ? 'h-96' : 'aspect-video'}`}>
+                    <div className={`bg-gray-100 rounded-lg overflow-hidden ${expandedPreview ? 'h-96' : 'aspect-video'}`}>
                       {currentScreenshot ? (
                         <img
                           src={currentScreenshot}
@@ -1181,7 +1270,7 @@ export const QALoopPage: React.FC = () => {
                   {/* AI Thinking - hidden when preview is expanded */}
                   {!expandedPreview && (
                     <Card className="p-4">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                         <FiTerminal className="text-green-500" />
                         AI Thinking
                         <button
@@ -1202,7 +1291,7 @@ export const QALoopPage: React.FC = () => {
 
                 {/* Tool Calls */}
                 <Card className="p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <FiActivity className="text-purple-500" />
                     Recent Tool Calls
                     <button
@@ -1218,8 +1307,8 @@ export const QALoopPage: React.FC = () => {
                         <div className="text-gray-500 text-sm">No tool calls yet</div>
                       ) : (
                         toolCalls.slice(-10).reverse().map((call, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                            <span className="font-mono text-purple-600 dark:text-purple-400">{call.tool}</span>
+                          <div key={idx} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded">
+                            <span className="font-mono text-purple-600">{call.tool}</span>
                             {call.result && (
                               <span className="text-green-500">✓</span>
                             )}
@@ -1244,31 +1333,8 @@ export const QALoopPage: React.FC = () => {
                   />
                 </Card>
               </>
-            ) : (
-              /* No Active Session */
-              <Card className="p-12 text-center">
-                <FiZap className="mx-auto text-6xl text-purple-500 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  Start Your First QA Loop
-                </h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                  Enter a URL on the left and let our AI autonomously explore your application,
-                  generate test cases, and find bugs while you sleep.
-                </p>
-                <div className="flex justify-center gap-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <FiGlobe className="text-blue-500" /> Explores all pages
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FiFileText className="text-green-500" /> Generates tests
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FiAlertTriangle className="text-red-500" /> Finds bugs
-                  </div>
-                </div>
-              </Card>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Error Alert */}

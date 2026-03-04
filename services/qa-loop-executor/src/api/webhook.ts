@@ -680,10 +680,10 @@ router.post('/webhook/trigger', async (req: AuthenticatedRequest, res: Response)
  */
 router.post('/api/api-keys', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // In production, check for admin permission
-    // if (req.apiKey && !req.apiKey.permissions.includes('admin')) {
-    //   return res.status(403).json({ error: 'Admin permission required' });
-    // }
+    // Only API keys with admin permission can create new API keys
+    if (req.apiKey && !req.apiKey.permissions.includes('admin')) {
+      return res.status(403).json({ error: 'Admin permission required' });
+    }
 
     const { name, permissions, rate_limit_per_hour, expires_in_days } = req.body;
 

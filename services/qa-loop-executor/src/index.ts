@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import routes from './api/routes';
+import routes, { shutdownActiveSessions } from './api/routes';
 import { setupWebSocketServer } from './api/websocket';
 import { createLogger } from '../../shared/logger/logger';
 
@@ -50,6 +50,44 @@ server.listen(PORT, () => {
     testExecutorUrl: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001',
     anthropicConfigured: !!process.env.ANTHROPIC_API_KEY
   });
+});
+
+// ── Graceful shutdown (3.1) ────────────────────────────────────────────────────
+// Stop all active orchestrators, update DB statuses, and close the HTTP server
+// cleanly before the process exits so no session gets stuck in 'running' state.
+
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string): Promise<void> {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  logger.info(`Received ${signal} — starting graceful shutdown`);
+
+  // Stop accepting new HTTP connections
+  server.close(async () => {
+    try {
+      await shutdownActiveSessions();
+      logger.info('All active sessions stopped cleanly');
+    } catch (error: any) {
+      logger.error('Error stopping sessions during shutdown', { error: error.message });
+    }
+    process.exit(0);
+  });
+
+  // Safety net: force-exit after 30 seconds if server.close() stalls
+  setTimeout(() => {
+    logger.error('Graceful shutdown timed out after 30 s — forcing exit');
+    process.exit(1);
+  }, 30_000).unref();
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
+// Log unhandled promise rejections so they don't silently swallow errors
+process.on('unhandledRejection', (reason: any) => {
+  logger.error('Unhandled promise rejection', { reason: reason?.message ?? String(reason) });
 });
 
 export { server };

@@ -11,6 +11,7 @@ export interface ExecutionEntity {
   total_duration_ms: number | null;
   error: string | null;
   screenshots: string[] | null;
+  workspace_id: string | null;
   created_at: Date;
 }
 
@@ -30,8 +31,10 @@ export interface StepResultEntity {
 export class ExecutionRepository {
   /**
    * Create a new execution
+   * @param execution  The execution result data
+   * @param workspaceId  Optional workspace to scope the execution to
    */
-  async create(execution: ExecutionResult): Promise<ExecutionEntity> {
+  async create(execution: ExecutionResult, workspaceId?: string): Promise<ExecutionEntity> {
     return await transaction(async (client) => {
       // Convert started_at from ISO string to Date if needed
       let startedAt: Date;
@@ -54,8 +57,8 @@ export class ExecutionRepository {
 
       // Insert execution
       const execResult = await client.query<ExecutionEntity>(
-        `INSERT INTO executions (id, test_case_id, status, started_at, completed_at, total_duration_ms, error, screenshots)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO executions (id, test_case_id, status, started_at, completed_at, total_duration_ms, error, screenshots, workspace_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           execution.execution_id,
@@ -65,7 +68,8 @@ export class ExecutionRepository {
           completedAt,
           execution.total_duration_ms,
           execution.error || null,
-          execution.screenshots || []
+          execution.screenshots || [],
+          workspaceId || null
         ]
       );
 
@@ -94,14 +98,14 @@ export class ExecutionRepository {
   }
 
   /**
-   * Find execution by ID
+   * Find execution by ID, optionally scoped to a workspace
    */
-  async findById(id: string): Promise<ExecutionEntity | null> {
-    const result = await query<ExecutionEntity>(
-      'SELECT * FROM executions WHERE id = $1',
-      [id]
-    );
-
+  async findById(id: string, workspaceId?: string): Promise<ExecutionEntity | null> {
+    const sql = workspaceId
+      ? 'SELECT * FROM executions WHERE id = $1 AND workspace_id = $2'
+      : 'SELECT * FROM executions WHERE id = $1';
+    const params = workspaceId ? [id, workspaceId] : [id];
+    const result = await query<ExecutionEntity>(sql, params);
     return result[0] || null;
   }
 
@@ -126,22 +130,26 @@ export class ExecutionRepository {
   }
 
   /**
-   * Get total count of executions
+   * Get total count of executions, optionally scoped to a workspace
    */
   async count(filters?: {
     status?: string;
     search?: string;
+    workspaceId?: string;
   }): Promise<number> {
     let queryStr = 'SELECT COUNT(*) as count FROM executions e';
     const conditions: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
+    if (filters?.workspaceId) {
+      conditions.push(`e.workspace_id = $${paramIndex++}`);
+      values.push(filters.workspaceId);
+    }
     if (filters?.status) {
       conditions.push(`e.status = $${paramIndex++}`);
       values.push(filters.status);
     }
-
     if (filters?.search) {
       queryStr += ' LEFT JOIN test_cases tc ON e.test_case_id = tc.id';
       conditions.push(`(e.id ILIKE $${paramIndex} OR e.test_case_id ILIKE $${paramIndex} OR tc.name ILIKE $${paramIndex})`);
@@ -158,7 +166,8 @@ export class ExecutionRepository {
   }
 
   /**
-   * List all executions with pagination, filtering, and search
+   * List all executions with pagination, filtering, and search.
+   * When workspaceId is provided only executions in that workspace are returned.
    */
   async list(
     offset: number = 0,
@@ -166,6 +175,7 @@ export class ExecutionRepository {
     filters?: {
       status?: 'completed' | 'failed' | 'running' | 'timeout' | 'paused';
       search?: string;
+      workspaceId?: string;
     }
   ): Promise<ExecutionEntity[]> {
     let queryStr = 'SELECT e.* FROM executions e';
@@ -173,11 +183,14 @@ export class ExecutionRepository {
     const values: any[] = [];
     let paramIndex = 1;
 
+    if (filters?.workspaceId) {
+      conditions.push(`e.workspace_id = $${paramIndex++}`);
+      values.push(filters.workspaceId);
+    }
     if (filters?.status) {
       conditions.push(`e.status = $${paramIndex++}`);
       values.push(filters.status);
     }
-
     if (filters?.search) {
       queryStr += ' LEFT JOIN test_cases tc ON e.test_case_id = tc.id';
       conditions.push(`(e.id ILIKE $${paramIndex} OR e.test_case_id ILIKE $${paramIndex} OR tc.name ILIKE $${paramIndex})`);

@@ -1,0 +1,21 @@
+{
+  "name": "angry-buck",
+  "version": "1.0.0",
+  "description": "A proof-of-concept implementation of an AI-powered test automation tool that converts user stories into executable test cases, automatically detects UI elements, and runs tests in a browser environment.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "pg": "^8.19.0"
+  }
+}

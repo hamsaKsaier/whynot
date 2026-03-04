@@ -399,3 +399,35 @@ export function getAllToolDefinitions(): Anthropic.Tool[] {
     ...getGuardianToolDefinitions()
   ];
 }
+
+/**
+ * Browser-only tool names used for retest / lightweight phases.
+ * These are a subset of the 19 core tools — just enough to replay steps
+ * and observe results without needing note-taking or test-saving tools.
+ */
+const RETEST_TOOL_NAMES = new Set([
+  'navigate',
+  'click',
+  'type_text',
+  'screenshot',
+  'get_page_elements',
+  'scroll',
+  'go_back',
+  'wait',
+  'get_session_state'
+]);
+
+/**
+ * Return the appropriate tool subset for the given focus area.
+ *
+ * - 'explore'    → all 19 core tools (default)
+ * - 'retest'     → 9 browser tools only (no note-taking / test-saving overhead)
+ * - other phases → the specific agents use their own tool sets; fall back to core
+ */
+export function getToolsForFocusArea(focusArea: 'explore' | 'chaos' | 'retest' | 'investigate'): Anthropic.Tool[] {
+  if (focusArea === 'retest') {
+    return getToolDefinitions().filter(t => RETEST_TOOL_NAMES.has(t.name));
+  }
+  // 'explore', 'chaos', 'investigate' all use the full core tool set when going through ClaudeSession
+  return getToolDefinitions();
+}

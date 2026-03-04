@@ -91,15 +91,6 @@ async def generate_tests(user_story: UserStoryWithPageContext):
             "screenshot_size": f"{(len(user_story.screenshot_base64) / 1024):.2f} KB" if user_story.screenshot_base64 else "N/A"
         })
         
-        # #region agent log
-        try:
-            import json as _json
-            log_data = {"location":"ai-service/routes.py:generate_tests","message":"Quick mode received in AI service","data":{"quick_mode":user_story.quick_mode,"quick_mode_type":str(type(user_story.quick_mode)),"has_page_context":has_page_context},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
-            with open("/Users/takiacademy/whynot/.cursor/debug.log","a") as f:
-                f.write(_json.dumps(log_data)+"\n")
-        except: pass
-        # #endregion
-        
         if has_page_context:
             logger.info("Using page context for test generation (HTML + Screenshot)")
             # Log HTML preview (first 500 chars)
@@ -120,33 +111,13 @@ async def generate_tests(user_story: UserStoryWithPageContext):
                 logger.warning(f"HTML pre-processing failed, using original HTML: {str(e)}")
                 cleaned_html = user_story.html
             
-            # Optionally use VisionAnalyzer to pre-analyze page for better results
+            # Skip redundant pre-analysis — test_generator analyzes the screenshot directly
             vision_analysis = None
-            try:
-                import base64
-                screenshot_bytes = base64.b64decode(user_story.screenshot_base64)
-                vision_result = await vision_analyzer.analyze_screenshot(screenshot_bytes=screenshot_bytes)
-                vision_analysis = {
-                    "elements": vision_result.elements,
-                    "text_elements": vision_result.text_elements,
-                    "layout": vision_result.layout_info
-                }
-            except Exception as e:
-                # Continue without vision analysis if it fails
-                logger.warning(f"Vision analysis failed, continuing without it: {str(e)}")
             
             logger.info("Calling generate_test_cases_with_page_context with cleaned HTML and screenshot")
             raw_quick = getattr(user_story, 'quick_mode', None)
             quick_mode = raw_quick is True or (isinstance(raw_quick, str) and raw_quick.lower() == 'true')
             logger.info(f"Quick mode for generation: quick_mode={quick_mode}, raw={raw_quick}")
-            # #region agent log
-            try:
-                import json as _json
-                log_data = {"location":"ai-service/routes.py:before_generate","message":"Quick mode computed value","data":{"raw_quick":str(raw_quick),"raw_quick_type":str(type(raw_quick)),"quick_mode_computed":quick_mode,"raw_is_True":raw_quick is True,"raw_isinstance_str":isinstance(raw_quick,str)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"E2"}
-                with open("/Users/takiacademy/whynot/.cursor/debug.log","a") as f:
-                    f.write(_json.dumps(log_data)+"\n")
-            except: pass
-            # #endregion
             test_cases = await test_generator.generate_test_cases_with_page_context(
                 user_story,
                 user_story.screenshot_base64,
