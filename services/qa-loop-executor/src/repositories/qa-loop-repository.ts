@@ -7,6 +7,7 @@ const logger = createLogger('qa-loop-repository');
 
 export interface CreateSessionParams {
   projectId?: string;
+  workspaceId?: string;
   targetUrl: string;
   mode: string;
   qualityThreshold?: number;
@@ -19,6 +20,7 @@ export interface CreateSessionParams {
 export interface QALoopSession {
   id: string;
   project_id: string | null;
+  workspace_id: string | null;
   target_url: string;
   mode: string;
   status: string;
@@ -130,16 +132,17 @@ export class QALoopRepository {
     const id = uuidv4();
     const query = `
       INSERT INTO qa_loop_sessions (
-        id, project_id, target_url, mode, quality_threshold, 
+        id, project_id, workspace_id, target_url, mode, quality_threshold,
         max_iterations, max_duration_hours, document_context, config,
         status, started_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'running', CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'running', CURRENT_TIMESTAMP)
       RETURNING *
     `;
 
     const result = await this.pool.query(query, [
       id,
       params.projectId || null,
+      params.workspaceId || null,
       params.targetUrl,
       params.mode,
       params.qualityThreshold || 80,
@@ -149,26 +152,34 @@ export class QALoopRepository {
       JSON.stringify(params.config || {})
     ]);
 
-    logger.info('Created QA Loop session', { sessionId: id });
+    logger.info('Created QA Loop session', { sessionId: id, workspaceId: params.workspaceId });
     return result.rows[0];
   }
 
-  async getSession(id: string): Promise<QALoopSession | null> {
-    const query = 'SELECT * FROM qa_loop_sessions WHERE id = $1';
-    const result = await this.pool.query(query, [id]);
+  async getSession(id: string, workspaceId?: string): Promise<QALoopSession | null> {
+    const query = workspaceId
+      ? 'SELECT * FROM qa_loop_sessions WHERE id = $1 AND (workspace_id = $2 OR workspace_id IS NULL)'
+      : 'SELECT * FROM qa_loop_sessions WHERE id = $1';
+    const params = workspaceId ? [id, workspaceId] : [id];
+    const result = await this.pool.query(query, params);
     return result.rows[0] || null;
   }
 
   /**
    * Find the most recent completed session for a base URL (Phase 3)
+   * Optionally scoped to a specific workspace.
    */
-  async findLatestCompletedByBaseUrl(baseUrl: string): Promise<QALoopSession | null> {
-    const query = `
-      SELECT * FROM qa_loop_sessions 
-      WHERE target_url LIKE $1 || '%' AND status = 'completed'
-      ORDER BY completed_at DESC LIMIT 1
-    `;
-    const result = await this.pool.query(query, [baseUrl]);
+  async findLatestCompletedByBaseUrl(baseUrl: string, workspaceId?: string): Promise<QALoopSession | null> {
+    const query = workspaceId
+      ? `SELECT * FROM qa_loop_sessions
+         WHERE target_url LIKE $1 || '%' AND status = 'completed'
+           AND (workspace_id = $2 OR workspace_id IS NULL)
+         ORDER BY completed_at DESC LIMIT 1`
+      : `SELECT * FROM qa_loop_sessions
+         WHERE target_url LIKE $1 || '%' AND status = 'completed'
+         ORDER BY completed_at DESC LIMIT 1`;
+    const params = workspaceId ? [baseUrl, workspaceId] : [baseUrl];
+    const result = await this.pool.query(query, params);
     return result.rows[0] || null;
   }
 
@@ -197,6 +208,7 @@ export class QALoopRepository {
 
   async listSessions(params: {
     projectId?: string;
+    workspaceId?: string;
     status?: string;
     limit: number;
     offset: number;
@@ -205,6 +217,10 @@ export class QALoopRepository {
     const queryParams: any[] = [];
     let paramIndex = 1;
 
+    if (params.workspaceId) {
+      whereClause += ` AND (workspace_id = $${paramIndex++} OR workspace_id IS NULL)`;
+      queryParams.push(params.workspaceId);
+    }
     if (params.projectId) {
       whereClause += ` AND project_id = $${paramIndex++}`;
       queryParams.push(params.projectId);

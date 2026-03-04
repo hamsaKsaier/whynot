@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '../../../shared/logger/logger';
 import { QALoopRepository, QALoopTestCase, QALoopBug } from '../repositories/qa-loop-repository';
 import { emitToSession } from '../api/websocket';
+import { calculateCost } from '../model-selector';
 
 const logger = createLogger('detective-agent');
 
@@ -254,10 +255,27 @@ export class DetectiveAgent {
     try {
       const prompt = this.buildAnalysisPrompt(failure, history);
 
+      const DETECTIVE_MODEL = 'claude-sonnet-4-20250514' as const;
       const response = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: DETECTIVE_MODEL,
         max_tokens: 2048,
         messages: [{ role: 'user', content: prompt }]
+      });
+
+      // Track token usage through the frontend budget display (2.5)
+      const inputTokens = response.usage?.input_tokens || 0;
+      const outputTokens = response.usage?.output_tokens || 0;
+      const cost = calculateCost(DETECTIVE_MODEL, inputTokens, outputTokens);
+      emitToSession(this.sessionId, {
+        type: 'progress',
+        data: {
+          phase: 'cost_update',
+          model: DETECTIVE_MODEL,
+          modelName: 'Claude Sonnet (Detective)',
+          inputTokens,
+          outputTokens,
+          costCents: cost.costCents
+        }
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';

@@ -1,11 +1,15 @@
 import os
 import re
 import logging
-from typing import Optional
+import asyncio
+from typing import Optional, Callable, Any
 from openai import OpenAI
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic   # async client — does not block the event loop (3.8)
 import json
-import time
+
+# Transient HTTP status codes that warrant a retry with exponential back-off (3.4)
+_RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+_MAX_RETRIES = 3
 
 
 class LLMClient:
@@ -25,13 +29,41 @@ class LLMClient:
         elif self.provider == "anthropic":
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if api_key:
-                self.anthropic_client = Anthropic(api_key=api_key)
+                # Use the async client so .messages.create() is a coroutine and
+                # does not block the FastAPI event loop (3.8)
+                self.anthropic_client = AsyncAnthropic(api_key=api_key)
             else:
                 raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
         else:
             raise ValueError(f"Unknown LLM provider: {self.provider}. Set LLM_PROVIDER to 'openai' or 'anthropic'")
     
-    async def generate_completion(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+    async def _anthropic_with_retry(self, coro_factory: Callable[[], Any]) -> Any:
+        """Execute an Anthropic API coroutine with exponential back-off retry (3.4).
+
+        coro_factory must be a *callable* that returns a fresh coroutine each
+        time it is called (lambdas work perfectly).  Retries on transient errors
+        (429 / 5xx) up to _MAX_RETRIES times with 1 s → 2 s → 4 s delays.
+        Non-transient errors are re-raised immediately.
+        """
+        for attempt in range(_MAX_RETRIES):
+            try:
+                return await coro_factory()
+            except Exception as e:
+                status = (
+                    getattr(e, "status_code", None)
+                    or getattr(getattr(e, "response", None), "status_code", None)
+                )
+                if status in _RETRY_STATUSES and attempt < _MAX_RETRIES - 1:
+                    delay = 2 ** attempt  # 1 s, 2 s, 4 s
+                    logging.warning(
+                        f"Anthropic transient error (status {status}), "
+                        f"retrying in {delay}s (attempt {attempt + 1}/{_MAX_RETRIES})"
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    raise
+
+    async def generate_completion(self, prompt: str, system_prompt: Optional[str] = None, max_tokens: int = 8192) -> str:
         """Generate completion from LLM"""
         if self.provider == "openai":
             if not self.openai_client:
@@ -40,7 +72,7 @@ class LLMClient:
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": prompt})
-            
+
             try:
                 response = self.openai_client.chat.completions.create(
                     model=os.getenv("OPENAI_MODEL", "gpt-4"),
@@ -50,23 +82,25 @@ class LLMClient:
                 return response.choices[0].message.content
             except Exception as e:
                 raise ValueError(f"OpenAI API error: {str(e)}")
-        
+
         elif self.provider == "anthropic":
             if not self.anthropic_client:
                 raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
             system_message = system_prompt or ""
-            model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5-20251101")
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
             try:
-                response = self.anthropic_client.messages.create(
-                    model=model,
-                    max_tokens=16384,  # Increased to handle very large JSON responses with multiple scenarios
-                    system=system_message,
-                    messages=[{"role": "user", "content": prompt}]
+                response = await self._anthropic_with_retry(
+                    lambda: self.anthropic_client.messages.create(
+                        model=model,
+                        max_tokens=max_tokens,
+                        system=system_message,
+                        messages=[{"role": "user", "content": prompt}]
+                    )
                 )
                 return response.content[0].text
             except Exception as e:
                 raise ValueError(f"Anthropic API error: {str(e)}")
-        
+
         raise ValueError(f"No LLM provider configured. Provider: {self.provider}, Set OPENAI_API_KEY or ANTHROPIC_API_KEY")
     
     def _fix_missing_commas_safe(self, text):
@@ -121,29 +155,102 @@ class LLMClient:
             i += 1
         return ''.join(result)
     
-    def _extract_and_repair_json(self, response: str) -> dict:
-        """Extract and repair JSON from LLM response"""
-        # #region agent log
+    async def _generate_with_tool_use(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 8192
+    ) -> dict:
+        """Generate structured JSON via Anthropic tool_use — guarantees valid JSON output.
+
+        Uses tool_choice={"type":"tool","name":"return_result"} so the model is forced
+        to populate the tool-input dict, which the SDK parses automatically.  No text
+        repair needed.
+        """
+        system_message = system_prompt or ""
+        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+        tool = {
+            "name": "return_result",
+            "description": "Return the complete structured result as valid JSON",
+            "input_schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": True,
+            },
+        }
         try:
-            log_data = {
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "A",
-                "location": "llm_client.py:_extract_and_repair_json:entry",
-                "message": "Starting JSON extraction",
-                "data": {
-                    "original_response_length": len(response),
-                    "original_response_preview": response[:500] if len(response) > 500 else response,
-                    "original_response_suffix": response[-200:] if len(response) > 200 else ""
-                },
-                "timestamp": int(time.time() * 1000)
-            }
-            with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                f.write(json.dumps(log_data) + "\n")
-        except:
-            pass
-        # #endregion
-        
+            response = await self._anthropic_with_retry(
+                lambda: self.anthropic_client.messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system=system_message,
+                    tools=[tool],
+                    tool_choice={"type": "tool", "name": "return_result"},
+                    messages=[{"role": "user", "content": prompt}],
+                )
+            )
+            for block in response.content:
+                if block.type == "tool_use" and block.name == "return_result":
+                    return block.input  # already a dict; no JSON parsing needed
+            raise ValueError("No tool_use block found in Anthropic response")
+        except Exception as e:
+            raise ValueError(f"Anthropic tool_use generation error: {str(e)}")
+
+    async def _generate_with_tool_use_vision(
+        self,
+        prompt: str,
+        screenshot_base64: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 8192
+    ) -> dict:
+        """Generate structured JSON via Anthropic tool_use with an inline screenshot.
+
+        Identical to _generate_with_tool_use but includes the image in the user message.
+        """
+        system_message = system_prompt or ""
+        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+        tool = {
+            "name": "return_result",
+            "description": "Return the complete structured result as valid JSON",
+            "input_schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": True,
+            },
+        }
+        try:
+            response = await self._anthropic_with_retry(
+                lambda: self.anthropic_client.messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system=system_message,
+                    tools=[tool],
+                    tool_choice={"type": "tool", "name": "return_result"},
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": "image/png",
+                                    "data": screenshot_base64,
+                                },
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }],
+                )
+            )
+            for block in response.content:
+                if block.type == "tool_use" and block.name == "return_result":
+                    return block.input
+            raise ValueError("No tool_use block found in Anthropic vision response")
+        except Exception as e:
+            raise ValueError(f"Anthropic tool_use vision generation error: {str(e)}")
+
+    def _extract_and_repair_json(self, response: str) -> dict:
+        """Extract and repair JSON from LLM response (OpenAI fallback only)."""
         original_response = response
         
         # Step 1: Remove markdown code blocks
@@ -166,73 +273,13 @@ class LLMClient:
             else:
                 raise ValueError(f"No JSON object found in response: {response[:200]}")
         
-        # #region agent log
-        try:
-            log_data = {
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "B",
-                "location": "llm_client.py:_extract_and_repair_json:extracted",
-                "message": "JSON extracted from response",
-                "data": {
-                    "extracted_json_length": len(json_str),
-                    "extracted_json_preview": json_str[:500] if len(json_str) > 500 else json_str,
-                    "extracted_json_suffix": json_str[-200:] if len(json_str) > 200 else ""
-                },
-                "timestamp": int(time.time() * 1000)
-            }
-            with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                f.write(json.dumps(log_data) + "\n")
-        except:
-            pass
-        # #endregion
-        
         # Step 3: Try parsing
         try:
             parsed = json.loads(json_str)
-            # #region agent log
-            try:
-                log_data = {
-                    "sessionId": "debug-session",
-                    "runId": "run1",
-                    "hypothesisId": "C",
-                    "location": "llm_client.py:_extract_and_repair_json:parse_success",
-                    "message": "JSON parsed successfully on first attempt",
-                    "data": {"parsed_keys": list(parsed.keys()) if isinstance(parsed, dict) else "not_dict"},
-                    "timestamp": int(time.time() * 1000)
-                }
-                with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                    f.write(json.dumps(log_data) + "\n")
-            except:
-                pass
-            # #endregion
             return parsed
         except json.JSONDecodeError as e:
-            # #region agent log
             error_pos = getattr(e, 'pos', 0)
             error_msg = str(e)
-            try:
-                log_data = {
-                    "sessionId": "debug-session",
-                    "runId": "run1",
-                    "hypothesisId": "D",
-                    "location": "llm_client.py:_extract_and_repair_json:parse_error",
-                    "message": "JSON parse error detected",
-                    "data": {
-                        "error": error_msg,
-                        "error_position": error_pos,
-                        "error_line": json_str[:error_pos].count('\n') + 1,
-                        "error_column": error_pos - json_str[:error_pos].rfind('\n') - 1,
-                        "context_before": json_str[max(0, error_pos-100):error_pos],
-                        "context_after": json_str[error_pos:min(len(json_str), error_pos+100)]
-                    },
-                    "timestamp": int(time.time() * 1000)
-                }
-                with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                    f.write(json.dumps(log_data) + "\n")
-            except:
-                pass
-            # #endregion
             
             # Step 4: Attempt JSON repair for common issues
             logging.warning(f"JSON parse error: {e}. Attempting repair...")
@@ -322,47 +369,10 @@ class LLMClient:
             
             # Remove trailing commas before } or ]
             json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
-            
-            # #region agent log
-            try:
-                log_data = {
-                    "sessionId": "debug-session",
-                    "runId": "run1",
-                    "hypothesisId": "E",
-                    "location": "llm_client.py:_extract_and_repair_json:before_second_parse",
-                    "message": "Attempting second parse after repair",
-                    "data": {
-                        "repaired_json_length": len(json_str),
-                        "repaired_json_preview": json_str[:500] if len(json_str) > 500 else json_str,
-                        "repaired_json_around_error": json_str[max(0, error_pos-200):min(len(json_str), error_pos+200)]
-                    },
-                    "timestamp": int(time.time() * 1000)
-                }
-                with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                    f.write(json.dumps(log_data) + "\n")
-            except:
-                pass
-            # #endregion
-            
+
             # Try parsing again
             try:
                 parsed = json.loads(json_str)
-                # #region agent log
-                try:
-                    log_data = {
-                        "sessionId": "debug-session",
-                        "runId": "run1",
-                        "hypothesisId": "F",
-                        "location": "llm_client.py:_extract_and_repair_json:repair_success",
-                        "message": "JSON repair successful",
-                        "data": {"parsed_keys": list(parsed.keys()) if isinstance(parsed, dict) else "not_dict"},
-                        "timestamp": int(time.time() * 1000)
-                    }
-                    with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                        f.write(json.dumps(log_data) + "\n")
-                except:
-                    pass
-                # #endregion
                 return parsed
             except json.JSONDecodeError as e2:
                 # Log the problematic section with more context
@@ -372,32 +382,6 @@ class LLMClient:
                 context = json_str[start_context:end_context]
                 line_num = json_str[:error_pos].count('\n') + 1
                 col_num = error_pos - json_str[:error_pos].rfind('\n') - 1
-                
-                # #region agent log
-                try:
-                    log_data = {
-                        "sessionId": "debug-session",
-                        "runId": "run1",
-                        "hypothesisId": "G",
-                        "location": "llm_client.py:_extract_and_repair_json:repair_failed",
-                        "message": "JSON repair failed after all attempts",
-                        "data": {
-                            "error": str(e2),
-                            "error_position": error_pos,
-                            "error_line": line_num,
-                            "error_column": col_num,
-                            "context": context,
-                            "original_response_length": len(original_response),
-                            "json_string_length": len(json_str),
-                            "original_response_preview": original_response[:500]
-                        },
-                        "timestamp": int(time.time() * 1000)
-                    }
-                    with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                        f.write(json.dumps(log_data) + "\n")
-                except:
-                    pass
-                # #endregion
                 
                 logging.error(f"JSON repair failed. Error at line {line_num}, column {col_num} (position {error_pos}): {e2}")
                 logging.error(f"Context (200 chars before/after): ...{context}...")
@@ -414,40 +398,8 @@ class LLMClient:
                     
                     # Try parsing the aggressively fixed version
                     parsed = json.loads(aggressive_fix)
-                    # #region agent log
-                    try:
-                        log_data = {
-                            "sessionId": "debug-session",
-                            "runId": "run1",
-                            "hypothesisId": "H",
-                            "location": "llm_client.py:_extract_and_repair_json:aggressive_repair_success",
-                            "message": "Aggressive JSON repair successful",
-                            "data": {"parsed_keys": list(parsed.keys()) if isinstance(parsed, dict) else "not_dict"},
-                            "timestamp": int(time.time() * 1000)
-                        }
-                        with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                            f.write(json.dumps(log_data) + "\n")
-                    except:
-                        pass
-                    # #endregion
                     return parsed
                 except Exception as repair_error:
-                    # #region agent log
-                    try:
-                        log_data = {
-                            "sessionId": "debug-session",
-                            "runId": "run1",
-                            "hypothesisId": "I",
-                            "location": "llm_client.py:_extract_and_repair_json:aggressive_repair_failed",
-                            "message": "Aggressive repair also failed",
-                            "data": {"repair_error": str(repair_error)},
-                            "timestamp": int(time.time() * 1000)
-                        }
-                        with open("/Users/takiacademy/whynot/.cursor/debug.log", "a") as f:
-                            f.write(json.dumps(log_data) + "\n")
-                    except:
-                        pass
-                    # #endregion
                     pass
                 
                 # Try to detect and fix incomplete JSON (truncated field values)
@@ -605,22 +557,31 @@ class LLMClient:
                     f"Response preview: {original_response[:500]}"
                 )
     
-    async def generate_json(self, prompt: str, system_prompt: Optional[str] = None) -> dict:
-        """Generate JSON response from LLM"""
+    async def generate_json(self, prompt: str, system_prompt: Optional[str] = None, max_tokens: int = 8192) -> dict:
+        """Generate JSON response from LLM.
+
+        For Anthropic: uses tool_use to guarantee syntactically valid JSON with no repair needed.
+        For OpenAI: falls back to text generation + _extract_and_repair_json.
+        """
+        if self.provider == "anthropic" and self.anthropic_client:
+            return await self._generate_with_tool_use(prompt, system_prompt, max_tokens)
+
+        # OpenAI fallback: generate text then repair
         json_prompt = f"{prompt}\n\nIMPORTANT: Respond with COMPLETE, valid JSON only. Ensure all field values are complete and properly closed. Do not truncate responses. No markdown formatting."
-        response = await self.generate_completion(json_prompt, system_prompt)
-        
+        response = await self.generate_completion(json_prompt, system_prompt, max_tokens)
+
         # Check if response might be truncated (very long responses can hit token limits)
         if len(response) > 25000:
             logging.warning(f"Received very long response ({len(response)} chars), may be truncated - attempting repair")
-        
+
         return self._extract_and_repair_json(response)
     
     async def generate_with_vision(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         screenshot_base64: str,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 8192
     ) -> str:
         """Generate completion using vision-capable model with screenshot"""
         if self.provider == "openai" and self.openai_client:
@@ -652,31 +613,33 @@ class LLMClient:
             if not self.anthropic_client:
                 raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
             system_message = system_prompt or ""
-            model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5-20251101")
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
             
             try:
-                # Anthropic vision API format
-                response = self.anthropic_client.messages.create(
-                    model=model,
-                    max_tokens=16384,  # Increased to handle very large JSON responses with multiple scenarios
-                    system=system_message,
-                    messages=[{
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": "image/png",
-                                    "data": screenshot_base64
+                # Anthropic vision API format — awaited via async client (3.8), with retry (3.4)
+                response = await self._anthropic_with_retry(
+                    lambda: self.anthropic_client.messages.create(
+                        model=model,
+                        max_tokens=max_tokens,
+                        system=system_message,
+                        messages=[{
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": "image/png",
+                                        "data": screenshot_base64
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "text": prompt
                                 }
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt
-                            }
-                        ]
-                    }]
+                            ]
+                        }]
+                    )
                 )
                 return response.content[0].text
             except Exception as e:
@@ -688,10 +651,19 @@ class LLMClient:
         self,
         prompt: str,
         screenshot_base64: str,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 8192
     ) -> dict:
-        """Generate JSON response using vision-capable model"""
+        """Generate JSON response using vision-capable model.
+
+        For Anthropic: uses tool_use with inline image for guaranteed valid JSON.
+        For OpenAI: falls back to text generation + _extract_and_repair_json.
+        """
+        if self.provider == "anthropic" and self.anthropic_client:
+            return await self._generate_with_tool_use_vision(prompt, screenshot_base64, system_prompt, max_tokens)
+
+        # OpenAI fallback
         json_prompt = f"{prompt}\n\nRespond with valid JSON only, no markdown formatting."
-        response = await self.generate_with_vision(json_prompt, screenshot_base64, system_prompt)
+        response = await self.generate_with_vision(json_prompt, screenshot_base64, system_prompt, max_tokens)
         return self._extract_and_repair_json(response)
 

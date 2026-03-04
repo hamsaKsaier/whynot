@@ -1,15 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { FiBell, FiSettings, FiHelpCircle, FiLogOut } from 'react-icons/fi';
+import { FiBell, FiSettings, FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiPlay, FiServer, FiFileText, FiHome, FiCommand } from 'react-icons/fi';
 import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { useAuth } from '../../contexts/AuthContext';
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onMenuToggle?: () => void;
+}
+
+/** Per-page contextual help tips keyed by route prefix */
+const PAGE_HELP: Record<string, { icon: React.ReactNode; title: string; tips: string[] }> = {
+  '/qa-loop': {
+    icon: <FiZap className="h-4 w-4 text-primary-500" />,
+    title: 'QA Loop',
+    tips: [
+      'Enter a URL and click "Start Exploration" to begin an AI-driven QA session.',
+      'Use Smart mode for targeted testing or Explore mode for full coverage.',
+      'Toggle Advanced Options to control depth, browser headless mode, and agent behavior.',
+      'Generated test cases are automatically saved for reuse.',
+    ],
+  },
+  '/': {
+    icon: <FiHome className="h-4 w-4 text-primary-500" />,
+    title: 'Dashboard',
+    tips: [
+      'Your dashboard shows an overview of all test activity.',
+      'Click any stat card to navigate to the detailed list.',
+      'Use QA Loop to start a new automated testing session.',
+    ],
+  },
+  '/projects': {
+    icon: <FiFolder className="h-4 w-4 text-primary-500" />,
+    title: 'Projects',
+    tips: [
+      'Projects group your user stories and generated test cases.',
+      'Click a project card to view its user stories and test history.',
+      'Add a website URL to a project to pre-fill it in QA Loop.',
+    ],
+  },
+  '/environments': {
+    icon: <FiServer className="h-4 w-4 text-primary-500" />,
+    title: 'Environments',
+    tips: [
+      'Save base URLs for Production, Staging, or Local environments.',
+      'Environments are optional — you can always paste a URL directly in QA Loop.',
+      'Switch environments to compare test results across deployments.',
+    ],
+  },
+  '/test-runs': {
+    icon: <FiPlay className="h-4 w-4 text-primary-500" />,
+    title: 'Test Runs',
+    tips: [
+      'Each QA Loop session creates a test run you can review here.',
+      'Click a run to see the full step-by-step execution log.',
+      'Filter by status to find failures quickly.',
+    ],
+  },
+  '/test-cases': {
+    icon: <FiFileText className="h-4 w-4 text-primary-500" />,
+    title: 'Test Cases',
+    tips: [
+      'Test cases are generated automatically during QA Loop sessions.',
+      'Use the search bar to find cases by name, URL, or description.',
+      'Click the ▶ icon to re-run a test case from the QA Loop.',
+    ],
+  },
+  '/settings': {
+    icon: <FiSettings className="h-4 w-4 text-primary-500" />,
+    title: 'Settings',
+    tips: [
+      'Configure your workspace preferences and integrations here.',
+      'API keys let you trigger test runs from your CI/CD pipeline.',
+    ],
+  },
+};
+
+export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const location = useLocation();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
+
+  // Mock notification count — replace with real data when available
+  const notificationCount = 0;
 
   /** Get up-to-two-letter initials from the user's name */
   const initials = user
@@ -22,38 +98,94 @@ export const Header: React.FC = () => {
 
   useKeyboardShortcut('/', () => setShortcutsOpen(true), { metaKey: true, ctrlKey: true });
 
+  /** Close help popover on outside click */
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (helpRef.current && !helpRef.current.contains(e.target as Node)) {
+        setHelpOpen(false);
+      }
+    };
+    if (helpOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [helpOpen]);
+
+  /** Match the current pathname to a help entry */
+  const getPageHelp = () => {
+    const path = location.pathname;
+    // Exact or prefix match — longest match wins
+    const keys = Object.keys(PAGE_HELP).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (key === '/' ? path === '/' : path.startsWith(key)) {
+        return PAGE_HELP[key];
+      }
+    }
+    return null;
+  };
+
+  const pageHelp = getPageHelp();
+
   const getBreadcrumbs = () => {
     const paths = location.pathname.split('/').filter(Boolean);
-    const breadcrumbs = [{ label: 'Projects', path: '/' }];
-    
+
     if (paths.length === 0) {
       return [{ label: 'Dashboard', path: '/' }];
     }
 
-    const pathMap: { [key: string]: string } = {
+    // Top-level pages that stand alone (not nested under Projects)
+    const topLevelMap: { [key: string]: string } = {
+      'qa-loop': 'QA Loop',
       'test-cases': 'Test Cases',
       'test-runs': 'Test Runs',
       'environments': 'Environments',
       'settings': 'Settings',
+      'webhooks': 'Webhooks',
+      'organization-settings': 'Organization Settings',
+    };
+
+    const pathMap: { [key: string]: string } = {
+      ...topLevelMap,
+      'projects': 'Projects',
       'personas': 'Personas',
       'execute': 'Execute Test',
     };
 
+    const firstSegment = paths[0];
+
+    // If it's a known top-level page, start fresh (no "Projects /" prefix)
+    if (topLevelMap[firstSegment]) {
+      const breadcrumbs: { label: string; path: string }[] = [];
+      paths.forEach((path, index) => {
+        const label = pathMap[path] || path.charAt(0).toUpperCase() + path.slice(1);
+        const fullPath = '/' + paths.slice(0, index + 1).join('/');
+        breadcrumbs.push({ label, path: fullPath });
+      });
+      return breadcrumbs;
+    }
+
+    // Otherwise show Projects > ... hierarchy
+    const breadcrumbs = [{ label: 'Projects', path: '/projects' }];
     paths.forEach((path, index) => {
       const label = pathMap[path] || path.charAt(0).toUpperCase() + path.slice(1);
       const fullPath = '/' + paths.slice(0, index + 1).join('/');
       breadcrumbs.push({ label, path: fullPath });
     });
-
     return breadcrumbs;
   };
 
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6" role="banner">
-      {/* Left: WorkspaceSwitcher + Breadcrumbs */}
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6" role="banner">
+      {/* Left: Hamburger (mobile) + WorkspaceSwitcher + Breadcrumbs */}
       <div className="flex items-center gap-3">
+        {/* Mobile hamburger */}
+        <button
+          onClick={onMenuToggle}
+          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Open navigation menu"
+        >
+          <FiMenu className="h-5 w-5 text-gray-600" />
+        </button>
         <WorkspaceSwitcher />
         <span className="text-gray-300">|</span>
         <div className="flex items-center space-x-1 text-sm text-gray-600">
@@ -74,35 +206,85 @@ export const Header: React.FC = () => {
       </div>
 
       {/* Right: Actions & User Menu */}
-      <div className="flex items-center space-x-4">
-        {/* Keyboard Shortcuts */}
-        <button
-          onClick={() => setShortcutsOpen(true)}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          aria-label="Show keyboard shortcuts"
-          title="Keyboard shortcuts (Cmd/Ctrl + /)"
-        >
-          <FiHelpCircle className="h-5 w-5 text-gray-600" />
-        </button>
+      <div className="flex items-center space-x-1 sm:space-x-2">
+        {/* Contextual Help ("?") */}
+        <div className="relative" ref={helpRef}>
+          <button
+            onClick={() => setHelpOpen((o) => !o)}
+            className={`p-2 rounded-lg transition-colors ${helpOpen ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-100 text-gray-600'}`}
+            aria-label="Show page help"
+            title="Page help"
+          >
+            <FiHelpCircle className="h-5 w-5" />
+          </button>
 
-        {/* Upgrade Button */}
-        <button className="px-4 py-1.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors">
-          Upgrade
-        </button>
+          {helpOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  {pageHelp?.icon}
+                  <span className="text-sm font-semibold text-gray-800">
+                    {pageHelp ? `${pageHelp.title} — Help` : 'Help'}
+                  </span>
+                </div>
+                <button onClick={() => setHelpOpen(false)} className="p-1 rounded hover:bg-gray-200 transition-colors">
+                  <FiX className="h-3.5 w-3.5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Tips */}
+              {pageHelp ? (
+                <ul className="p-4 space-y-2">
+                  {pageHelp.tips.map((tip, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-gray-700">
+                      <span className="mt-0.5 flex-shrink-0 h-4 w-4 rounded-full bg-primary-100 text-primary-600 text-xs flex items-center justify-center font-semibold">
+                        {i + 1}
+                      </span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="p-4 text-sm text-gray-500">No tips available for this page.</p>
+              )}
+
+              {/* Footer — Keyboard shortcuts link */}
+              <div className="px-4 py-2 border-t border-gray-100 bg-gray-50">
+                <button
+                  onClick={() => { setHelpOpen(false); setShortcutsOpen(true); }}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary-600 transition-colors"
+                >
+                  <FiCommand className="h-3 w-3" />
+                  View keyboard shortcuts
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Plan badge */}
+        <span className="hidden sm:inline-flex items-center px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded-full hover:bg-gray-200 cursor-pointer transition-colors">
+          Free plan
+        </span>
 
         {/* Notifications */}
-        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
+        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
           <FiBell className="h-5 w-5 text-gray-600" />
-          <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+          {notificationCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold leading-none">
+              {notificationCount > 99 ? '99+' : notificationCount}
+            </span>
+          )}
         </button>
 
         {/* Settings */}
-        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Settings">
           <FiSettings className="h-5 w-5 text-gray-600" />
         </button>
 
         {/* User Avatar + Logout */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 ml-1">
           <div className="flex items-center gap-2 px-2 py-1 rounded-lg">
             {user?.avatarUrl ? (
               <img
@@ -135,28 +317,3 @@ export const Header: React.FC = () => {
     </header>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

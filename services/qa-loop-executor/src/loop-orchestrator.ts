@@ -5,6 +5,7 @@ import { emitToSession, cleanupSession } from './api/websocket';
 import { ChaosAgent } from './agents/chaos-agent';
 import { DetectiveAgent } from './agents/detective-agent';
 import { GuardianAgent, GuardianConfig, QualityScore, IterationPlan } from './agents/guardian-agent';
+import { RetestExecutor } from './retest-executor';
 import { selectModel, ClaudeModel, FOCUS_AREA_MODELS, getModelDisplayName } from './model-selector';
 import { BrowserTools } from './tools/browser-tools';
 
@@ -52,15 +53,30 @@ export class LoopOrchestrator {
   private guardianAgent: GuardianAgent;
   private currentFocus: FocusArea = 'explore';
 
-  constructor(sessionId: string, config: LoopConfig) {
+  /**
+   * Cached document context loaded once at session start (2.6).
+   * `undefined` = not yet loaded, `null` = loaded but no docs found.
+   */
+  private cachedDocumentContext: string | null | undefined = undefined;
+
+  /**
+   * Optional dependency overrides — primarily for unit testing (5.5).
+   * Production code uses the defaults (shared pool, real agents).
+   */
+  constructor(sessionId: string, config: LoopConfig, deps?: {
+    repository?: QALoopRepository;
+    chaosAgent?: ChaosAgent;
+    detectiveAgent?: DetectiveAgent;
+    guardianAgent?: GuardianAgent;
+  }) {
     this.sessionId = sessionId;
     this.config = config;
-    this.repository = new QALoopRepository();
+    this.repository = deps?.repository ?? new QALoopRepository();
 
-    // Initialize agents
-    this.chaosAgent = new ChaosAgent(sessionId);
-    this.detectiveAgent = new DetectiveAgent(sessionId);
-    this.guardianAgent = new GuardianAgent(sessionId, {
+    // Initialize agents (accept injected or create defaults)
+    this.chaosAgent = deps?.chaosAgent ?? new ChaosAgent(sessionId);
+    this.detectiveAgent = deps?.detectiveAgent ?? new DetectiveAgent(sessionId);
+    this.guardianAgent = deps?.guardianAgent ?? new GuardianAgent(sessionId, {
       testPriority: config.testPriority
     });
 
@@ -79,6 +95,10 @@ export class LoopOrchestrator {
       if (this.config.loginCredentials) {
         await this.performLogin();
       }
+
+      // Pre-load document context once so every ClaudeSession iteration reuses it (2.6)
+      await this.loadCachedDocumentContext();
+
       await this.runLoop();
     } catch (error: any) {
       logger.error('QA Loop failed', { sessionId: this.sessionId, error: error.message });
@@ -175,12 +195,57 @@ export class LoopOrchestrator {
     }
   }
 
+  /**
+   * Load and cache document context once at session start (2.6).
+   * Delegates to a throwaway ClaudeSession just for the DB read, then stores
+   * the result so it can be passed to every subsequent ClaudeSession via the
+   * preloadedDocumentContext constructor arg — avoiding one DB query per iteration.
+   */
+  private async loadCachedDocumentContext(): Promise<void> {
+    try {
+      const tempSession = new ClaudeSession(this.sessionId, this.config, 'explore');
+      await tempSession.loadDocumentContext();
+      this.cachedDocumentContext = (tempSession as any).documentContext as string | null;
+      logger.info('Document context pre-loaded for session', {
+        sessionId: this.sessionId,
+        hasContext: this.cachedDocumentContext !== null
+      });
+    } catch (error: any) {
+      logger.warn('Failed to pre-load document context; each iteration will load independently', {
+        error: error.message
+      });
+      // Leave cachedDocumentContext as undefined so each ClaudeSession falls back to self-loading
+    }
+  }
+
   private async runLoop(): Promise<void> {
     while (!this.isStopped) {
       // Check pause state
       if (this.isPaused) {
         await this.sleep(1000);
         continue;
+      }
+
+      // Enforce maxDurationHours (3.2) — terminate if wall-clock time is exceeded
+      if (this.startTime && this.config.maxDurationHours) {
+        const elapsedHours = (Date.now() - this.startTime.getTime()) / (1000 * 3600);
+        if (elapsedHours >= this.config.maxDurationHours) {
+          logger.info('Session exceeded maxDurationHours — terminating', {
+            sessionId: this.sessionId,
+            elapsedHours: elapsedHours.toFixed(2),
+            limit: this.config.maxDurationHours
+          });
+          await this.repository.updateSessionStatus(this.sessionId, 'completed');
+          emitToSession(this.sessionId, {
+            type: 'session_complete',
+            data: {
+              reason: 'max_duration_reached',
+              elapsedHours: parseFloat(elapsedHours.toFixed(2)),
+              maxDurationHours: this.config.maxDurationHours
+            }
+          });
+          return;
+        }
       }
 
       // Guardian: Calculate quality and decide next action
@@ -338,7 +403,14 @@ export class LoopOrchestrator {
    * Run exploration phase using Claude with tiered model selection
    */
   private async runExploration(plan: IterationPlan): Promise<any> {
-    this.claudeSession = new ClaudeSession(this.sessionId, this.config);
+    // Pass focusArea so the session selects the right tool subset (2.2),
+    // and pass the pre-loaded document context to skip the per-iteration DB query (2.6).
+    this.claudeSession = new ClaudeSession(
+      this.sessionId,
+      this.config,
+      plan.focusArea as any,
+      this.cachedDocumentContext
+    );
 
     // Select model based on focus area (Phase 6: Tiered Models)
     const modelSelection = selectModel({
@@ -510,26 +582,31 @@ export class LoopOrchestrator {
   }
 
   /**
-   * Run retest phase
+   * Run retest phase using the real RetestExecutor (5.4)
    */
   private async runRetest(plan: IterationPlan): Promise<any> {
     logger.info('Running retest', { sessionId: this.sessionId, targets: plan.targets });
 
     emitToSession(this.sessionId, {
       type: 'progress',
-      data: {
-        phase: 'retest',
-        message: 'Running regression tests...'
-      }
+      data: { phase: 'retest', message: 'Running regression tests...' }
     });
 
-    // This would use the existing retest-executor
-    // For now, return placeholder results
+    const executor = new RetestExecutor(
+      this.sessionId,
+      this.sessionId, // sourceSessionId = current session (retest against itself)
+      'quick',
+      true  // enableAutoAnalysis
+    );
+
+    const result = await executor.run();
+
     return {
-      testsRun: plan.targets.length,
-      passed: 0,
-      failed: 0,
-      skipped: 0
+      testsRun: result.totalTests,
+      passed: result.passed,
+      failed: result.failed,
+      skipped: result.skipped,
+      duration: result.duration
     };
   }
 

@@ -59,6 +59,26 @@ export const testGenerationRateLimiter = rateLimit({
   }
 });
 
+/**
+ * Strict rate limiter for QA Loop session creation.
+ * Each session spawns expensive autonomous LLM loops — keep this tight.
+ * Default: 5 sessions per hour per IP (override via RATE_LIMIT_QA_LOOP_MAX).
+ */
+export const qaLoopSessionRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: parseInt(process.env.RATE_LIMIT_QA_LOOP_MAX || '5', 10),
+  message: 'Too many QA Loop sessions started. Please wait before starting another session.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req: Request, res: Response) => {
+    throw createError(
+      'Too many QA Loop sessions started from this IP. Please wait before starting another session.',
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
+});
+
 
 
 

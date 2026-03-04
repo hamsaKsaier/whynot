@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiPlay, FiEdit, FiTrash2, FiSave, FiX, FiGlobe } from 'react-icons/fi';
+import { FiPlus, FiPlay, FiEdit, FiTrash2, FiSave, FiX, FiGlobe, FiSearch, FiFilter } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Alert } from '../components/common/Alert';
@@ -32,6 +32,10 @@ export const TestCasesPage: React.FC = () => {
     testCase: null,
   });
   const [runningTestId, setRunningTestId] = useState<string | null>(null);
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [domainFilter, setDomainFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'passed' | 'failed' | 'not_run'>('all');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -136,6 +140,32 @@ export const TestCasesPage: React.FC = () => {
     }
   };
 
+  // Derive unique domains for filter dropdown
+  const uniqueDomains = useMemo(() => {
+    const domains = new Set<string>();
+    testCases.forEach((tc) => {
+      try { domains.add(new URL(tc.website_url).hostname); } catch { /* skip invalid URLs */ }
+    });
+    return Array.from(domains).sort();
+  }, [testCases]);
+
+  // Apply filters
+  const filteredTestCases = useMemo(() => {
+    return testCases.filter((tc) => {
+      const q = searchQuery.toLowerCase();
+      if (q && !tc.name.toLowerCase().includes(q) && !tc.website_url.toLowerCase().includes(q) && !(tc.description || '').toLowerCase().includes(q)) return false;
+      if (domainFilter) {
+        try { if (new URL(tc.website_url).hostname !== domainFilter) return false; } catch { return false; }
+      }
+      const lastStatus = (tc as any).last_run_status as string | undefined;
+      if (statusFilter === 'passed' && lastStatus !== 'passed') return false;
+      if (statusFilter === 'failed' && lastStatus !== 'failed') return false;
+      if (statusFilter === 'not_run' && lastStatus) return false;
+      return true;
+    });
+  }, [testCases, searchQuery, domainFilter, statusFilter]);
+
+  const hasActiveFilters = searchQuery || domainFilter || statusFilter !== 'all';
 
   return (
     <div>
@@ -152,6 +182,64 @@ export const TestCasesPage: React.FC = () => {
           <span>New Test Case</span>
         </Button>
       </div>
+
+      {/* Filter bar — only shown when there are test cases */}
+      {testCases.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[180px]">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name or URL…"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-400"
+            />
+          </div>
+
+          {/* Domain filter */}
+          {uniqueDomains.length > 0 && (
+            <select
+              value={domainFilter}
+              onChange={(e) => setDomainFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-700"
+            >
+              <option value="">All domains</option>
+              {uniqueDomains.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Status filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-700"
+          >
+            <option value="all">All statuses</option>
+            <option value="passed">Passed</option>
+            <option value="failed">Failed</option>
+            <option value="not_run">Not run</option>
+          </select>
+
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <button
+              onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+            >
+              <FiX className="h-3 w-3" /> Clear
+            </button>
+          )}
+
+          {/* Result count */}
+          <span className="text-xs text-gray-400 ml-auto">
+            {filteredTestCases.length} of {testCases.length}
+          </span>
+        </div>
+      )}
 
       {error && (
         <Alert
@@ -201,9 +289,20 @@ export const TestCasesPage: React.FC = () => {
             tip="Tip: Navigate to a project, add a user story, then generate test cases"
           />
         </Card>
+      ) : filteredTestCases.length === 0 ? (
+        <Card className="text-center py-12">
+          <FiFilter className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm mb-2">No test cases match your filters</p>
+          <button
+            onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+          >
+            Clear filters
+          </button>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {testCases.map((testCase) => {
+          {filteredTestCases.map((testCase) => {
             const isEditing = editingId === testCase.id;
             const isRunning = runningTestId === testCase.id;
 
