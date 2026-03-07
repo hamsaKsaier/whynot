@@ -242,12 +242,40 @@ export class GuardianAgent {
     const highSecurity = securityBugs.filter(b => b.severity === 'high').length;
     const securityScore = Math.max(0, 100 - (criticalSecurity * 25 + highSecurity * 15));
 
-    // Accessibility score (mock)
+    // 🔴 Fix: Real accessibility score — weighted by severity from actual a11y bugs in DB
     const a11yBugs = bugs.filter(b => b.category === 'accessibility');
-    const accessibilityScore = Math.max(0, 100 - (a11yBugs.length * 10));
+    const a11yCritical = a11yBugs.filter(b => b.severity === 'critical').length;
+    const a11yHigh     = a11yBugs.filter(b => b.severity === 'high').length;
+    const a11yMedium   = a11yBugs.filter(b => b.severity === 'medium').length;
+    const a11yLow      = a11yBugs.filter(b => b.severity === 'low').length;
+    // Weights: critical=-25, high=-15, medium=-8, low=-3
+    const accessibilityScore = Math.max(
+      0,
+      100 - (a11yCritical * 25 + a11yHigh * 15 + a11yMedium * 8 + a11yLow * 3)
+    );
 
-    // Performance score (mock)
-    const performanceScore = 80; // Would calculate from actual metrics
+    // 🔴 Fix: Real performance score — bug-driven + page load times from discovered_elements
+    const perfBugs    = bugs.filter(b => b.category === 'performance');
+    const perfCritical = perfBugs.filter(b => b.severity === 'critical').length;
+    const perfHigh     = perfBugs.filter(b => b.severity === 'high').length;
+    const perfMedium   = perfBugs.filter(b => b.severity === 'medium').length;
+
+    // Extract load times captured by BrowserTools.navigate() stored in discovered_elements
+    const loadTimes = pages
+      .filter(p => typeof p.discovered_elements?.loadTimeMs === 'number')
+      .map(p => p.discovered_elements.loadTimeMs as number);
+    const avgLoadMs = loadTimes.length > 0
+      ? loadTimes.reduce((acc, t) => acc + t, 0) / loadTimes.length
+      : 0;
+
+    // Penalise for slow average load (>5 s critical, >3 s moderate, >2 s mild)
+    const loadPenalty =
+      avgLoadMs > 5000 ? 30 :
+      avgLoadMs > 3000 ? 15 :
+      avgLoadMs > 2000 ? 5  : 0;
+
+    const perfBugPenalty = perfCritical * 25 + perfHigh * 15 + perfMedium * 8;
+    const performanceScore = Math.max(0, 100 - loadPenalty - perfBugPenalty);
 
     // Calculate overall score
     const overall = Math.round(
@@ -296,7 +324,7 @@ export class GuardianAgent {
         bugsHigh: risks.high,
         vulnerabilitiesFound: securityBugs.length,
         a11yIssues: a11yBugs.length,
-        avgPageLoadMs: 0
+        avgPageLoadMs: Math.round(avgLoadMs)
       },
       risks,
       trend,
@@ -388,7 +416,8 @@ export class GuardianAgent {
       currentScore: score.overall
     });
 
-    const focusArea = this.determineNextFocus(score);
+    // Coverage-guided selection replaces the old threshold round-robin
+    const focusArea = await this.determineNextFocusCoverageGuided(score);
     const targets = await this.selectTargets(focusArea, score);
 
     const plan: IterationPlan = {
@@ -415,6 +444,99 @@ export class GuardianAgent {
     return plan;
   }
 
+  /**
+   * Coverage-guided focus selection — smarter than the old threshold round-robin.
+   *
+   * Decision hierarchy (checked in order):
+   * 1. Very low coverage → always explore
+   * 2. Gap analysis: explored pages with zero test coverage → explore to generate tests
+   * 3. High failure rate (>30 %) → investigate root causes
+   * 4. Some failing tests → retest to confirm fixes / mark as flaky
+   * 5. Form-rich pages discovered + security gap → chaos
+   * 6. Remaining unexplored pages → explore
+   * 7. testPriority config fallback
+   */
+  private async determineNextFocusCoverageGuided(
+    score: QualityScore
+  ): Promise<IterationPlan['focusArea']> {
+    const pages     = await this.repository.getPages(this.sessionId);
+    const testCases = await this.repository.getTestCases(this.sessionId);
+
+    const exploredPages   = pages.filter(p => p.is_explored);
+    const unexploredPages = pages.filter(p => !p.is_explored);
+    const coveragePct     = pages.length > 0 ? (exploredPages.length / pages.length) * 100 : 0;
+
+    // 1. Force exploration while coverage is very low
+    if (coveragePct < 30 || (unexploredPages.length > 5 && coveragePct < 60)) {
+      logger.debug('Coverage-guided: explore (low coverage)', {
+        sessionId: this.sessionId, coveragePct: coveragePct.toFixed(1)
+      });
+      return 'explore';
+    }
+
+    // 2. Gap analysis: pages that have been explored but have NO test cases yet
+    const pagesWithTests = new Set(
+      testCases.map(tc => tc.source_page_url).filter(Boolean)
+    );
+    const untestedExploredPages = exploredPages.filter(p => !pagesWithTests.has(p.url));
+    if (untestedExploredPages.length > 0) {
+      logger.debug('Coverage-guided: explore (test-coverage gap)', {
+        sessionId: this.sessionId,
+        untestedPages: untestedExploredPages.length
+      });
+      return 'explore';
+    }
+
+    // 3. Failure concentration: >30% tests failing → investigate
+    const failingTests = testCases.filter(tc => tc.last_run_status === 'failed');
+    const failRate = testCases.length > 0 ? failingTests.length / testCases.length : 0;
+    if (failRate > 0.3) {
+      logger.debug('Coverage-guided: investigate (high failure rate)', {
+        sessionId: this.sessionId, failRate: (failRate * 100).toFixed(1)
+      });
+      return 'investigate';
+    }
+
+    // 4. Some failing tests (≤30%) → retest to confirm fixes / spot flakes
+    if (failingTests.length > 0) {
+      logger.debug('Coverage-guided: retest (moderate failures)', {
+        sessionId: this.sessionId, failingCount: failingTests.length
+      });
+      return 'retest';
+    }
+
+    // 5. Form-rich explored pages + security gap → chaos
+    const formRichPages = exploredPages.filter(p => {
+      const inputs = p.discovered_elements?.inputs?.length  || 0;
+      const forms  = p.discovered_elements?.forms?.length   || 0;
+      return inputs + forms > 0;
+    });
+    if (score.breakdown.security < 80 && formRichPages.length > 0) {
+      logger.debug('Coverage-guided: chaos (security gap, form-rich pages available)', {
+        sessionId: this.sessionId,
+        securityScore: score.breakdown.security,
+        formRichPages: formRichPages.length
+      });
+      return 'chaos';
+    }
+
+    // 6. Still unexplored pages remaining → keep exploring
+    if (unexploredPages.length > 0) {
+      return 'explore';
+    }
+
+    // 7. Fallback based on testPriority config
+    if (this.config.testPriority === 'security_first' && formRichPages.length > 0) {
+      return 'chaos';
+    }
+
+    logger.debug('Coverage-guided: explore (default)', { sessionId: this.sessionId });
+    return 'explore';
+  }
+
+  /**
+   * Legacy sync version — kept for shouldContinue()'s advisory nextFocus field.
+   */
   private determineNextFocus(score: QualityScore): IterationPlan['focusArea'] {
     const priority = this.config.testPriority || 'functional_first';
 

@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { getPool } from '../../../shared/database/connection';
 import { createLogger } from '../../../shared/logger/logger';
 
@@ -456,19 +457,43 @@ export class QALoopRepository {
   }
 
   async updateTestCaseLastRun(testCaseId: string, status: string, durationMs?: number): Promise<void> {
+    // Compute pass/fail increments in TypeScript to avoid PostgreSQL "inconsistent
+    // types deduced for parameter $2" error that occurs when the same parameter
+    // appears in both a SET clause and a CASE expression in the same query.
+    const passIncrement = status === 'passed' ? 1 : 0;
+    const failIncrement = status === 'failed' ? 1 : 0;
     const query = `
-      UPDATE qa_loop_test_cases 
-      SET last_run_status = $2, 
-          last_run_at = CURRENT_TIMESTAMP,
+      UPDATE qa_loop_test_cases
+      SET last_run_status    = $2,
+          last_run_at        = CURRENT_TIMESTAMP,
           last_run_duration_ms = $3,
-          pass_count = pass_count + CASE WHEN $2 = 'passed' THEN 1 ELSE 0 END,
-          fail_count = fail_count + CASE WHEN $2 = 'failed' THEN 1 ELSE 0 END
+          pass_count         = pass_count + $4,
+          fail_count         = fail_count + $5
       WHERE id = $1
     `;
-    await this.pool.query(query, [testCaseId, status, durationMs || null]);
+    await this.pool.query(query, [testCaseId, status, durationMs || null, passIncrement, failIncrement]);
   }
 
   // Bug methods
+
+  /**
+   * Compute a stable fingerprint for deduplication.
+   * Bugs with the same session + page + category + bug_type are treated as duplicates.
+   */
+  private computeBugFingerprint(
+    sessionId: string,
+    pageUrl?: string,
+    category?: string,
+    bugType?: string
+  ): string {
+    const raw = `${sessionId}:${pageUrl ?? ''}:${category ?? ''}:${bugType ?? ''}`;
+    return crypto.createHash('md5').update(raw).digest('hex');
+  }
+
+  /**
+   * Save a bug, skipping (and returning the existing record) if an identical
+   * bug (same page, category and type) was already recorded for this session.
+   */
   async addBug(sessionId: string, bug: {
     projectId?: string;
     title: string;
@@ -483,6 +508,42 @@ export class QALoopRepository {
     suggestedFix?: string;
     iterationFound?: number;
   }): Promise<QALoopBug> {
+    // 🔴 Fix: Fingerprint-based deduplication — same page + category + bug_type = duplicate
+    const fingerprint = this.computeBugFingerprint(
+      sessionId,
+      bug.pageUrl,
+      bug.category,
+      bug.bugType
+    );
+
+    const dupCheck = await this.pool.query<{ id: string }>(`
+      SELECT id FROM qa_loop_bugs
+      WHERE session_id = $1
+        AND (page_url  IS NOT DISTINCT FROM $2)
+        AND (category  IS NOT DISTINCT FROM $3)
+        AND (bug_type  IS NOT DISTINCT FROM $4)
+      LIMIT 1
+    `, [
+      sessionId,
+      bug.pageUrl  ?? null,
+      bug.category ?? null,
+      bug.bugType  ?? null
+    ]);
+
+    if (dupCheck.rows.length > 0) {
+      logger.debug('Duplicate bug skipped (fingerprint match)', {
+        sessionId,
+        fingerprint,
+        title: bug.title,
+        existingId: dupCheck.rows[0].id
+      });
+      const existing = await this.pool.query<QALoopBug>(
+        'SELECT * FROM qa_loop_bugs WHERE id = $1',
+        [dupCheck.rows[0].id]
+      );
+      return existing.rows[0];
+    }
+
     const id = uuidv4();
     const query = `
       INSERT INTO qa_loop_bugs (

@@ -4,8 +4,17 @@ export interface QALoopEvent {
   type: 'thinking' | 'tool_call' | 'tool_result' | 'progress' | 'error' |
   'iteration_start' | 'iteration_end' | 'page_discovered' | 'page_explored' |
   'test_generated' | 'bug_found' | 'session_complete' | 'connected' |
-  'screenshot' | 'status_update';
+  'screenshot' | 'status_update' | 'test_run_start' | 'test_run_result';
   data: any;
+  timestamp: string;
+}
+
+export interface TestRunActivity {
+  testCaseId: string;
+  testCaseName: string;
+  status: 'running' | 'passed' | 'failed' | 'error';
+  durationMs?: number;
+  failureReason?: string;
   timestamp: string;
 }
 
@@ -15,19 +24,30 @@ interface UseQALoopStreamOptions {
   wsUrl?: string;
 }
 
+export interface CostInfo {
+  totalCostCents: number;
+  inputTokens: number;
+  outputTokens: number;
+  modelName: string;
+}
+
 interface UseQALoopStreamReturn {
   isConnected: boolean;
-  // `events` removed in 5.8 — it was returned but never destructured by any consumer
   currentScreenshot: string | null;
   currentUrl: string | null;
   thinkingText: string;
   toolCalls: Array<{ tool: string; input: any; result?: any; timestamp: string }>;
+  testRunActivity: TestRunActivity[];
   iteration: number;
   pagesDiscovered: string[];
   pagesExplored: string[];
   testsGenerated: string[];
   bugsFound: Array<{ title: string; severity: string }>;
   sessionStatus: string | null;
+  currentPhase: string | null;
+  currentMessage: string | null;
+  costInfo: CostInfo;
+  sessionStartTime: number | null;
   error: string | null;
   connect: () => void;
   disconnect: () => void;
@@ -45,12 +65,17 @@ export function useQALoopStream({
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [thinkingText, setThinkingText] = useState('');
   const [toolCalls, setToolCalls] = useState<Array<{ tool: string; input: any; result?: any; timestamp: string }>>([]);
+  const [testRunActivity, setTestRunActivity] = useState<TestRunActivity[]>([]);
   const [iteration, setIteration] = useState(0);
   const [pagesDiscovered, setPagesDiscovered] = useState<string[]>([]);
   const [pagesExplored, setPagesExplored] = useState<string[]>([]);
   const [testsGenerated, setTestsGenerated] = useState<string[]>([]);
   const [bugsFound, setBugsFound] = useState<Array<{ title: string; severity: string }>>([]);
   const [sessionStatus, setSessionStatus] = useState<string | null>(null);
+  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
+  const [currentMessage, setCurrentMessage] = useState<string | null>(null);
+  const [costInfo, setCostInfo] = useState<CostInfo>({ totalCostCents: 0, inputTokens: 0, outputTokens: 0, modelName: '' });
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -72,8 +97,13 @@ export function useQALoopStream({
     setPagesExplored([]);
     setTestsGenerated([]);
     setBugsFound([]);
+    setTestRunActivity([]);
     setIteration(0);
     setSessionStatus(null);
+    setCurrentPhase(null);
+    setCurrentMessage(null);
+    setCostInfo({ totalCostCents: 0, inputTokens: 0, outputTokens: 0, modelName: '' });
+    setSessionStartTime(null);
     setError(null);
     // Reset the O(1) dedup Sets to stay in sync with the cleared arrays (4.4)
     pagesDiscoveredSet.current.clear();
@@ -85,6 +115,7 @@ export function useQALoopStream({
       case 'connected':
         setIsConnected(true);
         setError(null);
+        setSessionStartTime(prev => prev ?? Date.now());
         break;
 
       case 'thinking':
@@ -169,7 +200,9 @@ export function useQALoopStream({
         break;
 
       case 'status_update':
-        setSessionStatus(event.data?.status || null);
+        if (event.data?.status) setSessionStatus(event.data.status);
+        if (event.data?.phase) setCurrentPhase(event.data.phase);
+        if (event.data?.message) setCurrentMessage(event.data.message);
         break;
 
       case 'session_complete':
@@ -180,8 +213,39 @@ export function useQALoopStream({
         setError(event.data?.message || 'Unknown error');
         break;
 
+      case 'test_run_start':
+        // Show "running" badge immediately when test starts
+        setTestRunActivity(prev => {
+          const updated = prev.filter(a => a.testCaseId !== event.data?.testCaseId);
+          return [...updated, {
+            testCaseId: event.data?.testCaseId,
+            testCaseName: event.data?.testCaseName || 'Test',
+            status: 'running',
+            timestamp: event.timestamp
+          }].slice(-20); // keep last 20
+        });
+        break;
+
+      case 'test_run_result':
+        // Update the entry from 'running' → actual result
+        setTestRunActivity(prev => prev.map(a =>
+          a.testCaseId === event.data?.testCaseId
+            ? { ...a, status: event.data.status, durationMs: event.data.durationMs, failureReason: event.data.failureReason }
+            : a
+        ));
+        break;
+
       case 'progress':
-        // Handle progress updates
+        if (event.data?.phase === 'cost_update') {
+          setCostInfo(prev => ({
+            totalCostCents: prev.totalCostCents + (event.data.costCents || 0),
+            inputTokens: prev.inputTokens + (event.data.inputTokens || 0),
+            outputTokens: prev.outputTokens + (event.data.outputTokens || 0),
+            modelName: event.data.modelName || prev.modelName
+          }));
+        }
+        if (event.data?.phase) setCurrentPhase(event.data.phase);
+        if (event.data?.message) setCurrentMessage(event.data.message);
         break;
     }
   }, []);
@@ -275,12 +339,17 @@ export function useQALoopStream({
     currentUrl,
     thinkingText,
     toolCalls,
+    testRunActivity,
     iteration,
     pagesDiscovered,
     pagesExplored,
     testsGenerated,
     bugsFound,
     sessionStatus,
+    currentPhase,
+    currentMessage,
+    costInfo,
+    sessionStartTime,
     error,
     connect,
     disconnect,

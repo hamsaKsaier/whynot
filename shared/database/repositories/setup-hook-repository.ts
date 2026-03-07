@@ -66,30 +66,45 @@ export class SetupHookRepository {
    * Find global setup hooks
    */
   async findByLevel(level: 'global' | 'suite' | 'test_case'): Promise<SetupHookEntity[]> {
-    return await query<SetupHookEntity>(
-      'SELECT * FROM setup_hooks WHERE level = $1 AND enabled = true ORDER BY created_at ASC',
-      [level]
-    );
+    try {
+      return await query<SetupHookEntity>(
+        'SELECT * FROM setup_hooks WHERE level = $1 AND enabled = true ORDER BY created_at ASC',
+        [level]
+      );
+    } catch (err: any) {
+      if (err.code === '42P01') return []; // Table doesn't exist yet — treat as no hooks
+      throw err;
+    }
   }
 
   /**
    * Find setup hooks for a specific test case
    */
   async findByTestCaseId(testCaseId: string): Promise<SetupHookEntity[]> {
-    return await query<SetupHookEntity>(
-      'SELECT * FROM setup_hooks WHERE test_case_id = $1 AND enabled = true ORDER BY created_at ASC',
-      [testCaseId]
-    );
+    try {
+      return await query<SetupHookEntity>(
+        'SELECT * FROM setup_hooks WHERE test_case_id = $1 AND enabled = true ORDER BY created_at ASC',
+        [testCaseId]
+      );
+    } catch (err: any) {
+      if (err.code === '42P01') return [];
+      throw err;
+    }
   }
 
   /**
    * Find setup hooks for a specific folder
    */
   async findByFolderId(folderId: string): Promise<SetupHookEntity[]> {
-    return await query<SetupHookEntity>(
-      'SELECT * FROM setup_hooks WHERE folder_id = $1 AND enabled = true ORDER BY created_at ASC',
-      [folderId]
-    );
+    try {
+      return await query<SetupHookEntity>(
+        'SELECT * FROM setup_hooks WHERE folder_id = $1 AND enabled = true ORDER BY created_at ASC',
+        [folderId]
+      );
+    } catch (err: any) {
+      if (err.code === '42P01') return [];
+      throw err;
+    }
   }
 
   /**

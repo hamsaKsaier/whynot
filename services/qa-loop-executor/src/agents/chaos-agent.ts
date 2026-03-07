@@ -235,7 +235,65 @@ export class ChaosAgent {
   }
 
   /**
-   * Run chaos testing on a specific page
+   * Returns true when an input element is worth chaos-testing.
+   * Hidden, readonly, submit, button, radio, checkbox and file inputs do not
+   * accept arbitrary text payloads, so attacking them wastes time.
+   */
+  private isTestableElement(element: any): boolean {
+    const type     = (element.type || 'text').toLowerCase();
+    const readonly = !!(element.readonly || element.readOnly || element.disabled);
+
+    const SKIP_TYPES = new Set([
+      'hidden', 'submit', 'button', 'reset', 'image',
+      'radio', 'checkbox', 'file', 'color', 'range'
+    ]);
+
+    if (SKIP_TYPES.has(type)) return false;
+    if (readonly) return false;
+    return true;
+  }
+
+  /**
+   * Risk-based attack pattern selection.
+   * High-risk elements (password, search, email) receive the full attack suite.
+   * Low-risk elements (name, quantity) receive boundary tests only — much faster.
+   */
+  private getTargetedAttackPatterns(element: any): AttackPattern[] {
+    const type = (element.type || 'text').toLowerCase();
+    const name = (element.name || '').toLowerCase();
+
+    // Password fields: SQL injection is the primary threat
+    if (type === 'password' || name.includes('password') || name.includes('passwd')) {
+      return this.attackPatterns; // full suite
+    }
+
+    // Search / query fields: XSS + injection risk
+    if (
+      name.includes('search') || name.includes('query') ||
+      name === 'q' || name.includes('keyword')
+    ) {
+      return this.attackPatterns.filter(p =>
+        ['xss', 'injection', 'boundary'].includes(p.category)
+      );
+    }
+
+    // Email / URL / file-path fields: injection + XSS
+    if (
+      type === 'email' || name.includes('email') ||
+      name.includes('url')  || name.includes('link') ||
+      name.includes('file') || name.includes('path')
+    ) {
+      return this.attackPatterns.filter(p =>
+        ['xss', 'injection', 'boundary'].includes(p.category)
+      );
+    }
+
+    // Everything else: boundary conditions only (fast)
+    return this.attackPatterns.filter(p => p.category === 'boundary');
+  }
+
+  /**
+   * Run chaos testing on a specific page — forms-only, targeted attack patterns.
    */
   async runChaos(page: QALoopPage): Promise<ChaosResult[]> {
     logger.info('Running chaos tests', { sessionId: this.sessionId, pageUrl: page.url });
@@ -244,26 +302,40 @@ export class ChaosAgent {
 
     const elements = page.discovered_elements || {};
     const inputs = elements.inputs || [];
-    const forms = elements.forms || [];
+    const forms  = elements.forms  || [];
+
+    // 🟢 Forms-only: filter to testable elements before doing anything
+    const testableInputs = inputs.filter((i: any) => this.isTestableElement(i));
+    const testableFormFields = forms.flatMap((f: any) =>
+      (f.fields || []).filter((field: any) => this.isTestableElement(field))
+    );
+
+    if (testableInputs.length === 0 && testableFormFields.length === 0) {
+      logger.info('No testable form elements on page — skipping chaos', {
+        sessionId: this.sessionId, pageUrl: page.url
+      });
+      return [];
+    }
 
     emitToSession(this.sessionId, {
       type: 'progress',
       data: {
         phase: 'chaos',
         pageUrl: page.url,
-        message: `Starting chaos testing on ${page.url}`
+        message: `Chaos-testing ${testableInputs.length + testableFormFields.length} form element(s) on ${page.url}`
       }
     });
 
-    // Test each input field
-    for (const input of inputs) {
+    // Test each testable standalone input
+    for (const input of testableInputs) {
       const inputResults = await this.testElement(page.url, input);
       results.push(...inputResults);
     }
 
-    // Test form fields
+    // Test testable fields inside forms (pass the parent form for submit context)
     for (const form of forms) {
       for (const field of (form.fields || [])) {
+        if (!this.isTestableElement(field)) continue;
         const fieldResults = await this.testElement(page.url, field, form);
         results.push(...fieldResults);
       }
@@ -277,7 +349,7 @@ export class ChaosAgent {
   }
 
   /**
-   * Test a single element with various attack patterns
+   * Test a single element with risk-appropriate attack patterns.
    */
   private async testElement(
     pageUrl: string,
@@ -288,10 +360,8 @@ export class ChaosAgent {
     const selector = element.selector || `input[name="${element.name}"]`;
     const elementType = element.type || 'text';
 
-    // Get applicable attacks for this element type
-    const applicablePatterns = this.attackPatterns.filter(p =>
-      p.appliesTo === 'text_input' || p.appliesTo === elementType || p.appliesTo === 'any'
-    );
+    // 🟢 Risk-based pattern selection — avoids wasting time on low-risk fields
+    const applicablePatterns = this.getTargetedAttackPatterns(element);
 
     for (const pattern of applicablePatterns) {
       // Test a subset of payloads (first 3) for efficiency

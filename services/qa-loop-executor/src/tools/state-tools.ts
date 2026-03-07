@@ -234,16 +234,21 @@ export class StateTools {
   async markPageExplored(
     url: string,
     description?: string,
-    pageType?: string
+    pageType?: string,
+    loadTimeMs?: number
   ): Promise<ToolResult> {
     try {
       // Ensure page exists
       await this.repository.addPage(this.sessionId, { url });
 
+      // Store real load time in discovered_elements so the Guardian can use it for performance scoring
+      const discoveredElements = loadTimeMs !== undefined ? { loadTimeMs } : undefined;
+
       // Mark as explored
       await this.repository.markPageExplored(this.sessionId, url, {
         description,
-        pageType
+        pageType,
+        discoveredElements
       });
 
       // Emit event for UI update

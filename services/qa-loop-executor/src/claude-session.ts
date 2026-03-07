@@ -173,11 +173,13 @@ export class ClaudeSession {
     ];
 
     try {
-      // Run conversation loop until Claude stops calling tools
-      // COST OPTIMIZATION: Reduced from 50 to 12 max loops
+      // Run conversation loop until Claude stops calling tools.
+      // 25 loops gives enough budget to navigate several pages AND generate
+      // test cases / bugs — 12 was too few and led to max_loops before any
+      // save_test_case calls were made.
       let continueLoop = true;
       let loopCount = 0;
-      const maxLoops = 12; // Reduced for cost savings
+      const maxLoops = 25;
 
       while (continueLoop && loopCount < maxLoops) {
         loopCount++;

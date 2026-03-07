@@ -90,8 +90,11 @@ export class ToolExecutor {
         case 'add_discovered_page':
           return await this.stateTools.addDiscoveredPage(input.url, input.priority);
 
-        case 'mark_page_explored':
-          return await this.stateTools.markPageExplored(input.url, input.description, input.page_type);
+        case 'mark_page_explored': {
+          // Thread real load time (captured during navigate()) into discovered_elements
+          const cachedLoadTime = this.browserTools.getLoadTime(input.url);
+          return await this.stateTools.markPageExplored(input.url, input.description, input.page_type, cachedLoadTime);
+        }
 
         // Report Tools
         case 'save_test_case':
