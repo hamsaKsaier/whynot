@@ -30,7 +30,7 @@ export interface QALoopEvent {
   type: 'thinking' | 'tool_call' | 'tool_result' | 'progress' | 'error' |
   'iteration_start' | 'iteration_end' | 'page_discovered' | 'page_explored' |
   'test_generated' | 'bug_found' | 'session_complete' | 'connected' |
-  'screenshot' | 'status_update';
+  'screenshot' | 'status_update' | 'test_run_start' | 'test_run_result';
   data: any;
   timestamp: string;
 }

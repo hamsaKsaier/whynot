@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import routes, { shutdownActiveSessions } from './api/routes';
 import { setupWebSocketServer } from './api/websocket';
 import { createLogger } from '../../shared/logger/logger';
+import { getPool } from '../../shared/database/connection';
 
 dotenv.config();
 
@@ -44,12 +45,46 @@ app.get('/', (req, res) => {
 // Setup WebSocket server for real-time streaming
 setupWebSocketServer(server);
 
-server.listen(PORT, () => {
+/**
+ * On startup, find any sessions that were left in the 'running' state by a
+ * previous crash or ungraceful shutdown and mark them as 'failed' so they
+ * don't appear stuck to the user and don't corrupt quality-score calculations.
+ */
+async function recoverStrandedSessions(): Promise<void> {
+  try {
+    const pool = getPool();
+    const result = await pool.query<{ id: string }>(`
+      UPDATE qa_loop_sessions
+         SET status          = 'failed',
+             error_message   = 'Session interrupted by service restart',
+             completed_at    = CURRENT_TIMESTAMP
+       WHERE status = 'running'
+      RETURNING id
+    `);
+
+    if (result.rows.length > 0) {
+      logger.warn('Recovered stranded sessions from previous crash', {
+        count: result.rows.length,
+        sessionIds: result.rows.map(r => r.id)
+      });
+    } else {
+      logger.info('No stranded sessions found on startup — clean state');
+    }
+  } catch (error: any) {
+    // Non-fatal: if the DB isn't ready yet, log and continue
+    logger.error('Failed to recover stranded sessions', { error: error.message });
+  }
+}
+
+server.listen(PORT, async () => {
   logger.info('QA Loop Executor Service started', {
     port: PORT,
     testExecutorUrl: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001',
     anthropicConfigured: !!process.env.ANTHROPIC_API_KEY
   });
+
+  // Recover any sessions that were left running by a crash
+  await recoverStrandedSessions();
 });
 
 // ── Graceful shutdown (3.1) ────────────────────────────────────────────────────

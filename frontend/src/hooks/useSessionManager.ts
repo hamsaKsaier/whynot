@@ -3,7 +3,8 @@
  * so that QALoopPage.tsx and its child components stay pure presentation (5.1).
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useQALoopStream } from './useQALoopStream';
+import { useQALoopStream, TestRunActivity } from './useQALoopStream';
+export type { TestRunActivity };
 import {
   startQALoopSession,
   listQALoopSessions,
@@ -94,12 +95,17 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
     currentUrl,
     thinkingText,
     toolCalls,
+    testRunActivity,
     iteration,
     pagesDiscovered,
     pagesExplored,
     testsGenerated,
     bugsFound: streamBugsFound,
     sessionStatus,
+    currentPhase,
+    currentMessage,
+    costInfo,
+    sessionStartTime,
     error: wsError,
     clearEvents,
   } = useQALoopStream({
@@ -262,6 +268,16 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
         testPriority:    params.testPriority,
         sourceSessionId: params.sourceSessionId,
       });
+      // Persist credentials so they can be re-supplied on resume (browser state
+      // is lost when the orchestrator is recreated; we need to re-login).
+      if (params.loginCredentials) {
+        try {
+          sessionStorage.setItem(
+            `qa-session-creds-${session.id}`,
+            JSON.stringify(params.loginCredentials)
+          );
+        } catch { /* sessionStorage unavailable — resume will proceed without re-login */ }
+      }
       setActiveSession(session);
       onSuccess('QA Loop session started!');
       loadSessions();
@@ -286,7 +302,15 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
   const handleResumeSession = useCallback(async () => {
     if (!activeSession) return;
     try {
-      await resumeQALoopSession(activeSession.id);
+      // Retrieve stored credentials so the backend can re-establish the browser
+      // session (login state is lost when the orchestrator is recreated).
+      let storedCreds: LoginCredentials | undefined;
+      try {
+        const raw = sessionStorage.getItem(`qa-session-creds-${activeSession.id}`);
+        if (raw) storedCreds = JSON.parse(raw) as LoginCredentials;
+      } catch { /* ignore parse errors */ }
+
+      await resumeQALoopSession(activeSession.id, storedCreds);
       setActiveSession(prev => prev ? { ...prev, status: 'running' } : prev);
       onSuccess('Session resumed');
     } catch {
@@ -364,14 +388,15 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fallback polling when WebSocket is NOT connected (4.1)
+  // Polling while session is running — every 5 s without WS, every 10 s with WS.
+  // Even with WS connected we need periodic REST refreshes so the Tests / Bugs /
+  // Pages tabs stay up-to-date (WS only emits lightweight events, not full objects).
   useEffect(() => {
-    if (activeSession && activeSession.status === 'running' && !isConnected) {
-      const interval = setInterval(() => {
-        loadSessionDetails(activeSession.id);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
+    if (!activeSession || activeSession.status !== 'running') return;
+    const interval = setInterval(() => {
+      loadSessionDetails(activeSession.id);
+    }, isConnected ? 10_000 : 5_000);
+    return () => clearInterval(interval);
   }, [activeSession?.id, activeSession?.status, isConnected, loadSessionDetails]);
 
   // Load documents when active session changes
@@ -427,12 +452,17 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
     currentUrl,
     thinkingText,
     toolCalls,
+    testRunActivity,
     iteration,
     pagesDiscovered,
     pagesExplored,
     testsGenerated,
     streamBugsFound,
     sessionStatus,
+    currentPhase,
+    currentMessage,
+    costInfo,
+    sessionStartTime,
     wsError,
     clearEvents,
   };

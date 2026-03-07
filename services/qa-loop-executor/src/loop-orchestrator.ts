@@ -8,6 +8,7 @@ import { GuardianAgent, GuardianConfig, QualityScore, IterationPlan } from './ag
 import { RetestExecutor } from './retest-executor';
 import { selectModel, ClaudeModel, FOCUS_AREA_MODELS, getModelDisplayName } from './model-selector';
 import { BrowserTools } from './tools/browser-tools';
+import axios from 'axios';
 
 const logger = createLogger('loop-orchestrator');
 
@@ -33,6 +34,10 @@ export interface LoopConfig {
   maxBudgetCents?: number;
   loginCredentials?: LoginCredentials;
   testPriority?: 'functional_first' | 'balanced' | 'security_first';
+  /** True when the orchestrator is resuming a previously paused session */
+  isResume?: boolean;
+  /** The iteration number the session was paused at — used to restore currentIteration */
+  resumeFromIteration?: number;
 }
 
 export type FocusArea = 'explore' | 'chaos' | 'retest' | 'investigate';
@@ -46,6 +51,8 @@ export class LoopOrchestrator {
   private isStopped: boolean = false;
   private currentIteration: number = 0;
   private startTime: Date | null = null;
+  /** True once performLogin() has succeeded this run — used to warn Claude when login state is absent */
+  private loginEstablished: boolean = false;
 
   // Multi-agent system
   private chaosAgent: ChaosAgent;
@@ -73,6 +80,14 @@ export class LoopOrchestrator {
     this.config = config;
     this.repository = deps?.repository ?? new QALoopRepository();
 
+    // Restore iteration counter when resuming so continuation prompts are used
+    if (config.isResume && config.resumeFromIteration && config.resumeFromIteration > 0) {
+      this.currentIteration = config.resumeFromIteration;
+      logger.info('Restored iteration counter for resume', {
+        sessionId, resumeFromIteration: config.resumeFromIteration
+      });
+    }
+
     // Initialize agents (accept injected or create defaults)
     this.chaosAgent = deps?.chaosAgent ?? new ChaosAgent(sessionId);
     this.detectiveAgent = deps?.detectiveAgent ?? new DetectiveAgent(sessionId);
@@ -93,7 +108,42 @@ export class LoopOrchestrator {
     try {
       // Perform login if credentials are provided (Phase 2)
       if (this.config.loginCredentials) {
-        await this.performLogin();
+        if (this.config.isResume) {
+          // RESUME: the auth page was already tested in a previous run — skip exploration.
+          // Just re-establish the browser session (login state was lost when the orchestrator
+          // was recreated), then continue from the last iteration.
+          logger.info('Resuming session — skipping auth exploration, performing re-login', {
+            sessionId: this.sessionId,
+            resumeFromIteration: this.config.resumeFromIteration
+          });
+          emitToSession(this.sessionId, {
+            type: 'status_update',
+            data: { message: 'Resuming session — re-establishing login state...', phase: 'resume_login' }
+          });
+          await this.performLogin();
+          this.loginEstablished = true;
+        } else {
+          // FRESH START: explore auth page first, then log in
+          await this.performAuthExploration();
+          await this.performLogin();
+          this.loginEstablished = true;
+        }
+      } else if (this.config.isResume && this.config.config?.hasLoginCredentials) {
+        // Resumed WITHOUT credentials but the session originally used login.
+        // We cannot re-login — warn Claude so it doesn't waste tool calls on the login form.
+        logger.warn('Resuming session that required login but no credentials were provided', {
+          sessionId: this.sessionId
+        });
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: {
+            message: 'Session resumed without login credentials — will explore public pages only. ' +
+                     'Stop and start a new session to resume with full access.',
+            phase: 'resume_no_credentials',
+            isWarning: true
+          }
+        });
+        // loginEstablished stays false — exploration prompt will warn Claude
       }
 
       // Pre-load document context once so every ClaudeSession iteration reuses it (2.6)
@@ -192,6 +242,149 @@ export class LoopOrchestrator {
         data: { message: `Login might have failed: ${error.message}. Continuing with exploration...`, isWarning: true }
       });
       // Don't throw - continue with exploration even if login fails
+    }
+  }
+
+  /**
+   * Explore and test the authentication page BEFORE logging in with real credentials.
+   *
+   * This phase drives Claude to:
+   *   1. Navigate to the login page and map its structure (inputs, buttons, error containers).
+   *   2. Generate and save test cases covering:
+   *        • Invalid credentials (wrong email / wrong password)
+   *        • Empty email / empty password validation
+   *        • Invalid e-mail format
+   *        • SQL-injection and XSS probes in the login fields
+   *        • Rate-limiting / brute-force protection observation
+   *        • Correct login-flow documentation (selectors, flow)
+   *   3. Execute those test cases immediately (up to MAX_INLINE_TESTS) so we get
+   *      real pass/fail signal before the real credentials are ever submitted.
+   *
+   * Real credentials are NEVER submitted in this phase.
+   * Non-fatal: any error is logged and the session continues to performLogin().
+   */
+  private async performAuthExploration(): Promise<void> {
+    const creds = this.config.loginCredentials!;
+    const loginUrl = creds.loginUrl || this.config.targetUrl;
+
+    logger.info('Starting auth page exploration', { sessionId: this.sessionId, loginUrl });
+
+    emitToSession(this.sessionId, {
+      type: 'status_update',
+      data: {
+        message: 'Analyzing authentication page and generating test cases...',
+        phase: 'auth_exploration'
+      }
+    });
+
+    try {
+      // Snapshot pre-existing test case IDs so we can detect the ones generated here
+      const preExisting = await this.repository.getTestCases(this.sessionId);
+      const preExistingIds = new Set(preExisting.map(tc => tc.id));
+
+      // Create a ClaudeSession pointed at the login URL, using the explore tool-set
+      const authSession = new ClaudeSession(
+        this.sessionId,
+        { ...this.config, targetUrl: loginUrl },
+        'explore',
+        this.cachedDocumentContext
+      );
+
+      const modelSelection = selectModel({
+        focusArea: 'explore',
+        preferCostEffective: this.config.maxBudgetCents !== undefined
+      });
+
+      const authPrompt = `
+You are performing a security and functional audit of the authentication page at: ${loginUrl}
+
+== YOUR MISSION ==
+1. Call get_session_state() first to initialise your session state.
+2. Navigate to ${loginUrl} and capture the page (screenshot + DOM).
+3. Identify all form inputs, labels, submit button, and any visible error/validation containers.
+4. Generate and SAVE test cases for each of the following scenarios (use save_test_case tool):
+
+   a) INVALID CREDENTIALS — enter email "invalid-user@test-qa.example" and password "WrongPass#999!",
+      submit the form, and verify that a meaningful error message is displayed (e.g. "Invalid credentials").
+      Expected: login is rejected, no redirect to a protected route, error visible.
+
+   b) EMPTY EMAIL — clear the email field, enter any non-empty password, submit, and verify a
+      validation error appears for the email field.
+      Expected: form is not submitted / error shown inline.
+
+   c) EMPTY PASSWORD — enter a valid email format, clear the password field, submit, and verify a
+      validation error appears for the password field.
+      Expected: form is not submitted / error shown inline.
+
+   d) INVALID EMAIL FORMAT — enter "notanemail" (no @ sign) as the email, any password, submit,
+      and verify the client or server rejects the format.
+      Expected: format validation error, login not attempted.
+
+   e) SQL INJECTION PROBE — enter  ' OR '1'='1'--  as both email and password and submit.
+      Expected: login is rejected safely; no crash, no unexpected 500 error, no auth bypass.
+
+   f) XSS PROBE — enter  <script>alert('xssprobe')</script>  as the email field value and submit.
+      Expected: value is sanitized or escaped; no alert fires; no raw HTML rendered in the response.
+
+   g) RATE-LIMIT / BRUTE-FORCE PROTECTION — attempt five rapid consecutive invalid logins and
+      observe whether the app applies a lockout, CAPTCHA, or rate-limit response.
+      Document what you observe (even if no protection is found — that is itself a bug to report).
+
+   h) SUCCESSFUL LOGIN FLOW DOCUMENTATION — document the exact CSS selectors for the email input,
+      password input, and submit button as a test case with steps that describe the happy path.
+      Do NOT use real credentials. Use "doc@test-qa.example" / "DocPass#1" as placeholder values
+      and add a note in the test description that these are placeholder values, not real credentials.
+
+5. For any failures, unexpected errors, or missing validations you discover, also call add_bug() to
+   record them with the appropriate severity and category.
+
+6. Do NOT use the real credentials (email: ${creds.email}).
+   Only use the fake/test values described above.
+
+Start now with get_session_state(), then navigate and explore.
+`.trim();
+
+      await authSession.runIteration(authPrompt, modelSelection.model);
+
+      // Execute the newly generated auth test cases immediately
+      if (!this.isStopped) {
+        const executionResult = await this.executeNewTestCases(preExistingIds);
+
+        logger.info('Auth exploration complete', {
+          sessionId: this.sessionId,
+          testsExecuted: executionResult.testsExecuted,
+          testsPassed: executionResult.testsPassed,
+          testsFailed: executionResult.testsFailed
+        });
+
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: {
+            message: `Auth page testing complete — ${executionResult.testsExecuted} test(s) run, ` +
+              `${executionResult.testsPassed} passed, ${executionResult.testsFailed} failed. ` +
+              `Proceeding to login...`,
+            phase: 'auth_exploration_complete',
+            testsExecuted: executionResult.testsExecuted,
+            testsPassed: executionResult.testsPassed,
+            testsFailed: executionResult.testsFailed
+          }
+        });
+      }
+
+    } catch (error: any) {
+      // Auth exploration is non-fatal — log the problem and let the session proceed to login
+      logger.error('Auth exploration failed (non-fatal), continuing to login', {
+        sessionId: this.sessionId,
+        error: error.message
+      });
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          message: `Auth exploration encountered an issue: ${error.message}. Proceeding to login...`,
+          phase: 'auth_exploration_error',
+          isWarning: true
+        }
+      });
     }
   }
 
@@ -400,9 +593,15 @@ export class LoopOrchestrator {
   }
 
   /**
-   * Run exploration phase using Claude with tiered model selection
+   * Run exploration phase using Claude with tiered model selection.
+   * After exploration completes, immediately executes newly generated test cases
+   * so the loop gains real pass/fail signal on every iteration.
    */
   private async runExploration(plan: IterationPlan): Promise<any> {
+    // Snapshot existing test case IDs so we can detect new ones created this iteration
+    const preExisting = await this.repository.getTestCases(this.sessionId);
+    const preExistingIds = new Set(preExisting.map(tc => tc.id));
+
     // Pass focusArea so the session selects the right tool subset (2.2),
     // and pass the pre-loaded document context to skip the per-iteration DB query (2.6).
     this.claudeSession = new ClaudeSession(
@@ -425,9 +624,79 @@ export class LoopOrchestrator {
       estimatedCostPerCall: modelSelection.estimatedCostPerCall
     });
 
-    const prompt = this.currentIteration === 1
-      ? `Start exploring ${this.config.targetUrl}. First, call get_session_state() to initialize, then begin systematic exploration.`
-      : `Continue exploration. Focus on these targets: ${plan.targets.join(', ')}. First, call get_session_state() to see your current progress.`;
+    const targetHint = plan.targets.length > 0
+      ? `Priority unexplored pages for this iteration:\n${plan.targets.map(t => `  - ${t}`).join('\n')}`
+      : `Start from ${this.config.targetUrl} and navigate to unexplored pages.`;
+
+    // Fetch the already-explored pages from the DB and embed them as a hard blocklist.
+    // This prevents Claude from re-visiting pages it tested in a previous iteration,
+    // whether that's within the same session or after a resume.
+    const alreadyExploredPages = await this.repository.getExploredPages(this.sessionId);
+    const alreadyExploredUrls = alreadyExploredPages.map(p => p.url);
+    const skipBlock = alreadyExploredUrls.length > 0
+      ? `\n⛔ ALREADY EXPLORED — DO NOT REVISIT THESE PAGES (skip them, navigate elsewhere):\n${alreadyExploredUrls.map(u => `  - ${u}`).join('\n')}\n`
+      : '';
+
+    const isFirstEverIteration = this.currentIteration <= 1 && alreadyExploredUrls.length === 0;
+
+    // Warn Claude when this is a resumed session without login credentials, so it
+    // doesn't waste tool calls attempting to fill in the login form.
+    const needsLoginButNoCreds =
+      this.config.isResume &&
+      this.config.config?.hasLoginCredentials &&
+      !this.loginEstablished;
+    const noLoginWarning = needsLoginButNoCreds
+      ? `\n⚠️  LOGIN NOTICE: This session was resumed without login credentials. ` +
+        `The browser has NO active session — protected pages will redirect to the login form. ` +
+        `DO NOT attempt to fill in or submit the login form. ` +
+        `Instead, ONLY explore pages that are publicly accessible (no login required).\n`
+      : '';
+
+    const prompt = isFirstEverIteration
+      ? `You are a QA engineer systematically testing ${this.config.targetUrl}.
+${noLoginWarning}
+STEP 1 — Initialise: call get_session_state() first.
+STEP 2 — Navigate to ${this.config.targetUrl} and capture the page with get_page_elements().
+STEP 3 — For EVERY page you visit, you MUST:
+  a) Observe what the page does (forms, buttons, data, navigation).
+  b) Immediately call save_test_case() with 2–4 concrete test cases for that page.
+     Each test case needs clear steps a real tester could follow.
+  c) If you spot a bug or a broken element, call add_bug() right away.
+  d) Call mark_page_explored() before moving to the next page.
+STEP 4 — Click navigation links to explore more pages, repeating step 3 for each.
+
+IMPORTANT RULES:
+- If a click or type action fails (error in result), SKIP IT immediately — do not retry the same selector.
+- Use descriptive selectors: prefer [data-testid], aria-label, or visible text over nth-of-type.
+- Generate test cases BEFORE moving to the next page, not at the end.
+- Aim to cover at least 3 different pages and save at least 6 test cases total this iteration.`
+      : `You are continuing a QA exploration of ${this.config.targetUrl}. Iteration ${this.currentIteration}.
+${noLoginWarning}${skipBlock}
+STEP 1 — ${targetHint}
+STEP 2 — For EVERY page you visit (that is NOT in the skip list above):
+  a) Call get_page_elements() to understand the page structure.
+  b) Immediately call save_test_case() with 2–4 test cases for that page's functionality.
+  c) Call add_bug() for any broken or missing functionality you observe.
+  d) Call mark_page_explored() before moving on.
+STEP 3 — After finishing the priority pages, check get_session_state() for other unexplored pages.
+
+CRITICAL RULES:
+- ⛔ NEVER navigate to a URL listed in the "ALREADY EXPLORED" block above. They are done.
+- If a page redirects you somewhere already explored → go back and pick a different target.
+- If a click, type, or navigation fails → SKIP it immediately, do NOT retry.
+- Generate test cases ON THE PAGE, not after leaving it.
+- Aim for at least 4 new test cases this iteration.`;
+
+    // Emit phase start so the UI can show the current activity
+    emitToSession(this.sessionId, {
+      type: 'status_update',
+      data: {
+        message: isFirstEverIteration
+          ? `Starting first exploration of ${this.config.targetUrl}…`
+          : `Iteration ${this.currentIteration}: exploring ${plan.targets.length > 0 ? plan.targets.length + ' pages' : 'new pages'}…`,
+        phase: 'exploring'
+      }
+    });
 
     const result = await this.claudeSession.runIteration(prompt, modelSelection.model);
 
@@ -454,7 +723,181 @@ export class LoopOrchestrator {
       });
     }
 
+    // 🔴 Fix: Execute newly generated test cases immediately instead of waiting for retest phase
+    if (!this.isStopped) {
+      const executionResult = await this.executeNewTestCases(preExistingIds);
+      return {
+        ...result,
+        testsExecuted: executionResult.testsExecuted,
+        testsPassed: executionResult.testsPassed,
+        testsFailed: executionResult.testsFailed
+      };
+    }
+
     return result;
+  }
+
+  /**
+   * Execute test cases that were newly created during the most recent exploration.
+   * Capped at MAX_INLINE_TESTS per iteration to keep the loop responsive.
+   */
+  private async executeNewTestCases(preExistingIds: Set<string>): Promise<{
+    testsExecuted: number;
+    testsPassed: number;
+    testsFailed: number;
+  }> {
+    const MAX_INLINE_TESTS = 5;
+    const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3001';
+
+    const allTestCases = await this.repository.getTestCases(this.sessionId);
+    const newTestCases = allTestCases
+      .filter(tc => !preExistingIds.has(tc.id))
+      .slice(0, MAX_INLINE_TESTS);
+
+    if (newTestCases.length === 0) {
+      return { testsExecuted: 0, testsPassed: 0, testsFailed: 0 };
+    }
+
+    logger.info('Executing newly generated test cases', {
+      sessionId: this.sessionId,
+      count: newTestCases.length
+    });
+
+    emitToSession(this.sessionId, {
+      type: 'progress',
+      data: {
+        phase: 'test_execution',
+        message: `Executing ${newTestCases.length} newly generated test${newTestCases.length > 1 ? 's' : ''}…`,
+        count: newTestCases.length
+      }
+    });
+
+    let passed = 0;
+    let failed = 0;
+
+    for (const testCase of newTestCases) {
+      if (this.isStopped) break;
+
+      // Normalise steps — JSONB comes back as a parsed array from pg, but guard
+      // against it being a JSON string (double-serialised) or missing entirely.
+      const rawSteps = (testCase as any).steps;
+      const rawStepsArr: any[] = Array.isArray(rawSteps)
+        ? rawSteps
+        : (typeof rawSteps === 'string' ? (() => { try { return JSON.parse(rawSteps); } catch { return []; } })() : []);
+
+      // ── Post-process steps: ensure navigate steps have a URL, ensure every
+      //    step has an id (step_results table requires non-null step_id) ──────
+      const websiteUrl = (testCase as any).source_page_url || this.config.targetUrl;
+      const steps: any[] = rawStepsArr.map((step: any) => {
+        const processed = { ...step };
+        // Ensure step has a stable id — required by the step_results DB constraint
+        if (!processed.id) {
+          processed.id = require('crypto').randomUUID();
+        }
+        // Fill in missing URL for navigate actions (Claude often omits it)
+        if (processed.action === 'navigate' && !processed.value && !processed.target?.attributes?.href) {
+          processed.value = websiteUrl;
+        }
+        return processed;
+      });
+
+      // ── Emit "running" event so the user sees real-time progress ──────────
+      emitToSession(this.sessionId, {
+        type: 'test_run_start',
+        data: { testCaseId: testCase.id, testCaseName: testCase.name }
+      });
+
+      try {
+        const response = await axios.post(
+          `${testExecutorUrl}/api/execute-test`,
+          {
+            testCase: {
+              id: testCase.id,
+              name: testCase.name,
+              description: testCase.description || testCase.name,
+              // website_url tells the test-runner where to navigate at the start of the test
+              website_url: testCase.source_page_url || this.config.targetUrl,
+              steps,                    // always an array (normalized above)
+              selectors: testCase.selectors || {}
+            },
+            headless: true,
+            useIsolatedContext: true
+          },
+          { timeout: 5 * 60 * 1000 } // 5-minute limit per test
+        );
+
+        const res = response.data;
+        const allPassed = res.status === 'completed' && res.allStepsPassed;
+        const status: 'passed' | 'failed' = allPassed ? 'passed' : 'failed';
+
+        if (allPassed) passed++; else failed++;
+
+        const failedStep = res.stepResults?.findIndex((s: any) => s.status === 'failed') ?? -1;
+        const failureReason = failedStep >= 0 ? res.stepResults?.[failedStep]?.error : undefined;
+
+        try {
+          await this.repository.addTestRun(this.sessionId, testCase.id, {
+            status,
+            durationMs: res.durationMs,
+            stepsTotal: steps.length,
+            stepsCompleted: res.stepResults?.length ?? 0,
+            failureStepIndex: failedStep >= 0 ? failedStep : undefined,
+            failureReason
+          });
+        } catch (saveErr: any) {
+          logger.warn('Failed to persist test run result', { testCaseId: testCase.id, error: saveErr.message });
+        }
+
+        // ── Emit result so UI can show ✅/❌ immediately ──────────────────
+        emitToSession(this.sessionId, {
+          type: 'test_run_result',
+          data: {
+            testCaseId: testCase.id,
+            testCaseName: testCase.name,
+            status,
+            durationMs: res.durationMs,
+            failureReason
+          }
+        });
+
+      } catch (error: any) {
+        failed++;
+        logger.warn('Inline test execution failed', {
+          sessionId: this.sessionId,
+          testCaseId: testCase.id,
+          error: error.message
+        });
+
+        // Save error state — guard so this can't bubble up and abort the loop
+        try {
+          await this.repository.addTestRun(this.sessionId, testCase.id, {
+            status: 'error',
+            failureReason: error.message
+          });
+        } catch (saveErr: any) {
+          logger.warn('Failed to persist test run error state', { testCaseId: testCase.id, error: saveErr.message });
+        }
+
+        emitToSession(this.sessionId, {
+          type: 'test_run_result',
+          data: {
+            testCaseId: testCase.id,
+            testCaseName: testCase.name,
+            status: 'error',
+            failureReason: error.message
+          }
+        });
+      }
+    }
+
+    logger.info('Inline test execution complete', {
+      sessionId: this.sessionId,
+      total: newTestCases.length,
+      passed,
+      failed
+    });
+
+    return { testsExecuted: newTestCases.length, testsPassed: passed, testsFailed: failed };
   }
 
   /**
@@ -716,3 +1159,4 @@ export class LoopOrchestrator {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
+// WORKTREE_BUILD_MARKER_1772873764

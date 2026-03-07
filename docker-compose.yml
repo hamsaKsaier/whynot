@@ -23,12 +23,13 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8010:8000"
+    env_file:
+      - .env
     environment:
       - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - OPENAI_VISION_MODEL=${OPENAI_VISION_MODEL:-gpt-4o}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-opus-4-5-20251101}
       - CORS_ORIGINS=http://localhost:3010,http://localhost:3011,http://localhost:5183
     volumes:
@@ -96,9 +97,10 @@ services:
       dockerfile: ./services/qa-loop-executor/Dockerfile
     ports:
       - "3012:3002"
+    env_file:
+      - .env
     environment:
       - PORT=3002
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TEST_EXECUTOR_URL=http://test-executor:3001
       - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
       - NODE_ENV=production
@@ -166,7 +168,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5183:5173"
+      - "5183:5183"
     environment:
       - VITE_API_URL=http://localhost:3010/api
       - VITE_WS_URL=ws://localhost:3011

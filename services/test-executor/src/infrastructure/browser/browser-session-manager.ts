@@ -240,6 +240,48 @@ export class BrowserSessionManager {
       }
     }
 
+    // Strategy 5: Plain text — when selector looks like a human-readable label (no CSS syntax)
+    // e.g. Claude passes "Se connecter" or "Matières" directly as the selector
+    const looksCssLike = /[.#\[\]:>+~()]/.test(selector) ||
+      /^(button|input|a|div|span|form|select|textarea|label)\b/.test(selector);
+    if (!looksCssLike && selector.trim().length > 0) {
+      const text = selector.trim();
+      logger.debug('Trying plain-text click strategies', { selector: text });
+
+      // 5a: getByRole button
+      try {
+        const btn = page.getByRole('button', { name: new RegExp(text, 'i') }).first();
+        if (await btn.isVisible({ timeout: 1500 })) {
+          await btn.click({ timeout: 3000 });
+          return true;
+        }
+      } catch (e) { /* continue */ }
+
+      // 5b: getByRole link
+      try {
+        const link = page.getByRole('link', { name: new RegExp(text, 'i') }).first();
+        if (await link.isVisible({ timeout: 1500 })) {
+          await link.click({ timeout: 3000 });
+          return true;
+        }
+      } catch (e) { /* continue */ }
+
+      // 5c: getByText (any element)
+      try {
+        const el = page.getByText(text, { exact: false }).first();
+        if (await el.isVisible({ timeout: 1500 })) {
+          await el.click({ timeout: 3000 });
+          return true;
+        }
+      } catch (e) { /* continue */ }
+
+      // 5d: CSS attribute-value text match
+      try {
+        await page.click(`[aria-label="${text}"]`, { timeout: 2000 });
+        return true;
+      } catch (e) { /* continue */ }
+    }
+
     return false;
   }
 
@@ -433,13 +475,26 @@ export class BrowserSessionManager {
             }
           });
 
-          // Get buttons
+          // Get buttons — prefer stable selectors over positional ones
           document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"]').forEach((el, idx) => {
             if (el.offsetParent !== null) {
-              buttons.push({
-                text: (el.textContent || el.value || '').trim().substring(0, 100),
-                selector: el.id ? '#' + el.id : 'button:nth-of-type(' + (idx + 1) + ')'
-              });
+              const text = (el.textContent || el.value || '').trim().substring(0, 100);
+              let selector;
+              if (el.id) {
+                selector = '#' + el.id;
+              } else if (el.getAttribute('data-testid')) {
+                selector = '[data-testid="' + el.getAttribute('data-testid') + '"]';
+              } else if (el.getAttribute('aria-label')) {
+                selector = '[aria-label="' + el.getAttribute('aria-label') + '"]';
+              } else if (el.getAttribute('name')) {
+                selector = '[name="' + el.getAttribute('name') + '"]';
+              } else if (text) {
+                // Use text content as the selector (Strategy 5 in clickWithFallback will handle it)
+                selector = text;
+              } else {
+                selector = 'button:nth-of-type(' + (idx + 1) + ')';
+              }
+              buttons.push({ text, selector });
             }
           });
 

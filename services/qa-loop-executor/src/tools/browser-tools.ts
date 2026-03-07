@@ -11,6 +11,7 @@ interface PageCaptureResult {
   title: string;
   html: string;
   screenshot: string;
+  loadTimeMs?: number; // real Navigation Timing measurement from test-executor
 }
 
 export class BrowserTools {
@@ -19,11 +20,18 @@ export class BrowserTools {
   private testExecutorUrl: string;
   private currentUrl: string = '';
   private browserContextId: string | null = null;
+  /** url → loadTimeMs — populated by navigate(), consumed by ToolExecutor for markPageExplored */
+  private loadTimesCache: Map<string, number> = new Map();
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
     this.config = config;
     this.testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3001';
+  }
+
+  /** Return the load time recorded the last time this URL was navigated to. */
+  getLoadTime(url: string): number | undefined {
+    return this.loadTimesCache.get(url);
   }
 
   private async ensureBrowserContext(): Promise<string> {
@@ -68,6 +76,11 @@ export class BrowserTools {
       const result: PageCaptureResult = response.data;
       this.currentUrl = result.url;
 
+      // Cache load time so ToolExecutor can persist it when mark_page_explored is called
+      if (result.loadTimeMs !== undefined) {
+        this.loadTimesCache.set(result.url, result.loadTimeMs);
+      }
+
       // Emit screenshot to websocket for live preview
       if (result.screenshot) {
         emitToSession(this.sessionId, {
@@ -91,7 +104,9 @@ export class BrowserTools {
           url: result.url,
           title: result.title,
           html_preview: truncatedHtml,
-          screenshot: result.screenshot ? '[screenshot captured]' : null
+          screenshot: result.screenshot ? '[screenshot captured]' : null,
+          // Pass real load time so it can be stored in discovered_elements
+          ...(result.loadTimeMs !== undefined ? { loadTimeMs: result.loadTimeMs } : {})
         }
       };
     } catch (error: any) {
@@ -250,7 +265,7 @@ export class BrowserTools {
         forms: elements.forms?.slice(0, 5).map((f: any) => ({
           action: f.action,
           method: f.method,
-          fields: f.fields?.slice(0, 10)
+          fields: Array.isArray(f.fields) ? f.fields.slice(0, 10) : []
         })) || [],
         inputs: elements.inputs?.slice(0, 15).map((i: any) => ({
           type: i.type,

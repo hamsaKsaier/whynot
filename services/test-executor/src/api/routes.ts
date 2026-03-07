@@ -70,14 +70,52 @@ router.get('/health', async (req: Request, res: Response) => {
 
 router.post('/api/execute-test', async (req: Request, res: Response) => {
   try {
-    const testCase: TestCase = req.body;
-    const headless = req.query.headless === 'true';
+    // Support two request formats:
+    //  1. Flat:   { id, name, steps, website_url, ... }         — used by the frontend
+    //  2. Nested: { testCase: {...}, headless: bool, ... }      — used by qa-loop-executor
+    const isNestedFormat = req.body.testCase !== undefined && typeof req.body.testCase === 'object';
+    const testCase: TestCase = isNestedFormat ? req.body.testCase : req.body;
+    const headless = isNestedFormat ? (req.body.headless === true) : (req.query.headless === 'true');
+
+    // Defensive: normalize steps to always be an array (guards against JSONB double-serialisation
+    // or the field being absent entirely when sent by qa-loop-executor)
+    if (!Array.isArray(testCase.steps)) {
+      const rawSteps = (testCase as any).steps;
+      testCase.steps = typeof rawSteps === 'string'
+        ? (() => { try { return JSON.parse(rawSteps); } catch { return []; } })()
+        : [];
+      logger.warn('Normalized testCase.steps to array', {
+        testCaseId: testCase.id,
+        originalType: typeof rawSteps,
+        resultLength: testCase.steps.length
+      });
+    }
+
+    // Ensure every step has a UUID id (required by step_results DB constraint)
+    // and every navigate step has a URL (Claude sometimes omits it).
+    const websiteUrlFallback = testCase.website_url || '';
+    testCase.steps = testCase.steps.map((step: any) => {
+      const fixed = { ...step };
+      // Add missing step id — step_results.step_id is NOT NULL
+      if (!fixed.id || !validateUUID(fixed.id)) {
+        fixed.id = uuidv4();
+      }
+      // Add missing URL for navigate steps so the test doesn't fail at step 1
+      if (fixed.action === 'navigate' && !fixed.value && !fixed.target?.attributes?.href && websiteUrlFallback) {
+        fixed.value = websiteUrlFallback;
+        logger.debug('Patched navigate step with website_url fallback', {
+          testCaseId: testCase.id, websiteUrl: websiteUrlFallback
+        });
+      }
+      return fixed;
+    });
 
     // Log raw request body for debugging
     try {
       const rawBody = JSON.stringify(testCase);
       logger.debug('Raw request body received', {
         bodySize: rawBody.length,
+        isNestedFormat,
         firstStepKeys: testCase.steps[0] ? Object.keys(testCase.steps[0]) : [],
         firstStepHasSuggestedSelectors: !!testCase.steps[0]?.suggested_selectors,
         firstStepSuggestedSelectorsCount: testCase.steps[0]?.suggested_selectors?.length || 0,

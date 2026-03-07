@@ -250,6 +250,10 @@ router.post('/api/sessions/:id/resume', async (req: Request, res: Response) => {
         return res.status(404).json({ error: 'Session not found or not paused' });
       }
 
+      // loginCredentials can be optionally re-supplied in the resume body so the
+      // orchestrator can re-establish the browser session without re-testing auth.
+      const { loginCredentials } = req.body || {};
+
       const newOrchestrator = new LoopOrchestrator(id, {
         targetUrl: session.target_url,
         mode: session.mode,
@@ -257,12 +261,26 @@ router.post('/api/sessions/:id/resume', async (req: Request, res: Response) => {
         maxIterations: session.max_iterations,
         maxDurationHours: session.max_duration_hours,
         documentContext: session.document_context,
-        config: session.config
+        config: session.config,
+        testPriority: session.config?.testPriority,
+        // Resume-specific flags
+        isResume: true,
+        resumeFromIteration: session.iteration_count || 0,
+        // Re-inject login credentials if the client supplies them (needed to
+        // re-login after the browser context was destroyed)
+        ...(loginCredentials ? { loginCredentials } : {})
       });
 
       activeSessions.set(id, newOrchestrator);
       newOrchestrator.start().catch(error => {
         logger.error('QA Loop resume failed', { sessionId: id, error: error.message });
+        activeSessions.delete(id);
+      });
+
+      logger.info('QA Loop session resumed from paused state', {
+        sessionId: id,
+        resumeFromIteration: session.iteration_count,
+        hasLoginCredentials: !!loginCredentials
       });
     } else {
       await orchestrator.resume();

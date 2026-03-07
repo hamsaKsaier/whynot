@@ -165,11 +165,18 @@ export async function pauseQALoopSession(sessionId: string): Promise<{
 }
 
 // Resume QA Loop session
-export async function resumeQALoopSession(sessionId: string): Promise<{
+// loginCredentials can be supplied so the backend can re-establish the browser
+// session (login state) without re-running the full auth exploration.
+export async function resumeQALoopSession(
+  sessionId: string,
+  loginCredentials?: LoginCredentials
+): Promise<{
   success: boolean;
   status: string;
 }> {
-  const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/resume`);
+  const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/resume`, {
+    ...(loginCredentials ? { loginCredentials } : {})
+  });
   return response.data;
 }
 
