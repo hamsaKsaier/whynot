@@ -22,3 +22,6 @@ export type { StatsBarProps } from './StatsBar';
 
 export { LiveMonitor } from './LiveMonitor';
 export type { LiveMonitorProps } from './LiveMonitor';
+
+export { CreateTaskButton } from './CreateTaskButton';
+export { AutoFixButton } from './AutoFixButton';

@@ -185,7 +185,13 @@ export class TestRunner {
       if (!skipInitialNav) {
         sendLog('info', `🌐 Navigating to ${testCase.website_url}...`);
         await browserController.navigate(testCase.website_url);
-        // Navigation already waits for networkidle, no additional wait needed
+        // Wait extra for SPAs: after networkidle, give JS frameworks time to render
+        const page = browserController.getPage();
+        if (page) {
+          await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+          // Wait for common interactive elements to appear (forms, buttons, inputs)
+          await page.waitForSelector('input, button, form, [role="button"]', { timeout: 3000 }).catch(() => {});
+        }
         sendLog('info', '✅ Navigation done\n');
 
         // Don't take screenshot here - we'll get one from the first step if needed
@@ -527,6 +533,17 @@ export class TestRunner {
       }
     }
 
+    // Save video recording (v2)
+    let videoPath: string | null = null;
+    try {
+      videoPath = await browserController.saveVideo(executionId);
+      if (videoPath) {
+        sendLog('info', `🎬 Video recorded: ${videoPath}`);
+      }
+    } catch (videoError: any) {
+      logger.warn('Failed to save video', { error: videoError.message, executionId });
+    }
+
     return {
       execution_id: executionId,
       test_case_id: testCase.id,
@@ -534,6 +551,7 @@ export class TestRunner {
       steps: stepResults,
       total_duration_ms: totalDuration,
       screenshots,
+      video_path: videoPath || undefined,
       error,
       started_at: startedAt,
       completed_at: completedAt

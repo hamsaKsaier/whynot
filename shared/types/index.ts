@@ -9,7 +9,19 @@ export enum ActionType {
   WAIT = "wait",
   ASSERT = "assert",
   SCROLL = "scroll",
-  HOVER = "hover"
+  HOVER = "hover",
+  // Smart assertion subtypes (v2)
+  ASSERT_URL_CONTAINS = "assert_url_contains",
+  ASSERT_URL_EQUALS = "assert_url_equals",
+  ASSERT_TEXT_VISIBLE = "assert_text_visible",
+  ASSERT_ELEMENT_EXISTS = "assert_element_exists",
+  ASSERT_ELEMENT_NOT_EXISTS = "assert_element_not_exists",
+  ASSERT_NO_CONSOLE_ERRORS = "assert_no_console_errors",
+  ASSERT_INPUT_VALUE = "assert_input_value",
+  // Phase 9: Richer assertion types
+  ASSERT_ELEMENT_VISIBLE = "assert_element_visible",
+  ASSERT_ELEMENT_COUNT = "assert_element_count",
+  ASSERT_ATTRIBUTE_CONTAINS = "assert_attribute_contains"
 }
 
 export interface ElementDescription {
@@ -72,6 +84,7 @@ export interface ExecutionResult {
   steps: StepResult[];
   total_duration_ms: number;
   screenshots: string[];
+  video_path?: string;
   error?: string;
   started_at: string;
   completed_at?: string;

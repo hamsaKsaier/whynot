@@ -4,122 +4,12 @@ import { DETECTIVE_TOOL_DEFINITIONS } from './detective-tools';
 import { GUARDIAN_TOOL_DEFINITIONS } from './guardian-tools';
 
 /**
- * Get all tool definitions for Claude
- * These define what tools Claude can call during exploration
+ * Get non-browser tool definitions (state + report tools).
+ * Browser tools come from Playwright MCP and are merged dynamically.
  */
 export function getToolDefinitions(): Anthropic.Tool[] {
   return [
-    // Browser Tools
-    {
-      name: 'navigate',
-      description: 'Navigate the browser to a URL. Returns a screenshot and HTML of the page.',
-      input_schema: {
-        type: 'object' as const,
-        properties: {
-          url: {
-            type: 'string',
-            description: 'The URL to navigate to'
-          }
-        },
-        required: ['url']
-      }
-    },
-    {
-      name: 'click',
-      description: 'Click on an element on the page. Use a CSS selector or descriptive text.',
-      input_schema: {
-        type: 'object' as const,
-        properties: {
-          selector: {
-            type: 'string',
-            description: 'CSS selector or text content to identify the element'
-          }
-        },
-        required: ['selector']
-      }
-    },
-    {
-      name: 'type_text',
-      description: 'Type text into an input field.',
-      input_schema: {
-        type: 'object' as const,
-        properties: {
-          selector: {
-            type: 'string',
-            description: 'CSS selector or text content to identify the input field'
-          },
-          text: {
-            type: 'string',
-            description: 'The text to type'
-          },
-          clear_first: {
-            type: 'boolean',
-            description: 'Whether to clear the field before typing (default: true)'
-          }
-        },
-        required: ['selector', 'text']
-      }
-    },
-    {
-      name: 'screenshot',
-      description: 'Take a screenshot of the current page.',
-      input_schema: {
-        type: 'object' as const,
-        properties: {},
-        required: []
-      }
-    },
-    {
-      name: 'get_page_elements',
-      description: 'Get all interactive elements on the current page (links, buttons, forms, inputs).',
-      input_schema: {
-        type: 'object' as const,
-        properties: {},
-        required: []
-      }
-    },
-    {
-      name: 'scroll',
-      description: 'Scroll the page in a direction.',
-      input_schema: {
-        type: 'object' as const,
-        properties: {
-          direction: {
-            type: 'string',
-            enum: ['up', 'down', 'top', 'bottom'],
-            description: 'Direction to scroll'
-          },
-          amount: {
-            type: 'number',
-            description: 'Amount to scroll in pixels (default: 500)'
-          }
-        },
-        required: ['direction']
-      }
-    },
-    {
-      name: 'go_back',
-      description: 'Go back to the previous page in browser history.',
-      input_schema: {
-        type: 'object' as const,
-        properties: {},
-        required: []
-      }
-    },
-    {
-      name: 'wait',
-      description: 'Wait for a specified amount of time.',
-      input_schema: {
-        type: 'object' as const,
-        properties: {
-          milliseconds: {
-            type: 'number',
-            description: 'Time to wait in milliseconds (max: 10000)'
-          }
-        },
-        required: ['milliseconds']
-      }
-    },
+    // Browser tools are provided by Playwright MCP — merged via getToolsForFocusArea()
 
     // State Tools
     {
@@ -231,7 +121,7 @@ export function getToolDefinitions(): Anthropic.Tool[] {
     // Report Tools
     {
       name: 'save_test_case',
-      description: 'Save a generated test case.',
+      description: 'Save a generated test case. IMPORTANT: Every test case MUST include at least one meaningful assertion (assert_text_visible, assert_element_exists, assert_element_visible, or assert_attribute_contains) that verifies the actual UI outcome — not just assert_url_contains or assert_no_console_errors.',
       input_schema: {
         type: 'object' as const,
         properties: {
@@ -250,15 +140,23 @@ export function getToolDefinitions(): Anthropic.Tool[] {
               properties: {
                 action: {
                   type: 'string',
-                  enum: ['navigate', 'click', 'type', 'assert', 'wait', 'scroll']
+                  enum: [
+                    'navigate', 'click', 'type', 'wait', 'scroll',
+                    'assert_url_contains', 'assert_url_equals',
+                    'assert_text_visible', 'assert_element_exists',
+                    'assert_element_not_exists', 'assert_no_console_errors',
+                    'assert_input_value',
+                    'assert_element_visible', 'assert_element_count',
+                    'assert_attribute_contains'
+                  ]
                 },
                 target: {
                   type: 'string',
-                  description: 'URL, selector, or assertion target'
+                  description: 'For navigate: the URL. For click/type: a CSS selector like "#email", ".btn-submit", "button[type=submit]". For assert_element_exists/assert_element_not_exists/assert_element_visible: a CSS selector. For assert_input_value: CSS selector. For assert_element_count: a CSS selector. For assert_attribute_contains: a CSS selector.'
                 },
                 value: {
                   type: 'string',
-                  description: 'Value for type action or expected value for assert'
+                  description: 'For type: the text to enter. For assert_url_contains: URL substring like "/dashboard". For assert_url_equals: full expected URL. For assert_text_visible: the exact visible text to search for on the page (MUST be text you actually observed). For assert_input_value: the expected input value. For assert_element_count: the expected number as string (e.g. "3"). For assert_attribute_contains: format is "attrName:expectedSubstring" (e.g. "class:error", "href:/dashboard", "aria-label:Submit").'
                 },
                 description: {
                   type: 'string',
@@ -267,7 +165,7 @@ export function getToolDefinitions(): Anthropic.Tool[] {
               },
               required: ['action', 'description']
             },
-            description: 'List of test steps'
+            description: 'List of test steps. Each test MUST end with at least one meaningful assertion that verifies UI feedback (text, elements, attributes), not just URL or console checks.'
           },
           category: {
             type: 'string',
@@ -282,9 +180,18 @@ export function getToolDefinitions(): Anthropic.Tool[] {
             type: 'string',
             enum: ['low', 'medium', 'high', 'critical'],
             description: 'Risk level if this test fails'
+          },
+          observed_result: {
+            type: 'string',
+            enum: ['pass', 'fail'],
+            description: 'Your observed outcome when you performed these steps during exploration. "pass" if the steps completed successfully and assertions matched what you saw. "fail" if you observed a bug, error, or unexpected behavior. ALWAYS provide this field.'
+          },
+          source_page_url: {
+            type: 'string',
+            description: 'The URL of the page this test was generated from'
           }
         },
-        required: ['name', 'steps']
+        required: ['name', 'steps', 'observed_result']
       }
     },
     {
@@ -401,33 +308,29 @@ export function getAllToolDefinitions(): Anthropic.Tool[] {
 }
 
 /**
- * Browser-only tool names used for retest / lightweight phases.
- * These are a subset of the 19 core tools — just enough to replay steps
- * and observe results without needing note-taking or test-saving tools.
+ * Non-browser tool names to EXCLUDE during retest (lightweight replay).
+ * Retest only needs MCP browser tools + get_session_state.
  */
-const RETEST_TOOL_NAMES = new Set([
-  'navigate',
-  'click',
-  'type_text',
-  'screenshot',
-  'get_page_elements',
-  'scroll',
-  'go_back',
-  'wait',
+const RETEST_KEEP_TOOLS = new Set([
   'get_session_state'
 ]);
 
 /**
  * Return the appropriate tool subset for the given focus area.
+ * MCP browser tools are passed in and merged with our custom tools.
  *
- * - 'explore'    → all 19 core tools (default)
- * - 'retest'     → 9 browser tools only (no note-taking / test-saving overhead)
- * - other phases → the specific agents use their own tool sets; fall back to core
+ * - 'explore'    -> MCP browser tools + all custom tools
+ * - 'retest'     -> MCP browser tools + get_session_state only
+ * - other phases -> MCP browser tools + all custom tools
  */
-export function getToolsForFocusArea(focusArea: 'explore' | 'chaos' | 'retest' | 'investigate'): Anthropic.Tool[] {
+export function getToolsForFocusArea(
+  focusArea: 'explore' | 'chaos' | 'retest' | 'investigate',
+  mcpTools: Anthropic.Tool[] = []
+): Anthropic.Tool[] {
   if (focusArea === 'retest') {
-    return getToolDefinitions().filter(t => RETEST_TOOL_NAMES.has(t.name));
+    const customTools = getToolDefinitions().filter(t => RETEST_KEEP_TOOLS.has(t.name));
+    return [...mcpTools, ...customTools];
   }
-  // 'explore', 'chaos', 'investigate' all use the full core tool set when going through ClaudeSession
-  return getToolDefinitions();
+  // 'explore', 'chaos', 'investigate' all get MCP browser tools + full custom tool set
+  return [...mcpTools, ...getToolDefinitions()];
 }

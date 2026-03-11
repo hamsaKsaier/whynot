@@ -13,7 +13,8 @@ import {
   FiBarChart2,
 } from 'react-icons/fi';
 import { QALoopSession } from '../../services/qa-loop-api';
-import { ChaosResult, QualityScore, RiskCounts, IterationHistory } from './QualityDashboard';
+import { QualityScore, RiskCounts, IterationHistory } from './QualityDashboard';
+import { ChaosResult } from './ChaosResultsTab';
 
 export interface StatsBarProps {
   activeSession: QALoopSession;

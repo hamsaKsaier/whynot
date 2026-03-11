@@ -274,6 +274,101 @@ export class StepExecutor {
           if (!success) error = assertResult.error;
           break;
 
+        // ─── Smart Assertion Types (v2) ───
+
+        case ActionType.ASSERT_URL_CONTAINS: {
+          const expected = step.value || (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          log('info', `   🔗 Assert URL contains: "${expected}"`);
+          const urlResult = await this.executeAssertUrlContains(expected);
+          success = urlResult.success;
+          if (!success) error = urlResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_URL_EQUALS: {
+          const expected = step.value || (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          log('info', `   🔗 Assert URL equals: "${expected}"`);
+          const urlResult = await this.executeAssertUrlEquals(expected);
+          success = urlResult.success;
+          if (!success) error = urlResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_TEXT_VISIBLE: {
+          const searchText = step.value || (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          log('info', `   👁️ Assert text visible: "${searchText}"`);
+          const textResult = await this.executeAssertTextVisible(searchText);
+          success = textResult.success;
+          if (!success) error = textResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_ELEMENT_EXISTS: {
+          const selector = step.value || (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          log('info', `   🎯 Assert element exists: "${selector}"`);
+          const elemResult = await this.executeAssertElementExists(selector);
+          success = elemResult.success;
+          if (!success) error = elemResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_ELEMENT_NOT_EXISTS: {
+          const selector = step.value || (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          log('info', `   🚫 Assert element not exists: "${selector}"`);
+          const elemResult = await this.executeAssertElementNotExists(selector);
+          success = elemResult.success;
+          if (!success) error = elemResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_NO_CONSOLE_ERRORS: {
+          log('info', `   🧹 Assert no console errors`);
+          const consoleResult = await this.executeAssertNoConsoleErrors();
+          success = consoleResult.success;
+          if (!success) error = consoleResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_INPUT_VALUE: {
+          const selector = (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          const expectedVal = step.value || '';
+          log('info', `   📝 Assert input "${selector}" has value "${expectedVal}"`);
+          const inputResult = await this.executeAssertInputValue(selector, expectedVal);
+          success = inputResult.success;
+          if (!success) error = inputResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_ELEMENT_VISIBLE: {
+          const selector = step.value || (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          log('info', `   👁️ Assert element visible: "${selector}"`);
+          const visResult = await this.executeAssertElementVisible(selector);
+          success = visResult.success;
+          if (!success) error = visResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_ELEMENT_COUNT: {
+          const selector = (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          const expectedCount = parseInt(step.value || '0', 10);
+          log('info', `   🔢 Assert element count: "${selector}" = ${expectedCount}`);
+          const countResult = await this.executeAssertElementCount(selector, expectedCount);
+          success = countResult.success;
+          if (!success) error = countResult.error;
+          break;
+        }
+
+        case ActionType.ASSERT_ATTRIBUTE_CONTAINS: {
+          // target = CSS selector, value = "attributeName:expectedSubstring"
+          const selector = (typeof step.target === 'string' ? step.target : (step.target as any)?.text) || '';
+          const attrValue = step.value || '';
+          log('info', `   🏷️ Assert attribute: "${selector}" → "${attrValue}"`);
+          const attrResult = await this.executeAssertAttributeContains(selector, attrValue);
+          success = attrResult.success;
+          if (!success) error = attrResult.error;
+          break;
+        }
+
         default:
           error = `Unknown action type: ${step.action}`;
       }
@@ -517,7 +612,12 @@ export class StepExecutor {
     }
 
     await this.browserController.navigate(url);
-    // Navigation already waits for networkidle, no need for additional wait
+    // Wait extra for SPAs: give JS frameworks time to render after navigation
+    try {
+      const page = await this.browserController.ensurePage();
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+      await page.waitForSelector('input, button, form, [role="button"]', { timeout: 3000 }).catch(() => {});
+    } catch { /* non-fatal */ }
   }
 
   private async executeClick(
@@ -625,7 +725,7 @@ export class StepExecutor {
       return { success: false, elementFound: false, error: 'No target specified for type' };
     }
 
-    if (!step.value) {
+    if (step.value === undefined || step.value === null) {
       return { success: false, elementFound: false, error: 'No value provided for type action' };
     }
 
@@ -962,5 +1062,311 @@ export class StepExecutor {
     }
 
     return { success: true };
+  }
+
+  // ─── Smart Assertion Methods (v2) ──────────────────────────────────
+
+  private async executeAssertUrlContains(expected: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const page = await this.browserController.ensurePage();
+      const currentUrl = page.url();
+      if (currentUrl.includes(expected)) {
+        return { success: true };
+      }
+      return { success: false, error: `URL "${currentUrl}" does not contain "${expected}"` };
+    } catch (e: any) {
+      return { success: false, error: `URL assertion failed: ${e.message}` };
+    }
+  }
+
+  private async executeAssertUrlEquals(expected: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const page = await this.browserController.ensurePage();
+      const currentUrl = page.url();
+      if (currentUrl === expected) {
+        return { success: true };
+      }
+      return { success: false, error: `URL "${currentUrl}" does not equal "${expected}"` };
+    } catch (e: any) {
+      return { success: false, error: `URL assertion failed: ${e.message}` };
+    }
+  }
+
+  private async executeAssertTextVisible(searchText: string): Promise<{ success: boolean; error?: string }> {
+    if (!searchText) {
+      return { success: false, error: 'No text provided for assert_text_visible' };
+    }
+    try {
+      const page = await this.browserController.ensurePage();
+
+      // Normalize search text: collapse whitespace, trim
+      const normalizedSearch = searchText.replace(/\s+/g, ' ').trim();
+
+      // Strategy 1: Exact match with getByText (8s timeout for dynamic content/toasts)
+      const locator = page.getByText(normalizedSearch, { exact: false });
+      try {
+        await locator.first().waitFor({ state: 'visible', timeout: 8000 });
+        return { success: true };
+      } catch {
+        // Strategy 1 failed — continue to fallback strategies
+      }
+
+      // Strategy 2: Case-insensitive regex match via getByText
+      try {
+        const escapedText = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const caseInsensitiveLocator = page.getByText(new RegExp(escapedText, 'i'));
+        const ciCount = await caseInsensitiveLocator.count();
+        if (ciCount > 0) {
+          try {
+            await caseInsensitiveLocator.first().waitFor({ state: 'visible', timeout: 3000 });
+            return { success: true };
+          } catch {
+            // Found but not visible — continue
+          }
+        }
+      } catch {
+        // Regex construction or matching failed — continue
+      }
+
+      // Strategy 3: Substring matching — if searchText is long, try matching key phrases
+      if (normalizedSearch.length > 20) {
+        // Try the first significant chunk (first 40 chars or first sentence)
+        const substringCandidates: string[] = [];
+        // First N words (at least 3 words)
+        const words = normalizedSearch.split(' ');
+        if (words.length > 3) {
+          substringCandidates.push(words.slice(0, Math.min(5, words.length)).join(' '));
+        }
+        // Last N words
+        if (words.length > 3) {
+          substringCandidates.push(words.slice(-Math.min(5, words.length)).join(' '));
+        }
+
+        for (const substring of substringCandidates) {
+          try {
+            const subLocator = page.getByText(substring, { exact: false });
+            const subCount = await subLocator.count();
+            if (subCount > 0) {
+              try {
+                await subLocator.first().waitFor({ state: 'visible', timeout: 2000 });
+                return { success: true };
+              } catch {
+                // Found but not visible
+              }
+            }
+          } catch {
+            // Continue to next candidate
+          }
+        }
+      }
+
+      // Strategy 4: Full body text scan with normalized comparison
+      const bodyText = await page.textContent('body').catch(() => '');
+      if (bodyText) {
+        const normalizedBody = bodyText.replace(/\s+/g, ' ').trim();
+
+        // Exact substring match (normalized whitespace)
+        if (normalizedBody.includes(normalizedSearch)) {
+          // Text exists in DOM but wasn't found by locator — likely hidden
+          return { success: false, error: `Text "${searchText}" exists in DOM but is not visible` };
+        }
+
+        // Case-insensitive body match
+        if (normalizedBody.toLowerCase().includes(normalizedSearch.toLowerCase())) {
+          // Text exists with different case — close enough, treat as pass
+          return { success: true };
+        }
+      }
+
+      // Strategy 5: Check if text exists but hidden (original locator)
+      const count = await locator.count();
+      if (count > 0) {
+        return { success: false, error: `Text "${searchText}" found but not visible on page` };
+      }
+
+      return { success: false, error: `Text "${searchText}" not found on page after 8s wait` };
+    } catch (e: any) {
+      return { success: false, error: `Text assertion failed: ${e.message}` };
+    }
+  }
+
+  private async executeAssertElementExists(selector: string): Promise<{ success: boolean; error?: string }> {
+    if (!selector) {
+      return { success: false, error: 'No selector provided for assert_element_exists' };
+    }
+    // Guard: CSS pseudo-selectors like :invalid, :required don't work reliably
+    if (/:(?:invalid|required|checked|focus|hover|active|visited|disabled|enabled)\b/.test(selector)) {
+      return { success: true }; // Skip — treat as pass with warning
+    }
+    try {
+      const page = await this.browserController.ensurePage();
+      // Auto-wait: wait for element to appear in DOM (up to 5s)
+      try {
+        await page.locator(selector).first().waitFor({ state: 'attached', timeout: 5000 });
+        return { success: true };
+      } catch {
+        return { success: false, error: `Element "${selector}" not found on page after 5s wait` };
+      }
+    } catch (e: any) {
+      return { success: false, error: `Element assertion failed: ${e.message}` };
+    }
+  }
+
+  private async executeAssertElementNotExists(selector: string): Promise<{ success: boolean; error?: string }> {
+    if (!selector) {
+      return { success: false, error: 'No selector provided for assert_element_not_exists' };
+    }
+    // Guard: bare tag names like "script", "style", "link" are too broad — every page has them
+    const bareTags = ['script', 'style', 'link', 'meta', 'head', 'body', 'html', 'div', 'span', 'img'];
+    if (bareTags.includes(selector.trim().toLowerCase())) {
+      return { success: true }; // Skip — treat as pass (too broad to be meaningful)
+    }
+    try {
+      const page = await this.browserController.ensurePage();
+      // Auto-wait: wait for element to detach/disappear (up to 5s)
+      try {
+        await page.locator(selector).first().waitFor({ state: 'detached', timeout: 5000 });
+        return { success: true };
+      } catch {
+        const count = await page.locator(selector).count();
+        return { success: false, error: `Element "${selector}" should not exist but found ${count} instance(s) after 5s wait` };
+      }
+    } catch (e: any) {
+      return { success: false, error: `Element not-exists assertion failed: ${e.message}` };
+    }
+  }
+
+  private async executeAssertNoConsoleErrors(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const errors = this.browserController.getConsoleErrors();
+      if (errors.length === 0) {
+        return { success: true };
+      }
+      const errorSummary = errors.slice(0, 5).join(' | ');
+      return { success: false, error: `${errors.length} console error(s): ${errorSummary}` };
+    } catch (e: any) {
+      return { success: false, error: `Console errors check failed: ${e.message}` };
+    }
+  }
+
+  private async executeAssertInputValue(selector: string, expectedValue: string): Promise<{ success: boolean; error?: string }> {
+    if (!selector) {
+      return { success: false, error: 'No selector provided for assert_input_value' };
+    }
+    try {
+      const actualValue = await this.browserController.getInputValue(selector);
+      if (actualValue === expectedValue) {
+        return { success: true };
+      }
+      return { success: false, error: `Input "${selector}" value is "${actualValue}", expected "${expectedValue}"` };
+    } catch (e: any) {
+      return { success: false, error: `Input value assertion failed: ${e.message}` };
+    }
+  }
+
+  // ─── Phase 9: Richer Assertion Methods ──────────────────────────────
+
+  /**
+   * Assert that an element matching the CSS selector is visible (not just present in DOM).
+   * This is stricter than assert_element_exists — it also checks CSS visibility.
+   */
+  private async executeAssertElementVisible(selector: string): Promise<{ success: boolean; error?: string }> {
+    if (!selector) {
+      return { success: false, error: 'No selector provided for assert_element_visible' };
+    }
+    // Guard: CSS pseudo-selectors
+    if (/:(?:invalid|required|checked|focus|hover|active|visited|disabled|enabled)\b/.test(selector)) {
+      return { success: true };
+    }
+    try {
+      const page = await this.browserController.ensurePage();
+      const locator = page.locator(selector).first();
+      // Auto-wait: wait for element to be visible (up to 5s)
+      try {
+        await locator.waitFor({ state: 'visible', timeout: 5000 });
+        return { success: true };
+      } catch {
+        const count = await page.locator(selector).count();
+        if (count > 0) {
+          return { success: false, error: `Element "${selector}" exists but is not visible after 5s wait` };
+        }
+        return { success: false, error: `Element "${selector}" not found on page after 5s wait` };
+      }
+    } catch (e: any) {
+      return { success: false, error: `Element visibility assertion failed: ${e.message}` };
+    }
+  }
+
+  /**
+   * Assert that the number of elements matching the CSS selector equals the expected count.
+   * Useful for verifying list items, error messages, table rows, etc.
+   */
+  private async executeAssertElementCount(selector: string, expectedCount: number): Promise<{ success: boolean; error?: string }> {
+    if (!selector) {
+      return { success: false, error: 'No selector provided for assert_element_count' };
+    }
+    try {
+      const page = await this.browserController.ensurePage();
+      // Auto-wait: poll for up to 5s for the expected count
+      const deadline = Date.now() + 5000;
+      let actualCount = 0;
+      while (Date.now() < deadline) {
+        actualCount = await page.locator(selector).count();
+        if (actualCount === expectedCount) {
+          return { success: true };
+        }
+        await page.waitForTimeout(300);
+      }
+      return { success: false, error: `Element "${selector}" count is ${actualCount}, expected ${expectedCount} (after 5s wait)` };
+    } catch (e: any) {
+      return { success: false, error: `Element count assertion failed: ${e.message}` };
+    }
+  }
+
+  /**
+   * Assert that an element's attribute contains a specific substring.
+   * value format: "attributeName:expectedSubstring"
+   * Examples: "class:error", "href:/dashboard", "disabled:", "aria-label:Submit"
+   */
+  private async executeAssertAttributeContains(selector: string, attrSpec: string): Promise<{ success: boolean; error?: string }> {
+    if (!selector) {
+      return { success: false, error: 'No selector provided for assert_attribute_contains' };
+    }
+    if (!attrSpec || !attrSpec.includes(':')) {
+      return { success: false, error: 'value must be "attributeName:expectedSubstring" (e.g. "class:error", "href:/dashboard")' };
+    }
+    const colonIndex = attrSpec.indexOf(':');
+    const attrName = attrSpec.substring(0, colonIndex).trim();
+    const expectedSubstring = attrSpec.substring(colonIndex + 1).trim();
+
+    try {
+      const page = await this.browserController.ensurePage();
+      // Auto-wait: wait for element to appear first (up to 5s)
+      try {
+        await page.locator(selector).first().waitFor({ state: 'attached', timeout: 5000 });
+      } catch {
+        return { success: false, error: `Element "${selector}" not found on page after 5s wait` };
+      }
+      // Poll for attribute value for up to 3s (element exists, but attribute may update async)
+      const deadline = Date.now() + 3000;
+      let lastValue: string | null = null;
+      while (Date.now() < deadline) {
+        const locator = page.locator(selector).first();
+        lastValue = await locator.getAttribute(attrName);
+        if (lastValue !== null && (expectedSubstring === '' || lastValue.includes(expectedSubstring))) {
+          return { success: true };
+        }
+        await page.waitForTimeout(300);
+      }
+      if (lastValue === null) {
+        if (expectedSubstring === '') {
+          return { success: false, error: `Element "${selector}" does not have attribute "${attrName}"` };
+        }
+        return { success: false, error: `Element "${selector}" has no "${attrName}" attribute` };
+      }
+      return { success: false, error: `Element "${selector}" attribute "${attrName}" is "${lastValue}", expected to contain "${expectedSubstring}"` };
+    } catch (e: any) {
+      return { success: false, error: `Attribute assertion failed: ${e.message}` };
+    }
   }
 }

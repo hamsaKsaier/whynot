@@ -18,6 +18,8 @@ import { EnvironmentsPage } from './pages/EnvironmentsPage';
 import { ArchitectureFlowPage } from './pages/ArchitectureFlowPage';
 import { QALoopPage } from './pages/QALoopPage';
 import { WebhookManagementPage } from './pages/WebhookManagementPage';
+import { IntegrationsPage } from './pages/IntegrationsPage';
+import { GitHubReposPage } from './pages/GitHubReposPage';
 
 /** Wraps all authenticated routes inside the app shell (sidebar + header). */
 const LayoutWrapper: React.FC = () => (
@@ -51,6 +53,8 @@ function App() {
                     <Route path="/test-runs" element={<TestRunsPage />} />
                     <Route path="/environments" element={<EnvironmentsPage />} />
                     <Route path="/architecture-flow" element={<ArchitectureFlowPage />} />
+                    <Route path="/integrations" element={<IntegrationsPage />} />
+                    <Route path="/github-repos" element={<GitHubReposPage />} />
                   </Route>
                 </Route>
               </Route>

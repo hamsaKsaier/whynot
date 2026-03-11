@@ -7,6 +7,7 @@ const logger = createLogger('model-selector');
  */
 export type ClaudeModel =
   | 'claude-3-haiku-20240307'
+  | 'claude-3-5-haiku-20241022'
   | 'claude-sonnet-4-20250514'
   | 'claude-3-opus-20240229';
 
@@ -25,6 +26,7 @@ export type FocusArea = 'explore' | 'chaos' | 'investigate' | 'retest';
  */
 export const MODEL_PRICING: Record<ClaudeModel, { input: number; output: number }> = {
   'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
+  'claude-3-5-haiku-20241022': { input: 1, output: 5 },
   'claude-sonnet-4-20250514': { input: 3, output: 15 },
   'claude-3-opus-20240229': { input: 15, output: 75 }
 };
@@ -41,6 +43,11 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
     complexity: ['simple'],
     maxTokens: 4096,
     description: 'Fast, cost-effective for simple tool calls and straightforward tasks'
+  },
+  'claude-3-5-haiku-20241022': {
+    complexity: ['simple', 'medium'],
+    maxTokens: 8192,
+    description: 'Smart and cheap — good for exploration and structured test generation'
   },
   'claude-sonnet-4-20250514': {
     complexity: ['simple', 'medium'],
@@ -61,7 +68,7 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
  * chaos/retest are mechanical tool calls that Haiku handles fine.
  */
 export const FOCUS_AREA_MODELS: Record<FocusArea, ClaudeModel> = {
-  explore: 'claude-sonnet-4-20250514',     // Sonnet: generates structured test cases & bugs
+  explore: 'claude-sonnet-4-20250514',     // Sonnet: reliable for structured tool calls
   chaos: 'claude-3-haiku-20240307',        // Simple mechanical tool calls
   investigate: 'claude-sonnet-4-20250514', // Sonnet for analysis
   retest: 'claude-3-haiku-20240307'        // Straightforward test execution
@@ -237,6 +244,8 @@ export function getModelDisplayName(model: ClaudeModel): string {
   switch (model) {
     case 'claude-3-haiku-20240307':
       return 'Claude 3 Haiku';
+    case 'claude-3-5-haiku-20241022':
+      return 'Claude 3.5 Haiku';
     case 'claude-sonnet-4-20250514':
       return 'Claude Sonnet 4';
     case 'claude-3-opus-20240229':

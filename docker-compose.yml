@@ -65,11 +65,13 @@ services:
       - VISUAL_REGRESSION_AI_ANALYSIS_ENABLED=${VISUAL_REGRESSION_AI_ANALYSIS_ENABLED:-true}
       - VISUAL_REGRESSION_AUTO_BASELINE=${VISUAL_REGRESSION_AUTO_BASELINE:-true}
       - VISUAL_REGRESSION_DIFF_DIR=/app/visual-diffs
+      - VIDEO_DIR=/app/videos
     volumes:
       - ./services/test-executor/src:/app/src
       - ./shared:/app/shared
       - screenshots:/app/screenshots
       - visual-diffs:/app/visual-diffs
+      - videos:/app/videos
     depends_on:
       database:
         condition: service_healthy
@@ -125,6 +127,8 @@ services:
       dockerfile: ./gateway/Dockerfile
     ports:
       - "3010:3000"
+    env_file:
+      - .env
     environment:
       - PORT=3000
       - FRONTEND_URL=http://localhost:5183
@@ -144,9 +148,11 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3010/api/auth/google/callback}
       - SCREENSHOT_RETENTION_DAYS=${SCREENSHOT_RETENTION_DAYS:-30}
+      - VIDEO_DIR=/app/videos
     volumes:
       - ./gateway/src:/app/src
       - ./shared:/app/shared
+      - videos:/app/videos
     depends_on:
       database:
         condition: service_healthy
@@ -185,3 +191,4 @@ volumes:
   screenshots:
   postgres_data:
   visual-diffs:
+  videos:

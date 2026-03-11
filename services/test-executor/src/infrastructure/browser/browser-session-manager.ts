@@ -176,8 +176,10 @@ export class BrowserSessionManager {
       }
 
       // Wait for potential navigation or DOM changes
-      await session.page.waitForTimeout(1000);
-      await session.page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
+      // First wait for any network requests to finish (API calls triggered by click)
+      await session.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+      // Then give JS frameworks time to render the response (React, Vue, etc.)
+      await session.page.waitForTimeout(500);
 
       return { success: true, newUrl: session.page.url() };
     } catch (error: any) {
@@ -519,7 +521,62 @@ export class BrowserSessionManager {
             });
           });
 
-          return { links, buttons, inputs, forms };
+          // Get visible text content — alerts, messages, headings, paragraphs
+          const visibleTexts = [];
+          const textSelectors = [
+            // Alert/error/success messages (highest priority)
+            '.alert', '.alert-danger', '.alert-success', '.alert-warning', '.alert-info',
+            '.error', '.error-message', '.form-error', '.field-error', '.validation-error',
+            '.success', '.success-message', '.toast', '.notification',
+            '.message', '.feedback', '.warning',
+            '[role="alert"]', '[role="status"]',
+            // Headings
+            'h1', 'h2', 'h3',
+            // Common text containers
+            '.title', '.subtitle', '.description', '.caption',
+            '.card-title', '.card-text', '.modal-title', '.modal-body'
+          ];
+          const seen = new Set();
+          textSelectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+              if (el.offsetParent !== null || getComputedStyle(el).display !== 'none') {
+                const text = (el.textContent || '').trim().substring(0, 200);
+                if (text && text.length > 1 && !seen.has(text)) {
+                  seen.add(text);
+                  let cssSelector = sel;
+                  if (el.id) cssSelector = '#' + el.id;
+                  else if (el.className && typeof el.className === 'string') {
+                    const classes = el.className.trim().split(/\\s+/).slice(0, 3).join('.');
+                    if (classes) cssSelector = el.tagName.toLowerCase() + '.' + classes;
+                  }
+                  visibleTexts.push({ text, selector: cssSelector, tag: el.tagName.toLowerCase() });
+                }
+              }
+            });
+          });
+
+          // Also grab any text that looks like an error/success by common patterns
+          document.querySelectorAll('div, span, p, li').forEach(el => {
+            if (el.children.length <= 2 && el.offsetParent !== null) {
+              const text = (el.textContent || '').trim();
+              if (text && text.length > 3 && text.length < 200 && !seen.has(text)) {
+                const cl = (el.className || '').toLowerCase();
+                const hasKeyword = /(error|alert|warning|success|invalid|valid|message|feedback|toast|notif)/i.test(cl);
+                if (hasKeyword) {
+                  seen.add(text);
+                  let cssSelector = el.tagName.toLowerCase();
+                  if (el.id) cssSelector = '#' + el.id;
+                  else if (el.className && typeof el.className === 'string') {
+                    const classes = el.className.trim().split(/\\s+/).slice(0, 3).join('.');
+                    if (classes) cssSelector = el.tagName.toLowerCase() + '.' + classes;
+                  }
+                  visibleTexts.push({ text, selector: cssSelector, tag: el.tagName.toLowerCase() });
+                }
+              }
+            }
+          });
+
+          return { links, buttons, inputs, forms, visibleTexts };
         })()
       `);
 

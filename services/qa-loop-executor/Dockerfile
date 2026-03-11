@@ -2,12 +2,20 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# Install Playwright browser dependencies (firefox — chromium not available on ARM64)
+RUN apt-get update && apt-get install -y \
+    libgtk-3-0 libdbus-glib-1-2 libxt6 libasound2 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy package files
 COPY services/qa-loop-executor/package*.json ./
 COPY services/qa-loop-executor/tsconfig.json ./
 
 # Install dependencies
 RUN npm install
+
+# Install Playwright firefox browser (ARM64 compatible — chromium not available on aarch64)
+RUN npx playwright install firefox
 
 # Create directory structure that matches local dev environment
 # shared is at ../../shared relative to /app/src, which means /shared

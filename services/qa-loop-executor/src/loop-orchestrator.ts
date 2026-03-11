@@ -6,8 +6,9 @@ import { ChaosAgent } from './agents/chaos-agent';
 import { DetectiveAgent } from './agents/detective-agent';
 import { GuardianAgent, GuardianConfig, QualityScore, IterationPlan } from './agents/guardian-agent';
 import { RetestExecutor } from './retest-executor';
+import { ParallelTestExecutor } from './parallel-test-executor';
 import { selectModel, ClaudeModel, FOCUS_AREA_MODELS, getModelDisplayName } from './model-selector';
-import { BrowserTools } from './tools/browser-tools';
+import { MCPBrowser } from './mcp-browser';
 import axios from 'axios';
 
 const logger = createLogger('loop-orchestrator');
@@ -53,6 +54,9 @@ export class LoopOrchestrator {
   private startTime: Date | null = null;
   /** True once performLogin() has succeeded this run — used to warn Claude when login state is absent */
   private loginEstablished: boolean = false;
+
+  /** MCP browser instance — one per session, shared across all phases */
+  private mcpBrowser: MCPBrowser | null = null;
 
   // Multi-agent system
   private chaosAgent: ChaosAgent;
@@ -106,6 +110,10 @@ export class LoopOrchestrator {
     this.startTime = new Date();
 
     try {
+      // Start MCP browser — one instance for the entire session
+      this.mcpBrowser = new MCPBrowser(this.sessionId);
+      await this.mcpBrowser.start();
+
       // Perform login if credentials are provided (Phase 2)
       if (this.config.loginCredentials) {
         if (this.config.isResume) {
@@ -125,8 +133,10 @@ export class LoopOrchestrator {
         } else {
           // FRESH START: explore auth page first, then log in
           await this.performAuthExploration();
-          await this.performLogin();
-          this.loginEstablished = true;
+          if (!this.isStopped && this.mcpBrowser) {
+            await this.performLogin();
+            this.loginEstablished = true;
+          }
         }
       } else if (this.config.isResume && this.config.config?.hasLoginCredentials) {
         // Resumed WITHOUT credentials but the session originally used login.
@@ -168,6 +178,11 @@ export class LoopOrchestrator {
       } catch (e) {
         logger.warn('Failed to generate final report', { error: e });
       }
+      // Stop MCP browser subprocess
+      if (this.mcpBrowser) {
+        await this.mcpBrowser.stop();
+        this.mcpBrowser = null;
+      }
       cleanupSession(this.sessionId);
     }
   }
@@ -186,12 +201,13 @@ export class LoopOrchestrator {
       data: { message: 'Performing login...', phase: 'login' }
     });
 
-    // Create browser tools instance for login
-    const browserTools = new BrowserTools(this.sessionId, this.config);
+    if (!this.mcpBrowser) {
+      throw new Error('MCP browser not initialized');
+    }
 
     try {
-      // Navigate to login page
-      const navResult = await browserTools.navigate(loginUrl);
+      // Navigate to login page via MCP
+      const navResult = await this.mcpBrowser.callTool('browser_navigate', { url: loginUrl });
       if (navResult.error) {
         throw new Error(`Failed to navigate to login page: ${navResult.error}`);
       }
@@ -205,22 +221,40 @@ export class LoopOrchestrator {
       const passwordSelector = creds.passwordSelector ||
         'input[type="password"]';
       const submitSelector = creds.submitSelector ||
-        'button[type="submit"], input[type="submit"], button:contains("Log in"), button:contains("Sign in")';
+        'button[type="submit"], input[type="submit"]';
 
-      // Type email/username
-      const typeEmailResult = await browserTools.typeText(emailSelector, creds.email);
-      if (typeEmailResult.error) {
-        throw new Error(`Failed to enter email: ${typeEmailResult.error}`);
+      // Use browser_evaluate to fill the form (works with React/Vue)
+      const fillResult = await this.mcpBrowser.callTool('browser_evaluate', {
+        expression: `(() => {
+          function fillInput(selector, value) {
+            const el = document.querySelector(selector);
+            if (!el) return false;
+            el.focus();
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            nativeSetter.call(el, value);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          }
+          const emailOk = fillInput(${JSON.stringify(emailSelector)}, ${JSON.stringify(creds.email)});
+          const passOk = fillInput(${JSON.stringify(passwordSelector)}, ${JSON.stringify(creds.password)});
+          return { emailOk, passOk };
+        })()`
+      });
+
+      if (fillResult.error) {
+        throw new Error(`Failed to fill login form: ${fillResult.error}`);
       }
 
-      // Type password
-      const typePasswordResult = await browserTools.typeText(passwordSelector, creds.password);
-      if (typePasswordResult.error) {
-        throw new Error(`Failed to enter password: ${typePasswordResult.error}`);
-      }
+      // Click submit via evaluate
+      const clickResult = await this.mcpBrowser.callTool('browser_evaluate', {
+        expression: `(() => {
+          const el = document.querySelector(${JSON.stringify(submitSelector)});
+          if (el) { el.click(); return true; }
+          return false;
+        })()`
+      });
 
-      // Click submit
-      const clickResult = await browserTools.click(submitSelector);
       if (clickResult.error) {
         logger.warn('Submit button click might have failed, continuing anyway', { error: clickResult.error });
       }
@@ -278,16 +312,22 @@ export class LoopOrchestrator {
     });
 
     try {
-      // Snapshot pre-existing test case IDs so we can detect the ones generated here
-      const preExisting = await this.repository.getTestCases(this.sessionId);
-      const preExistingIds = new Set(preExisting.map(tc => tc.id));
+      // Create parallel executor — tests execute immediately as Claude generates them
+      const parallelExecutor = new ParallelTestExecutor(
+        this.sessionId,
+        { ...this.config, targetUrl: loginUrl },
+        this.repository
+      );
 
       // Create a ClaudeSession pointed at the login URL, using the explore tool-set
+      // The onTestCaseCreated callback feeds each new test case into the parallel executor
       const authSession = new ClaudeSession(
         this.sessionId,
         { ...this.config, targetUrl: loginUrl },
+        this.mcpBrowser!,
         'explore',
-        this.cachedDocumentContext
+        this.cachedDocumentContext,
+        (testCase, observedResult) => parallelExecutor.enqueue(testCase, observedResult || 'pass')
       );
 
       const modelSelection = selectModel({
@@ -298,57 +338,81 @@ export class LoopOrchestrator {
       const authPrompt = `
 You are performing a security and functional audit of the authentication page at: ${loginUrl}
 
-== YOUR MISSION ==
+══ CRITICAL: OBSERVATION-FIRST APPROACH ══
+The app may be in ANY language (French, Arabic, English, etc.). You MUST:
+- FIRST use browser_navigate() then browser_snapshot() to see the ACTUAL page content (accessibility tree)
+- READ the actual labels, button text, placeholder text, and element roles in the snapshot
+- When creating assertions, use the EXACT text and selectors you observed — never assume English
+
+══ ASSERTION QUALITY RULE ══
+Every test case MUST include at least one PRIMARY assertion that verifies actual UI feedback:
+  ✅ assert_text_visible — with text you ACTUALLY SAW on the page
+  ✅ assert_element_visible — with a CSS selector for a visible element (e.g. ".alert-danger")
+  ✅ assert_attribute_contains — to check CSS classes changed (e.g. target="#email", value="class:is-invalid")
+  ✅ assert_element_exists — with a CSS selector for an element that appeared
+
+assert_url_contains and assert_no_console_errors are only SUPPLEMENTARY — use them as extras, never as the only assertions.
+
+══ YOUR MISSION ══
 1. Call get_session_state() first to initialise your session state.
-2. Navigate to ${loginUrl} and capture the page (screenshot + DOM).
-3. Identify all form inputs, labels, submit button, and any visible error/validation containers.
-4. Generate and SAVE test cases for each of the following scenarios (use save_test_case tool):
+2. Use browser_navigate() to go to ${loginUrl}, then call browser_snapshot() to see the full accessibility tree.
+3. OBSERVE CAREFULLY: Read all form inputs, labels, button text, element roles. Note the LANGUAGE.
 
-   a) INVALID CREDENTIALS — enter email "invalid-user@test-qa.example" and password "WrongPass#999!",
-      submit the form, and verify that a meaningful error message is displayed (e.g. "Invalid credentials").
-      Expected: login is rejected, no redirect to a protected route, error visible.
+4. Test INVALID CREDENTIALS:
+   a) Enter "invalid-user@test-qa.example" / "WrongPass#999!" and submit.
+   b) OBSERVE: call browser_snapshot() and READ the error message that appeared. Note its exact text and infer CSS selectors from the element structure.
+   c) Create save_test_case with:
+      - assert_text_visible with the EXACT error text you observed (e.g. "Identifiants invalides")
+      - assert_element_visible on the error container (e.g. ".alert-danger", ".toast-error")
+      - assert_url_contains("/login") as a supplementary check
 
-   b) EMPTY EMAIL — clear the email field, enter any non-empty password, submit, and verify a
-      validation error appears for the email field.
-      Expected: form is not submitted / error shown inline.
+5. Test EMPTY FIELDS:
+   a) Clear fields and submit. OBSERVE what validation appears with browser_snapshot().
+   b) Create test case with assert_text_visible for the validation message you SAW.
+   c) If input fields got error styling, use assert_attribute_contains (e.g. target="#email", value="class:is-invalid").
+   ⚠️ Do NOT use CSS pseudo-selectors like :invalid, :required — they don't work reliably.
 
-   c) EMPTY PASSWORD — enter a valid email format, clear the password field, submit, and verify a
-      validation error appears for the password field.
-      Expected: form is not submitted / error shown inline.
+6. Test SQL INJECTION: enter  ' OR '1'='1'--  as both email and password, submit.
+   OBSERVE: call browser_snapshot() — check what error message appeared.
+   - assert_text_visible with the error text you saw
+   - assert_url_contains("/login") as supplementary
+   - assert_no_console_errors as supplementary
 
-   d) INVALID EMAIL FORMAT — enter "notanemail" (no @ sign) as the email, any password, submit,
-      and verify the client or server rejects the format.
-      Expected: format validation error, login not attempted.
+7. Test XSS: enter  <script>alert('xssprobe')</script>  as the email value, submit.
+   OBSERVE: call browser_snapshot() — check what error message appeared.
+   - assert_text_visible with the error text you saw
+   - assert_url_contains("/login") as supplementary
+   - assert_no_console_errors as supplementary
+   ⚠️ Do NOT assert that "script" element doesn't exist — the page has legitimate script tags.
 
-   e) SQL INJECTION PROBE — enter  ' OR '1'='1'--  as both email and password and submit.
-      Expected: login is rejected safely; no crash, no unexpected 500 error, no auth bypass.
+8. For any failures or missing validations, call save_bug() to report them.
 
-   f) XSS PROBE — enter  <script>alert('xssprobe')</script>  as the email field value and submit.
-      Expected: value is sanitized or escaped; no alert fires; no raw HTML rendered in the response.
+══ FORBIDDEN PATTERNS ══
+- NEVER create a test with ONLY assert_url_contains + assert_no_console_errors — that's a useless test
+- NEVER use CSS pseudo-selectors (:invalid, :required, :checked)
+- NEVER use "script" as an element selector
+- NEVER assume error messages — READ them with browser_snapshot() first
 
-   g) RATE-LIMIT / BRUTE-FORCE PROTECTION — attempt five rapid consecutive invalid logins and
-      observe whether the app applies a lockout, CAPTCHA, or rate-limit response.
-      Document what you observe (even if no protection is found — that is itself a bug to report).
-
-   h) SUCCESSFUL LOGIN FLOW DOCUMENTATION — document the exact CSS selectors for the email input,
-      password input, and submit button as a test case with steps that describe the happy path.
-      Do NOT use real credentials. Use "doc@test-qa.example" / "DocPass#1" as placeholder values
-      and add a note in the test description that these are placeholder values, not real credentials.
-
-5. For any failures, unexpected errors, or missing validations you discover, also call add_bug() to
-   record them with the appropriate severity and category.
-
-6. Do NOT use the real credentials (email: ${creds.email}).
+9. Do NOT use the real credentials (email: ${creds.email}).
    Only use the fake/test values described above.
+
+══ OBSERVED RESULT (MANDATORY) ══
+When calling save_test_case(), ALWAYS include observed_result:
+- "pass" — you performed the steps and the assertions matched what you saw
+- "fail" — you observed a bug, error, or unexpected behavior
+For auth security tests (SQL injection rejected, XSS blocked, invalid creds rejected):
+  These are expected rejections → observed_result: "pass" (the app correctly blocked the attack)
+Only use "fail" if the app FAILED to reject the attack or showed unexpected behavior.
 
 Start now with get_session_state(), then navigate and explore.
 `.trim();
 
       await authSession.runIteration(authPrompt, modelSelection.model);
 
-      // Execute the newly generated auth test cases immediately
+      // Wait for any remaining queued tests to finish executing in parallel
       if (!this.isStopped) {
-        const executionResult = await this.executeNewTestCases(preExistingIds);
+        await parallelExecutor.waitForCompletion();
+        const executionResult = parallelExecutor.getResults();
 
         logger.info('Auth exploration complete', {
           sessionId: this.sessionId,
@@ -369,6 +433,8 @@ Start now with get_session_state(), then navigate and explore.
             testsFailed: executionResult.testsFailed
           }
         });
+      } else {
+        parallelExecutor.stop();
       }
 
     } catch (error: any) {
@@ -396,7 +462,7 @@ Start now with get_session_state(), then navigate and explore.
    */
   private async loadCachedDocumentContext(): Promise<void> {
     try {
-      const tempSession = new ClaudeSession(this.sessionId, this.config, 'explore');
+      const tempSession = new ClaudeSession(this.sessionId, this.config, this.mcpBrowser!, 'explore');
       await tempSession.loadDocumentContext();
       this.cachedDocumentContext = (tempSession as any).documentContext as string | null;
       logger.info('Document context pre-loaded for session', {
@@ -598,17 +664,23 @@ Start now with get_session_state(), then navigate and explore.
    * so the loop gains real pass/fail signal on every iteration.
    */
   private async runExploration(plan: IterationPlan): Promise<any> {
-    // Snapshot existing test case IDs so we can detect new ones created this iteration
-    const preExisting = await this.repository.getTestCases(this.sessionId);
-    const preExistingIds = new Set(preExisting.map(tc => tc.id));
+    // Create parallel executor — tests will be executed immediately as Claude generates them
+    const parallelExecutor = new ParallelTestExecutor(
+      this.sessionId,
+      this.config,
+      this.repository
+    );
 
     // Pass focusArea so the session selects the right tool subset (2.2),
     // and pass the pre-loaded document context to skip the per-iteration DB query (2.6).
+    // The onTestCaseCreated callback feeds each new test case into the parallel executor.
     this.claudeSession = new ClaudeSession(
       this.sessionId,
       this.config,
+      this.mcpBrowser!,
       plan.focusArea as any,
-      this.cachedDocumentContext
+      this.cachedDocumentContext,
+      (testCase, observedResult) => parallelExecutor.enqueue(testCase, observedResult || 'pass')
     );
 
     // Select model based on focus area (Phase 6: Tiered Models)
@@ -656,28 +728,38 @@ Start now with get_session_state(), then navigate and explore.
       ? `You are a QA engineer systematically testing ${this.config.targetUrl}.
 ${noLoginWarning}
 STEP 1 — Initialise: call get_session_state() first.
-STEP 2 — Navigate to ${this.config.targetUrl} and capture the page with get_page_elements().
+STEP 2 — Use browser_navigate() to go to ${this.config.targetUrl}, then call browser_snapshot() to see the full page.
 STEP 3 — For EVERY page you visit, you MUST:
-  a) Observe what the page does (forms, buttons, data, navigation).
-  b) Immediately call save_test_case() with 2–4 concrete test cases for that page.
-     Each test case needs clear steps a real tester could follow.
-  c) If you spot a bug or a broken element, call add_bug() right away.
-  d) Call mark_page_explored() before moving to the next page.
+  a) Call browser_snapshot() to observe the page — read ALL text, elements, buttons, forms in the accessibility tree.
+  b) Interact with the page (use browser_fill_form/browser_click with refs from the snapshot).
+  c) After EACH interaction, call browser_snapshot() AGAIN to observe what changed.
+  d) THEN call save_test_case() using the EXACT text and CSS selectors you inferred from what you observed.
+     ⚠️ Every test case MUST have at least one PRIMARY assertion (assert_text_visible,
+     assert_element_visible, assert_element_exists, or assert_attribute_contains).
+     Tests with ONLY assert_url_contains + assert_no_console_errors are USELESS and will be rejected.
+  e) If you spot a bug or broken element, call save_bug() right away.
+  f) Call mark_page_explored() before moving to the next page.
 STEP 4 — Click navigation links to explore more pages, repeating step 3 for each.
 
 IMPORTANT RULES:
 - If a click or type action fails (error in result), SKIP IT immediately — do not retry the same selector.
 - Use descriptive selectors: prefer [data-testid], aria-label, or visible text over nth-of-type.
 - Generate test cases BEFORE moving to the next page, not at the end.
-- Aim to cover at least 3 different pages and save at least 6 test cases total this iteration.`
+- Aim to cover at least 3 different pages and save at least 6 test cases total this iteration.
+- The app may be in ANY language — always call browser_snapshot() and use observed text.
+- ALWAYS include observed_result ("pass" or "fail") in every save_test_case() call.`
       : `You are continuing a QA exploration of ${this.config.targetUrl}. Iteration ${this.currentIteration}.
 ${noLoginWarning}${skipBlock}
 STEP 1 — ${targetHint}
 STEP 2 — For EVERY page you visit (that is NOT in the skip list above):
-  a) Call get_page_elements() to understand the page structure.
-  b) Immediately call save_test_case() with 2–4 test cases for that page's functionality.
-  c) Call add_bug() for any broken or missing functionality you observe.
-  d) Call mark_page_explored() before moving on.
+  a) Call browser_snapshot() to observe the page — read ALL text, elements, and structure.
+  b) Interact with the page (browser_click/browser_fill_form), then call browser_snapshot() AGAIN to see what changed.
+  c) Call save_test_case() with assertions based on what you ACTUALLY observed.
+     ⚠️ Every test MUST include at least one PRIMARY assertion (assert_text_visible,
+     assert_element_visible, assert_element_exists, or assert_attribute_contains).
+     Tests with ONLY assert_url_contains + assert_no_console_errors are USELESS.
+  d) Call save_bug() for any broken or missing functionality you observe.
+  e) Call mark_page_explored() before moving on.
 STEP 3 — After finishing the priority pages, check get_session_state() for other unexplored pages.
 
 CRITICAL RULES:
@@ -685,7 +767,9 @@ CRITICAL RULES:
 - If a page redirects you somewhere already explored → go back and pick a different target.
 - If a click, type, or navigation fails → SKIP it immediately, do NOT retry.
 - Generate test cases ON THE PAGE, not after leaving it.
-- Aim for at least 4 new test cases this iteration.`;
+- Aim for at least 4 new test cases this iteration.
+- ALWAYS call browser_snapshot() before creating assertions — use ONLY observed text/selectors.
+- ALWAYS include observed_result ("pass" or "fail") in every save_test_case() call.`;
 
     // Emit phase start so the UI can show the current activity
     emitToSession(this.sessionId, {
@@ -723,18 +807,260 @@ CRITICAL RULES:
       });
     }
 
-    // 🔴 Fix: Execute newly generated test cases immediately instead of waiting for retest phase
+    // Wait for any remaining queued tests to finish executing in parallel
     if (!this.isStopped) {
-      const executionResult = await this.executeNewTestCases(preExistingIds);
-      return {
-        ...result,
-        testsExecuted: executionResult.testsExecuted,
-        testsPassed: executionResult.testsPassed,
-        testsFailed: executionResult.testsFailed
-      };
+      const pending = parallelExecutor.getResults();
+      if (pending.testsExecuted < result.testsGenerated) {
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: {
+            message: `Waiting for remaining test executions to complete…`,
+            phase: 'test_execution'
+          }
+        });
+      }
+      await parallelExecutor.waitForCompletion();
+
+      // ── Self-healing: correction phase ────────────────────────────────
+      await this.runCorrectionPhase(parallelExecutor);
+    } else {
+      parallelExecutor.stop();
     }
 
-    return result;
+    const execResults = parallelExecutor.getResults();
+    return {
+      ...result,
+      testsExecuted: execResults.testsExecuted,
+      testsPassed: execResults.testsPassed,
+      testsFailed: execResults.testsFailed
+    };
+  }
+
+  /**
+   * Self-healing correction phase: compare Claude's observed results with
+   * mechanical execution results. If mismatches are found, make ONE focused
+   * Claude API call to fix the test steps, then re-execute corrected tests.
+   */
+  private async runCorrectionPhase(parallelExecutor: ParallelTestExecutor): Promise<void> {
+    const mismatches = parallelExecutor.getMismatches();
+    if (mismatches.length === 0) {
+      logger.info('No mismatches found — skipping correction phase', { sessionId: this.sessionId });
+      return;
+    }
+
+    logger.info('Starting correction phase', {
+      sessionId: this.sessionId,
+      mismatchCount: mismatches.length
+    });
+
+    emitToSession(this.sessionId, {
+      type: 'status_update',
+      data: {
+        message: `Correcting ${mismatches.length} mismatched test(s)…`,
+        phase: 'correction'
+      }
+    });
+
+    try {
+      const corrected = await this.callCorrectionAPI(mismatches);
+
+      if (corrected.length === 0) {
+        logger.info('Correction API returned no fixes', { sessionId: this.sessionId });
+        return;
+      }
+
+      // Update corrected test cases in DB
+      for (const c of corrected) {
+        try {
+          await this.repository.updateTestCaseSteps(c.testCaseId, {
+            steps: c.correctedSteps,
+            correctionSource: 'self_healing'
+          });
+        } catch (updateErr: any) {
+          logger.warn('Failed to update corrected test case', {
+            testCaseId: c.testCaseId,
+            error: updateErr.message
+          });
+        }
+      }
+
+      // Re-execute ONLY corrected tests (one final time)
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          message: `Re-executing ${corrected.length} corrected test(s)…`,
+          phase: 'correction_retest'
+        }
+      });
+
+      const retestExecutor = new ParallelTestExecutor(this.sessionId, this.config, this.repository);
+      for (const c of corrected) {
+        const updated = await this.repository.getTestCaseById(c.testCaseId);
+        if (updated) {
+          retestExecutor.enqueue(updated, 'pass'); // Corrected tests should pass
+        }
+      }
+      await retestExecutor.waitForCompletion();
+
+      const retestResults = retestExecutor.getResults();
+      logger.info('Correction retest complete', {
+        sessionId: this.sessionId,
+        testsExecuted: retestResults.testsExecuted,
+        testsPassed: retestResults.testsPassed,
+        testsFailed: retestResults.testsFailed
+      });
+
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          message: `Correction complete — ${retestResults.testsPassed}/${retestResults.testsExecuted} corrected tests passing`,
+          phase: 'correction_complete'
+        }
+      });
+
+    } catch (error: any) {
+      logger.error('Correction phase failed (non-fatal)', {
+        sessionId: this.sessionId,
+        error: error.message
+      });
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          message: `Correction phase encountered an issue: ${error.message}`,
+          phase: 'correction_error',
+          isWarning: true
+        }
+      });
+    }
+  }
+
+  /**
+   * Make ONE focused Claude API call to fix all mismatched tests.
+   * Returns an array of { testCaseId, correctedSteps }.
+   */
+  private async callCorrectionAPI(mismatches: Array<{
+    testCaseId: string;
+    testCaseName: string;
+    observedResult: string;
+    executionResult: string;
+    failureStepIndex?: number;
+    failureReason?: string;
+    steps: any[];
+  }>): Promise<Array<{ testCaseId: string; correctedSteps: any[] }>> {
+    const Anthropic = require('@anthropic-ai/sdk').default;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      logger.error('No ANTHROPIC_API_KEY — cannot run correction');
+      return [];
+    }
+
+    const client = new Anthropic({ apiKey });
+
+    // Build a focused prompt with all mismatches
+    const mismatchDescriptions = mismatches.map((m, i) => {
+      const failInfo = m.failureStepIndex !== undefined
+        ? `Failed at step ${m.failureStepIndex}: ${m.failureReason || 'unknown error'}`
+        : `Execution result: ${m.executionResult}`;
+      return `
+TEST ${i + 1}: "${m.testCaseName}" (id: ${m.testCaseId})
+  Claude observed: ${m.observedResult}
+  Mechanical result: ${m.executionResult}
+  ${failInfo}
+  Steps: ${JSON.stringify(m.steps, null, 2)}`;
+    }).join('\n');
+
+    const prompt = `You are fixing test cases that failed mechanical execution.
+These tests were generated during exploration. Claude observed them as "${mismatches[0].observedResult}"
+but our automated test runner got a different result.
+
+Common issues to fix:
+- Wrong CSS selectors (element not found)
+- Missing wait steps before assertions
+- Incorrect assertion text (typo or partial match)
+- Missing navigate step at the beginning
+- assert_text_visible with wrong text (check if it should be a substring match)
+
+TARGET URL: ${this.config.targetUrl}
+
+MISMATCHED TESTS:
+${mismatchDescriptions}
+
+Fix the test steps to make them work correctly. Return ONLY a JSON array:
+[
+  {
+    "testCaseId": "<id>",
+    "correctedSteps": [<fixed steps array>]
+  }
+]
+
+Rules:
+- Keep the same step structure (action, target, value, description)
+- Only fix what's broken — don't rewrite the entire test
+- If a selector failed, try a more general one
+- Add wait steps (action: "wait", value: "1000") before assertions if timing might be an issue
+- For assert_text_visible failures, verify the text exactly matches what the page shows
+- Return ONLY the JSON array, no other text`;
+
+    try {
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      const textContent = response.content
+        .filter((block: any) => block.type === 'text')
+        .map((block: any) => block.text)
+        .join('');
+
+      // Extract JSON from response — handle markdown code blocks, leading text, etc.
+      let jsonStr = textContent.trim();
+
+      // Strategy 1: Strip markdown code block wrapper
+      const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      }
+
+      // Strategy 2: If still not valid JSON, try to find the first [ ... ] array
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          parsed = JSON.parse(arrayMatch[0]);
+        } else {
+          throw new Error(`Could not extract JSON array from correction response: ${jsonStr.slice(0, 200)}`);
+        }
+      }
+      if (!Array.isArray(parsed)) {
+        logger.warn('Correction API returned non-array', { response: jsonStr.slice(0, 200) });
+        return [];
+      }
+
+      // Validate structure
+      const valid = parsed.filter((item: any) =>
+        item.testCaseId &&
+        Array.isArray(item.correctedSteps) &&
+        item.correctedSteps.length > 0
+      );
+
+      logger.info('Correction API returned fixes', {
+        sessionId: this.sessionId,
+        totalMismatches: mismatches.length,
+        fixesReturned: valid.length
+      });
+
+      return valid;
+
+    } catch (error: any) {
+      logger.error('Correction API call failed', {
+        sessionId: this.sessionId,
+        error: error.message
+      });
+      return [];
+    }
   }
 
   /**
@@ -786,7 +1112,8 @@ CRITICAL RULES:
         : (typeof rawSteps === 'string' ? (() => { try { return JSON.parse(rawSteps); } catch { return []; } })() : []);
 
       // ── Post-process steps: ensure navigate steps have a URL, ensure every
-      //    step has an id (step_results table requires non-null step_id) ──────
+      //    step has an id, and convert string targets into structured selectors
+      //    that the test-executor understands. ──────
       const websiteUrl = (testCase as any).source_page_url || this.config.targetUrl;
       const steps: any[] = rawStepsArr.map((step: any) => {
         const processed = { ...step };
@@ -794,10 +1121,56 @@ CRITICAL RULES:
         if (!processed.id) {
           processed.id = require('crypto').randomUUID();
         }
+
         // Fill in missing URL for navigate actions (Claude often omits it)
-        if (processed.action === 'navigate' && !processed.value && !processed.target?.attributes?.href) {
-          processed.value = websiteUrl;
+        if (processed.action === 'navigate') {
+          // If target is a URL string, move it to value
+          if (typeof processed.target === 'string' && processed.target.startsWith('http')) {
+            processed.value = processed.value || processed.target;
+            processed.target = undefined;
+          }
+          if (!processed.value && !processed.target?.attributes?.href) {
+            processed.value = websiteUrl;
+          }
         }
+
+        // Convert string target to proper ElementDescription + suggested_selectors
+        // Claude saves targets like "#email", "Se connecter", "[aria-label='x']"
+        // but the test-executor expects { target: ElementDescription, suggested_selectors: [] }
+        // Smart assertion types use target/value directly — don't convert to selectors
+        const assertionActions = [
+          'assert_url_contains', 'assert_url_equals', 'assert_text_visible',
+          'assert_no_console_errors', 'assert_input_value',
+          'assert_element_exists', 'assert_element_not_exists',
+          'assert_element_visible', 'assert_element_count',
+          'assert_attribute_contains'
+        ];
+        if (typeof processed.target === 'string' && processed.action !== 'navigate' && !assertionActions.includes(processed.action)) {
+          const rawTarget = processed.target;
+          const selectors: any[] = [];
+
+          if (rawTarget.startsWith('#')) {
+            // ID selector: "#email" → css selector + id selector
+            selectors.push({ type: 'css', value: rawTarget, stability_score: 0.9 });
+            selectors.push({ type: 'id', value: rawTarget, stability_score: 0.9 });
+          } else if (rawTarget.startsWith('.') || rawTarget.startsWith('[')) {
+            // CSS selector: ".class" or "[attr=val]"
+            selectors.push({ type: 'css', value: rawTarget, stability_score: 0.8 });
+          } else if (rawTarget.startsWith('//') || rawTarget.startsWith('xpath=')) {
+            // XPath selector
+            selectors.push({ type: 'xpath', value: rawTarget, stability_score: 0.6 });
+          } else {
+            // Text content: "Se connecter", "Submit" etc → text + css fallbacks
+            selectors.push({ type: 'text', value: `text="${rawTarget}"`, stability_score: 0.7 });
+            // Also try common button/link selectors with this text
+            selectors.push({ type: 'css', value: `button:has-text("${rawTarget}")`, stability_score: 0.6 });
+            selectors.push({ type: 'css', value: `a:has-text("${rawTarget}")`, stability_score: 0.5 });
+          }
+
+          processed.target = { text: rawTarget };
+          processed.suggested_selectors = selectors;
+        }
+
         return processed;
       });
 
@@ -827,20 +1200,22 @@ CRITICAL RULES:
         );
 
         const res = response.data;
-        const allPassed = res.status === 'completed' && res.allStepsPassed;
+        // The test-runner returns { status, steps: [...] } — normalize field names
+        const stepResults = res.steps || res.stepResults || [];
+        const allPassed = res.status === 'completed' && stepResults.every((s: any) => s.success);
         const status: 'passed' | 'failed' = allPassed ? 'passed' : 'failed';
 
         if (allPassed) passed++; else failed++;
 
-        const failedStep = res.stepResults?.findIndex((s: any) => s.status === 'failed') ?? -1;
-        const failureReason = failedStep >= 0 ? res.stepResults?.[failedStep]?.error : undefined;
+        const failedStep = stepResults.findIndex((s: any) => !s.success);
+        const failureReason = failedStep >= 0 ? stepResults[failedStep]?.error : undefined;
 
         try {
           await this.repository.addTestRun(this.sessionId, testCase.id, {
             status,
-            durationMs: res.durationMs,
+            durationMs: res.total_duration_ms || res.durationMs,
             stepsTotal: steps.length,
-            stepsCompleted: res.stepResults?.length ?? 0,
+            stepsCompleted: stepResults.length,
             failureStepIndex: failedStep >= 0 ? failedStep : undefined,
             failureReason
           });
@@ -1089,6 +1464,11 @@ CRITICAL RULES:
     this.isStopped = true;
     if (this.claudeSession) {
       await this.claudeSession.abort();
+    }
+    // Stop MCP browser subprocess
+    if (this.mcpBrowser) {
+      await this.mcpBrowser.stop();
+      this.mcpBrowser = null;
     }
     await this.repository.updateSessionStatus(this.sessionId, 'cancelled');
     emitToSession(this.sessionId, {

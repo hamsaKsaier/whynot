@@ -216,11 +216,13 @@ export class GuardianAgent {
   async calculateQualityScore(): Promise<QualityScore> {
     logger.info('Calculating quality score', { sessionId: this.sessionId });
 
-    // Gather metrics
-    const session = await this.repository.getSession(this.sessionId);
-    const pages = await this.repository.getPages(this.sessionId);
-    const testCases = await this.repository.getTestCases(this.sessionId);
-    const bugs = await this.repository.getBugs(this.sessionId);
+    // Gather metrics (parallelized for performance)
+    const [session, pages, testCases, bugs] = await Promise.all([
+      this.repository.getSession(this.sessionId),
+      this.repository.getPages(this.sessionId),
+      this.repository.getTestCases(this.sessionId),
+      this.repository.getBugs(this.sessionId),
+    ]);
 
     const exploredPages = pages.filter(p => p.is_explored).length;
     const totalPages = pages.length;
@@ -230,10 +232,11 @@ export class GuardianAgent {
       ? Math.round((exploredPages / totalPages) * 100)
       : 0;
 
-    // Stability score based on test results (mock for now)
-    const testsPassing = testCases.filter(tc => tc.last_run_status === 'passed').length;
-    const stabilityScore = testCases.length > 0
-      ? Math.round((testsPassing / testCases.length) * 100)
+    // Stability score based on test results — only count tests that have actually been executed
+    const executedTests = testCases.filter(tc => tc.last_run_status != null);
+    const testsPassing = executedTests.filter(tc => tc.last_run_status === 'passed').length;
+    const stabilityScore = executedTests.length > 0
+      ? Math.round((testsPassing / executedTests.length) * 100)
       : 100;
 
     // Security score (inverted - fewer vulnerabilities = higher score)
@@ -695,10 +698,12 @@ export class GuardianAgent {
   async generateReport(): Promise<QAReport> {
     logger.info('Generating QA report', { sessionId: this.sessionId });
 
-    const session = await this.repository.getSession(this.sessionId);
-    const score = await this.calculateQualityScore();
-    const bugs = await this.repository.getBugs(this.sessionId);
-    const testCases = await this.repository.getTestCases(this.sessionId);
+    const [session, score, bugs, testCases] = await Promise.all([
+      this.repository.getSession(this.sessionId),
+      this.calculateQualityScore(),
+      this.repository.getBugs(this.sessionId),
+      this.repository.getTestCases(this.sessionId),
+    ]);
 
     const securityBugs = bugs.filter(b => b.category === 'security');
     const a11yBugs = bugs.filter(b => b.category === 'accessibility');

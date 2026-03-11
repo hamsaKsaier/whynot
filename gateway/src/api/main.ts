@@ -128,6 +128,10 @@ app.use('/api', apiRateLimiter);
 // Serve screenshots (if needed)
 app.use('/api/screenshots', express.static(path.join(__dirname, '../../screenshots')));
 
+// Serve video recordings (v2)
+const videoDir = process.env.VIDEO_DIR || '/tmp/videos';
+app.use('/api/videos', express.static(videoDir));
+
 // Initialize orchestrator
 const orchestrator = new WorkflowOrchestrator(
   process.env.AI_SERVICE_URL || 'http://localhost:8000',
@@ -1168,7 +1172,8 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
           test_case: transformTestCaseEntity({
             id: tc.id, name: tc.name, description: tc.description || '',
             website_url: tc.website_url, user_story: tc.user_story,
-            steps, metadata, created_at: tc.created_at, updated_at: tc.updated_at
+            steps, metadata, workspace_id: tc.workspace_id || null,
+            created_at: tc.created_at, updated_at: tc.updated_at
           }),
           steps: steps || []
         };
@@ -1275,7 +1280,8 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
                   test_case: transformTestCaseEntity({
                     id: tc.id, name: tc.name, description: tc.description || '',
                     website_url: tc.website_url, user_story: tc.user_story,
-                    steps, metadata, created_at: tc.created_at, updated_at: tc.updated_at
+                    steps, metadata, workspace_id: tc.workspace_id || null,
+                    created_at: tc.created_at, updated_at: tc.updated_at
                   }),
                   steps: steps || []
                 };
@@ -1555,6 +1561,164 @@ app.get('/', (req, res) => {
 app.post('/api/cleanup/screenshots', requireAuth, asyncHandler(async (_req, res) => {
   const result = runCleanup();
   res.json({ success: true, deleted: result });
+}));
+
+// ── Integration Routes (Phase 3) ──────────────────────────────────────────────
+
+import { IntegrationService } from '../services/integration-service';
+const integrationService = new IntegrationService();
+
+// List integrations for a workspace
+app.get('/api/integrations', requireAuth, asyncHandler(async (req: any, res) => {
+  const workspaceId = req.query.workspace_id as string;
+  if (!workspaceId) {
+    return res.status(400).json({ error: 'workspace_id query param is required' });
+  }
+  const integrations = await integrationService.getIntegrations(workspaceId);
+  // Strip sensitive config fields from response
+  const safe = integrations.map(i => ({
+    ...i,
+    config: {
+      ...i.config,
+      apiToken: i.config.apiToken ? '••••' + String(i.config.apiToken).slice(-4) : undefined,
+      apiKey: i.config.apiKey ? '••••' + String(i.config.apiKey).slice(-4) : undefined,
+    }
+  }));
+  res.json(safe);
+}));
+
+// Create a new integration
+app.post('/api/integrations', requireAuth, asyncHandler(async (req: any, res) => {
+  const { workspace_id, type, name, config } = req.body;
+  if (!workspace_id || !type || !name || !config) {
+    return res.status(400).json({ error: 'workspace_id, type, name, and config are required' });
+  }
+  if (!['jira', 'clickup', 'linear'].includes(type)) {
+    return res.status(400).json({ error: 'type must be jira, clickup, or linear' });
+  }
+  const integration = await integrationService.createIntegration({ workspace_id, type, name, config });
+  res.status(201).json(integration);
+}));
+
+// Test integration connection
+app.post('/api/integrations/:id/test', requireAuth, asyncHandler(async (req: any, res) => {
+  const integration = await integrationService.getIntegration(req.params.id);
+  if (!integration) {
+    return res.status(404).json({ error: 'Integration not found' });
+  }
+  const result = await integrationService.testConnection(integration);
+  res.json(result);
+}));
+
+// Update integration
+app.patch('/api/integrations/:id', requireAuth, asyncHandler(async (req: any, res) => {
+  const updated = await integrationService.updateIntegration(req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ error: 'Integration not found' });
+  }
+  res.json(updated);
+}));
+
+// Delete integration
+app.delete('/api/integrations/:id', requireAuth, asyncHandler(async (req: any, res) => {
+  const deleted = await integrationService.deleteIntegration(req.params.id);
+  if (!deleted) {
+    return res.status(404).json({ error: 'Integration not found' });
+  }
+  res.json({ success: true });
+}));
+
+// Create task from bug
+app.post('/api/bugs/:bugId/create-task', requireAuth, asyncHandler(async (req: any, res) => {
+  const { bugId } = req.params;
+  const { integration_id, priority, labels } = req.body;
+  if (!integration_id) {
+    return res.status(400).json({ error: 'integration_id is required' });
+  }
+  try {
+    const task = await integrationService.createTaskFromBug(bugId, integration_id, { priority, labels });
+    res.status(201).json(task);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+}));
+
+// Get tasks linked to a bug
+app.get('/api/bugs/:bugId/tasks', requireAuth, asyncHandler(async (req: any, res) => {
+  const tasks = await integrationService.getBugTasks(req.params.bugId);
+  res.json(tasks);
+}));
+
+// ── Auto-Fix Routes (Phase 4) ─────────────────────────────────────────────────
+
+import { AutoFixService } from '../services/auto-fix-service';
+let autoFixService: AutoFixService | null = null;
+try {
+  autoFixService = new AutoFixService();
+} catch (e: any) {
+  logger.warn('Auto-fix service not available (missing ANTHROPIC_API_KEY)', { error: e.message });
+}
+
+// List GitHub repos for workspace
+app.get('/api/github-repos', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const workspaceId = req.query.workspace_id as string;
+  if (!workspaceId) return res.status(400).json({ error: 'workspace_id is required' });
+  const repos = await autoFixService.getRepos(workspaceId);
+  // Strip access tokens from response
+  const safe = repos.map(r => ({ ...r, access_token: r.access_token ? '••••' : null }));
+  res.json(safe);
+}));
+
+// Connect a GitHub repo
+app.post('/api/github-repos', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const { workspace_id, owner, repo, default_branch, access_token } = req.body;
+  if (!workspace_id || !owner || !repo || !access_token) {
+    return res.status(400).json({ error: 'workspace_id, owner, repo, and access_token are required' });
+  }
+  const result = await autoFixService.createRepo({ workspace_id, owner, repo, default_branch, access_token });
+  res.status(201).json({ ...result, access_token: '••••' });
+}));
+
+// Test GitHub repo connection
+app.post('/api/github-repos/:id/test', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const result = await autoFixService.testRepoConnection(req.params.id);
+  res.json(result);
+}));
+
+// Delete GitHub repo
+app.delete('/api/github-repos/:id', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const deleted = await autoFixService.deleteRepo(req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Repo not found' });
+  res.json({ success: true });
+}));
+
+// Start auto-fix for a bug (async)
+app.post('/api/bugs/:bugId/auto-fix', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const { bugId } = req.params;
+  const { github_repo_id } = req.body;
+  if (!github_repo_id) return res.status(400).json({ error: 'github_repo_id is required' });
+  const attempt = await autoFixService.startAutoFix(bugId, github_repo_id);
+  res.status(202).json(attempt);
+}));
+
+// Get auto-fix attempt status
+app.get('/api/auto-fix/:attemptId', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const attempt = await autoFixService.getAttempt(req.params.attemptId);
+  if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+  res.json(attempt);
+}));
+
+// Get all auto-fix attempts for a bug
+app.get('/api/bugs/:bugId/auto-fix', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const attempts = await autoFixService.getAttemptsForBug(req.params.bugId);
+  res.json(attempts);
 }));
 
 // Error handling middleware (must be last)

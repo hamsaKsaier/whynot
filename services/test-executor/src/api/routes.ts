@@ -91,8 +91,9 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
       });
     }
 
-    // Ensure every step has a UUID id (required by step_results DB constraint)
-    // and every navigate step has a URL (Claude sometimes omits it).
+    // Ensure every step has a UUID id (required by step_results DB constraint),
+    // every navigate step has a URL, and string targets are converted to
+    // structured selectors (QA loop saves targets as plain strings like "#email").
     const websiteUrlFallback = testCase.website_url || '';
     testCase.steps = testCase.steps.map((step: any) => {
       const fixed = { ...step };
@@ -100,13 +101,86 @@ router.post('/api/execute-test', async (req: Request, res: Response) => {
       if (!fixed.id || !validateUUID(fixed.id)) {
         fixed.id = uuidv4();
       }
-      // Add missing URL for navigate steps so the test doesn't fail at step 1
-      if (fixed.action === 'navigate' && !fixed.value && !fixed.target?.attributes?.href && websiteUrlFallback) {
-        fixed.value = websiteUrlFallback;
-        logger.debug('Patched navigate step with website_url fallback', {
-          testCaseId: testCase.id, websiteUrl: websiteUrlFallback
+
+      // Navigate steps: move URL-string targets to value
+      if (fixed.action === 'navigate') {
+        if (typeof fixed.target === 'string' && fixed.target.startsWith('http')) {
+          fixed.value = fixed.value || fixed.target;
+          fixed.target = undefined;
+        }
+        if (!fixed.value && !fixed.target?.attributes?.href && websiteUrlFallback) {
+          fixed.value = websiteUrlFallback;
+          logger.debug('Patched navigate step with website_url fallback', {
+            testCaseId: testCase.id, websiteUrl: websiteUrlFallback
+          });
+        }
+      }
+
+      // Auto-convert old generic 'assert' to smart assertion types
+      if (fixed.action === 'assert') {
+        const val = (fixed.value || '').toLowerCase();
+        const tgt = typeof fixed.target === 'string' ? fixed.target.toLowerCase() : '';
+        const combinedCtx = `${tgt} ${val} ${(fixed.expected_outcome || '').toLowerCase()}`;
+
+        if (combinedCtx.includes('url') && (fixed.value || tgt)) {
+          // URL assertion
+          fixed.action = 'assert_url_contains';
+          fixed.value = fixed.value || (typeof fixed.target === 'string' ? fixed.target : '');
+        } else if (combinedCtx.includes('not') && (combinedCtx.includes('exist') || combinedCtx.includes('visible') || combinedCtx.includes('hidden'))) {
+          // Element should not exist
+          fixed.action = 'assert_element_not_exists';
+        } else if (combinedCtx.includes('console') || combinedCtx.includes('error') && combinedCtx.includes('no ')) {
+          // No console errors
+          fixed.action = 'assert_no_console_errors';
+        } else if (fixed.value && !tgt) {
+          // Has value but no meaningful target → text visibility check
+          fixed.action = 'assert_text_visible';
+        } else if (typeof fixed.target === 'string' && !fixed.target.startsWith('#') && !fixed.target.startsWith('.') && !fixed.target.startsWith('[') && !fixed.target.startsWith('//') && fixed.target.length > 3) {
+          // Plain text target → check if text is visible on page
+          fixed.action = 'assert_text_visible';
+          fixed.value = fixed.value || fixed.target;
+        } else {
+          // Default: check element exists
+          fixed.action = 'assert_element_exists';
+        }
+        logger.info('Auto-converted generic assert', {
+          originalTarget: typeof fixed.target === 'string' ? fixed.target : 'object',
+          originalValue: fixed.value,
+          convertedAction: fixed.action,
         });
       }
+
+      // Smart assertion actions that don't need selector conversion
+      const assertionActions = [
+        'assert_url_contains', 'assert_url_equals', 'assert_text_visible',
+        'assert_no_console_errors', 'assert_input_value',
+        'assert_element_exists', 'assert_element_not_exists'
+      ];
+
+      // Convert string targets to structured selectors for non-navigate, non-assertion steps
+      if (typeof fixed.target === 'string' && fixed.action !== 'navigate' && !assertionActions.includes(fixed.action)) {
+        const rawTarget = fixed.target;
+        const selectors: any[] = [];
+
+        if (rawTarget.startsWith('#')) {
+          selectors.push({ type: 'css', value: rawTarget, stability_score: 0.9 });
+          selectors.push({ type: 'id', value: rawTarget, stability_score: 0.9 });
+        } else if (rawTarget.startsWith('.') || rawTarget.startsWith('[')) {
+          selectors.push({ type: 'css', value: rawTarget, stability_score: 0.8 });
+        } else if (rawTarget.startsWith('//') || rawTarget.startsWith('xpath=')) {
+          selectors.push({ type: 'xpath', value: rawTarget, stability_score: 0.6 });
+        } else {
+          selectors.push({ type: 'text', value: `text="${rawTarget}"`, stability_score: 0.7 });
+          selectors.push({ type: 'css', value: `button:has-text("${rawTarget}")`, stability_score: 0.6 });
+          selectors.push({ type: 'css', value: `a:has-text("${rawTarget}")`, stability_score: 0.5 });
+        }
+
+        fixed.target = { text: rawTarget };
+        if (!fixed.suggested_selectors || fixed.suggested_selectors.length === 0) {
+          fixed.suggested_selectors = selectors;
+        }
+      }
+
       return fixed;
     });
 

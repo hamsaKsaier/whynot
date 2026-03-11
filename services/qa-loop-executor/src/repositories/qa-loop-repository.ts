@@ -403,13 +403,15 @@ export class QALoopRepository {
     selectors?: Record<string, any>;
     source?: string;
     sourcePageUrl?: string;
+    observedResult?: 'pass' | 'fail';
   }): Promise<QALoopTestCase> {
     const id = uuidv4();
     const query = `
       INSERT INTO qa_loop_test_cases (
         id, session_id, project_id, name, description, category,
-        priority, risk_level, steps, selectors, source, source_page_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        priority, risk_level, steps, selectors, source, source_page_url,
+        observed_result
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
@@ -425,10 +427,11 @@ export class QALoopRepository {
       JSON.stringify(testCase.steps),
       JSON.stringify(testCase.selectors || {}),
       testCase.source || 'exploration',
-      testCase.sourcePageUrl || null
+      testCase.sourcePageUrl || null,
+      testCase.observedResult || null
     ]);
 
-    logger.info('Added test case', { sessionId, testCaseId: id, name: testCase.name });
+    logger.info('Added test case', { sessionId, testCaseId: id, name: testCase.name, observedResult: testCase.observedResult });
     return result.rows[0];
   }
 
@@ -449,6 +452,30 @@ export class QALoopRepository {
     query += ' ORDER BY priority DESC, created_at ASC';
     const result = await this.pool.query(query, params);
     return result.rows;
+  }
+
+  async getTestCaseById(testCaseId: string): Promise<QALoopTestCase | null> {
+    const query = 'SELECT * FROM qa_loop_test_cases WHERE id = $1';
+    const result = await this.pool.query(query, [testCaseId]);
+    return result.rows[0] || null;
+  }
+
+  async updateTestCaseSteps(testCaseId: string, updates: {
+    steps: any[];
+    correctionSource?: string;
+  }): Promise<void> {
+    const query = `
+      UPDATE qa_loop_test_cases
+      SET steps = $2,
+          source = COALESCE($3, source)
+      WHERE id = $1
+    `;
+    await this.pool.query(query, [
+      testCaseId,
+      JSON.stringify(updates.steps),
+      updates.correctionSource || null
+    ]);
+    logger.info('Updated test case steps (self-healing)', { testCaseId, correctionSource: updates.correctionSource });
   }
 
   async updateTestCaseSelectors(testCaseId: string, selectors: Record<string, any>): Promise<void> {
@@ -651,14 +678,17 @@ export class QALoopRepository {
     screenshots?: any[];
     selfHealed?: boolean;
     healedSelectors?: any[];
+    observedResult?: string;
+    isMismatch?: boolean;
   }): Promise<QALoopTestRun> {
     const id = uuidv4();
     const query = `
       INSERT INTO qa_loop_test_runs (
         id, session_id, test_case_id, status, duration_ms,
         steps_total, steps_completed, failure_step_index, failure_reason,
-        failure_type, screenshots, self_healed, healed_selectors
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        failure_type, screenshots, self_healed, healed_selectors,
+        observed_result, is_mismatch
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `;
 
@@ -675,7 +705,9 @@ export class QALoopRepository {
       result.failureType || null,
       JSON.stringify(result.screenshots || []),
       result.selfHealed || false,
-      JSON.stringify(result.healedSelectors || [])
+      JSON.stringify(result.healedSelectors || []),
+      result.observedResult || null,
+      result.isMismatch || false
     ]);
 
     // Update test case with last run info

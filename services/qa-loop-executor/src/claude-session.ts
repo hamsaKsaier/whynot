@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '../../shared/logger/logger';
 import { LoopConfig } from './loop-orchestrator';
 import { ToolExecutor } from './tool-executor';
+import { MCPBrowser } from './mcp-browser';
 import { emitToSession } from './api/websocket';
 import { getToolsForFocusArea } from './tools/tool-definitions';
 import { ClaudeModel, calculateCost, getModelDisplayName, MODEL_CAPABILITIES } from './model-selector';
@@ -58,8 +59,10 @@ export class ClaudeSession {
   constructor(
     sessionId: string,
     config: LoopConfig,
+    mcpBrowser: MCPBrowser,
     focusArea: FocusArea = 'explore',
-    preloadedDocumentContext?: string | null
+    preloadedDocumentContext?: string | null,
+    onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void
   ) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
@@ -69,10 +72,10 @@ export class ClaudeSession {
     this.client = new Anthropic({ apiKey });
     this.sessionId = sessionId;
     this.config = config;
-    this.toolExecutor = new ToolExecutor(sessionId, config);
+    this.toolExecutor = new ToolExecutor(sessionId, config, mcpBrowser, onTestCaseCreated);
 
-    // Select tools based on the current focus area (2.2: tool filtering)
-    const tools = getToolsForFocusArea(focusArea);
+    // Select tools based on the current focus area, merging MCP browser tools (2.2)
+    const tools = getToolsForFocusArea(focusArea, mcpBrowser.getTools());
     // Add cache_control to the last tool so the entire tools array is cached (2.1: prompt caching)
     if (tools.length > 0) {
       (tools[tools.length - 1] as any).cache_control = { type: 'ephemeral' };
@@ -392,13 +395,66 @@ Systematically explore every page and feature of the application, generating tes
 
 EXPLORATION STRATEGY:
 1. FIRST: Always call get_session_state() to understand your current progress
-2. NAVIGATE: Use navigate() to visit pages, starting from the target URL
-3. DISCOVER: Call get_page_elements() to identify all interactive elements
-4. EXPLORE: Click links and buttons to discover new pages
-5. TEST: For forms, test with both valid and invalid inputs
-6. DOCUMENT: Save test cases for every significant behavior
-7. REPORT: Log any bugs or issues you find
-8. TRACK: Add pages you discover to the exploration queue
+2. NAVIGATE: Use browser_navigate() to visit pages, starting from the target URL
+3. OBSERVE: Call browser_snapshot() to get the full accessibility tree — this shows ALL text, buttons, links, forms, and interactive elements on the page
+4. INTERACT: Use browser_click() with element refs from the snapshot to click links and buttons
+5. OBSERVE AGAIN: After EVERY interaction, call browser_snapshot() to see the resulting page state
+6. ONLY THEN SAVE: Save test cases based on what you ACTUALLY observed using save_test_case()
+7. REPORT: Log any bugs or issues you find using save_bug()
+8. TRACK: Add pages you discover to the exploration queue using add_discovered_page()
+
+⚠️ CRITICAL RULE — NEVER GENERATE SPECULATIVE TEST CASES ⚠️
+You MUST actually navigate to a page AND call browser_snapshot() to read its content
+BEFORE creating any test cases for that page. NEVER write test cases based on:
+- What you THINK a page contains based on its URL
+- Assumed page structure (like "there should be an email input")
+- Common patterns (like "login pages usually have X")
+You may ONLY assert text/elements that you have ACTUALLY seen in a browser_snapshot() response.
+Test cases with hallucinated selectors or text will FAIL mechanical execution and waste resources.
+
+═══════════════════════════════════════════════════════════════════
+BROWSER TOOLS — Playwright MCP
+═══════════════════════════════════════════════════════════════════
+
+You have access to Playwright MCP browser tools. Key tools:
+
+NAVIGATION:
+- browser_navigate({ url }) — Navigate to a URL
+- browser_navigate_back() — Go back in browser history
+
+PAGE OBSERVATION (CRITICAL — always observe before acting):
+- browser_snapshot() — Returns the FULL accessibility tree of the current page.
+  This shows every element with its role, name, text content, and a ref ID.
+  USE THIS instead of screenshots to understand page content.
+  The ref IDs (like "ref=e5") are used with browser_click, browser_fill_form, etc.
+
+INTERACTION:
+- browser_click({ element, ref }) — Click an element using its description and ref from snapshot
+- browser_fill_form({ ref, value }) — Fill an input field using its ref from snapshot
+- browser_type({ text, submit? }) — Type text into the currently focused element
+- browser_press_key({ key }) — Press a keyboard key (Enter, Tab, Escape, etc.)
+- browser_select_option({ ref, value }) — Select a dropdown option
+- browser_hover({ element, ref }) — Hover over an element
+
+SCREENSHOTS:
+- browser_take_screenshot() — Take a screenshot (sent to the preview client, not to you)
+
+OTHER:
+- browser_evaluate({ expression }) — Run JavaScript in the page context
+- browser_wait_for({ selector, timeout? }) — Wait for an element to appear
+- browser_console_messages() — Get browser console messages
+- browser_tabs() — List open browser tabs
+
+═══════════════════════════════════════════════════════════════════
+WORKFLOW: How to explore a page
+═══════════════════════════════════════════════════════════════════
+
+1. browser_navigate({ url: "..." }) — go to the page
+2. browser_snapshot() — read the accessibility tree to see EVERYTHING on the page
+3. Identify elements by their ref IDs (e.g., ref="e5" for a button)
+4. browser_click({ element: "Login button", ref: "e5" }) — interact with elements
+5. browser_snapshot() — observe the result of your action
+6. Repeat: interact → snapshot → observe → save test cases
 
 RULES:
 - Be SYSTEMATIC: Don't revisit pages you've already explored
@@ -406,12 +462,36 @@ RULES:
 - Be OBSERVANT: Note anything unusual (console errors, slow responses, UI glitches)
 - Be EFFICIENT: Generate actionable test cases with clear steps
 - SAVE NOTES: Use add_note() to remember important observations for future iterations
+- MANDATORY WORKFLOW: For every page you test: navigate → snapshot → interact → snapshot → save_test_case
+- NEVER save_test_case without having called browser_snapshot() on that page FIRST
+- ONLY ONE PAGE AT A TIME: Fully explore and test one page before moving to the next
 
 WHEN TO COMPLETE:
 Output "EXPLORATION_COMPLETE" when:
 - All discovered pages have been explored
 - No new pages can be found
 - You've generated sufficient test coverage
+
+═══ TEST CASE FORMAT ═══
+
+When you save test cases with save_test_case(), test steps use CSS SELECTORS (not refs from snapshot).
+To find the right selector for an element, use: browser_evaluate({ expression: "document.querySelector('input[type=email]')?.id || document.querySelector('input[type=email]')?.className" })
+
+Step types for test cases: navigate, click, type, select_option, assert_text_visible, assert_element_exists, assert_element_visible, assert_element_not_exists, assert_element_count, assert_attribute_contains, assert_input_value, assert_url_contains, assert_url_equals, assert_no_console_errors
+
+Every test case MUST include at least one assertion that verifies actual UI feedback.
+Use the EXACT text/selectors you observed in browser_snapshot() — never guess or assume.
+
+═══ OBSERVED RESULT TRACKING (MANDATORY) ═══
+When saving test cases with save_test_case(), ALWAYS include the observed_result field:
+- "pass" — you performed the steps and the assertions matched what you saw on the page
+            (e.g. form submitted successfully, correct page loaded, expected text appeared)
+- "fail" — you observed a bug, error, or unexpected behavior that the assertions should catch
+            (e.g. validation missing, error message wrong, UI broken)
+
+This is CRITICAL for test quality validation. We execute your test cases mechanically and
+compare the result with your observation. If they don't match, we know the test needs fixing.
+ALWAYS provide observed_result — never leave it out.
 
 REMEMBER:
 - Each iteration starts fresh - use get_session_state() to see your progress

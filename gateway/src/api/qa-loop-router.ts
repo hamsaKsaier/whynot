@@ -170,7 +170,7 @@ export const qaLoopSchemas = {
   /** POST /sessions */
   startSession: z.object({
     targetUrl: z
-      .string({ required_error: 'targetUrl is required' })
+      .string({ error: 'targetUrl is required' })
       .url('targetUrl must be a valid URL'),
     qualityThreshold: z.number().min(0).max(100).optional().default(80),
     maxIterations:    z.number().int().min(1).max(10_000).optional().default(100),
@@ -197,7 +197,7 @@ export const qaLoopSchemas = {
 
   /** PATCH /sessions/:id/documents/:docId */
   toggleDocument: z.object({
-    isActive: z.boolean({ required_error: 'isActive is required' }),
+    isActive: z.boolean({ error: 'isActive is required' }),
   }),
 };
 

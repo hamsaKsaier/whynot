@@ -136,6 +136,10 @@ const PHASE_CONFIG: Record<string, { label: string; color: string; pulse: boolea
   running_tests:            { label: '🧪 Running Tests',   color: '#818cf8', pulse: true },
   cost_update:              { label: '💡 Calculating',     color: '#fbbf24', pulse: false },
   resume_no_credentials:    { label: '⚠️ No Credentials',  color: '#f87171', pulse: false },
+  correction:               { label: '🔧 Correcting Tests', color: '#fbbf24', pulse: true },
+  correction_retest:        { label: '🔧 Re-testing',       color: '#a78bfa', pulse: true },
+  correction_complete:      { label: '🔧 Correction Done',  color: '#22c55e', pulse: false },
+  correction_error:         { label: '⚠️ Correction Error',  color: '#f87171', pulse: false },
 };
 
 const getPhaseConfig = (phase: string | null) =>
@@ -234,26 +238,66 @@ const ActionRow: React.FC<{
   );
 };
 
+/** SVG status icons for test results */
+const StatusIcons = {
+  running: () => (
+    <span className="inline-flex w-5 h-5 items-center justify-center">
+      <span className="w-4 h-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+    </span>
+  ),
+  passed: () => (
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-green-500/20">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 13l4 4L19 7"/>
+      </svg>
+    </span>
+  ),
+  failed: () => (
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-500/20">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </span>
+  ),
+  error: () => (
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-orange-500/20">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fb923c" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 9v4M12 17h.01"/>
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+    </span>
+  ),
+};
+
 /** Test result notification */
 const TestResultBadge: React.FC<{ activity: TestRunActivity }> = ({ activity }) => {
   const colors = {
-    running: { bg: 'rgba(96,165,250,0.15)', border: '#60a5fa40', text: '#60a5fa', icon: '⏳' },
-    passed:  { bg: 'rgba(74,222,128,0.15)', border: '#4ade8040', text: '#4ade80', icon: '✅' },
-    failed:  { bg: 'rgba(248,113,113,0.15)',border: '#f8717140', text: '#f87171', icon: '❌' },
-    error:   { bg: 'rgba(251,146,60,0.15)', border: '#fb923c40', text: '#fb923c', icon: '⚠️' },
+    running: { bg: 'rgba(96,165,250,0.15)', border: '#60a5fa40', text: '#60a5fa' },
+    passed:  { bg: 'rgba(74,222,128,0.15)', border: '#4ade8040', text: '#4ade80' },
+    failed:  { bg: 'rgba(248,113,113,0.15)',border: '#f8717140', text: '#f87171' },
+    error:   { bg: 'rgba(251,146,60,0.15)', border: '#fb923c40', text: '#fb923c' },
   };
   const c = colors[activity.status] || colors.error;
+  const IconComp = StatusIcons[activity.status] || StatusIcons.error;
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border"
-      style={{ background: c.bg, borderColor: c.border }}
+      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs border"
+      style={{
+        background: activity.isMismatch ? 'rgba(251,191,36,0.15)' : c.bg,
+        borderColor: activity.isMismatch ? '#fbbf2440' : c.border
+      }}
     >
-      <span>{c.icon}</span>
+      <IconComp />
       <span className="font-medium text-gray-200 truncate flex-1" title={activity.testCaseName}>
         {activity.testCaseName}
       </span>
+      {activity.isMismatch && (
+        <span className="shrink-0 text-yellow-400 font-semibold" title="Claude observed a different result — correcting">
+          mismatch
+        </span>
+      )}
       <span style={{ color: c.text }} className="shrink-0 font-semibold">
-        {activity.status === 'running' ? '…' : activity.status}
+        {activity.status === 'running' ? 'running…' : activity.status}
         {activity.durationMs ? ` (${(activity.durationMs / 1000).toFixed(1)}s)` : ''}
       </span>
     </div>
@@ -340,8 +384,8 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   const phaseConfig = getPhaseConfig(currentPhase ?? null);
   const costDollars = costInfo ? (costInfo.totalCostCents / 100).toFixed(3) : null;
 
-  // Thinking text — keep last 2000 chars to avoid overflow
-  const displayThinking = thinkingText.slice(-2000);
+  // Thinking text — keep last 5000 chars so user has time to read AI reasoning
+  const displayThinking = thinkingText.slice(-5000);
 
   // Last 30 tool calls reversed (newest first in reverse, but we show oldest→newest)
   const displayCalls = useMemo(() => toolCalls.slice(-40), [toolCalls]);
@@ -525,6 +569,11 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             <span className="ml-1 text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full">
               {testRunActivity.filter(a => a.status === 'passed').length}/{testRunActivity.length} passed
             </span>
+            {testRunActivity.some(a => a.isMismatch) && (
+              <span className="ml-1 text-xs bg-yellow-900/50 text-yellow-300 px-2 py-0.5 rounded-full">
+                {testRunActivity.filter(a => a.isMismatch).length} mismatch
+              </span>
+            )}
           </div>
           <div className="p-3 space-y-1.5 max-h-48 overflow-y-auto">
             {[...testRunActivity].reverse().map(activity => (

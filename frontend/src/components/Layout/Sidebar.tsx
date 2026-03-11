@@ -10,6 +10,8 @@ import {
   FiChevronRight,
   FiZap,
   FiServer,
+  FiLink,
+  FiGithub,
 } from 'react-icons/fi';
 import { Tooltip } from '../common/Tooltip';
 
@@ -52,7 +54,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       label: 'Config',
       items: [
-        { icon: FiSettings, label: 'Settings', path: '/settings', badge: null },
+        { icon: FiLink,     label: 'Integrations', path: '/integrations', badge: null },
+        { icon: FiGithub,   label: 'GitHub Repos', path: '/github-repos',  badge: null },
+        { icon: FiSettings, label: 'Settings',     path: '/settings',      badge: null },
       ],
     },
   ];

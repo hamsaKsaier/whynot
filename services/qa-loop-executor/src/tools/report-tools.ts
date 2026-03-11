@@ -18,6 +18,7 @@ export interface TestCaseInput {
   priority?: number;
   risk_level?: string;
   source_page_url?: string;
+  observed_result?: 'pass' | 'fail';
 }
 
 export interface BugInput {
@@ -35,10 +36,12 @@ export interface BugInput {
 export class ReportTools {
   private sessionId: string;
   private repository: QALoopRepository;
+  private onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void;
 
-  constructor(sessionId: string) {
+  constructor(sessionId: string, onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void) {
     this.sessionId = sessionId;
     this.repository = new QALoopRepository();
+    this.onTestCaseCreated = onTestCaseCreated;
   }
 
   async saveTestCase(input: TestCaseInput): Promise<ToolResult> {
@@ -56,7 +59,8 @@ export class ReportTools {
         priority: input.priority || 50,
         riskLevel: input.risk_level || 'medium',
         sourcePageUrl: input.source_page_url,
-        source: 'exploration'
+        source: 'exploration',
+        observedResult: input.observed_result
       });
 
       // Emit event for UI update
@@ -66,9 +70,19 @@ export class ReportTools {
           id: testCase.id,
           name: testCase.name,
           category: testCase.category,
-          stepsCount: input.steps.length
+          stepsCount: input.steps.length,
+          observedResult: input.observed_result
         }
       });
+
+      // Trigger parallel execution immediately (if callback registered)
+      if (this.onTestCaseCreated) {
+        try {
+          this.onTestCaseCreated(testCase, input.observed_result);
+        } catch (cbErr: any) {
+          logger.warn('onTestCaseCreated callback failed', { error: cbErr.message });
+        }
+      }
 
       // Update session progress
       const allTestCases = await this.repository.getTestCases(this.sessionId);
@@ -79,14 +93,15 @@ export class ReportTools {
       logger.info('Test case saved', {
         sessionId: this.sessionId,
         testCaseId: testCase.id,
-        name: input.name
+        name: input.name,
+        observedResult: input.observed_result
       });
 
       return {
         data: {
           success: true,
           testCaseId: testCase.id,
-          message: `Test case "${input.name}" saved with ${input.steps.length} steps`
+          message: `Test case "${input.name}" saved with ${input.steps.length} steps (observed: ${input.observed_result || 'not specified'})`
         },
         metrics: {
           testGenerated: true

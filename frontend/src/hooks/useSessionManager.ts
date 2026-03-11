@@ -135,8 +135,9 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
       const tests: any[] = details.testCases || [];
       const exploredCount = pages.filter(p => p.is_explored).length;
       const coverageScore  = pages.length > 0 ? Math.round((exploredCount / pages.length) * 100) : 0;
-      const passingTests   = tests.filter(t => t.last_run_status === 'passed').length;
-      const stabilityScore = tests.length > 0 ? Math.round((passingTests / tests.length) * 100) : 100;
+      const executedTests  = tests.filter(t => t.last_run_status != null);
+      const passingTests   = executedTests.filter(t => t.last_run_status === 'passed').length;
+      const stabilityScore = executedTests.length > 0 ? Math.round((passingTests / executedTests.length) * 100) : 100;
       const secBugs        = bugs.filter(b => b.category === 'security');
       const securityScore  = Math.max(0, 100 - (
         secBugs.filter(b => b.severity === 'critical').length * 25 +

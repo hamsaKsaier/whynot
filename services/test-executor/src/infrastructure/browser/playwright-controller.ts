@@ -12,6 +12,7 @@ export class PlaywrightController {
   private screenshotsDir: string;
   private navigationTimeout: number;
   private navigationMaxTimeout: number;
+  private consoleErrors: string[] = [];
 
   constructor(screenshotsDir: string = './screenshots') {
     this.screenshotsDir = screenshotsDir;
@@ -77,17 +78,35 @@ export class PlaywrightController {
         ]
       });
 
+      // Video recording directory
+      const videoDir = process.env.VIDEO_DIR || '/tmp/videos';
+      if (!fs.existsSync(videoDir)) {
+        fs.mkdirSync(videoDir, { recursive: true });
+      }
+
       this.context = await this.browser.newContext({
         viewport: { width: 1920, height: 1080 },
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         ignoreHTTPSErrors: true,
         javaScriptEnabled: true,
+        recordVideo: {
+          dir: videoDir,
+          size: { width: 1280, height: 720 }
+        }
       });
 
       this.page = await this.context.newPage();
       this.page.setDefaultTimeout(30000);
       this.page.setDefaultNavigationTimeout(30000);
-      
+
+      // Collect console errors for assert_no_console_errors (v2)
+      this.consoleErrors = [];
+      this.page.on('console', (msg) => {
+        if (msg.type() === 'error') {
+          this.consoleErrors.push(msg.text());
+        }
+      });
+
       logger.info('Browser initialized successfully');
     } catch (error: any) {
       logger.error('Browser initialization failed', { error: error.message });
@@ -225,7 +244,16 @@ export class PlaywrightController {
     if (!this.page) {
       throw new Error('Browser not initialized.');
     }
-    await this.page.click(selector, { timeout: 10000 });
+    try {
+      await this.page.click(selector, { timeout: 10000 });
+    } catch (error: any) {
+      // Retry with force:true if another element intercepts pointer events
+      if (error.message?.includes('intercepts pointer events')) {
+        await this.page.click(selector, { timeout: 10000, force: true });
+      } else {
+        throw error;
+      }
+    }
   }
 
   async type(selector: string, text: string): Promise<void> {
@@ -313,6 +341,53 @@ export class PlaywrightController {
       return this.page;
     }
     return null;
+  }
+
+  // ─── Video recording (v2) ───
+
+  async getVideoPath(): Promise<string | null> {
+    if (!this.page) return null;
+    try {
+      const video = this.page.video();
+      if (video) {
+        return await video.path();
+      }
+    } catch (e) {
+      logger.warn('Failed to get video path', { error: (e as Error).message });
+    }
+    return null;
+  }
+
+  async saveVideo(executionId: string): Promise<string | null> {
+    if (!this.page) return null;
+    try {
+      const video = this.page.video();
+      if (video) {
+        const videoDir = process.env.VIDEO_DIR || '/tmp/videos';
+        const destPath = path.join(videoDir, `${executionId}.webm`);
+        await video.saveAs(destPath);
+        logger.info('Video saved', { executionId, path: destPath });
+        return destPath;
+      }
+    } catch (e) {
+      logger.warn('Failed to save video', { error: (e as Error).message });
+    }
+    return null;
+  }
+
+  // ─── Console error collection (v2 smart assertions) ───
+
+  getConsoleErrors(): string[] {
+    return [...this.consoleErrors];
+  }
+
+  clearConsoleErrors(): void {
+    this.consoleErrors = [];
+  }
+
+  async getInputValue(selector: string): Promise<string> {
+    if (!this.page) throw new Error('Browser not initialized.');
+    return await this.page.inputValue(selector);
   }
 
   /**

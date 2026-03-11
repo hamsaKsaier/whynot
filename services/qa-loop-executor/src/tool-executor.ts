@@ -1,6 +1,6 @@
 import { createLogger } from '../../shared/logger/logger';
 import { LoopConfig } from './loop-orchestrator';
-import { BrowserTools } from './tools/browser-tools';
+import { MCPBrowser } from './mcp-browser';
 import { StateTools } from './tools/state-tools';
 import { ReportTools } from './tools/report-tools';
 import { ChaosTools } from './tools/chaos-tools';
@@ -23,19 +23,24 @@ export interface ToolResult {
 export class ToolExecutor {
   private sessionId: string;
   private config: LoopConfig;
-  private browserTools: BrowserTools;
+  private mcpBrowser: MCPBrowser;
   private stateTools: StateTools;
   private reportTools: ReportTools;
   private chaosTools: ChaosTools;
   private detectiveTools: DetectiveTools;
   private guardianTools: GuardianTools;
 
-  constructor(sessionId: string, config: LoopConfig) {
+  constructor(
+    sessionId: string,
+    config: LoopConfig,
+    mcpBrowser: MCPBrowser,
+    onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void
+  ) {
     this.sessionId = sessionId;
     this.config = config;
-    this.browserTools = new BrowserTools(sessionId, config);
+    this.mcpBrowser = mcpBrowser;
     this.stateTools = new StateTools(sessionId);
-    this.reportTools = new ReportTools(sessionId);
+    this.reportTools = new ReportTools(sessionId, onTestCaseCreated);
     this.chaosTools = new ChaosTools(sessionId);
     this.detectiveTools = new DetectiveTools(sessionId);
     this.guardianTools = new GuardianTools(sessionId);
@@ -45,32 +50,12 @@ export class ToolExecutor {
     logger.debug('Executing tool', { sessionId: this.sessionId, tool: toolName, input });
 
     try {
+      // Route MCP browser tools (browser_navigate, browser_click, browser_snapshot, etc.)
+      if (this.mcpBrowser.isMCPTool(toolName)) {
+        return await this.mcpBrowser.callTool(toolName, input);
+      }
+
       switch (toolName) {
-        // Browser Tools
-        case 'navigate':
-          return await this.browserTools.navigate(input.url);
-
-        case 'click':
-          return await this.browserTools.click(input.selector);
-
-        case 'type_text':
-          return await this.browserTools.typeText(input.selector, input.text, input.clear_first);
-
-        case 'screenshot':
-          return await this.browserTools.screenshot();
-
-        case 'get_page_elements':
-          return await this.browserTools.getPageElements();
-
-        case 'scroll':
-          return await this.browserTools.scroll(input.direction, input.amount);
-
-        case 'go_back':
-          return await this.browserTools.goBack();
-
-        case 'wait':
-          return await this.browserTools.wait(input.milliseconds);
-
         // State Tools
         case 'get_session_state':
           return await this.stateTools.getSessionState();
@@ -91,8 +76,8 @@ export class ToolExecutor {
           return await this.stateTools.addDiscoveredPage(input.url, input.priority);
 
         case 'mark_page_explored': {
-          // Thread real load time (captured during navigate()) into discovered_elements
-          const cachedLoadTime = this.browserTools.getLoadTime(input.url);
+          // Thread real load time (captured during browser_navigate) into discovered_elements
+          const cachedLoadTime = this.mcpBrowser.getLoadTime(input.url);
           return await this.stateTools.markPageExplored(input.url, input.description, input.page_type, cachedLoadTime);
         }
 
@@ -195,6 +180,6 @@ export class ToolExecutor {
   }
 
   async cleanup(): Promise<void> {
-    await this.browserTools.cleanup();
+    // MCP browser lifecycle is managed by LoopOrchestrator — nothing to clean up here
   }
 }

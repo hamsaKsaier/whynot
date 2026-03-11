@@ -15,6 +15,8 @@ export interface TestRunActivity {
   status: 'running' | 'passed' | 'failed' | 'error';
   durationMs?: number;
   failureReason?: string;
+  isMismatch?: boolean;
+  observedResult?: 'pass' | 'fail';
   timestamp: string;
 }
 
@@ -79,7 +81,7 @@ export function useQALoopStream({
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
   // O(1) dedup sets that shadow the pagesDiscovered/pagesExplored arrays (4.4)
@@ -129,8 +131,8 @@ export function useQALoopStream({
           input: event.data?.input,
           timestamp: event.timestamp
         }]);
-        // Clear thinking text when tool is called
-        setThinkingText('');
+        // Add a separator between thinking blocks so they remain readable
+        setThinkingText(prev => prev ? prev + '\n\n---\n\n' : '');
         break;
 
       case 'tool_result':
@@ -217,20 +219,28 @@ export function useQALoopStream({
         // Show "running" badge immediately when test starts
         setTestRunActivity(prev => {
           const updated = prev.filter(a => a.testCaseId !== event.data?.testCaseId);
-          return [...updated, {
+          const newEntry: TestRunActivity = {
             testCaseId: event.data?.testCaseId,
             testCaseName: event.data?.testCaseName || 'Test',
             status: 'running',
             timestamp: event.timestamp
-          }].slice(-20); // keep last 20
+          };
+          return [...updated, newEntry].slice(-20); // keep last 20
         });
         break;
 
       case 'test_run_result':
-        // Update the entry from 'running' → actual result
+        // Update the entry from 'running' → actual result (with mismatch info)
         setTestRunActivity(prev => prev.map(a =>
           a.testCaseId === event.data?.testCaseId
-            ? { ...a, status: event.data.status, durationMs: event.data.durationMs, failureReason: event.data.failureReason }
+            ? {
+                ...a,
+                status: event.data.status,
+                durationMs: event.data.durationMs,
+                failureReason: event.data.failureReason,
+                isMismatch: event.data.isMismatch || false,
+                observedResult: event.data.observedResult
+              }
             : a
         ));
         break;
