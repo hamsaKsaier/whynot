@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FiHome,
   FiFolder,
   FiFileText,
   FiPlay,
-  FiSettings,
   FiChevronLeft,
   FiChevronRight,
   FiZap,
   FiServer,
   FiLink,
   FiGithub,
+  FiBell,
+  FiGitBranch,
 } from 'react-icons/fi';
 import { Tooltip } from '../common/Tooltip';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -27,10 +29,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onMobileClose,
 }) => {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(collapsed);
+  const { activeWorkspace } = useWorkspace();
 
   const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
     onToggleCollapse?.();
   };
 
@@ -38,25 +39,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       label: 'Workspace',
       items: [
-        { icon: FiZap,      label: 'QA Loop',   path: '/qa-loop',   badge: null },
-        { icon: FiHome,     label: 'Dashboard',  path: '/',          badge: null },
-        { icon: FiFolder,   label: 'Projects',   path: '/projects',  badge: null },
+        { icon: FiZap,       label: 'QA Loop',       path: '/qa-loop' },
+        { icon: FiHome,      label: 'Dashboard',     path: '/' },
+        { icon: FiFolder,    label: 'Projects',      path: '/projects' },
+        { icon: FiGitBranch, label: 'Architecture',  path: '/architecture-flow' },
       ],
     },
     {
       label: 'Testing',
       items: [
-        { icon: FiServer,   label: 'Environments', path: '/environments', badge: null },
-        { icon: FiPlay,     label: 'Test Runs',    path: '/test-runs',    badge: null },
-        { icon: FiFileText, label: 'Test Cases',   path: '/test-cases',   badge: null },
+        { icon: FiServer,   label: 'Environments', path: '/environments' },
+        { icon: FiPlay,     label: 'Test Runs',    path: '/test-runs' },
+        { icon: FiFileText, label: 'Test Cases',   path: '/test-cases' },
       ],
     },
     {
       label: 'Config',
       items: [
-        { icon: FiLink,     label: 'Integrations', path: '/integrations', badge: null },
-        { icon: FiGithub,   label: 'GitHub Repos', path: '/github-repos',  badge: null },
-        { icon: FiSettings, label: 'Settings',     path: '/settings',      badge: null },
+        { icon: FiLink,   label: 'Integrations', path: '/integrations' },
+        { icon: FiGithub, label: 'GitHub Repos',  path: '/github-repos' },
+        { icon: FiBell,   label: 'Webhooks',      path: '/webhooks' },
       ],
     },
   ];
@@ -70,26 +72,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'
+      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'
         }`}
     >
       {/* Logo/Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-        {!isCollapsed && (
+        {!collapsed && (
           <div className="flex items-center">
             <FiZap className="h-6 w-6 text-primary-600 mr-2" />
-            <span className="font-bold text-gray-900">WhyNot</span>
+            <span className="font-bold text-gray-900">{activeWorkspace?.name || 'Thunder Code'}</span>
           </div>
         )}
-        {isCollapsed && (
+        {collapsed && (
           <FiZap className="h-6 w-6 text-primary-600 mx-auto" />
         )}
         <button
           onClick={toggleCollapse}
           className="p-1 rounded hover:bg-gray-100 transition-colors"
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {isCollapsed ? (
+          {collapsed ? (
             <FiChevronRight className="h-5 w-5 text-gray-600" />
           ) : (
             <FiChevronLeft className="h-5 w-5 text-gray-600" />
@@ -98,13 +100,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Project Section */}
-      {!isCollapsed && (
+      {!collapsed && (
         <div className="px-4 py-3 border-b border-gray-200">
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
             Project
           </div>
           <div className="text-sm font-medium text-gray-900">
-            WhyNot
+            {activeWorkspace?.name || 'Thunder Code'}
           </div>
         </div>
       )}
@@ -114,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="px-2 space-y-4">
           {navSections.map((section) => (
             <div key={section.label}>
-              {!isCollapsed && (
+              {!collapsed && (
                 <div className="px-3 mb-2">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {section.label}
@@ -135,21 +137,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         : 'text-gray-700 hover:bg-gray-50'
                         }`}
                     >
-                      <Icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                      {!isCollapsed && (
-                        <>
-                          <span className="flex-1">{item.label}</span>
-                          {item.badge && (
-                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
-                              {item.badge}
-                            </span>
-                          )}
-                        </>
+                      <Icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? 'mx-auto' : 'mr-3'}`} />
+                      {!collapsed && (
+                        <span className="flex-1">{item.label}</span>
                       )}
                     </Link>
                   );
 
-                  return isCollapsed ? (
+                  return collapsed ? (
                     <Tooltip key={item.path} content={item.label} position="right">
                       {linkContent}
                     </Tooltip>
@@ -162,39 +157,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </div>
       </nav>
-
-      {/* Footer */}
-      {!isCollapsed && (
-        <div className="px-4 py-3 border-t border-gray-200">
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Workspace
-          </div>
-          <Link
-            to="/organization-settings"
-            className="flex items-center text-sm text-gray-700 hover:text-gray-900"
-          >
-            <FiSettings className="h-4 w-4 mr-2" />
-            Organization Settings
-          </Link>
-        </div>
-      )}
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

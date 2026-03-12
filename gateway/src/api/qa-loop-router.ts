@@ -337,6 +337,7 @@ createProxy('get', '/sessions/:id/test-cases', 'Failed to get test cases');
 createProxy('get', '/sessions/:id/bugs',        'Failed to get bugs');
 createProxy('get', '/sessions/:id/pages',       'Failed to get pages');
 createProxy('get', '/sessions/:id/test-runs',   'Failed to get test runs');
+createProxy('post', '/sessions/:id/test-cases/:tcId/save-to-project', 'Failed to save test case to project', { timeout: 15_000 });
 
 // ── Document management ────────────────────────────────────────────────────────
 // combined must come BEFORE /:docId to avoid route shadowing

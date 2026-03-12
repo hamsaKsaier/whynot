@@ -15,9 +15,9 @@ import {
   FiAlertTriangle,
   FiExternalLink
 } from 'react-icons/fi';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { apiClient } from '../services/api';
+import { useToastContext } from '../contexts/ToastContext';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
 
 interface APIKey {
   id: string;
@@ -51,6 +51,8 @@ interface WebhookLog {
 }
 
 export const WebhookManagementPage: React.FC = () => {
+  const { success, error: showError } = useToastContext();
+
   // API Keys State
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -73,6 +75,10 @@ export const WebhookManagementPage: React.FC = () => {
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
 
+  // Confirm Dialog State
+  const [revokeConfirm, setRevokeConfirm] = useState<{isOpen: boolean; keyId: string | null}>({isOpen: false, keyId: null});
+  const [deleteChannelConfirm, setDeleteChannelConfirm] = useState<{isOpen: boolean; channelId: string | null}>({isOpen: false, channelId: null});
+
   // Active Tab
   const [activeTab, setActiveTab] = useState<'keys' | 'channels' | 'logs'>('keys');
 
@@ -86,7 +92,7 @@ export const WebhookManagementPage: React.FC = () => {
   const loadAPIKeys = async () => {
     try {
       setLoadingKeys(true);
-      const response = await axios.get(`${API_URL}/qa-loop/api/api-keys`);
+      const response = await apiClient.get('/qa-loop/api/api-keys');
       setApiKeys(response.data.api_keys || []);
     } catch (error) {
       console.error('Failed to load API keys:', error);
@@ -98,7 +104,7 @@ export const WebhookManagementPage: React.FC = () => {
   const loadNotificationChannels = async () => {
     try {
       setLoadingChannels(true);
-      const response = await axios.get(`${API_URL}/qa-loop/api/notification-channels`);
+      const response = await apiClient.get('/qa-loop/api/notification-channels');
       setChannels(response.data.channels || []);
     } catch (error) {
       console.error('Failed to load notification channels:', error);
@@ -110,7 +116,7 @@ export const WebhookManagementPage: React.FC = () => {
   const loadWebhookLogs = async () => {
     try {
       setLoadingLogs(true);
-      const response = await axios.get(`${API_URL}/qa-loop/api/webhook-logs?limit=50`);
+      const response = await apiClient.get('/qa-loop/api/webhook-logs?limit=50');
       setLogs(response.data.logs || []);
     } catch (error) {
       console.error('Failed to load webhook logs:', error);
@@ -121,7 +127,7 @@ export const WebhookManagementPage: React.FC = () => {
 
   const createAPIKey = async () => {
     try {
-      const response = await axios.post(`${API_URL}/qa-loop/api/api-keys`, {
+      const response = await apiClient.post('/qa-loop/api/api-keys', {
         name: newKeyName,
         permissions: newKeyPermissions,
         expires_in_days: newKeyExpiry
@@ -136,13 +142,17 @@ export const WebhookManagementPage: React.FC = () => {
     }
   };
 
-  const revokeAPIKey = async (id: string) => {
-    if (!window.confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
-      return;
-    }
+  const revokeAPIKey = (id: string) => {
+    setRevokeConfirm({isOpen: true, keyId: id});
+  };
+
+  const confirmRevokeAPIKey = async () => {
+    const id = revokeConfirm.keyId;
+    setRevokeConfirm({isOpen: false, keyId: null});
+    if (!id) return;
 
     try {
-      await axios.delete(`${API_URL}/qa-loop/api/api-keys/${id}`);
+      await apiClient.delete(`/qa-loop/api/api-keys/${id}`);
       loadAPIKeys();
     } catch (error) {
       console.error('Failed to revoke API key:', error);
@@ -151,7 +161,7 @@ export const WebhookManagementPage: React.FC = () => {
 
   const createNotificationChannel = async () => {
     try {
-      await axios.post(`${API_URL}/qa-loop/api/notification-channels`, {
+      await apiClient.post('/qa-loop/api/notification-channels', {
         name: channelName,
         channel_type: channelType,
         config: channelConfig
@@ -166,13 +176,17 @@ export const WebhookManagementPage: React.FC = () => {
     }
   };
 
-  const deleteNotificationChannel = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this notification channel?')) {
-      return;
-    }
+  const deleteNotificationChannel = (id: string) => {
+    setDeleteChannelConfirm({isOpen: true, channelId: id});
+  };
+
+  const confirmDeleteNotificationChannel = async () => {
+    const id = deleteChannelConfirm.channelId;
+    setDeleteChannelConfirm({isOpen: false, channelId: null});
+    if (!id) return;
 
     try {
-      await axios.delete(`${API_URL}/qa-loop/api/notification-channels/${id}`);
+      await apiClient.delete(`/qa-loop/api/notification-channels/${id}`);
       loadNotificationChannels();
     } catch (error) {
       console.error('Failed to delete notification channel:', error);
@@ -181,10 +195,10 @@ export const WebhookManagementPage: React.FC = () => {
 
   const testNotificationChannel = async (id: string) => {
     try {
-      await axios.post(`${API_URL}/qa-loop/api/notification-channels/${id}/test`);
-      alert('Test notification sent!');
+      await apiClient.post(`/qa-loop/api/notification-channels/${id}/test`);
+      success('Test notification sent!');
     } catch (error: any) {
-      alert(`Failed to send test: ${error.response?.data?.details || error.message}`);
+      showError(`Failed to send test: ${error.response?.data?.details || error.message}`);
     }
   };
 
@@ -725,8 +739,26 @@ export const WebhookManagementPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Confirm Dialogs */}
+        <ConfirmDialog
+          isOpen={revokeConfirm.isOpen}
+          title="Revoke API Key"
+          message="Are you sure you want to revoke this API key? This action cannot be undone."
+          confirmText="Revoke"
+          variant="danger"
+          onConfirm={confirmRevokeAPIKey}
+          onCancel={() => setRevokeConfirm({isOpen: false, keyId: null})}
+        />
+        <ConfirmDialog
+          isOpen={deleteChannelConfirm.isOpen}
+          title="Delete Notification Channel"
+          message="Are you sure you want to delete this notification channel?"
+          confirmText="Delete"
+          variant="danger"
+          onConfirm={confirmDeleteNotificationChannel}
+          onCancel={() => setDeleteChannelConfirm({isOpen: false, channelId: null})}
+        />
     </div>
   );
 };
-
-export default WebhookManagementPage;

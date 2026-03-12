@@ -23,6 +23,7 @@ import {
   FiInfo,
 } from 'react-icons/fi';
 import { QALoopSession, QALoopDocument, LoginCredentials } from '../../services/qa-loop-api';
+import type { SavedEnvironment } from '../../services/api';
 
 export interface ExistingSessionInfo {
   id: string;
@@ -72,6 +73,8 @@ export interface SessionFormProps {
   onUpload: (file: File) => Promise<void>;
   onDelete: (docId: string) => Promise<void>;
   onToggle: (docId: string, isActive: boolean) => Promise<void>;
+  // Environments (optional)
+  environments?: SavedEnvironment[];
   // Submit
   isStarting: boolean;
   onStart: () => void;
@@ -88,6 +91,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   loginCredentials, setLoginCredentials,
   showPassword, setShowPassword,
   existingSession, useExisting, setUseExisting,
+  environments,
   documents, activeSession, onUpload, onDelete, onToggle,
   isStarting, onStart,
 }) => (
@@ -98,8 +102,29 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     </h2>
 
     <div className="space-y-4">
-      {/* Target URL */}
+      {/* Environment selector + Target URL */}
       <div>
+        {environments && environments.length > 0 && (
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Environment
+            </label>
+            <select
+              value=""
+              onChange={e => {
+                if (e.target.value) setTargetUrl(e.target.value);
+              }}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Select an environment or type URL below</option>
+              {environments.map(env => (
+                <option key={env.id} value={env.url}>
+                  {env.name} — {env.url}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Target URL
         </label>

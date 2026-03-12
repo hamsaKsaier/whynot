@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { FiBell, FiSettings, FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiPlay, FiServer, FiFileText, FiHome, FiCommand } from 'react-icons/fi';
+import { FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiPlay, FiServer, FiFileText, FiHome, FiCommand } from 'react-icons/fi';
 import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { useAuth } from '../../contexts/AuthContext';
@@ -67,12 +67,37 @@ const PAGE_HELP: Record<string, { icon: React.ReactNode; title: string; tips: st
       'Click the ▶ icon to re-run a test case from the QA Loop.',
     ],
   },
-  '/settings': {
-    icon: <FiSettings className="h-4 w-4 text-primary-500" />,
-    title: 'Settings',
+  '/webhooks': {
+    icon: <FiZap className="h-4 w-4 text-primary-500" />,
+    title: 'Webhooks',
     tips: [
-      'Configure your workspace preferences and integrations here.',
-      'API keys let you trigger test runs from your CI/CD pipeline.',
+      'Manage API keys for CI/CD integration.',
+      'Set up Slack or Discord notifications for QA Loop events.',
+      'Monitor webhook activity and response times.',
+    ],
+  },
+  '/integrations': {
+    icon: <FiZap className="h-4 w-4 text-primary-500" />,
+    title: 'Integrations',
+    tips: [
+      'Connect Jira, ClickUp, or Linear to create bug tickets automatically.',
+      'Test connections before relying on them for bug reporting.',
+    ],
+  },
+  '/github-repos': {
+    icon: <FiZap className="h-4 w-4 text-primary-500" />,
+    title: 'GitHub Repos',
+    tips: [
+      'Connect GitHub repos to enable AutoFix PR generation from QA Loop bugs.',
+      'Use a Personal Access Token with repo permissions.',
+    ],
+  },
+  '/architecture-flow': {
+    icon: <FiFolder className="h-4 w-4 text-primary-500" />,
+    title: 'Architecture Flow',
+    tips: [
+      'Visualize the relationships between projects, user stories, and test cases.',
+      'Expand nodes to see test steps and run tests directly.',
     ],
   },
 };
@@ -83,9 +108,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const [helpOpen, setHelpOpen] = useState(false);
   const helpRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
-
-  // Mock notification count — replace with real data when available
-  const notificationCount = 0;
 
   /** Get up-to-two-letter initials from the user's name */
   const initials = user
@@ -165,7 +187,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
     // Otherwise show Projects > ... hierarchy
     const breadcrumbs = [{ label: 'Projects', path: '/projects' }];
     paths.forEach((path, index) => {
-      const label = pathMap[path] || path.charAt(0).toUpperCase() + path.slice(1);
+      let label = pathMap[path] || path.charAt(0).toUpperCase() + path.slice(1);
+      // Replace raw UUIDs with friendly labels in project sub-paths
+      if (paths[0] === 'projects' && index === 1 && path.includes('-')) {
+        label = 'Project Details';
+      }
       const fullPath = '/' + paths.slice(0, index + 1).join('/');
       breadcrumbs.push({ label, path: fullPath });
     });
@@ -262,26 +288,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
             </div>
           )}
         </div>
-
-        {/* Plan badge */}
-        <span className="hidden sm:inline-flex items-center px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded-full hover:bg-gray-200 cursor-pointer transition-colors">
-          Free plan
-        </span>
-
-        {/* Notifications */}
-        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
-          <FiBell className="h-5 w-5 text-gray-600" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold leading-none">
-              {notificationCount > 99 ? '99+' : notificationCount}
-            </span>
-          )}
-        </button>
-
-        {/* Settings */}
-        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Settings">
-          <FiSettings className="h-5 w-5 text-gray-600" />
-        </button>
 
         {/* User Avatar + Logout */}
         <div className="flex items-center gap-1 ml-1">

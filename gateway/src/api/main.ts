@@ -1517,6 +1517,119 @@ app.put('/api/visual-regressions/:id/ignore', asyncHandler(async (req, res) => {
   res.json({ success: true, comparison });
 }));
 
+// ==================== DASHBOARD STATS API ====================
+
+app.get('/api/dashboard/stats', requireAuth, asyncHandler(async (req, res) => {
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+  // Run all queries in parallel for speed
+  const [testCaseRows, executionRows, qaSessionRows, bugRows, recentSessionRows] = await Promise.all([
+    // Total test cases
+    query('SELECT COUNT(*) as count FROM test_cases WHERE workspace_id = $1', [workspaceId]),
+    // Execution stats (success rate)
+    query(
+      `SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'completed') as completed,
+        COUNT(*) FILTER (WHERE status = 'failed') as failed
+      FROM executions WHERE workspace_id = $1`,
+      [workspaceId]
+    ),
+    // QA Loop sessions count
+    query('SELECT COUNT(*) as count FROM qa_loop_sessions WHERE workspace_id = $1', [workspaceId]),
+    // Bugs found
+    query(
+      `SELECT COUNT(*) as count FROM qa_loop_bugs b
+       JOIN qa_loop_sessions s ON b.session_id = s.id
+       WHERE s.workspace_id = $1`,
+      [workspaceId]
+    ),
+    // Recent QA Loop sessions (last 5)
+    query(
+      `SELECT id, target_url, status, quality_score, tests_generated, bugs_found, pages_explored, created_at, completed_at
+       FROM qa_loop_sessions
+       WHERE workspace_id = $1
+       ORDER BY created_at DESC LIMIT 5`,
+      [workspaceId]
+    ),
+  ]);
+
+  const totalExecutions = parseInt(executionRows[0]?.total || '0');
+  const completedExecutions = parseInt(executionRows[0]?.completed || '0');
+
+  res.json({
+    totalTestCases: parseInt(testCaseRows[0]?.count || '0'),
+    totalQASessions: parseInt(qaSessionRows[0]?.count || '0'),
+    totalBugsFound: parseInt(bugRows[0]?.count || '0'),
+    successRate: totalExecutions > 0 ? Math.round((completedExecutions / totalExecutions) * 100) : 0,
+    totalExecutions,
+    recentSessions: recentSessionRows,
+  });
+}));
+
+// ==================== ENVIRONMENTS API ====================
+
+app.get('/api/environments', requireAuth, asyncHandler(async (req, res) => {
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+  const rows = await query(
+    'SELECT * FROM saved_environments WHERE workspace_id = $1 ORDER BY name ASC',
+    [workspaceId]
+  );
+  res.json({ environments: rows });
+}));
+
+app.post('/api/environments', requireAuth, asyncHandler(async (req, res) => {
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+  const { name, url, description } = req.body;
+  if (!name || !url) return res.status(400).json({ error: 'name and url are required' });
+
+  const rows = await query(
+    'INSERT INTO saved_environments (workspace_id, name, url, description) VALUES ($1, $2, $3, $4) RETURNING *',
+    [workspaceId, name, url, description || null]
+  );
+  res.status(201).json({ success: true, environment: rows[0] });
+}));
+
+app.put('/api/environments/:id', requireAuth, asyncHandler(async (req, res) => {
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+  const { id } = req.params;
+  const { name, url, description } = req.body;
+
+  const rows = await query(
+    `UPDATE saved_environments SET
+       name = COALESCE($1, name),
+       url = COALESCE($2, url),
+       description = COALESCE($3, description)
+     WHERE id = $4 AND workspace_id = $5
+     RETURNING *`,
+    [name, url, description, id, workspaceId]
+  );
+
+  if (rows.length === 0) return res.status(404).json({ error: 'Environment not found' });
+  res.json({ success: true, environment: rows[0] });
+}));
+
+app.delete('/api/environments/:id', requireAuth, asyncHandler(async (req, res) => {
+  const workspaceId = req.workspaceId;
+  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+
+  const { id } = req.params;
+  const rows = await query(
+    'DELETE FROM saved_environments WHERE id = $1 AND workspace_id = $2 RETURNING id',
+    [id, workspaceId]
+  );
+
+  if (rows.length === 0) return res.status(404).json({ error: 'Environment not found' });
+  res.json({ success: true });
+}));
+
 // ==================== QA LOOP ENDPOINTS ====================
 // All routes are in a dedicated router for cleaner separation (5.2).
 

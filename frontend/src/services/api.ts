@@ -207,23 +207,10 @@ export interface ProjectsResponse {
 
 // Get all projects
 export const getProjects = async (offset = 0, limit = 50): Promise<ProjectsResponse> => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'frontend/src/services/api.ts:128', message: 'getProjects called', data: { offset, limit, baseURL: API_BASE_URL, fullURL: `${API_BASE_URL}/projects` }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-  // #endregion
-  try {
-    const response = await apiClient.get<ProjectsResponse>('/projects', {
-      params: { offset, limit }
-    });
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'frontend/src/services/api.ts:131', message: 'getProjects success', data: { status: response.status, projectsCount: response.data?.projects?.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
-    return response.data;
-  } catch (error: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'frontend/src/services/api.ts:135', message: 'getProjects error', data: { errorMessage: error?.message, errorCode: error?.code, responseStatus: error?.response?.status, responseData: error?.response?.data }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
-    throw error;
-  }
+  const response = await apiClient.get<ProjectsResponse>('/projects', {
+    params: { offset, limit }
+  });
+  return response.data;
 };
 
 // Get project by ID
@@ -333,9 +320,6 @@ export interface GenerateTestsWithContextResponse extends GenerateTestsResponse 
 export const generateTestsWithContext = async (
   request: GenerateTestsWithContextRequest
 ): Promise<GenerateTestsWithContextResponse> => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api.ts:generateTestsWithContext', message: 'Request payload being sent', data: { quick_mode: request.quick_mode, quick_mode_type: typeof request.quick_mode, requestKeys: Object.keys(request) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-  // #endregion
   const response = await apiClient.post<GenerateTestsWithContextResponse>(
     '/generate-tests',
     request
@@ -400,6 +384,74 @@ export const assignUserStoryToFolder = async (
     { folder_id: folderId }
   );
   return response.data;
+};
+
+// ==================== DASHBOARD API ====================
+
+export interface DashboardStats {
+  totalTestCases: number;
+  totalQASessions: number;
+  totalBugsFound: number;
+  successRate: number;
+  totalExecutions: number;
+  recentSessions: Array<{
+    id: string;
+    target_url: string;
+    status: string;
+    quality_score: number;
+    tests_generated: number;
+    bugs_found: number;
+    pages_explored: number;
+    created_at: string;
+    completed_at: string | null;
+  }>;
+}
+
+export const getDashboardStats = async (): Promise<DashboardStats> => {
+  const response = await apiClient.get<DashboardStats>('/dashboard/stats');
+  return response.data;
+};
+
+// ==================== ENVIRONMENTS API ====================
+
+export interface SavedEnvironment {
+  id: string;
+  workspace_id: string;
+  name: string;
+  url: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Get all saved environments
+export const getEnvironments = async (): Promise<{ environments: SavedEnvironment[] }> => {
+  const response = await apiClient.get<{ environments: SavedEnvironment[] }>('/environments');
+  return response.data;
+};
+
+// Create a new environment
+export const createEnvironment = async (data: {
+  name: string;
+  url: string;
+  description?: string;
+}): Promise<{ success: boolean; environment: SavedEnvironment }> => {
+  const response = await apiClient.post<{ success: boolean; environment: SavedEnvironment }>('/environments', data);
+  return response.data;
+};
+
+// Update an environment
+export const updateEnvironment = async (
+  id: string,
+  data: { name?: string; url?: string; description?: string }
+): Promise<{ success: boolean; environment: SavedEnvironment }> => {
+  const response = await apiClient.put<{ success: boolean; environment: SavedEnvironment }>(`/environments/${id}`, data);
+  return response.data;
+};
+
+// Delete an environment
+export const deleteEnvironment = async (id: string): Promise<void> => {
+  await apiClient.delete(`/environments/${id}`);
 };
 
 // ==================== VISUAL REGRESSION ENDPOINTS ====================
@@ -492,8 +544,4 @@ export const setVisualRegressionIgnored = async (
 };
 
 export default apiClient;
-
-
-
-
 

@@ -42,6 +42,7 @@ export interface StartSessionParams {
   loginCredentials?: LoginCredentials;
   testPriority?: 'functional_first' | 'balanced' | 'security_first';
   sourceSessionId?: string;
+  projectId?: string;
 }
 
 interface UseSessionManagerOptions {
@@ -268,6 +269,7 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
         loginCredentials: params.loginCredentials,
         testPriority:    params.testPriority,
         sourceSessionId: params.sourceSessionId,
+        projectId:       params.projectId,
       });
       // Persist credentials so they can be re-supplied on resume (browser state
       // is lost when the orchestrator is recreated; we need to re-login).

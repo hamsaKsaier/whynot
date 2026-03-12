@@ -1,67 +1,64 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { OnboardingFlow } from '../components/Onboarding/OnboardingFlow';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { StatsCard } from '../components/common/StatsCard';
-import { getTestCases } from '../services/api';
+import { Card } from '../components/common/Card';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { Button } from '../components/common/Button';
+import { getDashboardStats, type DashboardStats } from '../services/api';
+import { formatRelativeTime } from '../utils/dateFormat';
 import {
   FiCheckCircle,
-  FiPlay,
   FiTrendingUp,
-  FiActivity,
   FiZap,
   FiGlobe,
   FiFileText,
   FiAlertTriangle,
+  FiActivity,
+  FiRefreshCw,
 } from 'react-icons/fi';
-import type { TestCase } from '../types';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { isCompleted, isLoading: onboardingLoading } = useOnboarding();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Statistics state
-  const [stats, setStats] = useState({
-    totalTestCases: 0,
-    totalTestRuns: 0,
-    successRate: 0,
-    recentActivity: 0,
-  });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState(false);
 
-  useEffect(() => {
-    fetchStatistics();
-  }, []);
-
-  const fetchStatistics = async () => {
+  const fetchStats = async () => {
     setLoadingStats(true);
+    setStatsError(false);
     try {
-      const testCasesResponse = await getTestCases();
-      const totalTestCases = testCasesResponse.test_cases.length;
-      const successfulTests = testCasesResponse.test_cases.filter(
-        (tc) => (tc as TestCase & { validation_summary?: { overall_status?: string } }).validation_summary?.overall_status === 'passed'
-      ).length;
-      const successRate = totalTestCases > 0 ? (successfulTests / totalTestCases) * 100 : 0;
-      setStats({
-        totalTestCases,
-        totalTestRuns: 0,
-        successRate: Math.round(successRate),
-        recentActivity: 0,
-      });
-    } catch (error) {
-      console.error('Failed to fetch statistics:', error);
+      const data = await getDashboardStats();
+      setStats(data);
+    } catch {
+      setStatsError(true);
     } finally {
       setLoadingStats(false);
     }
   };
 
-  // Show onboarding for first-time users
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   useEffect(() => {
     if (!onboardingLoading && !isCompleted) {
       setShowOnboarding(true);
     }
   }, [onboardingLoading, isCompleted]);
+
+  const sessionStatusMap: Record<string, 'success' | 'error' | 'running' | 'pending'> = {
+    completed: 'success',
+    failed: 'error',
+    running: 'running',
+    cancelled: 'pending',
+    paused: 'pending',
+    pending: 'pending',
+  };
 
   return (
     <div className="space-y-8">
@@ -73,31 +70,84 @@ export const HomePage: React.FC = () => {
       {/* Statistics Dashboard */}
       {!showOnboarding && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Overview</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Overview</h2>
+            {statsError && (
+              <Button variant="secondary" onClick={fetchStats} className="text-sm">
+                <FiRefreshCw className="mr-1 h-3 w-3" /> Retry
+              </Button>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatsCard
-              title="Total Test Cases"
-              value={loadingStats ? '...' : stats.totalTestCases}
+              title="Test Cases"
+              value={loadingStats ? '...' : stats?.totalTestCases ?? 0}
               icon={<FiCheckCircle className="h-6 w-6" />}
               onClick={() => navigate('/test-cases')}
             />
             <StatsCard
-              title="Test Runs"
-              value={loadingStats ? '...' : stats.totalTestRuns}
-              icon={<FiPlay className="h-6 w-6" />}
-              onClick={() => navigate('/test-runs')}
+              title="QA Sessions"
+              value={loadingStats ? '...' : stats?.totalQASessions ?? 0}
+              icon={<FiActivity className="h-6 w-6" />}
+              onClick={() => navigate('/qa-loop')}
+            />
+            <StatsCard
+              title="Bugs Found"
+              value={loadingStats ? '...' : stats?.totalBugsFound ?? 0}
+              icon={<FiAlertTriangle className="h-6 w-6" />}
             />
             <StatsCard
               title="Success Rate"
-              value={loadingStats ? '...' : `${stats.successRate}%`}
+              value={loadingStats ? '...' : `${stats?.successRate ?? 0}%`}
               icon={<FiTrendingUp className="h-6 w-6" />}
-              trend={stats.successRate >= 80 ? 'up' : stats.successRate >= 50 ? 'neutral' : 'down'}
+              trend={(stats?.successRate ?? 0) >= 80 ? 'up' : (stats?.successRate ?? 0) >= 50 ? 'neutral' : 'down'}
+              onClick={() => navigate('/test-runs')}
             />
-            <StatsCard
-              title="Recent Activity"
-              value={loadingStats ? '...' : stats.recentActivity}
-              icon={<FiActivity className="h-6 w-6" />}
-            />
+          </div>
+        </div>
+      )}
+
+      {/* Recent QA Sessions */}
+      {!showOnboarding && stats?.recentSessions && stats.recentSessions.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Recent QA Sessions</h2>
+            <Link to="/qa-loop" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+              View all
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {stats.recentSessions.map(session => (
+              <Card key={session.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/qa-loop')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <StatusBadge
+                      status={sessionStatusMap[session.status] || 'pending'}
+                      pulse={session.status === 'running'}
+                      size="sm"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900 truncate max-w-md">
+                        {(() => {
+                          try { return new URL(session.target_url).hostname; } catch { return session.target_url; }
+                        })()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatRelativeTime(session.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    {session.quality_score > 0 && (
+                      <span className="font-medium">{session.quality_score}% quality</span>
+                    )}
+                    <span>{session.tests_generated} tests</span>
+                    <span>{session.bugs_found} bugs</span>
+                    <span>{session.pages_explored} pages</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         </div>
       )}

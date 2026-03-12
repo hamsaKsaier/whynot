@@ -10,6 +10,7 @@
  * Heavy UI lives in SessionForm / SessionList / StatsBar / LiveMonitor.
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useToastContext } from '../contexts/ToastContext';
 import { Alert } from '../components/common/Alert';
 import { Button } from '../components/common/Button';
@@ -19,6 +20,7 @@ import {
 } from 'react-icons/fi';
 
 import { checkExistingSession } from '../services/qa-loop-api';
+import { getEnvironments, type SavedEnvironment } from '../services/api';
 import { useSessionManager, StartSessionParams } from '../hooks/useSessionManager';
 
 import {
@@ -27,248 +29,9 @@ import {
   StatsBar,
   LiveMonitor,
   ExistingSessionInfo,
-  ChaosResultsTab,
-  AnalysisTab,
+  ResultsTabs,
 } from '../components/QALoop';
-
-// ── Inline ResultsTabs (was already local to QALoopPage, kept here) ────────────
-import { QALoopTestCase, QALoopBug, QALoopPage as QAPage } from '../services/qa-loop-api';
-import {
-  ChaosResult, ChaosSummary, RootCauseAnalysis, FailureCorrelation,
-} from '../components/QALoop';
-import {
-  FiFileText, FiAlertTriangle, FiShield, FiSearch, FiCheckCircle, FiClock,
-} from 'react-icons/fi';
-import { CreateTaskButton } from '../components/QALoop/CreateTaskButton';
-import { AutoFixButton } from '../components/QALoop/AutoFixButton';
-
-function safePathname(url: string | undefined | null, fallback?: string): string {
-  try {
-    if (!url) return fallback ?? '';
-    return new URL(url).pathname || fallback || url;
-  } catch {
-    return fallback ?? url ?? '';
-  }
-}
-
-/** Expandable bug card with reproduction steps and action buttons */
-const BugCard: React.FC<{
-  bug: QALoopBug;
-  severityColor: (s: string) => string;
-  safePathname: (url: string | undefined | null, fallback?: string) => string;
-}> = ({ bug, severityColor, safePathname }) => {
-  const [expanded, setExpanded] = useState(false);
-
-  const reproSteps = Array.isArray(bug.reproduction_steps) ? bug.reproduction_steps : [];
-
-  return (
-    <div className="bg-gray-50 rounded-lg border-l-4 border-red-400 overflow-hidden">
-      <div
-        className="p-3 cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <svg
-              className={`w-3 h-3 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-            <span className="font-medium text-gray-900">{bug.title}</span>
-          </div>
-          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-            <AutoFixButton bugId={bug.id} bugTitle={bug.title} />
-            <CreateTaskButton bugId={bug.id} bugTitle={bug.title} />
-            <span className={`text-xs px-2 py-1 rounded ${severityColor(bug.severity)}`}>{bug.severity}</span>
-          </div>
-        </div>
-        {bug.description && <p className="text-sm text-gray-500 mt-1 ml-5">{bug.description}</p>}
-        <div className="text-xs text-gray-400 mt-2 ml-5 flex items-center gap-3">
-          {bug.category && <span className="bg-gray-200 px-1.5 py-0.5 rounded">{bug.category}</span>}
-          {bug.bug_type && <span className="bg-gray-200 px-1.5 py-0.5 rounded">{bug.bug_type}</span>}
-          {bug.page_url && <span className="truncate max-w-xs">{safePathname(bug.page_url)}</span>}
-          <span className={bug.status === 'open' ? 'text-red-500' : 'text-green-500'}>{bug.status}</span>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="px-3 pb-3 border-t border-gray-200 mt-1 pt-3 ml-5 space-y-3">
-          {reproSteps.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Reproduction Steps</div>
-              <ol className="list-decimal list-inside space-y-1">
-                {reproSteps.map((step: any, i: number) => (
-                  <li key={i} className="text-sm text-gray-700">
-                    {typeof step === 'string' ? step : step.description || step.action || JSON.stringify(step)}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          {bug.page_url && (
-            <div>
-              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Page URL</div>
-              <a
-                href={bug.page_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary-600 hover:text-primary-700 break-all"
-              >
-                {bug.page_url}
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ResultsTabs: React.FC<{
-  testCases: QALoopTestCase[];
-  bugs: QALoopBug[];
-  pages: QAPage[];
-  chaosResults: ChaosResult[];
-  chaosSummary?: ChaosSummary;
-  analyses: RootCauseAnalysis[];
-  correlations: FailureCorrelation[];
-  isRunning?: boolean;
-}> = ({ testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning }) => {
-  const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'chaos' | 'analysis'>('tests');
-
-  const severityColor = (s: string) => {
-    switch (s) {
-      case 'critical': return 'text-red-600 bg-red-100';
-      case 'high':     return 'text-orange-600 bg-orange-100';
-      case 'medium':   return 'text-yellow-600 bg-yellow-100';
-      case 'low':      return 'text-blue-600 bg-blue-100';
-      default:         return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const statusIcon = (s: string | null) => {
-    if (s === 'passed') return <FiCheckCircle className="text-green-500" />;
-    if (s === 'failed') return <FiAlertTriangle className="text-red-500" />;
-    return <FiClock className="text-gray-400" />;
-  };
-
-  const vulns = chaosResults.filter(r => r.vulnerabilityConfirmed).length;
-
-  const tab = (id: typeof activeTab, label: string, count: number, icon: React.ReactNode, activeClass: string) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={`pb-2 flex items-center gap-1 ${activeTab === id ? `border-b-2 ${activeClass} font-medium` : 'text-gray-500 hover:text-gray-700'}`}
-    >
-      {icon}
-      {label} ({count})
-    </button>
-  );
-
-  return (
-    <>
-      <div className="border-b border-gray-200 mb-4">
-        <nav className="flex gap-4 flex-wrap">
-          {tab('tests',    'Tests',    testCases.length, <FiFileText className="text-sm" />,     'border-purple-500 text-purple-600')}
-          {tab('bugs',     'Bugs',     bugs.length,      <FiAlertTriangle className="text-sm" />, 'border-red-500 text-red-600')}
-          {tab('pages',    'Pages',    pages.length,     <FiGlobe className="text-sm" />,         'border-blue-500 text-blue-600')}
-          {tab('chaos',    'Security', vulns,            <FiShield className="text-sm" />,        'border-orange-500 text-orange-600')}
-          {tab('analysis', 'Analysis', analyses.length,  <FiSearch className="text-sm" />,        'border-green-500 text-green-600')}
-        </nav>
-      </div>
-
-      <div className="max-h-96 overflow-y-auto">
-        {activeTab === 'tests' && (
-          <div className="space-y-2">
-            {testCases.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No test cases generated yet</div>
-            ) : testCases.map(tc => (
-              <div key={tc.id} className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {statusIcon(tc.last_run_status)}
-                    <span className="font-medium text-gray-900">{tc.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">{tc.category}</span>
-                    <span className="text-xs text-gray-400">P{tc.priority}</span>
-                  </div>
-                </div>
-                {tc.description && <p className="text-sm text-gray-500 mt-1 ml-6">{tc.description}</p>}
-                <div className="text-xs text-gray-400 mt-1 ml-6 flex items-center gap-3">
-                  <span>{tc.steps?.length || 0} steps</span>
-                  {tc.last_run_status && (
-                    <span className={tc.last_run_status === 'passed' ? 'text-green-500' : 'text-red-500'}>
-                      Last: {tc.last_run_status}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'bugs' && (
-          <div className="space-y-2">
-            {bugs.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No bugs found yet — that's a good sign!</div>
-            ) : bugs.map(bug => (
-              <BugCard key={bug.id} bug={bug} severityColor={severityColor} safePathname={safePathname} />
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'pages' && (
-          <div className="space-y-2">
-            {pages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No pages explored yet</div>
-            ) : pages.map(page => (
-              <div key={page.id} className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {page.is_explored
-                      ? <FiCheckCircle className="text-green-500" />
-                      : <FiClock className="text-yellow-500" />
-                    }
-                    <span className="font-medium text-gray-900 truncate max-w-md">
-                      {page.title || safePathname(page.url, page.url)}
-                    </span>
-                  </div>
-                  {page.page_type && (
-                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">{page.page_type}</span>
-                  )}
-                </div>
-                <div className="text-xs text-gray-400 mt-1 ml-6 truncate">{page.url}</div>
-                {page.description && <p className="text-sm text-gray-500 mt-1 ml-6">{page.description}</p>}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'chaos' && (
-          <ChaosResultsTab results={chaosResults} summary={chaosSummary} isRunning={isRunning} />
-        )}
-        {activeTab === 'analysis' && (
-          <AnalysisTab analyses={analyses} correlations={correlations} />
-        )}
-      </div>
-    </>
-  );
-};
-
-// ── Status helpers ─────────────────────────────────────────────────────────────
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'running':   return 'text-blue-500';
-    case 'completed': return 'text-green-500';
-    case 'paused':    return 'text-yellow-500';
-    case 'failed':    return 'text-red-500';
-    case 'cancelled': return 'text-gray-500';
-    default:          return 'text-gray-400';
-  }
-}
+import { saveTestCaseToProject } from '../services/qa-loop-api';
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export const QALoopPage: React.FC = () => {
@@ -309,6 +72,12 @@ export const QALoopPage: React.FC = () => {
   const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
   const [useExisting,   setUseExisting]   = useState(false);
 
+  // ── Environments (for SessionForm dropdown) ──────────────────────────────
+  const [savedEnvironments, setSavedEnvironments] = useState<SavedEnvironment[]>([]);
+  useEffect(() => {
+    getEnvironments().then(r => setSavedEnvironments(r.environments)).catch(() => {});
+  }, []);
+
   // ── Cinema sidebar toggle (collapsed by default when session is running) ───
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -319,6 +88,22 @@ export const QALoopPage: React.FC = () => {
 
   // ── 6.2: Stop-session confirmation state ──────────────────────────────────
   const [showStopConfirm, setShowStopConfirm] = useState(false);
+
+  // ── Navigation state (pre-fill from ProjectDetailPage) ───────────────────
+  const location = useLocation();
+  const [projectId, setProjectId] = useState<string | undefined>();
+
+  // Pre-fill form from navigation state (e.g., coming from ProjectDetailPage)
+  useEffect(() => {
+    const navState = location.state as { projectId?: string; websiteUrl?: string; userStoryContext?: string } | null;
+    if (navState) {
+      if (navState.websiteUrl) setTargetUrl(navState.websiteUrl);
+      if (navState.userStoryContext) setDocumentContext(navState.userStoryContext);
+      if (navState.projectId) setProjectId(navState.projectId);
+      // Clear navigation state to prevent re-applying on re-renders
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   // ── 6.1: WS error auto-dismiss state ──────────────────────────────────────
   const [wsErrorDismissed, setWsErrorDismissed] = useState(false);
@@ -397,11 +182,12 @@ export const QALoopPage: React.FC = () => {
       loginCredentials: loginCreds,
       testPriority,
       sourceSessionId: useExisting && existingSession ? existingSession.id : undefined,
+      projectId,
     });
   }, [
     targetUrl, qualityThreshold, maxIterations, documentContext,
     useLogin, loginCredentials, testPriority, useExisting, existingSession,
-    handleStartSession, showError,
+    handleStartSession, showError, projectId,
   ]);
 
   // ── Shared session form props ───────────────────────────────────────────────
@@ -417,6 +203,7 @@ export const QALoopPage: React.FC = () => {
     showPassword, setShowPassword,
     existingSession,
     useExisting, setUseExisting,
+    environments: savedEnvironments,
     documents,
     activeSession,
     onUpload: handleUploadDocument,
@@ -641,6 +428,15 @@ export const QALoopPage: React.FC = () => {
                       analyses={analyses}
                       correlations={correlations}
                       isRunning={activeSession.status === 'running'}
+                      sessionId={activeSession.id}
+                      onSaveTestCase={async (testCaseId) => {
+                        try {
+                          await saveTestCaseToProject(activeSession.id, testCaseId);
+                          success('Test case saved to library');
+                        } catch (err: any) {
+                          showError(err.response?.data?.error || err.message || 'Failed to save test case');
+                        }
+                      }}
                     />
                   </div>
                 </div>

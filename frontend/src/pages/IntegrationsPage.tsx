@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiLink, FiPlus, FiTrash2, FiCheck, FiX, FiRefreshCw, FiExternalLink } from 'react-icons/fi';
+import { FiLink, FiPlus, FiTrash2, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import { apiClient } from '../services/api';
+import { useToastContext } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { Modal, ModalFooter } from '../components/common/Modal';
 
 interface Integration {
   id: string;
@@ -62,8 +66,11 @@ export const IntegrationsPage: React.FC = () => {
   const [testResult, setTestResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const workspaceId = localStorage.getItem('workspace_id') || '';
+  const { success, error: showError } = useToastContext();
+  const { activeWorkspace } = useWorkspace();
+  const workspaceId = activeWorkspace?.id || '';
 
   useEffect(() => {
     loadIntegrations();
@@ -98,7 +105,7 @@ export const IntegrationsPage: React.FC = () => {
       setFormName('');
       await loadIntegrations();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to create integration');
+      showError(error.response?.data?.error || 'Failed to create integration');
     } finally {
       setSaving(false);
     }
@@ -118,15 +125,16 @@ export const IntegrationsPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this integration?')) return;
     try {
       setDeleting(id);
       await apiClient.delete(`/integrations/${id}`);
       setIntegrations(prev => prev.filter(i => i.id !== id));
+      success('Integration deleted successfully');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to delete integration');
+      showError(error.response?.data?.error || 'Failed to delete integration');
     } finally {
       setDeleting(null);
+      setDeleteConfirm(null);
     }
   };
 
@@ -197,7 +205,7 @@ export const IntegrationsPage: React.FC = () => {
                       <FiRefreshCw className={`h-4 w-4 ${testing === integration.id ? 'animate-spin' : ''}`} />
                     </button>
                     <button
-                      onClick={() => handleDelete(integration.id)}
+                      onClick={() => setDeleteConfirm(integration.id)}
                       disabled={deleting === integration.id}
                       className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                       title="Delete integration"
@@ -218,94 +226,99 @@ export const IntegrationsPage: React.FC = () => {
       )}
 
       {/* Add Integration Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {selectedType ? `Connect ${selectedType.label}` : 'Add Integration'}
-              </h2>
-            </div>
-
-            <div className="p-6">
-              {!selectedType ? (
-                /* Type selection */
-                <div className="space-y-3">
-                  {INTEGRATION_TYPES.map((type) => (
-                    <button
-                      key={type.type}
-                      onClick={() => {
-                        setSelectedType(type);
-                        setFormName(type.label);
-                      }}
-                      className="w-full flex items-center gap-4 p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors text-left"
-                    >
-                      <div className={`w-12 h-12 rounded-lg ${type.color} flex items-center justify-center text-white font-bold`}>
-                        {type.type === 'jira' ? 'J' : type.type === 'clickup' ? 'C' : 'L'}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{type.label}</div>
-                        <div className="text-sm text-gray-500">{type.description}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                /* Config form */
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input
-                      type="text"
-                      value={formName}
-                      onChange={e => setFormName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="My Jira Integration"
-                    />
-                  </div>
-                  {selectedType.fields.map((field) => (
-                    <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-                      <input
-                        type={field.type}
-                        value={formData[field.key] || ''}
-                        onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder={field.placeholder}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title={selectedType ? `Connect ${selectedType.label}` : 'Add Integration'}
+        size="lg"
+      >
+        {!selectedType ? (
+          /* Type selection */
+          <div className="space-y-3">
+            {INTEGRATION_TYPES.map((type) => (
               <button
+                key={type.type}
                 onClick={() => {
-                  if (selectedType) {
-                    setSelectedType(null);
-                    setFormData({});
-                  } else {
-                    setShowAddModal(false);
-                  }
+                  setSelectedType(type);
+                  setFormName(type.label);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="w-full flex items-center gap-4 p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors text-left"
               >
-                {selectedType ? 'Back' : 'Cancel'}
+                <div className={`w-12 h-12 rounded-lg ${type.color} flex items-center justify-center text-white font-bold`}>
+                  {type.type === 'jira' ? 'J' : type.type === 'clickup' ? 'C' : 'L'}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">{type.label}</div>
+                  <div className="text-sm text-gray-500">{type.description}</div>
+                </div>
               </button>
-              {selectedType && (
-                <button
-                  onClick={handleAddIntegration}
-                  disabled={saving || !formName.trim()}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Connecting...' : 'Connect'}
-                </button>
-              )}
-            </div>
+            ))}
           </div>
-        </div>
-      )}
+        ) : (
+          /* Config form */
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={formName}
+                onChange={e => setFormName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="My Jira Integration"
+              />
+            </div>
+            {selectedType.fields.map((field) => (
+              <div key={field.key}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                <input
+                  type={field.type}
+                  value={formData[field.key] || ''}
+                  onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder={field.placeholder}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <ModalFooter>
+          <button
+            onClick={() => {
+              if (selectedType) {
+                setSelectedType(null);
+                setFormData({});
+              } else {
+                setShowAddModal(false);
+              }
+            }}
+            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            {selectedType ? 'Back' : 'Cancel'}
+          </button>
+          {selectedType && (
+            <button
+              onClick={handleAddIntegration}
+              disabled={saving || !formName.trim()}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Connecting...' : 'Connect'}
+            </button>
+          )}
+        </ModalFooter>
+      </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        title="Delete Integration"
+        message="Are you sure you want to delete this integration? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 };

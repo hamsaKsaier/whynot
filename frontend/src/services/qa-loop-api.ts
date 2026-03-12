@@ -232,6 +232,20 @@ export async function getSessionTestRuns(sessionId: string): Promise<{
   return response.data;
 }
 
+// Save a QA Loop test case to the main test_cases library
+export async function saveTestCaseToProject(
+  sessionId: string,
+  testCaseId: string
+): Promise<{
+  success: boolean;
+  testCase: { id: string; name: string };
+}> {
+  const response = await apiClient.post(
+    `/qa-loop/sessions/${sessionId}/test-cases/${testCaseId}/save-to-project`
+  );
+  return response.data;
+}
+
 // ==================== DOCUMENT API (Phase 7) ====================
 
 // Field names match the snake_case columns returned by the executor API (5.6)

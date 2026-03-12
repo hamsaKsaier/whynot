@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFilter, FiSearch, FiPlay, FiActivity, FiSquare, FiDownload } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
@@ -13,7 +13,6 @@ import { Alert } from '../components/common/Alert';
 import { EmptyState } from '../components/common/EmptyState';
 import { Button } from '../components/common/Button';
 import { useNavigate } from 'react-router-dom';
-import { debounce } from '../utils/debounce';
 import type { ExecutionResult } from '../types';
 
 const formatDuration = (ms: number): string => {
@@ -173,9 +172,6 @@ export const TestRunsPage: React.FC = () => {
     );
   };
 
-  // No need for client-side filtering since API handles it
-  const filteredExecutions = useMemo(() => executions, [executions]);
-
   const activeFilters = useMemo(() => {
     const filters: Array<{ key: string; label: string; value: string }> = [];
     if (filter !== 'all') {
@@ -222,20 +218,19 @@ export const TestRunsPage: React.FC = () => {
             <div className="text-sm text-gray-600 mb-1">Success Rate</div>
             <div className="text-2xl font-bold text-green-600">
               {total > 0 && executions.length > 0
-                ? `${Math.round((executions.filter(e => e && e.status === 'completed').length / executions.length) * 100)}%`
+                ? `${Math.round((executions.filter(e => e && e.status === 'completed').length / total) * 100)}%`
                 : '0%'}
             </div>
           </Card>
           <Card className="p-4">
             <div className="text-sm text-gray-600 mb-1">Average Duration</div>
             <div className="text-2xl font-bold text-gray-900">
-              {executions.length > 0
-                ? formatDuration(
-                    executions
-                      .filter(e => e && e.total_duration_ms !== undefined)
-                      .reduce((sum, e) => sum + (e.total_duration_ms || 0), 0) / executions.length
-                  )
-                : '0ms'}
+              {(() => {
+                const completed = executions.filter(e => e && e.status !== 'running' && e.total_duration_ms);
+                return completed.length > 0
+                  ? formatDuration(completed.reduce((sum, e) => sum + (e.total_duration_ms || 0), 0) / completed.length)
+                  : '0ms';
+              })()}
             </div>
           </Card>
           <Card className="p-4">
@@ -304,7 +299,7 @@ export const TestRunsPage: React.FC = () => {
         <div className="card-grid grid grid-cols-1">
           <SkeletonCard count={3} />
         </div>
-      ) : filteredExecutions.length === 0 ? (
+      ) : executions.length === 0 ? (
         <Card>
           <EmptyState
             icon={<FiActivity />}
@@ -328,7 +323,7 @@ export const TestRunsPage: React.FC = () => {
       ) : (
         <>
           <div className="space-y-4">
-            {filteredExecutions
+            {executions
               .filter(execution => execution && execution.execution_id)
               .map((execution) => (
                 <Card key={execution.execution_id} className="p-4 hover:shadow-md transition-shadow">
@@ -419,23 +414,3 @@ export const TestRunsPage: React.FC = () => {
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -41,7 +41,6 @@ export const ProjectsPage: React.FC = () => {
   const { success, error: showError } = useToastContext();
   const { copyToClipboard } = useClipboard();
   const { optimisticCreate, optimisticUpdate, optimisticDelete } = useOptimisticUpdate<ProjectWithStats>();
-  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +53,6 @@ export const ProjectsPage: React.FC = () => {
     isOpen: boolean;
     project: ProjectWithStats | null;
   }>({ isOpen: false, project: null });
-  const [showDraftRestore, setShowDraftRestore] = useState(false);
 
   // Auto-save form data
   const { loadDraft, clearDraft, hasDraft } = useFormAutoSave(
@@ -71,7 +69,6 @@ export const ProjectsPage: React.FC = () => {
   // Check for draft when modal opens
   useEffect(() => {
     if (isModalOpen && hasDraft() && !editingProject) {
-      setShowDraftRestore(true);
     }
   }, [isModalOpen, hasDraft, editingProject]);
 
@@ -98,7 +95,6 @@ export const ProjectsPage: React.FC = () => {
     const draft = loadDraft();
     if (draft) {
       setFormData(draft);
-      setShowDraftRestore(true);
     } else {
       setFormData(initialFormData);
     }
@@ -122,7 +118,6 @@ export const ProjectsPage: React.FC = () => {
     setEditingProject(null);
     setFormData(initialFormData);
     setFormErrors({});
-    setShowDraftRestore(false);
   };
 
   const validateForm = (): boolean => {
@@ -176,7 +171,6 @@ export const ProjectsPage: React.FC = () => {
           }
         );
         setProjects(updatedProjects);
-        setShowSuccessAnimation(true);
       } else {
         const tempId = `temp-${Date.now()}`;
         const optimisticProject: ProjectWithStats = {
@@ -203,7 +197,6 @@ export const ProjectsPage: React.FC = () => {
           }
         );
         setProjects(updatedProjects);
-        setShowSuccessAnimation(true);
       }
       clearDraft(); // Clear draft on successful submission
       closeModal();
@@ -439,9 +432,6 @@ export const ProjectsPage: React.FC = () => {
     </div>
   );
 };
-
-
-
 
 
 

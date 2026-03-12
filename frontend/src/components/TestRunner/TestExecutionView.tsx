@@ -57,12 +57,6 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
   const memoizedExecutionId = useMemo(() => executionIdForWs, [executionIdForWs]);
   const memoizedWsEnabled = useMemo(() => wsEnabled, [wsEnabled]);
 
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestExecutionView.tsx:44', message: 'WebSocket hook params changed', data: { executionId: memoizedExecutionId, headless, wsEnabled: memoizedWsEnabled, hasExecutionResult: !!executionResult, prevExecutionId: executionIdForWs }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B,C' }) }).catch(() => { });
-  }, [memoizedExecutionId, memoizedWsEnabled, headless, executionResult]);
-  // #endregion
-
   const {
     currentFrame,
     isConnected,
@@ -85,13 +79,6 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
     enabled: memoizedWsEnabled, // Enable as soon as executionId is available
     wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:3011',
   });
-  // #region agent log
-  useEffect(() => {
-    if (streamError) {
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestExecutionView.tsx:54', message: 'streamError state changed', data: { streamError, isConnected, hasCurrentFrame: !!currentFrame }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B,D,E' }) }).catch(() => { });
-    }
-  }, [streamError, isConnected, currentFrame]);
-  // #endregion
 
   // Update execution result when final result arrives via WebSocket
   useEffect(() => {

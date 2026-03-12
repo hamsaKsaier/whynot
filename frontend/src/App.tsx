@@ -20,6 +20,7 @@ import { QALoopPage } from './pages/QALoopPage';
 import { WebhookManagementPage } from './pages/WebhookManagementPage';
 import { IntegrationsPage } from './pages/IntegrationsPage';
 import { GitHubReposPage } from './pages/GitHubReposPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 /** Wraps all authenticated routes inside the app shell (sidebar + header). */
 const LayoutWrapper: React.FC = () => (
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/architecture-flow" element={<ArchitectureFlowPage />} />
                     <Route path="/integrations" element={<IntegrationsPage />} />
                     <Route path="/github-repos" element={<GitHubReposPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Route>
               </Route>
@@ -67,8 +69,4 @@ function App() {
 }
 
 export default App;
-
-
-
-
 

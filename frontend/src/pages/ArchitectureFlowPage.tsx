@@ -158,9 +158,6 @@ export const ArchitectureFlowPage: React.FC = () => {
   }, [testCasesMap, navigate]);
 
   const buildFlowGraph = useCallback((projects: FlowData['projects']) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:196', message: 'buildFlowGraph called', data: { projectsCount: projects.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
     const newTestCasesMap = new Map<string, TestCase>();
@@ -505,31 +502,19 @@ export const ArchitectureFlowPage: React.FC = () => {
     });
 
     // Store all nodes and edges - filtering will happen in the useEffect
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:543', message: 'buildFlowGraph completed', data: { nodesCount: newNodes.length, edgesCount: newEdges.length, testCasesCount: newTestCasesMap.size }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
     setAllNodes(newNodes);
     setAllEdges(newEdges);
     setTestCasesMap(newTestCasesMap);
   }, []); // State setters are stable, no need to include in deps
 
   const fetchFlowData = useCallback(async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:546', message: 'fetchFlowData called', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-    // #endregion
     setLoading(true);
     setError(null);
     try {
       const response = await getFlowData();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:552', message: 'getFlowData response received', data: { projectsCount: response.projects.length, hasBuildFlowGraph: typeof buildFlowGraph === 'function' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-      // #endregion
       setFlowData(response.projects);
       buildFlowGraph(response.projects);
     } catch (err: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:554', message: 'fetchFlowData error', data: { errorMessage: err.message, errorCode: err.code, hasResponse: !!err.response, errorType: err.constructor.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-      // #endregion
       let errorMessage = 'Failed to load architecture flow data';
 
       if (err.code === 'ERR_NETWORK' || !err.response) {
@@ -585,28 +570,7 @@ export const ArchitectureFlowPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Global error handler for browser console errors
-    const handleError = (event: ErrorEvent) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:window.onerror', message: 'Browser console error', data: { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno, error: event.error?.toString() }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-      // #endregion
-    };
-
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:window.unhandledrejection', message: 'Unhandled promise rejection', data: { reason: event.reason?.toString(), error: event.reason }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-      // #endregion
-    };
-
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-
     fetchFlowData();
-
-    return () => {
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-    };
   }, [fetchFlowData]);
 
   // Initialize folder expansion state when flow data is loaded
@@ -863,11 +827,3 @@ export const ArchitectureFlowPage: React.FC = () => {
     </div>
   );
 };
-
-
-
-
-
-
-
-
