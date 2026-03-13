@@ -25,3 +25,9 @@ export type { LiveMonitorProps } from './LiveMonitor';
 
 export { CreateTaskButton } from './CreateTaskButton';
 export { AutoFixButton } from './AutoFixButton';
+
+export { BugCard } from './BugCard';
+export type { BugCardProps } from './BugCard';
+
+export { ResultsTabs } from './ResultsTabs';
+export type { ResultsTabsProps } from './ResultsTabs';

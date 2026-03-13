@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '../../../shared/logger/logger';
 import { QALoopRepository, QALoopTestCase, QALoopBug } from '../repositories/qa-loop-repository';
 import { emitToSession } from '../api/websocket';
-import { calculateCost } from '../model-selector';
+import { calculateCost, FOCUS_AREA_MODELS } from '../model-selector';
 
 const logger = createLogger('detective-agent');
 
@@ -87,7 +87,7 @@ export interface MinimalRepro {
 export class DetectiveAgent {
   private sessionId: string;
   private repository: QALoopRepository;
-  private client: Anthropic;
+  private client: Anthropic | null = null;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -98,7 +98,6 @@ export class DetectiveAgent {
       this.client = new Anthropic({ apiKey });
     } else {
       logger.warn('ANTHROPIC_API_KEY not set, detective agent AI features disabled');
-      this.client = null as any;
     }
   }
 
@@ -255,7 +254,7 @@ export class DetectiveAgent {
     try {
       const prompt = this.buildAnalysisPrompt(failure, history);
 
-      const DETECTIVE_MODEL = 'claude-sonnet-4-20250514' as const;
+      const DETECTIVE_MODEL = FOCUS_AREA_MODELS['investigate'];
       const response = await this.client.messages.create({
         model: DETECTIVE_MODEL,
         max_tokens: 2048,
@@ -516,28 +515,48 @@ Analyze and respond in JSON format:
    * Get test history for a test case
    */
   private async getTestHistory(testCaseId: string): Promise<TestHistory> {
-    // This would query the test_runs table for historical data
-    // For now, return default values
-    return {
-      testCaseId,
-      totalRuns: 0,
-      passCount: 0,
-      failCount: 0,
-      recentResults: [],
-      avgDurationMs: 0,
-      durationVariance: 0
-    };
+    const runs = await this.repository.getTestRunsForCase(testCaseId);
+    const totalRuns = runs.length;
+    const passCount = runs.filter((r: any) => r.status === 'passed').length;
+    const failCount = runs.filter((r: any) => r.status === 'failed').length;
+    const recentResults = runs.slice(0, 10).map((r: any) => ({
+      status: r.status,
+      timestamp: new Date(r.executed_at)
+    }));
+    const durations = runs
+      .filter((r: any) => r.duration_ms != null)
+      .map((r: any) => r.duration_ms as number);
+    const avgDurationMs = durations.length > 0
+      ? Math.round(durations.reduce((a: number, b: number) => a + b, 0) / durations.length)
+      : 0;
+    const durationVariance = durations.length > 1
+      ? Math.sqrt(durations.reduce((sq: number, d: number) => sq + Math.pow(d - avgDurationMs, 2), 0) / durations.length)
+      : 0;
+    return { testCaseId, totalRuns, passCount, failCount, recentResults, avgDurationMs, durationVariance };
   }
 
   /**
    * Save analysis result
    */
   async saveAnalysis(analysis: RootCauseAnalysis): Promise<void> {
-    // Would save to qa_loop_root_cause_analysis table
     logger.info('Saving root cause analysis', {
       failureId: analysis.failureId,
       category: analysis.category,
       confidence: analysis.confidence
+    });
+    await this.repository.saveRootCauseAnalysis(this.sessionId, analysis.failureId, {
+      category: analysis.category,
+      subCategory: analysis.subCategory,
+      confidence: analysis.confidence,
+      rootCause: analysis.rootCause,
+      hypothesis: analysis.hypothesis,
+      consoleErrors: analysis.evidence?.consoleErrors,
+      networkIssues: analysis.evidence?.networkIssues,
+      minimalSteps: analysis.minimalSteps,
+      environmentFactors: analysis.environmentFactors,
+      fixSuggestion: analysis.fixSuggestion,
+      preventionSuggestion: analysis.preventionSuggestion,
+      testImprovement: analysis.testImprovement
     });
   }
 }

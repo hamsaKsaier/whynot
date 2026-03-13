@@ -852,6 +852,93 @@ export class QALoopRepository {
     const query = 'DELETE FROM qa_loop_documents WHERE id = $1';
     await this.pool.query(query, [documentId]);
   }
+
+  // ==================== TEST RUN HISTORY (Phase 2A) ====================
+
+  async getTestRunsForCase(testCaseId: string): Promise<any[]> {
+    const query = `
+      SELECT * FROM qa_loop_test_runs
+      WHERE test_case_id = $1
+      ORDER BY executed_at DESC
+    `;
+    const result = await this.pool.query(query, [testCaseId]);
+    return result.rows;
+  }
+
+  // ==================== ROOT CAUSE ANALYSIS (Phase 2B) ====================
+
+  async saveRootCauseAnalysis(sessionId: string, failureId: string, analysis: {
+    category: string;
+    subCategory?: string;
+    confidence: number;
+    rootCause: string;
+    hypothesis?: string;
+    consoleErrors?: any[];
+    networkIssues?: any[];
+    minimalSteps?: string[];
+    environmentFactors?: string[];
+    fixSuggestion?: string;
+    preventionSuggestion?: string;
+    testImprovement?: string;
+  }): Promise<void> {
+    const id = uuidv4();
+    const query = `
+      INSERT INTO qa_loop_root_cause_analysis (
+        id, session_id, failure_id, failure_type,
+        category, sub_category, confidence, root_cause, hypothesis,
+        console_errors, network_issues, minimal_steps, environment_factors,
+        fix_suggestion, prevention_suggestion, test_improvement
+      ) VALUES ($1,$2,$3,'test_failure',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+    `;
+    await this.pool.query(query, [
+      id, sessionId, failureId,
+      analysis.category, analysis.subCategory || null, analysis.confidence,
+      analysis.rootCause, analysis.hypothesis || null,
+      JSON.stringify(analysis.consoleErrors || []),
+      JSON.stringify(analysis.networkIssues || []),
+      JSON.stringify(analysis.minimalSteps || []),
+      JSON.stringify(analysis.environmentFactors || []),
+      analysis.fixSuggestion || null,
+      analysis.preventionSuggestion || null,
+      analysis.testImprovement || null
+    ]);
+  }
+
+  // ==================== CHAOS RESULTS (Phase 3D) ====================
+
+  async saveChaosResult(sessionId: string, result: {
+    pageUrl: string;
+    elementSelector?: string;
+    elementType?: string;
+    attackCategory: string;
+    attackName: string;
+    payloadUsed?: string;
+    resultStatus: string;
+    vulnerabilityConfirmed: boolean;
+    severity?: string;
+    confidence: number;
+    reproductionSteps?: string[];
+    errorMessage?: string;
+  }): Promise<void> {
+    const id = uuidv4();
+    const query = `
+      INSERT INTO qa_loop_chaos_results (
+        id, session_id, page_url, element_selector, element_type,
+        attack_category, attack_name, payload_used,
+        result, vulnerability_confirmed,
+        severity, confidence, reproduction_steps, error_message
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+    `;
+    await this.pool.query(query, [
+      id, sessionId,
+      result.pageUrl, result.elementSelector || null, result.elementType || null,
+      result.attackCategory, result.attackName, result.payloadUsed || null,
+      result.resultStatus, result.vulnerabilityConfirmed,
+      result.severity || null, result.confidence,
+      JSON.stringify(result.reproductionSteps || []),
+      result.errorMessage || null
+    ]);
+  }
 }
 
 // Document interface

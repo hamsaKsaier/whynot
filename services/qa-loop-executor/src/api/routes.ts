@@ -5,6 +5,7 @@ import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { LoopOrchestrator } from '../loop-orchestrator';
 import { RetestExecutor } from '../retest-executor';
 import webhookRoutes from './webhook';
+import { generateWsToken } from './websocket';
 import { parseDocument, combineDocuments, ParsedDocument } from '../document-parser';
 
 const router = Router();
@@ -106,7 +107,8 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
         status: 'running',
         qualityThreshold,
         maxIterations
-      }
+      },
+      wsToken: generateWsToken(session.id)
     });
   } catch (error: any) {
     logger.error('Failed to start QA Loop session', { error: error.message });
@@ -289,7 +291,7 @@ router.post('/api/sessions/:id/resume', async (req: Request, res: Response) => {
     await qaLoopRepository.updateSessionStatus(id, 'running');
 
     logger.info('QA Loop session resumed', { sessionId: id });
-    res.json({ success: true, status: 'running' });
+    res.json({ success: true, status: 'running', wsToken: generateWsToken(id) });
   } catch (error: any) {
     logger.error('Failed to resume session', { error: error.message });
     res.status(500).json({ error: 'Failed to resume session' });

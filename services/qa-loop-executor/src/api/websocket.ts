@@ -2,6 +2,7 @@ import { Server } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createLogger } from '../../../shared/logger/logger';
 import { URL } from 'url';
+import crypto from 'crypto';
 
 const logger = createLogger('qa-loop-websocket');
 
@@ -13,6 +14,26 @@ const sessionEventQueues = new Map<string, QALoopEvent[]>();
 
 // Track last-access timestamps for queue cleanup
 const queueTimestamps = new Map<string, number>();
+
+/**
+ * Generate an HMAC-SHA256 token for WebSocket authentication.
+ * Clients must pass this token as a query parameter to connect.
+ */
+export function generateWsToken(sessionId: string): string {
+  const secret = process.env.QA_LOOP_WS_SECRET || 'dev-secret';
+  if (!process.env.QA_LOOP_WS_SECRET) {
+    logger.warn('QA_LOOP_WS_SECRET is not set — using insecure default. Set it in production!');
+  }
+  return crypto.createHmac('sha256', secret).update(sessionId).digest('hex');
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks on token validation.
+ */
+function timingSafeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 // Periodically evict queues that haven't been accessed in 30 minutes
 setInterval(() => {
@@ -49,6 +70,24 @@ export function setupWebSocketServer(server: Server): WebSocketServer {
     if (!sessionId) {
       logger.warn('WebSocket connection without sessionId');
       ws.close(1008, 'sessionId query parameter required');
+      return;
+    }
+
+    // Validate authentication token (timing-safe comparison)
+    const token = url.searchParams.get('token');
+    const expectedToken = generateWsToken(sessionId);
+    if (!token || !timingSafeCompare(token, expectedToken)) {
+      logger.warn('WebSocket connection with invalid token', { sessionId });
+      ws.close(1008, 'Invalid authentication token');
+      return;
+    }
+
+    // Validate Origin header
+    const origin = req.headers.origin;
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5183,http://localhost:5184').split(',');
+    if (origin && !allowedOrigins.includes(origin)) {
+      logger.warn('WebSocket connection from forbidden origin', { sessionId, origin });
+      ws.close(1008, 'Forbidden origin');
       return;
     }
 

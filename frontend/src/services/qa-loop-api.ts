@@ -109,6 +109,7 @@ export interface SessionDetailsResponse {
 export async function startQALoopSession(request: StartSessionRequest): Promise<{
   success: boolean;
   session: QALoopSession;
+  wsToken?: string;
 }> {
   const response = await apiClient.post('/qa-loop/sessions', request);
   return response.data;
@@ -173,6 +174,7 @@ export async function resumeQALoopSession(
 ): Promise<{
   success: boolean;
   status: string;
+  wsToken?: string;
 }> {
   const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/resume`, {
     ...(loginCredentials ? { loginCredentials } : {})

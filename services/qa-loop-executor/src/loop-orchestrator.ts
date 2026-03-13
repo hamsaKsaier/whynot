@@ -9,7 +9,7 @@ import { RetestExecutor } from './retest-executor';
 import { ParallelTestExecutor } from './parallel-test-executor';
 import { selectModel, ClaudeModel, FOCUS_AREA_MODELS, getModelDisplayName } from './model-selector';
 import { MCPBrowser } from './mcp-browser';
-import axios from 'axios';
+
 
 const logger = createLogger('loop-orchestrator');
 
@@ -113,6 +113,9 @@ export class LoopOrchestrator {
       // Start MCP browser — one instance for the entire session
       this.mcpBrowser = new MCPBrowser(this.sessionId);
       await this.mcpBrowser.start();
+
+      // Wire browser to chaos agent so it uses Playwright MCP instead of legacy REST
+      this.chaosAgent.setBrowser(this.mcpBrowser);
 
       // Perform login if credentials are provided (Phase 2)
       if (this.config.loginCredentials) {
@@ -729,19 +732,25 @@ Start now with get_session_state(), then navigate and explore.
 ${noLoginWarning}
 STEP 1 — Initialise: call get_session_state() first.
 STEP 2 — Use browser_navigate() to go to ${this.config.targetUrl}, then call browser_snapshot() to see the full page.
-STEP 3 — For EVERY page you visit, you MUST:
+STEP 3 — ★★★ DISCOVER ALL LINKS ★★★
+  After browser_snapshot(), look at EVERY link/anchor in the accessibility tree.
+  For EACH link that points to a different page on the same domain, call add_discovered_page({ url: "..." }).
+  This is the MOST IMPORTANT step — it populates the exploration queue. Do this BEFORE anything else.
+STEP 4 — For EVERY page you visit, you MUST:
   a) Call browser_snapshot() to observe the page — read ALL text, elements, buttons, forms in the accessibility tree.
-  b) Interact with the page (use browser_fill_form/browser_click with refs from the snapshot).
-  c) After EACH interaction, call browser_snapshot() AGAIN to observe what changed.
-  d) THEN call save_test_case() using the EXACT text and CSS selectors you inferred from what you observed.
+  b) ★ Call add_discovered_page() for EVERY new link you see in the snapshot.
+  c) Interact with the page (use browser_fill_form/browser_click with refs from the snapshot).
+  d) After EACH interaction, call browser_snapshot() AGAIN to observe what changed.
+  e) THEN call save_test_case() using the EXACT text and CSS selectors you inferred from what you observed.
      ⚠️ Every test case MUST have at least one PRIMARY assertion (assert_text_visible,
      assert_element_visible, assert_element_exists, or assert_attribute_contains).
      Tests with ONLY assert_url_contains + assert_no_console_errors are USELESS and will be rejected.
-  e) If you spot a bug or broken element, call save_bug() right away.
-  f) Call mark_page_explored() before moving to the next page.
-STEP 4 — Click navigation links to explore more pages, repeating step 3 for each.
+  f) If you spot a bug or broken element, call save_bug() right away.
+  g) Call mark_page_explored() before moving to the next page.
+STEP 5 — Click navigation links to explore more pages, repeating step 4 for each.
 
 IMPORTANT RULES:
+- ★ After EVERY browser_snapshot(), IMMEDIATELY call add_discovered_page() for all new links you see.
 - If a click or type action fails (error in result), SKIP IT immediately — do not retry the same selector.
 - Use descriptive selectors: prefer [data-testid], aria-label, or visible text over nth-of-type.
 - Generate test cases BEFORE moving to the next page, not at the end.
@@ -753,16 +762,18 @@ ${noLoginWarning}${skipBlock}
 STEP 1 — ${targetHint}
 STEP 2 — For EVERY page you visit (that is NOT in the skip list above):
   a) Call browser_snapshot() to observe the page — read ALL text, elements, and structure.
-  b) Interact with the page (browser_click/browser_fill_form), then call browser_snapshot() AGAIN to see what changed.
-  c) Call save_test_case() with assertions based on what you ACTUALLY observed.
+  b) ★ Call add_discovered_page() for EVERY new link/URL you see in the snapshot.
+  c) Interact with the page (browser_click/browser_fill_form), then call browser_snapshot() AGAIN to see what changed.
+  d) Call save_test_case() with assertions based on what you ACTUALLY observed.
      ⚠️ Every test MUST include at least one PRIMARY assertion (assert_text_visible,
      assert_element_visible, assert_element_exists, or assert_attribute_contains).
      Tests with ONLY assert_url_contains + assert_no_console_errors are USELESS.
-  d) Call save_bug() for any broken or missing functionality you observe.
-  e) Call mark_page_explored() before moving on.
-STEP 3 — After finishing the priority pages, check get_session_state() for other unexplored pages.
+  e) Call save_bug() for any broken or missing functionality you observe.
+  f) Call mark_page_explored() before moving on.
+STEP 3 — After finishing the priority pages, check get_unexplored_pages() for remaining targets.
 
 CRITICAL RULES:
+- ★ After EVERY browser_snapshot(), IMMEDIATELY call add_discovered_page() for all new links you see.
 - ⛔ NEVER navigate to a URL listed in the "ALREADY EXPLORED" block above. They are done.
 - If a page redirects you somewhere already explored → go back and pick a different target.
 - If a click, type, or navigation fails → SKIP it immediately, do NOT retry.
@@ -1061,218 +1072,6 @@ Rules:
       });
       return [];
     }
-  }
-
-  /**
-   * Execute test cases that were newly created during the most recent exploration.
-   * Capped at MAX_INLINE_TESTS per iteration to keep the loop responsive.
-   */
-  private async executeNewTestCases(preExistingIds: Set<string>): Promise<{
-    testsExecuted: number;
-    testsPassed: number;
-    testsFailed: number;
-  }> {
-    const MAX_INLINE_TESTS = 5;
-    const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3001';
-
-    const allTestCases = await this.repository.getTestCases(this.sessionId);
-    const newTestCases = allTestCases
-      .filter(tc => !preExistingIds.has(tc.id))
-      .slice(0, MAX_INLINE_TESTS);
-
-    if (newTestCases.length === 0) {
-      return { testsExecuted: 0, testsPassed: 0, testsFailed: 0 };
-    }
-
-    logger.info('Executing newly generated test cases', {
-      sessionId: this.sessionId,
-      count: newTestCases.length
-    });
-
-    emitToSession(this.sessionId, {
-      type: 'progress',
-      data: {
-        phase: 'test_execution',
-        message: `Executing ${newTestCases.length} newly generated test${newTestCases.length > 1 ? 's' : ''}…`,
-        count: newTestCases.length
-      }
-    });
-
-    let passed = 0;
-    let failed = 0;
-
-    for (const testCase of newTestCases) {
-      if (this.isStopped) break;
-
-      // Normalise steps — JSONB comes back as a parsed array from pg, but guard
-      // against it being a JSON string (double-serialised) or missing entirely.
-      const rawSteps = (testCase as any).steps;
-      const rawStepsArr: any[] = Array.isArray(rawSteps)
-        ? rawSteps
-        : (typeof rawSteps === 'string' ? (() => { try { return JSON.parse(rawSteps); } catch { return []; } })() : []);
-
-      // ── Post-process steps: ensure navigate steps have a URL, ensure every
-      //    step has an id, and convert string targets into structured selectors
-      //    that the test-executor understands. ──────
-      const websiteUrl = (testCase as any).source_page_url || this.config.targetUrl;
-      const steps: any[] = rawStepsArr.map((step: any) => {
-        const processed = { ...step };
-        // Ensure step has a stable id — required by the step_results DB constraint
-        if (!processed.id) {
-          processed.id = require('crypto').randomUUID();
-        }
-
-        // Fill in missing URL for navigate actions (Claude often omits it)
-        if (processed.action === 'navigate') {
-          // If target is a URL string, move it to value
-          if (typeof processed.target === 'string' && processed.target.startsWith('http')) {
-            processed.value = processed.value || processed.target;
-            processed.target = undefined;
-          }
-          if (!processed.value && !processed.target?.attributes?.href) {
-            processed.value = websiteUrl;
-          }
-        }
-
-        // Convert string target to proper ElementDescription + suggested_selectors
-        // Claude saves targets like "#email", "Se connecter", "[aria-label='x']"
-        // but the test-executor expects { target: ElementDescription, suggested_selectors: [] }
-        // Smart assertion types use target/value directly — don't convert to selectors
-        const assertionActions = [
-          'assert_url_contains', 'assert_url_equals', 'assert_text_visible',
-          'assert_no_console_errors', 'assert_input_value',
-          'assert_element_exists', 'assert_element_not_exists',
-          'assert_element_visible', 'assert_element_count',
-          'assert_attribute_contains'
-        ];
-        if (typeof processed.target === 'string' && processed.action !== 'navigate' && !assertionActions.includes(processed.action)) {
-          const rawTarget = processed.target;
-          const selectors: any[] = [];
-
-          if (rawTarget.startsWith('#')) {
-            // ID selector: "#email" → css selector + id selector
-            selectors.push({ type: 'css', value: rawTarget, stability_score: 0.9 });
-            selectors.push({ type: 'id', value: rawTarget, stability_score: 0.9 });
-          } else if (rawTarget.startsWith('.') || rawTarget.startsWith('[')) {
-            // CSS selector: ".class" or "[attr=val]"
-            selectors.push({ type: 'css', value: rawTarget, stability_score: 0.8 });
-          } else if (rawTarget.startsWith('//') || rawTarget.startsWith('xpath=')) {
-            // XPath selector
-            selectors.push({ type: 'xpath', value: rawTarget, stability_score: 0.6 });
-          } else {
-            // Text content: "Se connecter", "Submit" etc → text + css fallbacks
-            selectors.push({ type: 'text', value: `text="${rawTarget}"`, stability_score: 0.7 });
-            // Also try common button/link selectors with this text
-            selectors.push({ type: 'css', value: `button:has-text("${rawTarget}")`, stability_score: 0.6 });
-            selectors.push({ type: 'css', value: `a:has-text("${rawTarget}")`, stability_score: 0.5 });
-          }
-
-          processed.target = { text: rawTarget };
-          processed.suggested_selectors = selectors;
-        }
-
-        return processed;
-      });
-
-      // ── Emit "running" event so the user sees real-time progress ──────────
-      emitToSession(this.sessionId, {
-        type: 'test_run_start',
-        data: { testCaseId: testCase.id, testCaseName: testCase.name }
-      });
-
-      try {
-        const response = await axios.post(
-          `${testExecutorUrl}/api/execute-test`,
-          {
-            testCase: {
-              id: testCase.id,
-              name: testCase.name,
-              description: testCase.description || testCase.name,
-              // website_url tells the test-runner where to navigate at the start of the test
-              website_url: testCase.source_page_url || this.config.targetUrl,
-              steps,                    // always an array (normalized above)
-              selectors: testCase.selectors || {}
-            },
-            headless: true,
-            useIsolatedContext: true
-          },
-          { timeout: 5 * 60 * 1000 } // 5-minute limit per test
-        );
-
-        const res = response.data;
-        // The test-runner returns { status, steps: [...] } — normalize field names
-        const stepResults = res.steps || res.stepResults || [];
-        const allPassed = res.status === 'completed' && stepResults.every((s: any) => s.success);
-        const status: 'passed' | 'failed' = allPassed ? 'passed' : 'failed';
-
-        if (allPassed) passed++; else failed++;
-
-        const failedStep = stepResults.findIndex((s: any) => !s.success);
-        const failureReason = failedStep >= 0 ? stepResults[failedStep]?.error : undefined;
-
-        try {
-          await this.repository.addTestRun(this.sessionId, testCase.id, {
-            status,
-            durationMs: res.total_duration_ms || res.durationMs,
-            stepsTotal: steps.length,
-            stepsCompleted: stepResults.length,
-            failureStepIndex: failedStep >= 0 ? failedStep : undefined,
-            failureReason
-          });
-        } catch (saveErr: any) {
-          logger.warn('Failed to persist test run result', { testCaseId: testCase.id, error: saveErr.message });
-        }
-
-        // ── Emit result so UI can show ✅/❌ immediately ──────────────────
-        emitToSession(this.sessionId, {
-          type: 'test_run_result',
-          data: {
-            testCaseId: testCase.id,
-            testCaseName: testCase.name,
-            status,
-            durationMs: res.durationMs,
-            failureReason
-          }
-        });
-
-      } catch (error: any) {
-        failed++;
-        logger.warn('Inline test execution failed', {
-          sessionId: this.sessionId,
-          testCaseId: testCase.id,
-          error: error.message
-        });
-
-        // Save error state — guard so this can't bubble up and abort the loop
-        try {
-          await this.repository.addTestRun(this.sessionId, testCase.id, {
-            status: 'error',
-            failureReason: error.message
-          });
-        } catch (saveErr: any) {
-          logger.warn('Failed to persist test run error state', { testCaseId: testCase.id, error: saveErr.message });
-        }
-
-        emitToSession(this.sessionId, {
-          type: 'test_run_result',
-          data: {
-            testCaseId: testCase.id,
-            testCaseName: testCase.name,
-            status: 'error',
-            failureReason: error.message
-          }
-        });
-      }
-    }
-
-    logger.info('Inline test execution complete', {
-      sessionId: this.sessionId,
-      total: newTestCases.length,
-      passed,
-      failed
-    });
-
-    return { testsExecuted: newTestCases.length, testsPassed: passed, testsFailed: failed };
   }
 
   /**

@@ -24,6 +24,7 @@ interface UseQALoopStreamOptions {
   sessionId?: string;
   enabled?: boolean;
   wsUrl?: string;
+  wsToken?: string;
 }
 
 export interface CostInfo {
@@ -59,7 +60,8 @@ interface UseQALoopStreamReturn {
 export function useQALoopStream({
   sessionId,
   enabled = true,
-  wsUrl
+  wsUrl,
+  wsToken
 }: UseQALoopStreamOptions): UseQALoopStreamReturn {
   const [isConnected, setIsConnected] = useState(false);
   // `events` state removed in 5.8 — was accumulated but never consumed by any component
@@ -264,15 +266,13 @@ export function useQALoopStream({
     if (!sessionId || !enabled) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const wsUrlWithSession = `${baseWsUrl}/ws/qa-loop?sessionId=${sessionId}`;
-    console.log('Connecting to QA Loop WebSocket:', wsUrlWithSession);
+    const wsUrlWithSession = `${baseWsUrl}/ws/qa-loop?sessionId=${sessionId}${wsToken ? `&token=${wsToken}` : ''}`;
 
     try {
       const ws = new WebSocket(wsUrlWithSession);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('QA Loop WebSocket connected');
         setIsConnected(true);
         setError(null);
         reconnectAttempts.current = 0;
@@ -287,13 +287,11 @@ export function useQALoopStream({
         }
       };
 
-      ws.onerror = (error) => {
-        console.error('QA Loop WebSocket error:', error);
+      ws.onerror = () => {
         setError('WebSocket connection error');
       };
 
-      ws.onclose = (event) => {
-        console.log('QA Loop WebSocket closed:', event.code, event.reason);
+      ws.onclose = () => {
         setIsConnected(false);
         wsRef.current = null;
 
@@ -301,18 +299,15 @@ export function useQALoopStream({
         if (enabled && reconnectAttempts.current < maxReconnectAttempts) {
           reconnectAttempts.current++;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-          console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
-
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
           }, delay);
         }
       };
-    } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+    } catch {
       setError('Failed to connect to WebSocket');
     }
-  }, [sessionId, enabled, baseWsUrl, processEvent]);
+  }, [sessionId, enabled, baseWsUrl, wsToken, processEvent]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

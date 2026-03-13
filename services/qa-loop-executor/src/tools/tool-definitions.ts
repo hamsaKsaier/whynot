@@ -65,8 +65,8 @@ export function getToolDefinitions(): Anthropic.Tool[] {
           },
           category: {
             type: 'string',
-            enum: ['general', 'bug_hint', 'todo', 'observation', 'blocked'],
-            description: 'Category of the note'
+            enum: ['general', 'bug_hint', 'todo', 'observation'],
+            description: 'Category of the note (general, bug_hint, todo, observation)'
           },
           page_url: {
             type: 'string',
@@ -78,7 +78,7 @@ export function getToolDefinitions(): Anthropic.Tool[] {
     },
     {
       name: 'add_discovered_page',
-      description: 'Add a newly discovered page URL to the exploration queue.',
+      description: 'IMPORTANT: Call this for EVERY link/URL you discover in browser_snapshot(). Add each page URL to the exploration queue so future iterations can test it. Call this IMMEDIATELY after observing links — before interacting with the page.',
       input_schema: {
         type: 'object' as const,
         properties: {
