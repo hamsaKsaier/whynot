@@ -1,7 +1,7 @@
 import { createLogger } from '../../../shared/logger/logger';
 import { QALoopRepository, QALoopPage } from '../repositories/qa-loop-repository';
 import { emitToSession } from '../api/websocket';
-import axios from 'axios';
+import { MCPBrowser } from '../mcp-browser';
 
 const logger = createLogger('chaos-agent');
 
@@ -162,7 +162,7 @@ const DEFAULT_ATTACK_PATTERNS: AttackPattern[] = [
 export class ChaosAgent {
   private sessionId: string;
   private repository: QALoopRepository;
-  private testExecutorUrl: string;
+  private mcpBrowser: MCPBrowser | null = null;
   private attackPatterns: AttackPattern[];
   private results: ChaosResult[] = [];
   private startTime: number = 0;
@@ -170,8 +170,14 @@ export class ChaosAgent {
   constructor(sessionId: string) {
     this.sessionId = sessionId;
     this.repository = new QALoopRepository();
-    this.testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3001';
     this.attackPatterns = DEFAULT_ATTACK_PATTERNS;
+  }
+
+  /**
+   * Set the browser instance (called by orchestrator after MCP browser starts).
+   */
+  setBrowser(browser: MCPBrowser): void {
+    this.mcpBrowser = browser;
   }
 
   /**
@@ -424,30 +430,55 @@ export class ChaosAgent {
     pattern: AttackPattern,
     form?: any
   ): Promise<ChaosResult> {
+    if (!this.mcpBrowser) {
+      return {
+        pageUrl,
+        elementSelector: selector,
+        elementType: 'text_input',
+        attackCategory: pattern.category,
+        attackName: pattern.name,
+        payloadUsed: payload,
+        result: 'error',
+        vulnerabilityConfirmed: false,
+        errorMessage: 'Browser not available',
+        confidence: 0,
+        reproductionSteps: []
+      };
+    }
+
     try {
       // Navigate to page
-      await axios.post(`${this.testExecutorUrl}/api/capture-page`, {
-        url: pageUrl,
-        timeout: 30000
-      }, { timeout: 45000 });
+      await this.mcpBrowser.callTool('browser_navigate', { url: pageUrl });
 
-      // Clear and type payload
-      await axios.post(`${this.testExecutorUrl}/api/action`, {
-        action: 'type',
-        selector,
-        value: payload,
-        clearFirst: true,
-        timeout: 10000
-      }, { timeout: 30000 });
+      // Fill payload into target element via JS (more reliable than browser_type
+      // for React-controlled inputs — matches the login-flow approach)
+      await this.mcpBrowser.callTool('browser_evaluate', {
+        expression: `(() => {
+          const el = document.querySelector(${JSON.stringify(selector)});
+          if (!el) return false;
+          el.focus();
+          const proto = el.tagName === 'TEXTAREA'
+            ? window.HTMLTextAreaElement.prototype
+            : window.HTMLInputElement.prototype;
+          const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+          if (setter) setter.call(el, ${JSON.stringify(payload)});
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          return true;
+        })()`
+      });
 
-      // If there's a form, submit it
+      // If there's a form, submit it via JS click
       if (form?.action || form?.selector) {
         try {
-          await axios.post(`${this.testExecutorUrl}/api/action`, {
-            action: 'click',
-            selector: form.submitSelector || 'button[type="submit"]',
-            timeout: 5000
-          }, { timeout: 15000 });
+          const submitSelector = form.submitSelector || 'button[type="submit"]';
+          await this.mcpBrowser.callTool('browser_evaluate', {
+            expression: `(() => {
+              const el = document.querySelector(${JSON.stringify(submitSelector)});
+              if (el) { el.click(); return true; }
+              return false;
+            })()`
+          });
 
           // Wait for response
           await this.sleep(1000);
@@ -456,17 +487,17 @@ export class ChaosAgent {
         }
       }
 
-      // Capture result state
-      const stateResponse = await axios.post(`${this.testExecutorUrl}/api/capture-page`, {
-        captureCurrentPage: true,
-        includeScreenshot: true
-      }, { timeout: 30000 });
+      // Capture result state via snapshot (returns accessibility tree text)
+      const snapshotResult = await this.mcpBrowser.callTool('browser_snapshot', {});
+      const snapshotText = typeof snapshotResult.data === 'string'
+        ? snapshotResult.data
+        : JSON.stringify(snapshotResult.data || '');
 
       // Analyze result
       const analysis = this.analyzeAttackResult(
         payload,
         pattern,
-        stateResponse.data
+        { html: snapshotText, url: pageUrl }
       );
 
       return {
@@ -478,7 +509,6 @@ export class ChaosAgent {
         payloadUsed: payload,
         result: analysis.result,
         vulnerabilityConfirmed: analysis.confirmed,
-        evidenceScreenshot: stateResponse.data.screenshot,
         consoleOutput: analysis.consoleOutput,
         networkResponse: analysis.networkResponse,
         domChanges: analysis.domChanges,
@@ -678,11 +708,30 @@ export class ChaosAgent {
   }
 
   private async saveResults(results: ChaosResult[]): Promise<void> {
-    // This would save to the chaos_results table
-    // For now, we'll add bugs for confirmed vulnerabilities
     for (const result of results) {
+      // Persist ALL results to chaos_results table
+      try {
+        await this.repository.saveChaosResult(this.sessionId, {
+          pageUrl: result.pageUrl,
+          elementSelector: result.elementSelector,
+          elementType: result.elementType,
+          attackCategory: result.attackCategory,
+          attackName: result.attackName,
+          payloadUsed: result.payloadUsed,
+          resultStatus: result.result,
+          vulnerabilityConfirmed: result.vulnerabilityConfirmed,
+          severity: result.severity,
+          confidence: result.confidence,
+          reproductionSteps: result.reproductionSteps,
+          errorMessage: result.errorMessage
+        });
+      } catch (err: any) {
+        logger.warn('Failed to persist chaos result', { error: err.message });
+      }
+
+      // Also save confirmed vulnerabilities as bugs
       if (result.vulnerabilityConfirmed && result.severity) {
-        await this.repository.addBug(this.sessionId, {
+        const bug = await this.repository.addBug(this.sessionId, {
           title: `${result.attackName}: ${result.attackCategory} vulnerability`,
           description: `Found ${result.attackCategory} vulnerability on ${result.pageUrl} using payload: ${result.payloadUsed}`,
           severity: result.severity as any,
@@ -690,6 +739,18 @@ export class ChaosAgent {
           bugType: result.attackCategory,
           pageUrl: result.pageUrl,
           reproductionSteps: result.reproductionSteps
+        });
+
+        // Emit WebSocket event for live UI updates
+        emitToSession(this.sessionId, {
+          type: 'bug_found',
+          data: {
+            id: bug.id,
+            title: bug.title,
+            severity: bug.severity,
+            category: 'security',
+            pageUrl: result.pageUrl
+          }
         });
       }
     }
@@ -723,14 +784,20 @@ export class ChaosAgent {
     logger.info('Running accessibility audit', { sessionId: this.sessionId, pageUrl });
     const results: ChaosResult[] = [];
 
-    try {
-      // Capture page
-      const response = await axios.post(`${this.testExecutorUrl}/api/capture-page`, {
-        url: pageUrl,
-        includeScreenshot: true
-      }, { timeout: 45000 });
+    if (!this.mcpBrowser) {
+      logger.warn('Browser not available for accessibility audit', { sessionId: this.sessionId });
+      return results;
+    }
 
-      const html = response.data.html || '';
+    try {
+      // Navigate and get page HTML via evaluate for accurate HTML-based checks
+      await this.mcpBrowser.callTool('browser_navigate', { url: pageUrl });
+      const evalResult = await this.mcpBrowser.callTool('browser_evaluate', {
+        expression: 'document.documentElement.outerHTML'
+      });
+      const html = typeof evalResult.data === 'string'
+        ? evalResult.data
+        : JSON.stringify(evalResult.data || '');
 
       // Check for missing alt attributes
       const imgWithoutAlt = (html.match(/<img(?![^>]*alt=)[^>]*>/gi) || []).length;

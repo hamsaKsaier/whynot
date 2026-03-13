@@ -7,6 +7,20 @@ import { emitToSession } from './api/websocket';
 const logger = createLogger('mcp-browser');
 
 /**
+ * MCP tools that Claude should never call directly.
+ * - browser_install: browser is pre-installed; calling it wastes tool-call budget
+ * - browser_close: we manage the browser lifecycle
+ * - browser_run_code: arbitrary JS execution is already handled via browser_evaluate
+ * - browser_resize: not useful for testing, wastes tool calls
+ */
+const EXCLUDED_MCP_TOOLS = new Set([
+  'browser_install',
+  'browser_close',
+  'browser_run_code',
+  'browser_resize',
+]);
+
+/**
  * Manages a Playwright MCP server subprocess for browser automation.
  * Spawns @playwright/mcp as a child process, connects via stdio transport,
  * and provides methods to list tools, call tools, and handle cleanup.
@@ -34,7 +48,7 @@ export class MCPBrowser {
 
     this.transport = new StdioClientTransport({
       command: 'npx',
-      args: ['@playwright/mcp@latest', '--headless', '--browser', 'firefox']
+      args: ['@playwright/mcp@0.0.68', '--headless', '--browser', 'firefox']
     });
 
     this.client = new Client(
@@ -45,13 +59,25 @@ export class MCPBrowser {
     await this.client.connect(this.transport);
     this.isConnected = true;
 
-    // Cache tool definitions
+    // Pre-install browser so Claude never needs to call browser_install
+    try {
+      await this.client.callTool({ name: 'browser_install', arguments: {} });
+      logger.info('Browser pre-installed', { sessionId: this.sessionId });
+    } catch (err: any) {
+      logger.warn('Browser pre-install skipped (may already be installed)', {
+        sessionId: this.sessionId, error: err.message
+      });
+    }
+
+    // Cache tool definitions (filter out tools Claude should never call)
     const { tools } = await this.client.listTools();
-    this.tools = tools.map(t => ({
-      name: t.name,
-      description: t.description || '',
-      input_schema: t.inputSchema as Anthropic.Tool['input_schema']
-    }));
+    this.tools = tools
+      .filter(t => !EXCLUDED_MCP_TOOLS.has(t.name))
+      .map(t => ({
+        name: t.name,
+        description: t.description || '',
+        input_schema: t.inputSchema as Anthropic.Tool['input_schema']
+      }));
 
     logger.info('Playwright MCP server started', {
       sessionId: this.sessionId,

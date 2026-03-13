@@ -26,7 +26,8 @@ export type { LiveMonitorProps } from './LiveMonitor';
 export { CreateTaskButton } from './CreateTaskButton';
 export { AutoFixButton } from './AutoFixButton';
 
-// Phase 7 — extracted from QALoopPage
-export { BugCard, safePathname } from './BugCard';
+export { BugCard } from './BugCard';
+export type { BugCardProps } from './BugCard';
+
 export { ResultsTabs } from './ResultsTabs';
 export type { ResultsTabsProps } from './ResultsTabs';

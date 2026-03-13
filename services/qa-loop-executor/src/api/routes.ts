@@ -5,8 +5,8 @@ import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { LoopOrchestrator } from '../loop-orchestrator';
 import { RetestExecutor } from '../retest-executor';
 import webhookRoutes from './webhook';
+import { generateWsToken } from './websocket';
 import { parseDocument, combineDocuments, ParsedDocument } from '../document-parser';
-import { getPool } from '../../../../shared/database/connection';
 
 const router = Router();
 const logger = createLogger('qa-loop-routes');
@@ -107,7 +107,8 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
         status: 'running',
         qualityThreshold,
         maxIterations
-      }
+      },
+      wsToken: generateWsToken(session.id)
     });
   } catch (error: any) {
     logger.error('Failed to start QA Loop session', { error: error.message });
@@ -290,7 +291,7 @@ router.post('/api/sessions/:id/resume', async (req: Request, res: Response) => {
     await qaLoopRepository.updateSessionStatus(id, 'running');
 
     logger.info('QA Loop session resumed', { sessionId: id });
-    res.json({ success: true, status: 'running' });
+    res.json({ success: true, status: 'running', wsToken: generateWsToken(id) });
   } catch (error: any) {
     logger.error('Failed to resume session', { error: error.message });
     res.status(500).json({ error: 'Failed to resume session' });
@@ -408,68 +409,6 @@ router.get('/api/sessions/:id/test-runs', async (req: Request, res: Response) =>
   } catch (error: any) {
     logger.error('Failed to get test runs', { error: error.message });
     res.status(500).json({ error: 'Failed to get test runs' });
-  }
-});
-
-// Save a QA Loop test case to the main test_cases table
-router.post('/api/sessions/:id/test-cases/:tcId/save-to-project', async (req: Request, res: Response) => {
-  try {
-    const { id, tcId } = req.params;
-    const workspaceId = req.headers['x-workspace-id'] as string | undefined;
-
-    // Get the session to retrieve target_url and project info
-    const session = await qaLoopRepository.getSession(id, workspaceId);
-    if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
-    }
-
-    // Get the QA Loop test case
-    const qaTestCase = await qaLoopRepository.getTestCaseById(tcId);
-    if (!qaTestCase || qaTestCase.session_id !== id) {
-      return res.status(404).json({ error: 'Test case not found in this session' });
-    }
-
-    // Insert into the main test_cases table
-    const testCaseId = uuidv4();
-    const pool = getPool();
-    const insertQuery = `
-      INSERT INTO test_cases (
-        id, name, description, website_url, user_story, steps, metadata, workspace_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `;
-
-    const result = await pool.query(insertQuery, [
-      testCaseId,
-      qaTestCase.name,
-      qaTestCase.description || '',
-      session.target_url,
-      qaTestCase.description || `QA Loop generated test case from session ${id}`,
-      JSON.stringify(qaTestCase.steps || []),
-      JSON.stringify({
-        category: qaTestCase.category,
-        priority: qaTestCase.priority,
-        risk_level: qaTestCase.risk_level,
-        source: 'qa_loop',
-        qa_loop_session_id: id,
-        qa_loop_test_case_id: tcId,
-      }),
-      session.workspace_id || null,
-    ]);
-
-    logger.info('QA Loop test case saved to project', {
-      sessionId: id,
-      qaTestCaseId: tcId,
-      savedTestCaseId: testCaseId,
-    });
-
-    res.status(201).json({
-      success: true,
-      testCase: result.rows[0],
-    });
-  } catch (error: any) {
-    logger.error('Failed to save test case to project', { error: error.message });
-    res.status(500).json({ error: 'Failed to save test case', details: error.message });
   }
 });
 

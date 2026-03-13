@@ -10,7 +10,6 @@
  * Heavy UI lives in SessionForm / SessionList / StatsBar / LiveMonitor.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useToastContext } from '../contexts/ToastContext';
 import { Alert } from '../components/common/Alert';
 import { Button } from '../components/common/Button';
@@ -20,7 +19,6 @@ import {
 } from 'react-icons/fi';
 
 import { checkExistingSession } from '../services/qa-loop-api';
-import { getEnvironments, type SavedEnvironment } from '../services/api';
 import { useSessionManager, StartSessionParams } from '../hooks/useSessionManager';
 
 import {
@@ -31,7 +29,18 @@ import {
   ExistingSessionInfo,
   ResultsTabs,
 } from '../components/QALoop';
-import { saveTestCaseToProject } from '../services/qa-loop-api';
+
+// ── Status helpers ─────────────────────────────────────────────────────────────
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'running':   return 'text-blue-500';
+    case 'completed': return 'text-green-500';
+    case 'paused':    return 'text-yellow-500';
+    case 'failed':    return 'text-red-500';
+    case 'cancelled': return 'text-gray-500';
+    default:          return 'text-gray-400';
+  }
+}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export const QALoopPage: React.FC = () => {
@@ -72,12 +81,6 @@ export const QALoopPage: React.FC = () => {
   const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
   const [useExisting,   setUseExisting]   = useState(false);
 
-  // ── Environments (for SessionForm dropdown) ──────────────────────────────
-  const [savedEnvironments, setSavedEnvironments] = useState<SavedEnvironment[]>([]);
-  useEffect(() => {
-    getEnvironments().then(r => setSavedEnvironments(r.environments)).catch(() => {});
-  }, []);
-
   // ── Cinema sidebar toggle (collapsed by default when session is running) ───
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -88,22 +91,6 @@ export const QALoopPage: React.FC = () => {
 
   // ── 6.2: Stop-session confirmation state ──────────────────────────────────
   const [showStopConfirm, setShowStopConfirm] = useState(false);
-
-  // ── Navigation state (pre-fill from ProjectDetailPage) ───────────────────
-  const location = useLocation();
-  const [projectId, setProjectId] = useState<string | undefined>();
-
-  // Pre-fill form from navigation state (e.g., coming from ProjectDetailPage)
-  useEffect(() => {
-    const navState = location.state as { projectId?: string; websiteUrl?: string; userStoryContext?: string } | null;
-    if (navState) {
-      if (navState.websiteUrl) setTargetUrl(navState.websiteUrl);
-      if (navState.userStoryContext) setDocumentContext(navState.userStoryContext);
-      if (navState.projectId) setProjectId(navState.projectId);
-      // Clear navigation state to prevent re-applying on re-renders
-      window.history.replaceState({}, document.title);
-    }
-  }, []);
 
   // ── 6.1: WS error auto-dismiss state ──────────────────────────────────────
   const [wsErrorDismissed, setWsErrorDismissed] = useState(false);
@@ -182,12 +169,11 @@ export const QALoopPage: React.FC = () => {
       loginCredentials: loginCreds,
       testPriority,
       sourceSessionId: useExisting && existingSession ? existingSession.id : undefined,
-      projectId,
     });
   }, [
     targetUrl, qualityThreshold, maxIterations, documentContext,
     useLogin, loginCredentials, testPriority, useExisting, existingSession,
-    handleStartSession, showError, projectId,
+    handleStartSession, showError,
   ]);
 
   // ── Shared session form props ───────────────────────────────────────────────
@@ -203,7 +189,6 @@ export const QALoopPage: React.FC = () => {
     showPassword, setShowPassword,
     existingSession,
     useExisting, setUseExisting,
-    environments: savedEnvironments,
     documents,
     activeSession,
     onUpload: handleUploadDocument,
@@ -428,15 +413,6 @@ export const QALoopPage: React.FC = () => {
                       analyses={analyses}
                       correlations={correlations}
                       isRunning={activeSession.status === 'running'}
-                      sessionId={activeSession.id}
-                      onSaveTestCase={async (testCaseId) => {
-                        try {
-                          await saveTestCaseToProject(activeSession.id, testCaseId);
-                          success('Test case saved to library');
-                        } catch (err: any) {
-                          showError(err.response?.data?.error || err.message || 'Failed to save test case');
-                        }
-                      }}
                     />
                   </div>
                 </div>

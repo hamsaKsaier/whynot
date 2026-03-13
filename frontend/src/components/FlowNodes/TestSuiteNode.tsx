@@ -10,24 +10,35 @@ interface TestSuiteNodeData {
 
 export const TestSuiteNode: React.FC<NodeProps<TestSuiteNodeData>> = ({ data }) => {
   return (
-    <div className="px-4 py-3 bg-orange-100 border-2 border-orange-300 rounded-lg shadow-md min-w-[200px]">
-      <Handle type="target" position={Position.Top} />
-      <div className="flex items-center gap-2 mb-1">
-        <FiPackage className="h-5 w-5 text-orange-600" />
-        <div className="font-semibold text-orange-900">{data.label}</div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-orange-500 min-w-[220px] max-w-[260px] transition-all duration-200 hover:shadow-md">
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-orange-500"
+      />
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="p-1.5 bg-orange-50 rounded-lg flex-shrink-0">
+            <FiPackage className="h-3.5 w-3.5 text-orange-600" />
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-orange-600">
+            Test Suite
+          </span>
+        </div>
+        <div className="font-bold text-gray-900 text-sm leading-snug truncate">
+          {data.label}
+        </div>
+        {data.description && (
+          <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+            {data.description}
+          </p>
+        )}
       </div>
-      {data.description && (
-        <div className="text-xs text-orange-700 mt-1 line-clamp-2">{data.description}</div>
-      )}
-      <Handle type="source" position={Position.Bottom} />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-orange-500"
+      />
     </div>
   );
 };
-
-
-
-
-
-
-
-

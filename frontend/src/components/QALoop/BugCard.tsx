@@ -1,32 +1,16 @@
-/**
- * BugCard — expandable bug card with reproduction steps and action buttons.
- * Extracted from QALoopPage (Phase 7).
- */
 import React, { useState } from 'react';
-import type { QALoopBug } from '../../services/qa-loop-api';
+import { QALoopBug } from '../../services/qa-loop-api';
 import { CreateTaskButton } from './CreateTaskButton';
 import { AutoFixButton } from './AutoFixButton';
 
-export function safePathname(url: string | undefined | null, fallback?: string): string {
-  try {
-    if (!url) return fallback ?? '';
-    return new URL(url).pathname || fallback || url;
-  } catch {
-    return fallback ?? url ?? '';
-  }
+export interface BugCardProps {
+  bug: QALoopBug;
+  severityColor: (s: string) => string;
+  safePathname: (url: string | undefined | null, fallback?: string) => string;
 }
 
-function severityColor(s: string) {
-  switch (s) {
-    case 'critical': return 'text-red-600 bg-red-100';
-    case 'high':     return 'text-orange-600 bg-orange-100';
-    case 'medium':   return 'text-yellow-600 bg-yellow-100';
-    case 'low':      return 'text-blue-600 bg-blue-100';
-    default:         return 'text-gray-600 bg-gray-100';
-  }
-}
-
-export const BugCard: React.FC<{ bug: QALoopBug }> = ({ bug }) => {
+/** Expandable bug card with reproduction steps and action buttons */
+export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathname }) => {
   const [expanded, setExpanded] = useState(false);
 
   const reproSteps = Array.isArray(bug.reproduction_steps) ? bug.reproduction_steps : [];

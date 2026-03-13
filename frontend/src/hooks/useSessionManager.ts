@@ -42,7 +42,6 @@ export interface StartSessionParams {
   loginCredentials?: LoginCredentials;
   testPriority?: 'functional_first' | 'balanced' | 'security_first';
   sourceSessionId?: string;
-  projectId?: string;
 }
 
 interface UseSessionManagerOptions {
@@ -89,6 +88,9 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
   // Cache for completed/cancelled session details — never change so zero cost (4.6)
   const completedSessionCache = useRef<Map<string, any>>(new Map());
 
+  // ── WebSocket auth token ───────────────────────────────────────────────────
+  const [wsToken, setWsToken] = useState<string | undefined>();
+
   // ── WebSocket stream ─────────────────────────────────────────────────────────
   const {
     isConnected,
@@ -112,6 +114,7 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
   } = useQALoopStream({
     sessionId: activeSession?.id,
     enabled: activeSession?.status === 'running',
+    wsToken,
   });
 
   // ── applySessionDetails ──────────────────────────────────────────────────────
@@ -148,7 +151,7 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
       // 6.4 — accessibility & performance have no real data source yet; show N/A
       setQualityScore({
         overall: session.quality_score || 0,
-        breakdown: { coverage: coverageScore, stability: stabilityScore, security: securityScore, accessibility: null, performance: null },
+        breakdown: { coverage: coverageScore, stability: stabilityScore, security: securityScore, accessibility: 0, performance: 0 },
         trend: 'stable',
         scoreDelta: 0,
       });
@@ -261,7 +264,7 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
     setIsStarting(true);
     clearEvents();
     try {
-      const { session } = await startQALoopSession({
+      const result = await startQALoopSession({
         targetUrl:       params.targetUrl,
         qualityThreshold: params.qualityThreshold,
         maxIterations:   params.maxIterations,
@@ -269,17 +272,11 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
         loginCredentials: params.loginCredentials,
         testPriority:    params.testPriority,
         sourceSessionId: params.sourceSessionId,
-        projectId:       params.projectId,
       });
-      // Persist credentials so they can be re-supplied on resume (browser state
-      // is lost when the orchestrator is recreated; we need to re-login).
-      if (params.loginCredentials) {
-        try {
-          sessionStorage.setItem(
-            `qa-session-creds-${session.id}`,
-            JSON.stringify(params.loginCredentials)
-          );
-        } catch { /* sessionStorage unavailable — resume will proceed without re-login */ }
+      const { session } = result;
+      // Store WS auth token for secure WebSocket connection
+      if (result.wsToken) {
+        setWsToken(result.wsToken);
       }
       setActiveSession(session);
       onSuccess('QA Loop session started!');
@@ -305,15 +302,13 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
   const handleResumeSession = useCallback(async () => {
     if (!activeSession) return;
     try {
-      // Retrieve stored credentials so the backend can re-establish the browser
-      // session (login state is lost when the orchestrator is recreated).
-      let storedCreds: LoginCredentials | undefined;
-      try {
-        const raw = sessionStorage.getItem(`qa-session-creds-${activeSession.id}`);
-        if (raw) storedCreds = JSON.parse(raw) as LoginCredentials;
-      } catch { /* ignore parse errors */ }
-
-      await resumeQALoopSession(activeSession.id, storedCreds);
+      // Credentials are not persisted for security. Sessions requiring login
+      // will run without authentication on resume. Re-enter credentials by
+      // stopping and starting a new session if re-authentication is needed.
+      const result = await resumeQALoopSession(activeSession.id);
+      if (result.wsToken) {
+        setWsToken(result.wsToken);
+      }
       setActiveSession(prev => prev ? { ...prev, status: 'running' } : prev);
       onSuccess('Session resumed');
     } catch {

@@ -1104,9 +1104,9 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
         SELECT id, name, description, website_url, user_story, steps, metadata,
                test_suite_id, user_story_id, created_at, updated_at
         FROM test_cases
-        WHERE test_suite_id = ANY($1) OR (user_story_id = ANY($2) AND test_suite_id IS NULL)
+        WHERE test_suite_id = ANY($1::uuid[]) OR (user_story_id = ANY($2::uuid[]) AND test_suite_id IS NULL)
         ORDER BY created_at DESC
-      `, [testSuiteIds.length ? testSuiteIds : [''], userStoryIds.length ? userStoryIds : ['']]) : [];
+      `, [testSuiteIds.length ? testSuiteIds : [], userStoryIds.length ? userStoryIds : []]) : [];
 
       // 6. Orphan test cases (backward compatibility — per-project website_url filter)
       const projectWebsiteUrls = projects.map((p: any) => p.website_url).filter(Boolean);

@@ -1,18 +1,22 @@
-/**
- * ResultsTabs — tabbed view of test cases, bugs, pages, security, and analysis.
- * Extracted from QALoopPage (Phase 7).
- */
 import React, { useState } from 'react';
 import {
-  FiFileText, FiAlertTriangle, FiShield, FiSearch, FiCheckCircle, FiClock,
-  FiGlobe, FiSave,
+  FiFileText, FiAlertTriangle, FiGlobe, FiShield, FiSearch, FiCheckCircle, FiClock,
 } from 'react-icons/fi';
-import type { QALoopTestCase, QALoopBug, QALoopPage as QAPage } from '../../services/qa-loop-api';
-import { BugCard, safePathname } from './BugCard';
+
+import { QALoopTestCase, QALoopBug, QALoopPage as QAPage } from '../../services/qa-loop-api';
+import { ChaosResult, ChaosSummary, RootCauseAnalysis, FailureCorrelation } from './index';
 import { ChaosResultsTab } from './ChaosResultsTab';
 import { AnalysisTab } from './AnalysisTab';
-import type { ChaosResult, ChaosSummary } from './ChaosResultsTab';
-import type { RootCauseAnalysis, FailureCorrelation } from './AnalysisTab';
+import { BugCard } from './BugCard';
+
+function safePathname(url: string | undefined | null, fallback?: string): string {
+  try {
+    if (!url) return fallback ?? '';
+    return new URL(url).pathname || fallback || url;
+  } catch {
+    return fallback ?? url ?? '';
+  }
+}
 
 export interface ResultsTabsProps {
   testCases: QALoopTestCase[];
@@ -23,17 +27,22 @@ export interface ResultsTabsProps {
   analyses: RootCauseAnalysis[];
   correlations: FailureCorrelation[];
   isRunning?: boolean;
-  sessionId?: string;
-  onSaveTestCase?: (testCaseId: string) => void;
 }
 
 export const ResultsTabs: React.FC<ResultsTabsProps> = ({
-  testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations,
-  isRunning, sessionId, onSaveTestCase,
+  testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning
 }) => {
   const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'chaos' | 'analysis'>('tests');
-  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  const severityColor = (s: string) => {
+    switch (s) {
+      case 'critical': return 'text-red-600 bg-red-100';
+      case 'high':     return 'text-orange-600 bg-orange-100';
+      case 'medium':   return 'text-yellow-600 bg-yellow-100';
+      case 'low':      return 'text-blue-600 bg-blue-100';
+      default:         return 'text-gray-600 bg-gray-100';
+    }
+  };
 
   const statusIcon = (s: string | null) => {
     if (s === 'passed') return <FiCheckCircle className="text-green-500" />;
@@ -78,31 +87,6 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
                     <span className="font-medium text-gray-900">{tc.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {sessionId && onSaveTestCase && (
-                      <button
-                        onClick={() => {
-                          if (savedIds.has(tc.id) || savingIds.has(tc.id)) return;
-                          setSavingIds(prev => new Set(prev).add(tc.id));
-                          onSaveTestCase(tc.id);
-                          setTimeout(() => {
-                            setSavingIds(prev => { const n = new Set(prev); n.delete(tc.id); return n; });
-                            setSavedIds(prev => new Set(prev).add(tc.id));
-                          }, 1500);
-                        }}
-                        disabled={savedIds.has(tc.id) || savingIds.has(tc.id)}
-                        className={`text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-                          savedIds.has(tc.id)
-                            ? 'bg-green-100 text-green-700 cursor-default'
-                            : savingIds.has(tc.id)
-                            ? 'bg-gray-100 text-gray-400 cursor-wait'
-                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200 cursor-pointer'
-                        }`}
-                        title={savedIds.has(tc.id) ? 'Saved to Test Cases' : 'Save to Test Cases library'}
-                      >
-                        <FiSave className="h-3 w-3" />
-                        {savedIds.has(tc.id) ? 'Saved' : savingIds.has(tc.id) ? 'Saving…' : 'Save'}
-                      </button>
-                    )}
                     <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">{tc.category}</span>
                     <span className="text-xs text-gray-400">P{tc.priority}</span>
                   </div>
@@ -126,7 +110,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
             {bugs.length === 0 ? (
               <div className="text-center py-8 text-gray-500">No bugs found yet — that's a good sign!</div>
             ) : bugs.map(bug => (
-              <BugCard key={bug.id} bug={bug} />
+              <BugCard key={bug.id} bug={bug} severityColor={severityColor} safePathname={safePathname} />
             ))}
           </div>
         )}

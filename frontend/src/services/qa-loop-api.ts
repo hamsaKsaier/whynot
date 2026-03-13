@@ -109,6 +109,7 @@ export interface SessionDetailsResponse {
 export async function startQALoopSession(request: StartSessionRequest): Promise<{
   success: boolean;
   session: QALoopSession;
+  wsToken?: string;
 }> {
   const response = await apiClient.post('/qa-loop/sessions', request);
   return response.data;
@@ -173,6 +174,7 @@ export async function resumeQALoopSession(
 ): Promise<{
   success: boolean;
   status: string;
+  wsToken?: string;
 }> {
   const response = await apiClient.post(`/qa-loop/sessions/${sessionId}/resume`, {
     ...(loginCredentials ? { loginCredentials } : {})
@@ -229,20 +231,6 @@ export async function getSessionTestRuns(sessionId: string): Promise<{
   testRuns: QALoopTestRun[];
 }> {
   const response = await apiClient.get(`/qa-loop/sessions/${sessionId}/test-runs`);
-  return response.data;
-}
-
-// Save a QA Loop test case to the main test_cases library
-export async function saveTestCaseToProject(
-  sessionId: string,
-  testCaseId: string
-): Promise<{
-  success: boolean;
-  testCase: { id: string; name: string };
-}> {
-  const response = await apiClient.post(
-    `/qa-loop/sessions/${sessionId}/test-cases/${testCaseId}/save-to-project`
-  );
   return response.data;
 }
 
