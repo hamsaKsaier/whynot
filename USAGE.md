@@ -1,4 +1,4 @@
-# How to Use the Thunder Code POC
+# How to Use WhyNot
 
 This guide will walk you through setting up and using the POC system.
 

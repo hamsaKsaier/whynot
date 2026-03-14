@@ -22,9 +22,23 @@ import type { ExecutionEntity, StepResultEntity } from '../../shared/database/re
 import { ExecutionResult, StepResult } from '../../shared/types';
 import { query } from '../../shared/database/connection';
 import { requireAuth } from '../middleware/auth';
+import { requireAdmin, requireSuperAdmin } from '../middleware/admin-auth';
 import * as authService from '../services/auth-service';
 import { WorkspaceRepository } from '../../shared/database/repositories/workspace-repository';
+import { PlanRepository } from '../../shared/database/repositories/plan-repository';
+import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
+import { CreditRepository } from '../../shared/database/repositories/credit-repository';
+import { BillingService } from '../services/billing-service';
+import { StripeService } from '../services/stripe-service';
+import { InvoiceRepository } from '../../shared/database/repositories/invoice-repository';
+import { UserRepository } from '../../shared/database/repositories/user-repository';
 import { startCleanupScheduler, runCleanup } from '../services/cleanup-service';
+import { requireCredits, deductCredits } from '../middleware/credit-gate';
+import { requireFeature, requireFeatureLimit } from '../middleware/feature-gate';
+import { requireActiveSubscription } from '../middleware/subscription-check';
+import { AuditRepository } from '../../shared/database/repositories/audit-repository';
+import { SystemSettingsRepository } from '../../shared/database/repositories/system-settings-repository';
+import { AnnouncementRepository } from '../../shared/database/repositories/announcement-repository';
 
 dotenv.config();
 
@@ -108,14 +122,40 @@ const PORT = process.env.PORT || 3000;
 const logger = createLogger('gateway');
 
 // Middleware
-const corsOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+const corsOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  process.env.ADMIN_FRONTEND_URL || 'http://localhost:5184',
+];
 app.use(cors({
-  origin: corsOrigin,
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Workspace-ID'],
   exposedHeaders: ['X-Request-ID', 'RateLimit-*']
 }));
+// Stripe webhook needs raw body for signature verification — must be before express.json()
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'] as string;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    logger.warn('STRIPE_WEBHOOK_SECRET not configured, skipping webhook');
+    res.status(400).json({ error: 'Webhook secret not configured' });
+    return;
+  }
+
+  try {
+    const Stripe = require('stripe');
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    await stripeService.handleWebhookEvent(event);
+    res.json({ received: true });
+  } catch (err: any) {
+    logger.error('Stripe webhook error', err);
+    res.status(400).json({ error: `Webhook error: ${err.message}` });
+  }
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -147,6 +187,30 @@ const folderRepository = new FolderRepository();
 const setupHookRepository = new SetupHookRepository();
 const visualRegressionRepository = new VisualRegressionRepository();
 const workspaceRepository = new WorkspaceRepository();
+const planRepository = new PlanRepository();
+const subscriptionRepository = new SubscriptionRepository();
+const creditRepository = new CreditRepository();
+const billingService = new BillingService();
+const stripeService = new StripeService();
+const invoiceRepository = new InvoiceRepository();
+const adminUserRepository = new UserRepository();
+const auditRepository = new AuditRepository();
+const systemSettingsRepository = new SystemSettingsRepository();
+const announcementRepository = new AnnouncementRepository();
+
+/** Fire-and-forget audit logging helper */
+function auditLog(req: Express.Request, action: string, targetType?: string, targetId?: string, details?: Record<string, any>) {
+  auditRepository.log({
+    actor_id: req.user?.id,
+    actor_email: req.user?.email || undefined,
+    action,
+    target_type: targetType,
+    target_id: targetId,
+    details,
+    ip_address: (req as any).ip,
+    user_agent: (req as any).headers?.['user-agent'],
+  }).catch(() => {});
+}
 
 // Health check with detailed status
 app.get('/health', async (req, res) => {
@@ -386,7 +450,7 @@ app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), a
 }));
 
 // Generate tests only (without execution) (with rate limiting)
-app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.generateTests), asyncHandler(async (req, res) => {
+app.post('/api/generate-tests', testGenerationRateLimiter, requireActiveSubscription, requireCredits('TEST_GENERATION'), validate(schemas.generateTests), asyncHandler(async (req, res) => {
   const { website_url, user_story, additional_context, project_id, user_story_id, prerequisite_steps, quick_mode } = req.body;
 
   let sanitizedUrl: string;
@@ -460,6 +524,11 @@ app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.gene
     // Don't fail the request if DB persistence fails
   }
 
+  // Deduct credits after successful generation
+  if (req.workspaceId) {
+    await deductCredits(req.workspaceId, 'TEST_GENERATION', `Generated ${testCases.length} test case(s)`).catch(() => {});
+  }
+
   // Return test cases (validation info is included in each test case's validation_result field if available)
   res.json({
     test_cases: testCases,
@@ -468,7 +537,7 @@ app.post('/api/generate-tests', testGenerationRateLimiter, validate(schemas.gene
 }));
 
 // Execute a test case (test case already generated) (with stricter rate limiting)
-app.post('/api/execute-test', testExecutionRateLimiter, validate(schemas.executeTest), asyncHandler(async (req, res) => {
+app.post('/api/execute-test', testExecutionRateLimiter, requireActiveSubscription, requireCredits('TEST_EXECUTION'), validate(schemas.executeTest), asyncHandler(async (req, res) => {
   const testCase = req.body;
   const headless = req.query.headless === 'true';
 
@@ -493,6 +562,11 @@ app.post('/api/execute-test', testExecutionRateLimiter, validate(schemas.execute
     status: executionResult.status,
     durationMs: executionResult.total_duration_ms
   });
+
+  // Deduct credits after successful execution
+  if (req.workspaceId) {
+    await deductCredits(req.workspaceId, 'TEST_EXECUTION', `Executed test ${testCase.id}`).catch(() => {});
+  }
 
   // Only persist execution result if it's a final status (not "starting")
   // For non-headless mode, the test-executor will persist the final result asynchronously
@@ -570,8 +644,10 @@ app.get('/api/projects', asyncHandler(async (req, res) => {
   res.json({ projects, offset, limit, total });
 }));
 
-// Create a new project
-app.post('/api/projects', asyncHandler(async (req, res) => {
+// Create a new project (with plan limit check)
+app.post('/api/projects', requireFeatureLimit('max_projects', async (req) => {
+  return await projectRepository.count(req.workspaceId);
+}), asyncHandler(async (req, res) => {
   const { name, description, website_url } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -1480,8 +1556,8 @@ app.get('/api/executions/:id/visual-comparisons', asyncHandler(async (req, res) 
   res.json({ comparisons });
 }));
 
-// Get all visual regressions (filtered, paginated)
-app.get('/api/visual-regressions', asyncHandler(async (req, res) => {
+// Get all visual regressions (filtered, paginated) — requires feature
+app.get('/api/visual-regressions', requireFeature('visual_regression'), asyncHandler(async (req, res) => {
   const { ignored, severity, limit = 50, offset = 0 } = req.query;
 
   const options: any = {
@@ -1642,7 +1718,7 @@ app.use('/api/qa-loop', qaLoopRouter);
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    service: 'Thunder Code POC Gateway',
+    service: 'WhyNot Gateway',
     version: '1.0.0',
     endpoints: {
       health: '/health',
@@ -1832,6 +1908,602 @@ app.get('/api/bugs/:bugId/auto-fix', requireAuth, asyncHandler(async (req: any, 
   if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
   const attempts = await autoFixService.getAttemptsForBug(req.params.bugId);
   res.json(attempts);
+}));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUBLIC PLAN ROUTES (no auth required — for pricing page)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/plans', asyncHandler(async (_req, res) => {
+  const plans = await planRepository.findPublicPlans();
+  const plansWithFeatures = await Promise.all(
+    plans.map(async (plan) => {
+      const features = await planRepository.getFeatures(plan.id);
+      const featureMap: Record<string, string> = {};
+      features.forEach(f => { featureMap[f.feature_key] = f.feature_value; });
+      return { ...plan, features: featureMap };
+    })
+  );
+  res.json({ success: true, plans: plansWithFeatures });
+}));
+
+app.get('/api/plans/:slug', asyncHandler(async (req, res) => {
+  const plan = await planRepository.findBySlug(req.params.slug);
+  if (!plan || plan.is_archived) {
+    throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  }
+  const features = await planRepository.getFeatures(plan.id);
+  const featureMap: Record<string, string> = {};
+  features.forEach(f => { featureMap[f.feature_key] = f.feature_value; });
+  res.json({ success: true, plan: { ...plan, features: featureMap } });
+}));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BILLING ROUTES (authenticated — for workspace billing page)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/billing/subscription', requireAuth, asyncHandler(async (req: any, res) => {
+  const data = await billingService.getWorkspaceSubscription(req.workspaceId);
+  if (!data) {
+    return res.json({ success: true, subscription: null, plan: null, features: {} });
+  }
+  res.json({ success: true, ...data });
+}));
+
+app.get('/api/billing/credits', requireAuth, asyncHandler(async (req: any, res) => {
+  const balance = await creditRepository.getBalance(req.workspaceId);
+  res.json({ success: true, balance: balance || { balance: 0, lifetime_credits_used: 0, lifetime_credits_granted: 0, lifetime_credits_purchased: 0 } });
+}));
+
+app.get('/api/billing/credits/history', requireAuth, asyncHandler(async (req: any, res) => {
+  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const type = req.query.type as string | undefined;
+  const result = await creditRepository.getTransactions(req.workspaceId, { offset, limit, type });
+  res.json({ success: true, ...result });
+}));
+
+app.get('/api/billing/usage', requireAuth, asyncHandler(async (req: any, res) => {
+  const usage = await billingService.getUsageSummary(req.workspaceId);
+  res.json({ success: true, usage });
+}));
+
+app.post('/api/billing/checkout', requireAuth, asyncHandler(async (req: any, res) => {
+  const { plan_id } = req.body;
+  if (!plan_id) throw createError('plan_id is required', 400, 'MISSING_PLAN_ID');
+  const email = req.user!.email || '';
+  const name = req.user!.name || '';
+  const session = await stripeService.createCheckoutSession(req.workspaceId, plan_id, email, name);
+  res.json({ success: true, ...session });
+}));
+
+app.post('/api/billing/portal', requireAuth, asyncHandler(async (req: any, res) => {
+  const result = await stripeService.createPortalSession(req.workspaceId);
+  res.json({ success: true, ...result });
+}));
+
+app.get('/api/billing/invoices', requireAuth, asyncHandler(async (req: any, res) => {
+  const invoices = await invoiceRepository.findByWorkspaceId(req.workspaceId);
+  res.json({ success: true, invoices });
+}));
+
+app.post('/api/billing/cancel', requireAuth, asyncHandler(async (req: any, res) => {
+  const immediate = req.body.immediate === true;
+  await stripeService.cancelSubscription(req.workspaceId, immediate);
+  res.json({ success: true, message: immediate ? 'Subscription canceled immediately' : 'Subscription will cancel at period end' });
+}));
+
+app.post('/api/billing/reactivate', requireAuth, asyncHandler(async (req: any, res) => {
+  await stripeService.reactivateSubscription(req.workspaceId);
+  res.json({ success: true, message: 'Subscription reactivated' });
+}));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN ROUTES (requireAuth + requireAdmin)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Admin: Plan Management ─────────────────────────────────────────────────
+
+app.get('/api/admin/plans', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const plans = await planRepository.findAllWithFeatures();
+  const plansWithCounts = await Promise.all(
+    plans.map(async (plan) => ({
+      ...plan,
+      subscriber_count: await planRepository.countSubscribers(plan.id),
+    }))
+  );
+  res.json({ success: true, plans: plansWithCounts });
+}));
+
+app.post('/api/admin/plans', requireAuth, requireAdmin, validate(schemas.createPlan), asyncHandler(async (req: any, res) => {
+  const existing = await planRepository.findBySlug(req.body.slug);
+  if (existing) {
+    throw createError('Plan with this slug already exists', 409, 'SLUG_EXISTS');
+  }
+  const plan = await planRepository.create(req.body);
+  res.status(201).json({ success: true, plan });
+}));
+
+app.get('/api/admin/plans/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const plan = await planRepository.findById(req.params.id);
+  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  const features = await planRepository.getFeatures(plan.id);
+  const subscriberCount = await planRepository.countSubscribers(plan.id);
+  res.json({ success: true, plan: { ...plan, features, subscriber_count: subscriberCount } });
+}));
+
+app.put('/api/admin/plans/:id', requireAuth, requireAdmin, validate(schemas.updatePlan), asyncHandler(async (req, res) => {
+  const plan = await planRepository.update(req.params.id, req.body);
+  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  res.json({ success: true, plan });
+}));
+
+app.post('/api/admin/plans/:id/archive', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const plan = await planRepository.archive(req.params.id);
+  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  auditLog(req as any, 'plan.archive', 'plan', req.params.id, { name: plan.name });
+  res.json({ success: true, plan });
+}));
+
+app.post('/api/admin/plans/:id/restore', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const plan = await planRepository.restore(req.params.id);
+  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  auditLog(req as any, 'plan.restore', 'plan', req.params.id, { name: plan.name });
+  res.json({ success: true, plan });
+}));
+
+app.post('/api/admin/plans/:id/features', requireAuth, requireAdmin, validate(schemas.setPlanFeatures), asyncHandler(async (req, res) => {
+  const plan = await planRepository.findById(req.params.id);
+  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  const features = await planRepository.setFeatures(plan.id, req.body.features);
+  res.json({ success: true, features });
+}));
+
+app.delete('/api/admin/plans/:id/features/:key', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  await planRepository.removeFeature(req.params.id, req.params.key);
+  res.json({ success: true });
+}));
+
+app.post('/api/admin/plans/:id/sync-stripe', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const result = await stripeService.syncPlanToStripe(req.params.id);
+  res.json({ success: true, ...result });
+}));
+
+// ─── Admin: User Management ─────────────────────────────────────────────────
+
+app.get('/api/admin/users', requireAuth, requireAdmin, asyncHandler(async (req: any, res) => {
+  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const search = req.query.search as string | undefined;
+  const role = req.query.role as string | undefined;
+  const result = await adminUserRepository.findAllPaginated(offset, limit, { search, role });
+
+  // Enrich with subscription/plan info
+  const usersWithPlans = await Promise.all(
+    result.users.map(async (user) => {
+      const workspaces = await workspaceRepository.findAllByUserId(user.id);
+      const primaryWorkspace = workspaces[0];
+      let planName = null;
+      let credits = 0;
+      if (primaryWorkspace) {
+        const sub = await subscriptionRepository.findByWorkspaceId(primaryWorkspace.id);
+        if (sub) {
+          const plan = await planRepository.findById(sub.plan_id);
+          planName = plan?.name || null;
+        }
+        const balance = await creditRepository.getBalance(primaryWorkspace.id);
+        credits = balance?.balance || 0;
+      }
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        role: user.role,
+        created_at: user.created_at,
+        plan_name: planName,
+        credits,
+        workspace_count: workspaces.length,
+      };
+    })
+  );
+
+  res.json({ success: true, users: usersWithPlans, total: result.total });
+}));
+
+app.get('/api/admin/users/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const user = await adminUserRepository.findById(req.params.id);
+  if (!user) throw createError('User not found', 404, 'USER_NOT_FOUND');
+
+  const workspaces = await workspaceRepository.findAllByUserId(user.id);
+  const workspacesWithSubs = await Promise.all(
+    workspaces.map(async (ws) => {
+      const sub = await subscriptionRepository.findByWorkspaceId(ws.id);
+      const balance = await creditRepository.getBalance(ws.id);
+      let planName = null;
+      if (sub) {
+        const plan = await planRepository.findById(sub.plan_id);
+        planName = plan?.name || null;
+      }
+      return {
+        ...ws,
+        subscription: sub,
+        plan_name: planName,
+        credits: balance?.balance || 0,
+      };
+    })
+  );
+
+  res.json({
+    success: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar_url: user.avatar_url,
+      role: user.role,
+      github_id: user.github_id,
+      google_id: user.google_id,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    },
+    workspaces: workspacesWithSubs,
+  });
+}));
+
+app.put('/api/admin/users/:id/role', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { role } = req.body;
+  if (!['user', 'admin', 'super_admin'].includes(role)) {
+    throw createError('Invalid role', 400, 'INVALID_ROLE');
+  }
+  const user = await adminUserRepository.updateRole(req.params.id, role);
+  if (!user) throw createError('User not found', 404, 'USER_NOT_FOUND');
+  auditLog(req as any, 'user.role_change', 'user', req.params.id, { new_role: role });
+  res.json({ success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+}));
+
+// ─── Admin: Credit Management ───────────────────────────────────────────────
+
+app.get('/api/admin/workspaces/:wsId/credits', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const balance = await creditRepository.getBalance(req.params.wsId);
+  res.json({ success: true, balance });
+}));
+
+app.post('/api/admin/workspaces/:wsId/credits/grant', requireAuth, requireAdmin, validate(schemas.grantCredits), asyncHandler(async (req: any, res) => {
+  const txn = await billingService.grantCredits(
+    req.params.wsId,
+    req.body.amount,
+    req.body.description,
+    req.user!.id
+  );
+  auditLog(req, 'credits.grant', 'workspace', req.params.wsId, { amount: req.body.amount });
+  res.json({ success: true, transaction: txn });
+}));
+
+app.post('/api/admin/workspaces/:wsId/credits/revoke', requireAuth, requireAdmin, validate(schemas.revokeCredits), asyncHandler(async (req: any, res) => {
+  try {
+    const txn = await billingService.revokeCredits(
+      req.params.wsId,
+      req.body.amount,
+      req.body.description,
+      req.user!.id
+    );
+    auditLog(req, 'credits.revoke', 'workspace', req.params.wsId, { amount: req.body.amount });
+    res.json({ success: true, transaction: txn });
+  } catch (err: any) {
+    if (err.message === 'Insufficient credits') {
+      throw createError('Workspace does not have enough credits to revoke', 400, 'INSUFFICIENT_CREDITS');
+    }
+    throw err;
+  }
+}));
+
+app.get('/api/admin/workspaces/:wsId/credits/history', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const result = await creditRepository.getTransactions(req.params.wsId, { offset, limit });
+  res.json({ success: true, ...result });
+}));
+
+// ─── Admin: Subscription Management ─────────────────────────────────────────
+
+app.get('/api/admin/subscriptions', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const status = req.query.status as string | undefined;
+  const plan_id = req.query.plan_id as string | undefined;
+  const result = await subscriptionRepository.findAllPaginated(offset, limit, { status, plan_id });
+
+  // Enrich with workspace and plan info
+  const enriched = await Promise.all(
+    result.subscriptions.map(async (sub) => {
+      const workspace = await workspaceRepository.findById(sub.workspace_id);
+      const plan = await planRepository.findById(sub.plan_id);
+      const balance = await creditRepository.getBalance(sub.workspace_id);
+      let ownerName = null;
+      if (workspace?.owner_id) {
+        const owner = await adminUserRepository.findById(workspace.owner_id);
+        ownerName = owner?.name || null;
+      }
+      return {
+        ...sub,
+        workspace_name: workspace?.name || null,
+        owner_name: ownerName,
+        plan_name: plan?.name || null,
+        credits_remaining: balance?.balance || 0,
+      };
+    })
+  );
+
+  res.json({ success: true, subscriptions: enriched, total: result.total });
+}));
+
+app.get('/api/admin/workspaces/:wsId/subscription', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const data = await billingService.getWorkspaceSubscription(req.params.wsId);
+  if (!data) throw createError('No subscription found', 404, 'NO_SUBSCRIPTION');
+  res.json({ success: true, ...data });
+}));
+
+app.put('/api/admin/workspaces/:wsId/subscription', requireAuth, requireAdmin, validate(schemas.adminUpdateSubscription), asyncHandler(async (req, res) => {
+  const sub = await subscriptionRepository.findByWorkspaceId(req.params.wsId);
+  if (!sub) throw createError('No subscription found', 404, 'NO_SUBSCRIPTION');
+
+  const updates: any = {};
+  if (req.body.plan_id) updates.plan_id = req.body.plan_id;
+  if (req.body.status) updates.status = req.body.status;
+
+  const updated = await subscriptionRepository.update(sub.id, updates);
+  res.json({ success: true, subscription: updated });
+}));
+
+// ─── Admin: Overview Stats ──────────────────────────────────────────────────
+
+app.get('/api/admin/stats/overview', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const totalUsers = await adminUserRepository.countAll();
+  const subscriptionsByPlan = await subscriptionRepository.countByPlan();
+
+  // Calculate MRR from active paid subscriptions
+  let mrr = 0;
+  for (const { plan_id, count } of subscriptionsByPlan) {
+    const plan = await planRepository.findById(plan_id);
+    if (plan && plan.price_cents > 0) {
+      mrr += plan.price_cents * count;
+    }
+  }
+
+  res.json({
+    success: true,
+    stats: {
+      total_users: totalUsers,
+      subscriptions_by_plan: subscriptionsByPlan,
+      mrr_cents: mrr,
+    },
+  });
+}));
+
+// ==================== PHASE 6: ADVANCED ADMIN FEATURES ====================
+
+// --- Analytics ---
+
+app.get('/api/admin/analytics/overview', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const totalUsers = await adminUserRepository.countAll();
+  const subscriptionsByPlan = await subscriptionRepository.countByPlan();
+
+  let mrr = 0;
+  let activeSubscriptions = 0;
+  for (const { plan_id, count } of subscriptionsByPlan) {
+    const plan = await planRepository.findById(plan_id);
+    if (plan && plan.price_cents > 0) {
+      mrr += plan.price_cents * count;
+    }
+    activeSubscriptions += count;
+  }
+
+  res.json({
+    success: true,
+    overview: {
+      total_users: totalUsers,
+      active_subscriptions: activeSubscriptions,
+      mrr_cents: mrr,
+      arr_cents: mrr * 12,
+      subscriptions_by_plan: subscriptionsByPlan,
+    },
+  });
+}));
+
+app.get('/api/admin/analytics/signups', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const days = parseInt(req.query.days as string) || 30;
+  const result = await query<{ date: string; count: string }>(
+    `SELECT DATE(created_at) as date, COUNT(*) as count
+     FROM users
+     WHERE created_at >= NOW() - INTERVAL '1 day' * $1
+     GROUP BY DATE(created_at)
+     ORDER BY date`,
+    [days]
+  );
+  res.json({ success: true, signups: result.map(r => ({ date: r.date, count: parseInt(r.count, 10) })) });
+}));
+
+app.get('/api/admin/analytics/revenue', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const result = await query<{ plan_name: string; subscriber_count: string; mrr_cents: string }>(
+    `SELECT p.name as plan_name, COUNT(ws.id) as subscriber_count, p.price_cents * COUNT(ws.id) as mrr_cents
+     FROM workspace_subscriptions ws
+     JOIN plans p ON ws.plan_id = p.id
+     WHERE ws.status IN ('active', 'trialing')
+     GROUP BY p.id, p.name, p.price_cents
+     ORDER BY mrr_cents DESC`
+  );
+  res.json({
+    success: true,
+    revenue: result.map(r => ({
+      plan_name: r.plan_name,
+      subscriber_count: parseInt(r.subscriber_count, 10),
+      mrr_cents: parseInt(r.mrr_cents, 10),
+    })),
+  });
+}));
+
+app.get('/api/admin/analytics/usage', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const days = parseInt(req.query.days as string) || 30;
+  const result = await query<{ date: string; credits_used: string }>(
+    `SELECT DATE(created_at) as date, ABS(SUM(amount)) as credits_used
+     FROM credit_transactions
+     WHERE type = 'usage' AND created_at >= NOW() - INTERVAL '1 day' * $1
+     GROUP BY DATE(created_at)
+     ORDER BY date`,
+    [days]
+  );
+  res.json({ success: true, usage: result.map(r => ({ date: r.date, credits_used: parseInt(r.credits_used, 10) })) });
+}));
+
+app.get('/api/admin/analytics/churn', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const days = parseInt(req.query.days as string) || 90;
+  const result = await query<{ date: string; cancellations: string }>(
+    `SELECT DATE(canceled_at) as date, COUNT(*) as cancellations
+     FROM workspace_subscriptions
+     WHERE canceled_at IS NOT NULL AND canceled_at >= NOW() - INTERVAL '1 day' * $1
+     GROUP BY DATE(canceled_at)
+     ORDER BY date`,
+    [days]
+  );
+  res.json({ success: true, churn: result.map(r => ({ date: r.date, cancellations: parseInt(r.cancellations, 10) })) });
+}));
+
+// --- User Management (extended) ---
+
+app.post('/api/admin/users/:id/suspend', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const user = await adminUserRepository.findById(req.params.id);
+  if (!user) throw createError('User not found', 404, 'NOT_FOUND');
+
+  await adminUserRepository.updateRole(req.params.id, 'user'); // keep role but mark suspended via subscription
+  // Suspend by deactivating subscription
+  const workspaces = await workspaceRepository.findAllByUserId(req.params.id);
+  for (const ws of workspaces) {
+    await subscriptionRepository.updateByWorkspaceId(ws.id, { status: 'canceled' });
+  }
+
+  auditLog(req as any, 'user.suspend', 'user', req.params.id);
+  res.json({ success: true, message: 'User suspended' });
+}));
+
+app.post('/api/admin/users/:id/unsuspend', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const user = await adminUserRepository.findById(req.params.id);
+  if (!user) throw createError('User not found', 404, 'NOT_FOUND');
+
+  const workspaces = await workspaceRepository.findAllByUserId(req.params.id);
+  for (const ws of workspaces) {
+    await subscriptionRepository.updateByWorkspaceId(ws.id, { status: 'active' });
+  }
+
+  auditLog(req as any, 'user.unsuspend', 'user', req.params.id);
+  res.json({ success: true, message: 'User unsuspended' });
+}));
+
+app.post('/api/admin/users/:id/impersonate', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const targetUser = await adminUserRepository.findById(req.params.id);
+  if (!targetUser) throw createError('User not found', 404, 'NOT_FOUND');
+
+  // Generate short-lived token (1 hour) for impersonation
+  const jwt = await import('jsonwebtoken');
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw createError('JWT secret not configured', 500, 'CONFIG_ERROR');
+
+  const token = jwt.default.sign(
+    { id: targetUser.id, email: targetUser.email, name: targetUser.name, role: targetUser.role },
+    secret,
+    { expiresIn: '1h' }
+  );
+
+  auditLog(req as any, 'user.impersonate', 'user', req.params.id);
+  res.json({ success: true, token, user: { id: targetUser.id, name: targetUser.name, email: targetUser.email } });
+}));
+
+// --- System Settings ---
+
+app.get('/api/admin/settings', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const settings = await systemSettingsRepository.getAll();
+  res.json({ success: true, settings });
+}));
+
+app.put('/api/admin/settings/:key', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { value } = req.body;
+  if (value === undefined || value === null) throw createError('Value is required', 400, 'VALIDATION_ERROR');
+
+  const setting = await systemSettingsRepository.set(req.params.key, String(value), req.user!.id);
+  auditLog(req as any, 'settings.update', 'setting', req.params.key, { value });
+  res.json({ success: true, setting });
+}));
+
+// --- Announcements ---
+
+app.get('/api/announcements/active', asyncHandler(async (_req, res) => {
+  const announcements = await announcementRepository.findActive();
+  res.json({ success: true, announcements });
+}));
+
+app.get('/api/admin/announcements', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const announcements = await announcementRepository.findAll();
+  res.json({ success: true, announcements });
+}));
+
+app.post('/api/admin/announcements', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const { title, body, type, is_active, starts_at, ends_at } = req.body;
+  if (!title) throw createError('Title is required', 400, 'VALIDATION_ERROR');
+
+  const announcement = await announcementRepository.create({
+    title,
+    body,
+    type,
+    is_active,
+    starts_at: starts_at ? new Date(starts_at) : undefined,
+    ends_at: ends_at ? new Date(ends_at) : undefined,
+    created_by: req.user!.id,
+  });
+
+  auditLog(req as any, 'announcement.create', 'announcement', announcement.id, { title });
+  res.status(201).json({ success: true, announcement });
+}));
+
+app.put('/api/admin/announcements/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const { title, body, type, is_active, starts_at, ends_at } = req.body;
+  const announcement = await announcementRepository.update(req.params.id, {
+    title,
+    body,
+    type,
+    is_active,
+    starts_at: starts_at ? new Date(starts_at) : starts_at === null ? null : undefined,
+    ends_at: ends_at ? new Date(ends_at) : ends_at === null ? null : undefined,
+  });
+
+  if (!announcement) throw createError('Announcement not found', 404, 'NOT_FOUND');
+  auditLog(req as any, 'announcement.update', 'announcement', req.params.id);
+  res.json({ success: true, announcement });
+}));
+
+app.delete('/api/admin/announcements/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const deleted = await announcementRepository.delete(req.params.id);
+  if (!deleted) throw createError('Announcement not found', 404, 'NOT_FOUND');
+  auditLog(req as any, 'announcement.delete', 'announcement', req.params.id);
+  res.json({ success: true });
+}));
+
+// --- Audit Log ---
+
+app.get('/api/admin/audit-log', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const { actor_id, action, target_type, target_id } = req.query as Record<string, string>;
+
+  const result = await auditRepository.findAll({
+    offset,
+    limit,
+    actor_id: actor_id || undefined,
+    action: action || undefined,
+    target_type: target_type || undefined,
+    target_id: target_id || undefined,
+  });
+
+  res.json({ success: true, ...result });
 }));
 
 // Error handling middleware (must be last)

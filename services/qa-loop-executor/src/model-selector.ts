@@ -3,13 +3,11 @@ import { createLogger } from '../../shared/logger/logger';
 const logger = createLogger('model-selector');
 
 /**
- * Claude model identifiers
+ * Claude model identifiers — streamlined to 2 models for cost/performance
  */
 export type ClaudeModel =
-  | 'claude-3-haiku-20240307'
   | 'claude-3-5-haiku-20241022'
-  | 'claude-sonnet-4-20250514'
-  | 'claude-3-opus-20240229';
+  | 'claude-sonnet-4-6';
 
 /**
  * Task complexity levels
@@ -25,10 +23,8 @@ export type FocusArea = 'explore' | 'chaos' | 'investigate' | 'retest';
  * Model pricing in dollars per million tokens
  */
 export const MODEL_PRICING: Record<ClaudeModel, { input: number; output: number }> = {
-  'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
   'claude-3-5-haiku-20241022': { input: 1, output: 5 },
-  'claude-sonnet-4-20250514': { input: 3, output: 15 },
-  'claude-3-opus-20240229': { input: 15, output: 75 }
+  'claude-sonnet-4-6': { input: 3, output: 15 },
 };
 
 /**
@@ -39,39 +35,29 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
   maxTokens: number;
   description: string;
 }> = {
-  'claude-3-haiku-20240307': {
-    complexity: ['simple'],
-    maxTokens: 4096,
-    description: 'Fast, cost-effective for simple tool calls and straightforward tasks'
-  },
   'claude-3-5-haiku-20241022': {
     complexity: ['simple', 'medium'],
     maxTokens: 8192,
-    description: 'Smart and cheap — good for exploration and structured test generation'
+    description: 'Smart and cheap — good for simple tool calls, exploration, and structured test generation'
   },
-  'claude-sonnet-4-20250514': {
-    complexity: ['simple', 'medium'],
-    maxTokens: 8192,
-    description: 'Balanced performance for exploration and test generation'
+  'claude-sonnet-4-6': {
+    complexity: ['simple', 'medium', 'complex'],
+    maxTokens: 64000,
+    description: 'Best all-round model — coding, analysis, complex reasoning, and vision'
   },
-  'claude-3-opus-20240229': {
-    complexity: ['medium', 'complex'],
-    maxTokens: 4096,
-    description: 'Highest capability for complex analysis and reasoning'
-  }
 };
 
 /**
  * Default model mapping for each focus area
- * explore/investigate use Sonnet — Haiku is NOT smart enough to reliably call
+ * explore/investigate use Sonnet 4.6 — Haiku is NOT smart enough to reliably call
  * save_test_case / add_bug with well-structured payloads.
- * chaos/retest are mechanical tool calls that Haiku handles fine.
+ * chaos/retest are mechanical tool calls that Haiku 3.5 handles fine.
  */
 export const FOCUS_AREA_MODELS: Record<FocusArea, ClaudeModel> = {
-  explore: 'claude-sonnet-4-20250514',     // Sonnet: reliable for structured tool calls
-  chaos: 'claude-3-haiku-20240307',        // Simple mechanical tool calls
-  investigate: 'claude-sonnet-4-20250514', // Sonnet for analysis
-  retest: 'claude-3-haiku-20240307'        // Straightforward test execution
+  explore: 'claude-sonnet-4-6',            // Sonnet 4.6: reliable for structured tool calls
+  chaos: 'claude-3-5-haiku-20241022',      // Haiku 3.5: simple mechanical tool calls
+  investigate: 'claude-sonnet-4-6',        // Sonnet 4.6 for analysis
+  retest: 'claude-3-5-haiku-20241022'      // Haiku 3.5: straightforward test execution
 };
 
 /**
@@ -97,7 +83,7 @@ const TOOL_COMPLEXITY: Record<string, TaskComplexity> = {
   'run_injection_test': 'medium',
   'run_boundary_test': 'medium',
 
-  // Complex tools - Opus for best results
+  // Complex tools - Sonnet 4.6 handles these well (no need for Opus anymore)
   'analyze_failure': 'complex',
   'correlate_failures': 'complex',
   'minimize_reproduction': 'complex',
@@ -157,13 +143,13 @@ export function selectModel(options: ModelSelectorOptions = {}): ModelSelection 
   if (focusArea) {
     const areaModel = FOCUS_AREA_MODELS[focusArea];
 
-    // Override with complexity-based selection if needed
-    if (complexity === 'complex' && focusArea !== 'investigate') {
-      logger.debug('Upgrading model for complex task', { focusArea, complexity });
+    // For complex tasks, always use Sonnet 4.6 (replaces Opus)
+    if (complexity === 'complex') {
+      logger.debug('Using Sonnet 4.6 for complex task', { focusArea, complexity });
       return {
-        model: 'claude-3-opus-20240229',
+        model: 'claude-sonnet-4-6',
         reason: `Complex task in ${focusArea} phase`,
-        estimatedCostPerCall: estimateCostPerCall('claude-3-opus-20240229')
+        estimatedCostPerCall: estimateCostPerCall('claude-sonnet-4-6')
       };
     }
 
@@ -180,17 +166,17 @@ export function selectModel(options: ModelSelectorOptions = {}): ModelSelection 
 
   switch (complexity) {
     case 'simple':
-      selectedModel = preferCostEffective ? 'claude-3-haiku-20240307' : 'claude-sonnet-4-20250514';
-      reason = preferCostEffective ? 'Cost-effective for simple task' : 'Balanced model for simple task';
+      selectedModel = preferCostEffective ? 'claude-3-5-haiku-20241022' : 'claude-sonnet-4-6';
+      reason = preferCostEffective ? 'Cost-effective Haiku for simple task' : 'Sonnet 4.6 for simple task';
       break;
     case 'complex':
-      selectedModel = 'claude-3-opus-20240229';
-      reason = 'Complex task requires advanced reasoning';
+      selectedModel = 'claude-sonnet-4-6';
+      reason = 'Complex task requires Sonnet 4.6 reasoning';
       break;
     case 'medium':
     default:
-      selectedModel = 'claude-sonnet-4-20250514';
-      reason = 'Standard model for medium complexity task';
+      selectedModel = 'claude-sonnet-4-6';
+      reason = 'Standard Sonnet 4.6 for medium complexity task';
       break;
   }
 
@@ -242,14 +228,10 @@ export function calculateCost(
  */
 export function getModelDisplayName(model: ClaudeModel): string {
   switch (model) {
-    case 'claude-3-haiku-20240307':
-      return 'Claude 3 Haiku';
     case 'claude-3-5-haiku-20241022':
       return 'Claude 3.5 Haiku';
-    case 'claude-sonnet-4-20250514':
-      return 'Claude Sonnet 4';
-    case 'claude-3-opus-20240229':
-      return 'Claude 3 Opus';
+    case 'claude-sonnet-4-6':
+      return 'Claude Sonnet 4.6';
     default:
       return model;
   }
@@ -263,21 +245,21 @@ export function shouldUpgradeModel(
   consecutiveFailures: number,
   taskComplexity: TaskComplexity
 ): { shouldUpgrade: boolean; suggestedModel?: ClaudeModel; reason?: string } {
-  // Upgrade if multiple failures with simpler model
-  if (consecutiveFailures >= 3 && currentModel === 'claude-3-haiku-20240307') {
+  // Upgrade if multiple failures with Haiku
+  if (consecutiveFailures >= 3 && currentModel === 'claude-3-5-haiku-20241022') {
     return {
       shouldUpgrade: true,
-      suggestedModel: 'claude-sonnet-4-20250514',
-      reason: 'Multiple failures with Haiku, upgrading to Sonnet'
+      suggestedModel: 'claude-sonnet-4-6',
+      reason: 'Multiple failures with Haiku, upgrading to Sonnet 4.6'
     };
   }
 
-  // Upgrade for complex tasks if using basic model
-  if (taskComplexity === 'complex' && currentModel !== 'claude-3-opus-20240229') {
+  // Upgrade for complex tasks if using Haiku
+  if (taskComplexity === 'complex' && currentModel !== 'claude-sonnet-4-6') {
     return {
       shouldUpgrade: true,
-      suggestedModel: 'claude-3-opus-20240229',
-      reason: 'Complex task benefits from Opus capabilities'
+      suggestedModel: 'claude-sonnet-4-6',
+      reason: 'Complex task benefits from Sonnet 4.6 capabilities'
     };
   }
 

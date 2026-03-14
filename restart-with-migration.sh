@@ -5,7 +5,7 @@
 set -e
 
 echo "=========================================="
-echo "Thunder Code - Service Restart Script"
+echo "WhyNot - Service Restart Script"
 echo "=========================================="
 echo ""
 

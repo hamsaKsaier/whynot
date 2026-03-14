@@ -1,6 +1,6 @@
 # API Documentation
 
-Complete API reference for Thunder Code Gateway.
+Complete API reference for WhyNot Gateway.
 
 ## Base URL
 

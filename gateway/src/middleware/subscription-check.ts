@@ -1,0 +1,71 @@
+import { Request, Response, NextFunction } from 'express';
+import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
+
+const subscriptionRepository = new SubscriptionRepository();
+
+/**
+ * Middleware that checks if the workspace has an active or trialing subscription.
+ * Returns 403 if no active subscription exists.
+ */
+export async function requireActiveSubscription(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      res.status(401).json({ success: false, error: 'Workspace not resolved' });
+      return;
+    }
+
+    const subscription = await subscriptionRepository.findByWorkspaceId(workspaceId);
+
+    if (!subscription) {
+      res.status(403).json({
+        success: false,
+        error: 'No active subscription',
+        code: 'NO_SUBSCRIPTION',
+        details: {
+          upgrade_url: '/billing',
+        },
+      });
+      return;
+    }
+
+    const activeStatuses = ['active', 'trialing'];
+    if (!activeStatuses.includes(subscription.status)) {
+      res.status(403).json({
+        success: false,
+        error: 'Your subscription is not active',
+        code: 'SUBSCRIPTION_INACTIVE',
+        details: {
+          status: subscription.status,
+          upgrade_url: '/billing',
+        },
+      });
+      return;
+    }
+
+    // Check if trial has expired
+    if (subscription.status === 'trialing' && subscription.trial_end) {
+      const trialEnd = new Date(subscription.trial_end);
+      if (trialEnd < new Date()) {
+        res.status(403).json({
+          success: false,
+          error: 'Your free trial has expired',
+          code: 'TRIAL_EXPIRED',
+          details: {
+            trial_end: trialEnd.toISOString(),
+            upgrade_url: '/billing',
+          },
+        });
+        return;
+      }
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+}

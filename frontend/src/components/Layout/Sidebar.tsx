@@ -13,6 +13,7 @@ import {
   FiGithub,
   FiBell,
   FiGitBranch,
+  FiCreditCard,
 } from 'react-icons/fi';
 import { Tooltip } from '../common/Tooltip';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
@@ -56,9 +57,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       label: 'Config',
       items: [
-        { icon: FiLink,   label: 'Integrations', path: '/integrations' },
-        { icon: FiGithub, label: 'GitHub Repos',  path: '/github-repos' },
-        { icon: FiBell,   label: 'Webhooks',      path: '/webhooks' },
+        { icon: FiLink,       label: 'Integrations', path: '/integrations' },
+        { icon: FiGithub,     label: 'GitHub Repos',  path: '/github-repos' },
+        { icon: FiBell,       label: 'Webhooks',      path: '/webhooks' },
+        { icon: FiCreditCard, label: 'Billing',        path: '/billing' },
       ],
     },
   ];
@@ -80,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!collapsed && (
           <div className="flex items-center">
             <FiZap className="h-6 w-6 text-primary-600 mr-2" />
-            <span className="font-bold text-gray-900">{activeWorkspace?.name || 'Thunder Code'}</span>
+            <span className="font-bold text-gray-900">{activeWorkspace?.name || 'WhyNot'}</span>
           </div>
         )}
         {collapsed && (
@@ -106,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Project
           </div>
           <div className="text-sm font-medium text-gray-900">
-            {activeWorkspace?.name || 'Thunder Code'}
+            {activeWorkspace?.name || 'WhyNot'}
           </div>
         </div>
       )}

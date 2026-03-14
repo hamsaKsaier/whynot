@@ -8,6 +8,14 @@
       "cwd": "frontend",
       "port": 5183,
       "autoPort": true
+    },
+    {
+      "name": "Admin Frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "admin-frontend",
+      "port": 5184,
+      "autoPort": true
     }
   ]
 }

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiPlay, FiServer, FiFileText, FiHome, FiCommand } from 'react-icons/fi';
+import { FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiPlay, FiServer, FiFileText, FiHome, FiCommand, FiCreditCard } from 'react-icons/fi';
 import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { useAuth } from '../../contexts/AuthContext';
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher';
+import { getBillingCredits } from '../../services/api';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -106,8 +107,17 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const location = useLocation();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
+
+  // Fetch credit balance
+  useEffect(() => {
+    if (!user) return;
+    getBillingCredits()
+      .then((data) => setCreditBalance(data.balance ?? null))
+      .catch(() => {});
+  }, [user, location.pathname]);
 
   /** Get up-to-two-letter initials from the user's name */
   const initials = user
@@ -233,6 +243,24 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
 
       {/* Right: Actions & User Menu */}
       <div className="flex items-center space-x-1 sm:space-x-2">
+        {/* Credit Balance Pill */}
+        {creditBalance !== null && (
+          <Link
+            to="/billing"
+            className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+              creditBalance <= 10
+                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                : creditBalance <= 50
+                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+            title="Credit balance"
+          >
+            <FiCreditCard className="h-3 w-3" />
+            {creditBalance} credits
+          </Link>
+        )}
+
         {/* Contextual Help ("?") */}
         <div className="relative" ref={helpRef}>
           <button

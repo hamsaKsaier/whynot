@@ -110,7 +110,7 @@ class VisualDiffAnalyzer:
             
             elif provider == "anthropic" and self.llm_client.anthropic_client:
                 # Anthropic Claude Vision API
-                model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5-20251101")
+                model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
                 response = self.llm_client.anthropic_client.messages.create(
                     model=model,
                     max_tokens=2000,

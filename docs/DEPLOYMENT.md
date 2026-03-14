@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying Thunder Code to production environments.
+This guide covers deploying WhyNot to production environments.
 
 ## Prerequisites
 

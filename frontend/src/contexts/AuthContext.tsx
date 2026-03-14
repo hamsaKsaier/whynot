@@ -8,6 +8,7 @@ export interface AuthUser {
   email: string | null;
   name: string;
   avatarUrl: string | null;
+  role: string;
 }
 
 interface AuthContextValue {
@@ -38,8 +39,9 @@ function serverUserToAuthUser(u: {
   email: string | null;
   name: string;
   avatarUrl: string | null;
+  role?: string;
 }): AuthUser {
-  return { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl };
+  return { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, role: u.role || 'user' };
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -57,12 +59,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     apiClient
-      .get<{ success: boolean; user: { id: string; email: string | null; name: string } }>(
+      .get<{ success: boolean; user: { id: string; email: string | null; name: string; role?: string } }>(
         '/auth/me'
       )
       .then((res) => {
         if (res.data.success) {
-          setUser({ ...res.data.user, avatarUrl: null });
+          setUser({ ...res.data.user, avatarUrl: null, role: res.data.user.role || 'user' });
         } else {
           clearToken();
         }
@@ -80,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await apiClient.post<{
       success: boolean;
       token: string;
-      user: { id: string; email: string | null; name: string; avatarUrl: string | null };
+      user: { id: string; email: string | null; name: string; avatarUrl: string | null; role?: string };
     }>('/auth/login', { email, password });
     storeToken(res.data.token);
     setUser(serverUserToAuthUser(res.data.user));
@@ -90,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await apiClient.post<{
       success: boolean;
       token: string;
-      user: { id: string; email: string | null; name: string; avatarUrl: string | null };
+      user: { id: string; email: string | null; name: string; avatarUrl: string | null; role?: string };
     }>('/auth/register', { email, password, name });
     storeToken(res.data.token);
     setUser(serverUserToAuthUser(res.data.user));

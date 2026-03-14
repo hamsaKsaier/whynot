@@ -135,16 +135,12 @@ export interface BudgetStatus {
     retest: number;
   };
   costByModel: {
-    'claude-3-haiku-20240307': number;
     'claude-3-5-haiku-20241022': number;
-    'claude-sonnet-4-20250514': number;
-    'claude-3-opus-20240229': number;
+    'claude-sonnet-4-6': number;
   };
   tokensByModel: {
-    'claude-3-haiku-20240307': number;
     'claude-3-5-haiku-20241022': number;
-    'claude-sonnet-4-20250514': number;
-    'claude-3-opus-20240229': number;
+    'claude-sonnet-4-6': number;
   };
 }
 
@@ -202,16 +198,12 @@ export class GuardianAgent {
         retest: 0
       },
       costByModel: {
-        'claude-3-haiku-20240307': 0,
         'claude-3-5-haiku-20241022': 0,
-        'claude-sonnet-4-20250514': 0,
-        'claude-3-opus-20240229': 0
+        'claude-sonnet-4-6': 0,
       },
       tokensByModel: {
-        'claude-3-haiku-20240307': 0,
         'claude-3-5-haiku-20241022': 0,
-        'claude-sonnet-4-20250514': 0,
-        'claude-3-opus-20240229': 0
+        'claude-sonnet-4-6': 0,
       }
     };
   }
@@ -1016,8 +1008,8 @@ export class GuardianAgent {
     for (const [model, cost] of Object.entries(this.budgetTracking.costByModel)) {
       if (cost > 0) {
         // Use friendly model names
-        const friendlyName = model === 'claude-3-haiku-20240307' ? 'Haiku' :
-          model === 'claude-sonnet-4-20250514' ? 'Sonnet' : 'Opus';
+        const friendlyName = model === 'claude-3-5-haiku-20241022' ? 'Haiku 3.5' :
+          model === 'claude-sonnet-4-6' ? 'Sonnet 4.6' : model;
         costByModel[friendlyName] = formatCost(cost);
       }
     }

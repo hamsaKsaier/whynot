@@ -16,6 +16,9 @@ import { requireAuth } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/error-handler';
 import { validate } from '../middleware/validation';
 import { qaLoopSessionRateLimiter } from '../middleware/rate-limit';
+import { requireCredits, deductCredits } from '../middleware/credit-gate';
+import { requireFeature } from '../middleware/feature-gate';
+import { requireActiveSubscription } from '../middleware/subscription-check';
 import { createLogger } from '../../shared/logger/logger';
 
 const router  = express.Router();
@@ -297,10 +300,13 @@ function createProxy(
 
 // ── Session lifecycle ──────────────────────────────────────────────────────────
 
-// Start session — rate-limited, SSRF-protected, Zod-validated
+// Start session — rate-limited, SSRF-protected, Zod-validated, credit + feature gated
 router.post(
   '/sessions',
   requireAuth,
+  requireActiveSubscription,
+  requireFeature('qa_loop'),
+  requireCredits('QA_LOOP_SESSION_RESERVE'),
   qaLoopSessionRateLimiter,
   validate(qaLoopSchemas.startSession),
   asyncHandler(async (req, res) => {
@@ -311,6 +317,10 @@ router.post(
         { ...req.body, workspaceId: req.workspaceId },
         { headers: qaLoopHeaders(req), timeout: 30_000 },
       );
+      // Deduct credits after successful session creation
+      if (req.workspaceId) {
+        await deductCredits(req.workspaceId, 'QA_LOOP_SESSION_RESERVE', `Session ${response.data?.session?.id || 'new'}`).catch(() => {});
+      }
       res.status(201).json(response.data);
     });
   }),

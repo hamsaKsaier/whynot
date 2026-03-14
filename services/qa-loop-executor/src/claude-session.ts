@@ -137,7 +137,7 @@ export class ClaudeSession {
 
   async runIteration(
     prompt: string,
-    model: ClaudeModel = 'claude-sonnet-4-20250514'
+    model: ClaudeModel = 'claude-sonnet-4-6'
   ): Promise<IterationResult> {
     this.abortController = new AbortController();
 

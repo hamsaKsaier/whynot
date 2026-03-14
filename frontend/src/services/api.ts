@@ -39,10 +39,15 @@ apiClient.interceptors.request.use((config) => {
 });
 
 /** On 401, clear token and redirect to /login (skip for auth-specific endpoints) */
+/** On 402/403 with billing codes, dispatch upgrade prompt event */
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const code = error.response?.data?.code;
+    const details = error.response?.data?.details;
+
+    if (status === 401) {
       const url: string = error.config?.url || '';
       const isAuthEndpoint = url.includes('/auth/');
       if (!isAuthEndpoint) {
@@ -52,6 +57,22 @@ apiClient.interceptors.response.use(
         }
       }
     }
+
+    // Credit / feature / subscription gates
+    if (status === 402 && code === 'INSUFFICIENT_CREDITS') {
+      window.dispatchEvent(new CustomEvent('upgrade-prompt', {
+        detail: { type: 'credits', details },
+      }));
+    } else if (status === 403 && (code === 'FEATURE_NOT_AVAILABLE' || code === 'FEATURE_LIMIT_REACHED')) {
+      window.dispatchEvent(new CustomEvent('upgrade-prompt', {
+        detail: { type: 'feature', details },
+      }));
+    } else if (status === 403 && (code === 'NO_SUBSCRIPTION' || code === 'SUBSCRIPTION_INACTIVE' || code === 'TRIAL_EXPIRED')) {
+      window.dispatchEvent(new CustomEvent('upgrade-prompt', {
+        detail: { type: 'subscription', details: { ...details, status: code } },
+      }));
+    }
+
     return Promise.reject(error);
   }
 );
@@ -540,6 +561,58 @@ export const setVisualRegressionIgnored = async (
     `/visual-regressions/${comparisonId}/ignore`,
     { ignored }
   );
+  return response.data;
+};
+
+// ─── Billing API ──────────────────────────────────────────────────────────────
+
+export const getBillingSubscription = async () => {
+  const response = await apiClient.get('/billing/subscription');
+  return response.data;
+};
+
+export const getBillingCredits = async () => {
+  const response = await apiClient.get('/billing/credits');
+  return response.data;
+};
+
+export const getBillingCreditsHistory = async (offset = 0, limit = 50) => {
+  const response = await apiClient.get('/billing/credits/history', { params: { offset, limit } });
+  return response.data;
+};
+
+export const getBillingUsage = async () => {
+  const response = await apiClient.get('/billing/usage');
+  return response.data;
+};
+
+export const getPublicPlans = async () => {
+  const response = await apiClient.get('/plans');
+  return response.data;
+};
+
+export const createCheckoutSession = async (planId: string) => {
+  const response = await apiClient.post('/billing/checkout', { plan_id: planId });
+  return response.data;
+};
+
+export const createPortalSession = async () => {
+  const response = await apiClient.post('/billing/portal');
+  return response.data;
+};
+
+export const getBillingInvoices = async () => {
+  const response = await apiClient.get('/billing/invoices');
+  return response.data;
+};
+
+export const cancelSubscription = async (immediate = false) => {
+  const response = await apiClient.post('/billing/cancel', { immediate });
+  return response.data;
+};
+
+export const reactivateSubscription = async () => {
+  const response = await apiClient.post('/billing/reactivate');
   return response.data;
 };
 
