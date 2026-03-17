@@ -93,7 +93,11 @@ export class GitHubService {
     const relevantPaths: Map<string, number> = new Map();
 
     // Source file extensions to search
-    const sourceExtensions = ['.ts', '.tsx', '.js', '.jsx', '.vue', '.svelte', '.py', '.rb', '.go', '.java', '.php'];
+    const sourceExtensions = [
+      '.ts', '.tsx', '.js', '.jsx', '.vue', '.svelte',
+      '.py', '.rb', '.go', '.java', '.php',
+      '.html', '.ejs', '.hbs', '.pug', '.css', '.scss',
+    ];
 
     const sourceFiles = tree.filter(item =>
       sourceExtensions.some(ext => item.path.endsWith(ext)) &&
@@ -101,6 +105,8 @@ export class GitHubService {
       !item.path.includes('.test.') &&
       !item.path.includes('.spec.') &&
       !item.path.includes('__tests__') &&
+      !item.path.includes('dist/') &&
+      !item.path.includes('build/') &&
       (item.size || 0) < 100000 // Skip very large files
     );
 
@@ -156,11 +162,33 @@ export class GitHubService {
       }
     }
 
+    // Always include entry point files (server.js, app.js, etc.) — these often contain the backend logic
+    const entryPointNames = ['server.js', 'app.js', 'index.js', 'main.js', 'server.ts', 'app.ts', 'index.ts', 'main.ts'];
+    const entryPoints = sourceFiles.filter(f => {
+      const name = f.path.split('/').pop()?.toLowerCase() || '';
+      return entryPointNames.includes(name);
+    });
+    for (const ep of entryPoints) {
+      if (!relevantPaths.has(ep.path)) {
+        relevantPaths.set(ep.path, 3); // High score for entry points
+      }
+    }
+
     // Sort by score and return top files
-    return Array.from(relevantPaths.entries())
+    let results = Array.from(relevantPaths.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5) // Max 5 files
+      .slice(0, 8) // Max 8 files
       .map(([path]) => path);
+
+    // Fallback: if repo is small, include all source files
+    if (results.length === 0 && sourceFiles.length <= 20) {
+      results = sourceFiles
+        .filter(f => (f.size || 0) < 50000)
+        .slice(0, 10)
+        .map(f => f.path);
+    }
+
+    return results;
   }
 
   /**
@@ -258,5 +286,54 @@ export class GitHubService {
   async getDefaultBranch(): Promise<string> {
     const data = await this.request(`/repos/${this.owner}/${this.repo}`);
     return data.default_branch || 'main';
+  }
+
+  /**
+   * Add a comment to a PR (uses Issues API — PRs are issues in GitHub)
+   */
+  async addPRComment(prNumber: number, body: string): Promise<void> {
+    await this.request(`/repos/${this.owner}/${this.repo}/issues/${prNumber}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
+  }
+
+  /**
+   * Merge a pull request
+   */
+  async mergePullRequest(prNumber: number, commitMessage?: string): Promise<{ merged: boolean; sha: string }> {
+    const body: any = {
+      merge_method: 'merge',
+    };
+    if (commitMessage) {
+      body.commit_message = commitMessage;
+    }
+    const data = await this.request(`/repos/${this.owner}/${this.repo}/pulls/${prNumber}/merge`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    logger.info('PR merged', { prNumber, sha: data.sha });
+    return { merged: data.merged, sha: data.sha };
+  }
+
+  /**
+   * Push a new commit to an existing branch (update file on branch)
+   */
+  async pushFixToExistingBranch(
+    path: string,
+    content: string,
+    message: string,
+    branch: string
+  ): Promise<void> {
+    // Get the current SHA of the file on this branch
+    try {
+      const fileData = await this.request(
+        `/repos/${this.owner}/${this.repo}/contents/${path}?ref=${branch}`
+      );
+      await this.updateFile(path, content, message, branch, fileData.sha);
+    } catch (error: any) {
+      // File doesn't exist on branch, create it
+      await this.updateFile(path, content, message, branch);
+    }
   }
 }

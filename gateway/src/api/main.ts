@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import { WorkflowOrchestrator } from '../workflow/workflow-orchestrator';
@@ -122,8 +123,15 @@ const PORT = process.env.PORT || 3000;
 const logger = createLogger('gateway');
 
 // Middleware
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false,  // We handle CSP separately if needed
+  crossOriginEmbedderPolicy: false,  // Allow embedding for preview/testing features
+}));
+
 const corsOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
+  process.env.FRONTEND_URL || 'http://localhost:5183',
   process.env.ADMIN_FRONTEND_URL || 'http://localhost:5184',
 ];
 app.use(cors({
@@ -387,8 +395,20 @@ app.delete('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => 
   res.json({ success: true, message: 'Workspace deleted' });
 }));
 
+// ─── Public routes (no auth required) ────────────────────────────────────────
+import { publicRouter } from './public-router';
+app.use('/api/public', publicRouter);
+
+// ─── CI routes (API key auth — must be before requireAuth blanket) ───────────
+import { ciRouter } from './ci-router';
+app.use('/api/ci', ciRouter);
+
 // ─── All routes below this line require a valid JWT ───────────────────────────
 app.use('/api', requireAuth);
+
+// ─── Monitor routes (requires auth) ──────────────────────────────────────────
+import { monitorRouter } from './monitor-router';
+app.use('/api/monitors', monitorRouter);
 
 // Main workflow endpoint (with stricter rate limiting)
 app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), asyncHandler(async (req, res) => {
@@ -1910,6 +1930,29 @@ app.get('/api/bugs/:bugId/auto-fix', requireAuth, asyncHandler(async (req: any, 
   res.json(attempts);
 }));
 
+// Start auto-fix + retest loop (the killer feature)
+// Fix code → Create PR → Retest → Iterate until quality target hit
+app.post('/api/bugs/:bugId/auto-fix-loop', requireAuth, asyncHandler(async (req: any, res) => {
+  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  const { bugId } = req.params;
+  const { github_repo_id, max_iterations, quality_threshold, auto_merge } = req.body;
+  if (!github_repo_id) return res.status(400).json({ error: 'github_repo_id is required' });
+
+  const attempt = await autoFixService.startAutoFixLoop(bugId, github_repo_id, {
+    maxIterations: max_iterations || 3,
+    qualityThreshold: quality_threshold || 80,
+    workspaceId: req.workspaceId,
+    autoMerge: auto_merge !== false, // default true
+  });
+
+  res.status(202).json({
+    ...attempt,
+    message: auto_merge !== false
+      ? 'Auto-fix loop started. The system will fix code, create a PR, auto-merge, retest, and iterate until quality target is met.'
+      : 'Auto-fix loop started. The system will fix code, create a PR, retest, and iterate until quality target is met.',
+  });
+}));
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PUBLIC PLAN ROUTES (no auth required — for pricing page)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2518,5 +2561,12 @@ app.listen(PORT, () => {
 
   // Start screenshot cleanup scheduler (runs once on startup + every 24h)
   startCleanupScheduler();
+
+  // Start QA Monitor scheduler (checks every 60s for due monitors)
+  import('../services/qa-monitor-scheduler').then(({ startMonitorScheduler }) => {
+    startMonitorScheduler();
+  }).catch(err => {
+    logger.warn('QA Monitor scheduler failed to start', { error: err.message });
+  });
 });
 
