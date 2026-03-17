@@ -9,6 +9,7 @@ import { RetestExecutor } from './retest-executor';
 import { ParallelTestExecutor } from './parallel-test-executor';
 import { selectModel, ClaudeModel, FOCUS_AREA_MODELS, getModelDisplayName } from './model-selector';
 import { MCPBrowser } from './mcp-browser';
+import { stitchVideo, cleanupFrames } from './video-stitcher';
 
 
 const logger = createLogger('loop-orchestrator');
@@ -114,6 +115,9 @@ export class LoopOrchestrator {
       this.mcpBrowser = new MCPBrowser(this.sessionId);
       await this.mcpBrowser.start();
 
+      // Start video recording (captures screenshots as frames for stitching into MP4)
+      await this.mcpBrowser.startRecording();
+
       // Wire browser to chaos agent so it uses Playwright MCP instead of legacy REST
       this.chaosAgent.setBrowser(this.mcpBrowser);
 
@@ -181,6 +185,23 @@ export class LoopOrchestrator {
       } catch (e) {
         logger.warn('Failed to generate final report', { error: e });
       }
+      // Stitch video from captured frames
+      if (this.mcpBrowser) {
+        try {
+          const { frameDir, frameCount } = this.mcpBrowser.stopRecording();
+          if (frameDir && frameCount >= 2) {
+            const videoFilename = await stitchVideo(this.sessionId, frameDir, frameCount);
+            if (videoFilename) {
+              await this.repository.updateSessionVideoPath(this.sessionId, videoFilename);
+              logger.info('Session video saved', { sessionId: this.sessionId, videoFilename });
+            }
+            await cleanupFrames(frameDir);
+          }
+        } catch (videoErr: any) {
+          logger.warn('Video stitching failed (non-critical)', { error: videoErr.message });
+        }
+      }
+
       // Stop MCP browser subprocess
       if (this.mcpBrowser) {
         await this.mcpBrowser.stop();

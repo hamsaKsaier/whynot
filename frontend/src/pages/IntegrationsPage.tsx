@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiLink, FiPlus, FiTrash2, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
+import { FiLink, FiPlus, FiTrash2, FiCheck, FiX, FiRefreshCw, FiKey, FiCopy, FiTerminal } from 'react-icons/fi';
 import { apiClient } from '../services/api';
 import { useToastContext } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -39,7 +39,7 @@ const INTEGRATION_TYPES = [
     color: 'bg-purple-500',
     fields: [
       { key: 'apiToken', label: 'API Token', placeholder: 'Your ClickUp API token', type: 'password' },
-      { key: 'listId', label: 'List ID', placeholder: 'Target list ID for tasks', type: 'text' },
+      { key: 'listId', label: 'List ID', placeholder: 'List ID or full ClickUp list URL', type: 'text' },
     ],
   },
   {
@@ -308,6 +308,9 @@ export const IntegrationsPage: React.FC = () => {
         </ModalFooter>
       </Modal>
 
+      {/* ── CI/CD Integration Section ────────────────────────────────────── */}
+      <CIKeysSection />
+
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!deleteConfirm}
@@ -319,6 +322,199 @@ export const IntegrationsPage: React.FC = () => {
         onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
         onCancel={() => setDeleteConfirm(null)}
       />
+    </div>
+  );
+};
+
+// ── CI API Keys Section ────────────────────────────────────────────────────
+
+interface CIKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  last_used_at: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+const CIKeysSection: React.FC = () => {
+  const [keys, setKeys] = useState<CIKey[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const loadKeys = async () => {
+    try {
+      const res = await apiClient.get('/ci/keys');
+      setKeys(res.data);
+    } catch {
+      // CI keys endpoint may not be available
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadKeys(); }, []);
+
+  const handleCreate = async () => {
+    if (!newKeyName.trim()) return;
+    setCreating(true);
+    try {
+      const res = await apiClient.post('/ci/keys', { name: newKeyName });
+      setCreatedKey(res.data.key);
+      setNewKeyName('');
+      loadKeys();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to create API key');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    if (!window.confirm('Revoke this API key? Any CI pipelines using it will stop working.')) return;
+    try {
+      await apiClient.delete(`/ci/keys/${id}`);
+      loadKeys();
+    } catch (error) {
+      console.error('Failed to revoke key:', error);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="mt-10">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <FiTerminal className="h-5 w-5 text-purple-600" />
+            CI/CD Integration
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Run QA scans from GitHub Actions, GitLab CI, or any CI pipeline
+          </p>
+        </div>
+        <button
+          onClick={() => { setShowCreate(!showCreate); setCreatedKey(null); }}
+          className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm transition-colors"
+        >
+          <FiKey className="h-4 w-4" />
+          New API Key
+        </button>
+      </div>
+
+      {/* Created key display */}
+      {createdKey && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
+            <FiCheck className="h-4 w-4" />
+            API Key Created — Save this now!
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 px-3 py-2 bg-white border border-green-200 rounded text-sm font-mono text-gray-900 select-all">
+              {createdKey}
+            </code>
+            <button
+              onClick={() => copyToClipboard(createdKey)}
+              className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+            >
+              {copied ? <FiCheck className="h-4 w-4" /> : <FiCopy className="h-4 w-4" />}
+            </button>
+          </div>
+          <p className="text-xs text-green-600 mt-2">This key will not be shown again.</p>
+        </div>
+      )}
+
+      {/* Create form */}
+      {showCreate && !createdKey && (
+        <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={newKeyName}
+              onChange={e => setNewKeyName(e.target.value)}
+              placeholder="Key name (e.g., GitHub Actions)"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
+            />
+            <button
+              onClick={handleCreate}
+              disabled={creating || !newKeyName.trim()}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
+            >
+              {creating ? 'Creating...' : 'Create'}
+            </button>
+            <button
+              onClick={() => setShowCreate(false)}
+              className="px-3 py-2 text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Keys list */}
+      {loading ? (
+        <div className="text-center py-6 text-gray-400 text-sm">Loading API keys...</div>
+      ) : keys.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+          <FiKey className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm mb-2">No API keys yet</p>
+          <p className="text-gray-400 text-xs max-w-sm mx-auto">
+            Create an API key to authenticate QA scans from your CI/CD pipeline
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {keys.map(k => (
+            <div key={k.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <FiKey className={`h-4 w-4 ${k.is_active ? 'text-purple-500' : 'text-gray-300'}`} />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">{k.name}</span>
+                  <span className="text-xs text-gray-400 ml-2 font-mono">{k.key_prefix}...</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-gray-400">
+                {k.last_used_at && (
+                  <span>Last used: {new Date(k.last_used_at).toLocaleDateString()}</span>
+                )}
+                <span>{new Date(k.created_at).toLocaleDateString()}</span>
+                <button
+                  onClick={() => handleRevoke(k.id)}
+                  className="text-red-400 hover:text-red-600 transition-colors p-1"
+                  title="Revoke key"
+                >
+                  <FiTrash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Usage instructions */}
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Quick Start</h3>
+        <pre className="text-xs text-gray-600 bg-white p-3 rounded border border-gray-200 overflow-x-auto">{`# Start a QA scan
+curl -X POST https://your-whynot-instance.com/api/ci/scan \\
+  -H "Authorization: Bearer wn_ci_your_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{"targetUrl": "https://your-app.com", "qualityThreshold": 80}'
+
+# Check results (poll until status=completed)
+curl https://your-whynot-instance.com/api/ci/results/SESSION_ID \\
+  -H "Authorization: Bearer wn_ci_your_key_here"`}</pre>
+      </div>
     </div>
   );
 };

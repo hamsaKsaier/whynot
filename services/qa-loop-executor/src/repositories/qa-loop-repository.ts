@@ -261,6 +261,14 @@ export class QALoopRepository {
     await this.pool.query(query, [id, status, errorMessage || null]);
   }
 
+  async updateSessionVideoPath(id: string, videoPath: string): Promise<void> {
+    await this.pool.query(
+      'UPDATE qa_loop_sessions SET video_path = $2 WHERE id = $1',
+      [id, videoPath]
+    );
+    logger.info('Updated session video path', { sessionId: id, videoPath });
+  }
+
   async updateSessionProgress(id: string, progress: {
     iterationCount?: number;
     qualityScore?: number;
@@ -534,6 +542,7 @@ export class QALoopRepository {
     rootCause?: string;
     suggestedFix?: string;
     iterationFound?: number;
+    videoPath?: string;
   }): Promise<QALoopBug> {
     // 🔴 Fix: Fingerprint-based deduplication — same page + category + bug_type = duplicate
     const fingerprint = this.computeBugFingerprint(
@@ -576,8 +585,8 @@ export class QALoopRepository {
       INSERT INTO qa_loop_bugs (
         id, session_id, project_id, title, description, severity,
         category, bug_type, page_url, reproduction_steps, evidence_screenshots,
-        root_cause, suggested_fix, iteration_found
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        root_cause, suggested_fix, iteration_found, video_path
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `;
 
@@ -595,7 +604,8 @@ export class QALoopRepository {
       JSON.stringify(bug.evidenceScreenshots || []),
       bug.rootCause || null,
       bug.suggestedFix || null,
-      bug.iterationFound || null
+      bug.iterationFound || null,
+      bug.videoPath || null
     ]);
 
     logger.info('Added bug', { sessionId, bugId: id, title: bug.title, severity: bug.severity });
