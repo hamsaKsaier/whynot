@@ -154,10 +154,15 @@ export class SelectorLearningRepository {
    * Delete old learning records (cleanup)
    */
   async deleteOldRecords(olderThanDays: number = 90): Promise<number> {
+    // Validate input to prevent SQL injection (parameterized interval)
+    const safeDays = Math.max(1, Math.floor(Number(olderThanDays)));
+    if (!Number.isFinite(safeDays)) {
+      throw new Error('olderThanDays must be a finite number');
+    }
     const result = await query(
-      `DELETE FROM selector_learning 
-       WHERE last_used_at < NOW() - INTERVAL '${olderThanDays} days'`,
-      []
+      `DELETE FROM selector_learning
+       WHERE last_used_at < NOW() - MAKE_INTERVAL(days => $1)`,
+      [safeDays]
     );
     return result.length;
   }

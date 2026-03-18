@@ -524,42 +524,56 @@ export const ProjectDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Recent QA Sessions */}
+      {/* QA Scan Suites — auto-generated from QA Loop sessions */}
       {qaLoopSessions.length > 0 && (
         <div className="page-section">
-          <h2 className="section-title mb-4">Recent QA Sessions ({qaLoopSessions.length})</h2>
+          <h2 className="section-title mb-4">
+            <FiZap className="inline h-5 w-5 mr-2 text-primary-400" />
+            QA Scan Suites ({qaLoopSessions.length})
+          </h2>
           <div className="space-y-3">
-            {qaLoopSessions.map((session) => (
-              <Card key={session.id} hoverable clickable onClick={() => navigate('/qa-loop')}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FiZap className={`h-5 w-5 ${
-                      session.status === 'running' ? 'text-blue-500' :
-                      session.status === 'completed' ? 'text-green-500' :
-                      session.status === 'paused' ? 'text-yellow-500' :
-                      'text-gray-400'
-                    }`} />
-                    <div>
-                      <div className="font-medium text-gray-900 truncate max-w-md">{session.target_url}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {session.pages_explored} pages · {session.tests_generated} tests · {session.bugs_found} bugs
+            {qaLoopSessions.map((session) => {
+              const date = session.created_at ? new Date(session.created_at).toLocaleDateString() : '';
+              return (
+                <Card key={session.id} hoverable clickable onClick={() => navigate('/qa-loop')}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FiZap className={`h-5 w-5 ${
+                        session.status === 'running' ? 'text-sky-400' :
+                        session.status === 'completed' ? 'text-emerald-400' :
+                        session.status === 'paused' ? 'text-amber-400' :
+                        'text-gray-500'
+                      }`} />
+                      <div>
+                        <div className="font-medium text-gray-100 truncate max-w-md">
+                          QA Scan — {date} — {session.target_url}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-3">
+                          <span>{session.pages_explored} pages explored</span>
+                          <span className="text-emerald-400">{session.tests_generated} tests</span>
+                          <span className={session.bugs_found > 0 ? 'text-red-400' : 'text-gray-500'}>{session.bugs_found} bugs</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-3">
+                      {session.quality_score > 0 && (
+                        <span className={`text-sm font-semibold ${
+                          session.quality_score >= 80 ? 'text-emerald-400' :
+                          session.quality_score >= 50 ? 'text-amber-400' :
+                          'text-red-400'
+                        }`}>{session.quality_score}%</span>
+                      )}
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        session.status === 'running' ? 'bg-sky-500/10 text-sky-400' :
+                        session.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' :
+                        session.status === 'paused' ? 'bg-amber-500/10 text-amber-400' :
+                        'bg-gray-500/10 text-gray-400'
+                      }`}>{session.status}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {session.quality_score > 0 && (
-                      <span className="text-sm font-medium text-purple-600">{session.quality_score}%</span>
-                    )}
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      session.status === 'running' ? 'bg-blue-100 text-blue-700' :
-                      session.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      session.status === 'paused' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>{session.status}</span>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}

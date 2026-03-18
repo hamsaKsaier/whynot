@@ -20,9 +20,14 @@ FROM nginx:alpine
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Nginx config for SPA routing
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config template
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+
+# Default env vars for nginx template (Docker Compose defaults)
+ENV PORT=80
+ENV GATEWAY_URL=gateway:3000
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Substitute only our env vars, leaving nginx variables intact
+CMD ["/bin/sh", "-c", "envsubst '${PORT} ${GATEWAY_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

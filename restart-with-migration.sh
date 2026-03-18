@@ -38,7 +38,7 @@ echo ""
 echo -e "${YELLOW}Step 1: Running database migration...${NC}"
 echo "Migration: 006_failure_classification_and_chat.sql"
 
-if $DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-thundercode} -d ${POSTGRES_DB:-thundercode} < services/database/migrations/006_failure_classification_and_chat.sql 2>&1; then
+if $DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-whynot} -d ${POSTGRES_DB:-whynot} < services/database/migrations/006_failure_classification_and_chat.sql 2>&1; then
     echo -e "${GREEN}✓ Migration completed successfully!${NC}"
 else
     echo -e "${RED}✗ Migration failed. Check the error above.${NC}"
@@ -48,7 +48,7 @@ fi
 # Verify migration
 echo ""
 echo -e "${YELLOW}Verifying migration...${NC}"
-if $DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-thundercode} -d ${POSTGRES_DB:-thundercode} -c "\d failure_analyses" &> /dev/null; then
+if $DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-whynot} -d ${POSTGRES_DB:-whynot} -c "\d failure_analyses" &> /dev/null; then
     echo -e "${GREEN}✓ Migration verified: failure_analyses table exists${NC}"
 else
     echo -e "${RED}✗ Migration verification failed${NC}"

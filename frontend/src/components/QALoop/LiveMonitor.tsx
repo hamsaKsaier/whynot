@@ -398,7 +398,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border"
           style={{
             background: phaseConfig ? phaseConfig.color + '15' : 'rgba(99,102,241,0.1)',
-            borderColor: phaseConfig ? phaseConfig.color + '40' : '#6366f140',
+            borderColor: phaseConfig ? phaseConfig.color + '40' : '#0284c740',
           }}
         >
           <LiveDot active={isRunning} />
@@ -591,10 +591,10 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       {/* ── Action Feed ──────────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 border-b border-gray-700/50">
-          <span className="text-purple-400"><Icons.spark /></span>
+          <span className="text-sky-400"><Icons.spark /></span>
           <span className="text-sm font-semibold text-gray-200">Action Feed</span>
           {toolCalls.length > 0 && (
-            <span className="ml-1 text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full">
+            <span className="ml-1 text-xs bg-sky-900/50 text-sky-300 px-2 py-0.5 rounded-full">
               {toolCalls.length}
             </span>
           )}

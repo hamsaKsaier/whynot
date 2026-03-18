@@ -14,9 +14,9 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_USER: thundercode
-          POSTGRES_PASSWORD: thundercode
-          POSTGRES_DB: thundercode
+          POSTGRES_USER: whynot
+          POSTGRES_PASSWORD: whynot
+          POSTGRES_DB: whynot
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -46,7 +46,7 @@ jobs:
 
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://thundercode:thundercode@localhost:5432/thundercode
+          DATABASE_URL: postgresql://whynot:whynot@localhost:5432/whynot
         run: |
           cd gateway && npm test || true
           cd ../services/test-executor && npm test || true

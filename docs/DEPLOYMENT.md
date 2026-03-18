@@ -25,7 +25,7 @@ Update the following critical values:
 NODE_ENV=production
 POSTGRES_PASSWORD=<strong-password>
 OPENAI_API_KEY=<your-api-key>
-DATABASE_URL=postgresql://thundercode:<password>@database:5432/thundercode
+DATABASE_URL=postgresql://whynot:<password>@database:5432/whynot
 ```
 
 ### 2. Database Setup
@@ -36,7 +36,7 @@ The database service will automatically run migrations on first startup. The mig
 To manually run migrations:
 
 ```bash
-docker compose exec database psql -U thundercode -d thundercode -f /docker-entrypoint-initdb.d/001_initial_schema.sql
+docker compose exec database psql -U whynot -d whynot -f /docker-entrypoint-initdb.d/001_initial_schema.sql
 ```
 
 ### 3. Build and Start Services
@@ -129,10 +129,10 @@ Set up automated backups:
 
 ```bash
 # Backup script
-docker compose exec database pg_dump -U thundercode thundercode > backup_$(date +%Y%m%d).sql
+docker compose exec database pg_dump -U whynot whynot > backup_$(date +%Y%m%d).sql
 
 # Restore
-docker compose exec -T database psql -U thundercode thundercode < backup_20240101.sql
+docker compose exec -T database psql -U whynot whynot < backup_20240101.sql
 ```
 
 ## Health Checks

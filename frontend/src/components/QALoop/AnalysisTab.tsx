@@ -61,7 +61,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
       case 'flaky': return <FiRefreshCw className="text-yellow-500" />;
       case 'environment': return <FiActivity className="text-blue-500" />;
       case 'test_issue': return <FiHelpCircle className="text-orange-500" />;
-      case 'data_issue': return <FiHelpCircle className="text-purple-500" />;
+      case 'data_issue': return <FiHelpCircle className="text-sky-500" />;
       default: return <FiSearch className="text-gray-500" />;
     }
   };
@@ -72,7 +72,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
       case 'flaky': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
       case 'environment': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
       case 'test_issue': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
-      case 'data_issue': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+      case 'data_issue': return 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
@@ -113,9 +113,9 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
           <div className="text-xl font-bold text-orange-600">{byCategory.test_issue || 0}</div>
           <div className="text-xs text-orange-500">Test Issues</div>
         </div>
-        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
-          <div className="text-xl font-bold text-purple-600">{correlations.length}</div>
-          <div className="text-xs text-purple-500">Correlations</div>
+        <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg text-center">
+          <div className="text-xl font-bold text-sky-600">{correlations.length}</div>
+          <div className="text-xs text-sky-500">Correlations</div>
         </div>
       </div>
 
@@ -134,7 +134,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
         <button
           onClick={() => setActiveView('correlations')}
           className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${activeView === 'correlations'
-              ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
+              ? 'bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300'
               : 'text-gray-500 hover:text-gray-700'
             }`}
         >
@@ -275,17 +275,17 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
               correlations.map((correlation) => (
                 <div
                   key={correlation.id}
-                  className="p-3 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/10"
+                  className="p-3 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/10"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <FiLink className="text-purple-500" />
+                      <FiLink className="text-sky-500" />
                       <span className="font-medium text-gray-900 dark:text-white">
                         {getCorrelationTypeLabel(correlation.correlationType)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-purple-600 dark:text-purple-400">
+                      <span className="text-sm text-sky-600 dark:text-sky-400">
                         {correlation.failureCount} failures linked
                       </span>
                       <span className="text-xs text-gray-400">

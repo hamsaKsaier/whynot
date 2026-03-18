@@ -37,7 +37,7 @@ interface AutoFixButtonProps {
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   pending: { label: 'Starting...', color: 'text-gray-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
   analyzing: { label: 'Analyzing code...', color: 'text-blue-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
-  generating: { label: 'Generating fix...', color: 'text-purple-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
+  generating: { label: 'Generating fix...', color: 'text-sky-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
   pr_created: { label: 'PR Created', color: 'text-green-600', icon: <FiGitPullRequest className="h-3 w-3" /> },
   merging: { label: 'Merging PR...', color: 'text-blue-600', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
   retesting: { label: 'Retesting...', color: 'text-orange-500', icon: <FiRefreshCw className="h-3 w-3 animate-spin" /> },
@@ -61,6 +61,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [mode, setMode] = useState<'simple' | 'loop'>('loop'); // Default to loop mode
+  const [autoMerge, setAutoMerge] = useState(false); // Disabled by default
   const [maxIterations, setMaxIterations] = useState(3);
   const [qualityThreshold, setQualityThreshold] = useState(80);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -111,7 +112,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
           github_repo_id: selectedRepo,
           max_iterations: maxIterations,
           quality_threshold: qualityThreshold,
-          auto_merge: true,
+          auto_merge: autoMerge,
         });
       } else {
         res = await apiClient.post(`/bugs/${bugId}/auto-fix`, {
@@ -179,11 +180,12 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
     <>
       <button
         onClick={handleOpen}
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors ${className}`}
+        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-sky-50 text-sky-600 hover:bg-sky-100 transition-colors ${className}`}
         title="Auto-fix: Generate a PR to fix this bug"
       >
         <FiGitPullRequest className="h-3 w-3" />
         <span>Auto-Fix</span>
+        <span className="text-[10px] px-1 py-0.5 bg-amber-100 text-amber-700 rounded font-medium leading-none">Experimental</span>
       </button>
 
       {showModal && (
@@ -192,8 +194,9 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
             {/* Header */}
             <div className="p-5 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <FiGitPullRequest className="h-5 w-5 text-purple-600" />
+                <FiGitPullRequest className="h-5 w-5 text-sky-600" />
                 Auto-Fix Bug
+                <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">Experimental</span>
               </h3>
               <p className="text-sm text-gray-500 mt-1 truncate">{bugTitle}</p>
             </div>
@@ -277,10 +280,10 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                               const isCurrent = step === currentAttempt.status || (currentAttempt.status === 'pending' && step === 'analyzing');
                               return (
                                 <React.Fragment key={step}>
-                                  {i > 0 && <div className={`h-0.5 w-6 ${isActive ? 'bg-purple-500' : 'bg-gray-200'}`} />}
+                                  {i > 0 && <div className={`h-0.5 w-6 ${isActive ? 'bg-sky-500' : 'bg-gray-200'}`} />}
                                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                                    ${isActive ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-500'}
-                                    ${isCurrent ? 'ring-2 ring-purple-300' : ''}`}>
+                                    ${isActive ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-500'}
+                                    ${isCurrent ? 'ring-2 ring-sky-300' : ''}`}>
                                     {i + 1}
                                   </div>
                                 </React.Fragment>
@@ -304,7 +307,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                             {/* Iteration progress bar */}
                             <div className="w-48 mx-auto mt-1.5 bg-gray-100 rounded-full h-1.5">
                               <div
-                                className="bg-purple-500 h-1.5 rounded-full transition-all"
+                                className="bg-sky-500 h-1.5 rounded-full transition-all"
                                 style={{ width: `${(currentAttempt.iteration_count / currentAttempt.max_iterations) * 100}%` }}
                               />
                             </div>
@@ -312,7 +315,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                         )}
 
                         {isInProgress && (
-                          <div className="flex items-center justify-center gap-2 text-purple-600">
+                          <div className="flex items-center justify-center gap-2 text-sky-600">
                             <FiLoader className="h-5 w-5 animate-spin" />
                             <span className="font-medium">{STATUS_LABELS[currentAttempt.status]?.label}</span>
                           </div>
@@ -474,13 +477,13 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                             onClick={() => setMode('loop')}
                             className={`p-3 rounded-lg border-2 text-left transition-all ${
                               mode === 'loop'
-                                ? 'border-purple-500 bg-purple-50'
+                                ? 'border-sky-500 bg-sky-50'
                                 : 'border-gray-200 hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
-                              <FiZap className={`h-4 w-4 ${mode === 'loop' ? 'text-purple-600' : 'text-gray-400'}`} />
-                              <span className={`text-sm font-semibold ${mode === 'loop' ? 'text-purple-700' : 'text-gray-700'}`}>
+                              <FiZap className={`h-4 w-4 ${mode === 'loop' ? 'text-sky-600' : 'text-gray-400'}`} />
+                              <span className={`text-sm font-semibold ${mode === 'loop' ? 'text-sky-700' : 'text-gray-700'}`}>
                                 Fix + Merge + Verify
                               </span>
                             </div>
@@ -493,13 +496,13 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                             onClick={() => setMode('simple')}
                             className={`p-3 rounded-lg border-2 text-left transition-all ${
                               mode === 'simple'
-                                ? 'border-purple-500 bg-purple-50'
+                                ? 'border-sky-500 bg-sky-50'
                                 : 'border-gray-200 hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
-                              <FiCode className={`h-4 w-4 ${mode === 'simple' ? 'text-purple-600' : 'text-gray-400'}`} />
-                              <span className={`text-sm font-semibold ${mode === 'simple' ? 'text-purple-700' : 'text-gray-700'}`}>
+                              <FiCode className={`h-4 w-4 ${mode === 'simple' ? 'text-sky-600' : 'text-gray-400'}`} />
+                              <span className={`text-sm font-semibold ${mode === 'simple' ? 'text-sky-700' : 'text-gray-700'}`}>
                                 PR Only
                               </span>
                             </div>
@@ -512,7 +515,27 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                       {/* Loop options */}
                       {mode === 'loop' && (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                              <div className="text-sm font-medium text-gray-700">Auto-merge PRs</div>
+                              <div className="text-xs text-gray-500">Automatically merge PRs into the default branch</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setAutoMerge(!autoMerge)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                autoMerge ? 'bg-sky-500' : 'bg-gray-300'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  autoMerge ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Max Iterations</label>
                             <select
@@ -540,10 +563,11 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                             </select>
                           </div>
                         </div>
+                        </div>
                       )}
 
                       {/* How it works */}
-                      <div className="bg-purple-50 p-4 rounded-lg text-sm text-purple-700">
+                      <div className="bg-sky-50 p-4 rounded-lg text-sm text-sky-700">
                         <p className="font-medium mb-1">How it works:</p>
                         <ol className="list-decimal list-inside space-y-1 text-xs">
                           <li>AI analyzes the bug report and finds relevant source files</li>
@@ -551,7 +575,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           <li>A pull request is created on a new branch</li>
                           {mode === 'loop' && (
                             <>
-                              <li>PR is auto-merged into the default branch</li>
+                              {autoMerge && <li>PR is auto-merged into the default branch</li>}
                               <li>QA Loop retests the live app to verify the fix</li>
                               <li>If not fixed, Claude iterates with improved fix until quality target met</li>
                             </>
@@ -576,7 +600,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                 <button
                   onClick={handleStart}
                   disabled={starting || !selectedRepo}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {starting ? (
                     <>

@@ -16,6 +16,6 @@ else
 fi
 
 # Run migration
-$DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-thundercode} -d ${POSTGRES_DB:-thundercode} < services/database/migrations/008_visual_regression.sql
+$DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-whynot} -d ${POSTGRES_DB:-whynot} < services/database/migrations/008_visual_regression.sql
 
 echo "Migration completed successfully!"

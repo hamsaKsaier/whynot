@@ -156,7 +156,7 @@ export const MonitorsPage: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FiClock className="h-6 w-6 text-purple-600" />
+            <FiClock className="h-6 w-6 text-sky-600" />
             QA Monitors
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -165,7 +165,7 @@ export const MonitorsPage: React.FC = () => {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
         >
           <FiPlus className="h-4 w-4" />
           New Monitor
@@ -185,7 +185,7 @@ export const MonitorsPage: React.FC = () => {
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Production Health Check"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
                   required
                 />
               </div>
@@ -196,7 +196,7 @@ export const MonitorsPage: React.FC = () => {
                   value={form.target_url}
                   onChange={e => setForm(f => ({ ...f, target_url: e.target.value }))}
                   placeholder="https://your-app.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
                   required
                 />
               </div>
@@ -207,7 +207,7 @@ export const MonitorsPage: React.FC = () => {
                 <select
                   value={form.cron_expression}
                   onChange={e => setForm(f => ({ ...f, cron_expression: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
                 >
                   {CRON_PRESETS.map(p => (
                     <option key={p.value} value={p.value}>{p.label}</option>
@@ -219,7 +219,7 @@ export const MonitorsPage: React.FC = () => {
                 <select
                   value={form.quality_threshold}
                   onChange={e => setForm(f => ({ ...f, quality_threshold: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
                 >
                   {[60, 70, 80, 90].map(v => (
                     <option key={v} value={v}>{v}%</option>
@@ -231,7 +231,7 @@ export const MonitorsPage: React.FC = () => {
                 <select
                   value={form.max_iterations}
                   onChange={e => setForm(f => ({ ...f, max_iterations: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
                 >
                   {[3, 5, 10, 20].map(v => (
                     <option key={v} value={v}>{v}</option>
@@ -250,7 +250,7 @@ export const MonitorsPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {saving ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiPlus className="h-4 w-4" />}
                 Create Monitor
@@ -270,7 +270,7 @@ export const MonitorsPage: React.FC = () => {
           </p>
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
           >
             <FiPlus className="h-4 w-4" />
             Create your first monitor
@@ -360,7 +360,7 @@ export const MonitorsPage: React.FC = () => {
                     {monitor.last_session_id && (
                       <a
                         href={`/qa-loop?session=${monitor.last_session_id}`}
-                        className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
                         title="View last session"
                       >
                         <FiExternalLink className="h-4 w-4" />

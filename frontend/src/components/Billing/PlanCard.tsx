@@ -27,8 +27,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, isCurrentPlan, onUpgra
   const featureLabels: Record<string, string> = {
     qa_loop: 'QA Loop',
     visual_regression: 'Visual Regression',
-    chaos_testing: 'Chaos Testing',
-    webhooks: 'Webhooks',
+    webhooks: 'Notifications',
     api_access: 'API Access',
     priority_support: 'Priority Support',
   };

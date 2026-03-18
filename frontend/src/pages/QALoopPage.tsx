@@ -249,7 +249,7 @@ export const QALoopPage: React.FC = () => {
             </button>
 
             {/* Session URL */}
-            <FiGlobe className="text-purple-400 shrink-0" size={14} />
+            <FiGlobe className="text-sky-400 shrink-0" size={14} />
             <span className="text-sm font-semibold text-gray-200 truncate max-w-xs">
               {activeSession.target_url}
             </span>
@@ -279,7 +279,7 @@ export const QALoopPage: React.FC = () => {
             {/* Quality score */}
             {activeSession.quality_score > 0 && (
               <span className="text-xs text-gray-500 shrink-0">
-                Q: <span className="text-purple-300 font-semibold">{activeSession.quality_score}%</span>
+                Q: <span className="text-sky-300 font-semibold">{activeSession.quality_score}%</span>
               </span>
             )}
 
@@ -343,7 +343,7 @@ export const QALoopPage: React.FC = () => {
             {isLoadingDetails && (
               <div className="absolute inset-0 bg-gray-950/70 flex items-center justify-center z-20 backdrop-blur-sm">
                 <div className="flex items-center gap-2 text-gray-300 bg-gray-900 px-4 py-2 rounded-full shadow-xl border border-gray-700">
-                  <FiRefreshCw className="animate-spin text-purple-400" size={14} />
+                  <FiRefreshCw className="animate-spin text-sky-400" size={14} />
                   <span className="text-sm font-medium">Loading session…</span>
                 </div>
               </div>
@@ -433,7 +433,7 @@ export const QALoopPage: React.FC = () => {
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <FiZap className="text-purple-500" />
+          <FiZap className="text-sky-500" />
           QA Loop
         </h1>
         <p className="text-gray-600 mt-2">
@@ -443,7 +443,7 @@ export const QALoopPage: React.FC = () => {
 
       {/* First-run onboarding banner */}
       {showOnboarding && (
-        <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-primary-200 bg-gradient-to-r from-primary-50 to-purple-50 p-5">
+        <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-primary-200 bg-gradient-to-r from-primary-50 to-sky-50 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">

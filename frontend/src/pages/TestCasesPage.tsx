@@ -5,7 +5,7 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Alert } from '../components/common/Alert';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
-import { TestAutomationChatbot } from '../components/Chatbot/TestAutomationChatbot';
+
 import { EmptyState } from '../components/common/EmptyState';
 import { SkeletonCard } from '../components/common/SkeletonCard';
 import { QuickActions } from '../components/common/QuickActions';
@@ -402,12 +402,6 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         onCancel={() => setDeleteConfirm({ isOpen: false, testCase: null })}
       />
 
-      <TestAutomationChatbot
-        context={{}}
-        onTestGenerated={(testCase) => {
-          navigate('/qa-loop');
-        }}
-      />
     </div>
   );
 };

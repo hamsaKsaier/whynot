@@ -77,7 +77,7 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
       case 'injection': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
       case 'xss': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
       case 'boundary': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-      case 'timing': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+      case 'timing': return 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300';
       case 'security': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
       case 'a11y': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
@@ -116,11 +116,11 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
             </div>
             <div className="text-xs text-blue-500">Total Attacks</div>
           </div>
-          <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+          <div className="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg text-center">
+            <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
               {summary.pagesTested}
             </div>
-            <div className="text-xs text-purple-500">Pages Tested</div>
+            <div className="text-xs text-sky-500">Pages Tested</div>
           </div>
         </div>
       )}

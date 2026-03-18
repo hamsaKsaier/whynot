@@ -210,9 +210,19 @@ export const qaLoopSchemas = {
 
   /** POST /sessions/:id/documents */
   uploadDocument: z.object({
-    filename:      z.string().min(1, 'filename is required').max(255),
-    contentBase64: z.string().optional(),
-    content:       z.string().optional(),
+    filename: z.string()
+      .min(1, 'filename is required')
+      .max(255)
+      .refine(
+        (name) => /^[\w\-. ]+\.(txt|md|pdf|doc|docx|csv|json|xml|html|yml|yaml)$/i.test(name),
+        'Invalid file type. Allowed: txt, md, pdf, doc, docx, csv, json, xml, html, yml, yaml'
+      ),
+    contentBase64: z.string()
+      .max(10_485_760, 'File content must not exceed 10MB (base64)')  // ~7.5MB decoded
+      .optional(),
+    content: z.string()
+      .max(5_000_000, 'File content must not exceed 5MB')
+      .optional(),
   }).refine(
     d => d.contentBase64 !== undefined || d.content !== undefined,
     { message: 'Either contentBase64 or content must be provided' },

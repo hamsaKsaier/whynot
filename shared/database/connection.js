@@ -14,7 +14,7 @@ let pool = null;
 function getPool() {
     if (!pool) {
         const connectionString = process.env.DATABASE_URL ||
-            `postgresql://${process.env.POSTGRES_USER || 'thundercode'}:${process.env.POSTGRES_PASSWORD || 'thundercode'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'thundercode'}`;
+            `postgresql://${process.env.POSTGRES_USER || 'whynot'}:${process.env.POSTGRES_PASSWORD || 'whynot'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'whynot'}`;
         pool = new pg_1.Pool({
             connectionString,
             max: 20, // Maximum number of clients in the pool

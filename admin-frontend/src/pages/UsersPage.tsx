@@ -97,7 +97,7 @@ export const UsersPage: React.FC = () => {
                 <td className="px-4 py-3">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                     user.role === 'super_admin' ? 'bg-red-100 text-red-800'
-                    : user.role === 'admin' ? 'bg-purple-100 text-purple-800'
+                    : user.role === 'admin' ? 'bg-sky-100 text-sky-800'
                     : 'bg-gray-100 text-gray-800'
                   }`}>
                     {user.role}

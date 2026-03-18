@@ -77,7 +77,7 @@ export const SessionList: React.FC<SessionListProps> = ({
             onClick={() => onSelect(session)}
             className={`w-full text-left p-3 rounded-lg border transition-all ${
               activeSession?.id === session.id
-                ? 'border-purple-500 bg-purple-50 shadow-md ring-1 ring-purple-300'
+                ? 'border-sky-500 bg-sky-50 shadow-md ring-1 ring-sky-300'
                 : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
             }`}
           >

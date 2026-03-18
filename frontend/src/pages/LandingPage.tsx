@@ -67,23 +67,20 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-navy-900 text-gray-100">
       {/* Nav */}
-      <nav className="border-b border-gray-100">
+      <nav className="border-b border-navy-700">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <FiZap className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">WhyNot</span>
+            <img src="/logo.svg" alt="WhyNot" className="h-8" />
           </div>
           <div className="flex items-center gap-4">
-            <a href="#features" className="text-sm text-gray-600 hover:text-gray-900">Features</a>
-            <a href="#pricing" className="text-sm text-gray-600 hover:text-gray-900">Pricing</a>
+            <a href="#features" className="text-sm text-gray-400 hover:text-white">Features</a>
+            <a href="#pricing" className="text-sm text-gray-400 hover:text-white">Pricing</a>
             {isLoggedIn ? (
               <button
                 onClick={() => navigate('/qa-loop')}
-                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors"
               >
                 Go to Dashboard
               </button>
@@ -91,13 +88,13 @@ export const LandingPage: React.FC = () => {
               <>
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700"
+                  className="px-4 py-2 text-sm font-medium text-primary-400 hover:text-primary-300"
                 >
                   Log in
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors"
                 >
                   Sign up free
                 </button>
@@ -110,35 +107,35 @@ export const LandingPage: React.FC = () => {
       {/* Hero */}
       <section className="pt-20 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-sm font-medium mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 text-primary-400 text-sm font-medium mb-6">
             <FiZap className="h-3 w-3" />
             Autonomous QA — no scripts, no setup
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
             Drop in a URL.<br />
-            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary-400 to-primary-500 bg-clip-text text-transparent">
               Get a QA team.
             </span>
           </h1>
-          <p className="text-xl text-gray-500 mb-10 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
             WhyNot crawls your app, generates tests, finds bugs, fixes your code, and opens a PR —
             all autonomously. Just paste a URL.
           </p>
 
           {/* Scan Form */}
           <form onSubmit={handleScan} className="max-w-xl mx-auto">
-            <div className="flex items-stretch bg-white border-2 border-gray-200 rounded-xl shadow-lg focus-within:border-purple-400 transition-colors">
+            <div className="flex items-stretch bg-navy-800 border-2 border-navy-700 rounded-xl shadow-lg focus-within:border-primary-500 transition-colors">
               <input
                 type="text"
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 placeholder="https://your-app.com"
-                className="flex-1 px-5 py-4 text-lg bg-transparent outline-none rounded-l-xl"
+                className="flex-1 px-5 py-4 text-lg bg-transparent outline-none rounded-l-xl text-white placeholder-gray-500"
               />
               <button
                 type="submit"
                 disabled={scanning || !url}
-                className="px-6 py-4 bg-purple-600 text-white font-semibold rounded-r-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                className="px-6 py-4 bg-emerald-500 text-white font-semibold rounded-r-xl hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
               >
                 {scanning ? (
                   <>
@@ -163,9 +160,9 @@ export const LandingPage: React.FC = () => {
               />
             </div>
             {error && (
-              <p className="mt-3 text-sm text-red-500">{error}</p>
+              <p className="mt-3 text-sm text-red-400">{error}</p>
             )}
-            <p className="mt-3 text-xs text-gray-400">
+            <p className="mt-3 text-xs text-gray-500">
               3 free scans per day. No account needed.
             </p>
           </form>
@@ -173,9 +170,9 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* How it works */}
-      <section className="py-20 bg-gray-50 px-6">
+      <section className="py-20 bg-navy-800 px-6">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+          <h2 className="text-3xl font-bold text-center text-white mb-12">
             How it works
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
@@ -199,15 +196,15 @@ export const LandingPage: React.FC = () => {
                 desc: 'WhyNot fixes the code, opens a PR, retests, and iterates until quality target is met.',
               },
             ].map((item) => (
-              <div key={item.step} className="relative bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                  <item.icon className="h-5 w-5 text-purple-600" />
+              <div key={item.step} className="relative bg-navy-700 rounded-xl p-6 shadow-sm border border-navy-700">
+                <div className="w-10 h-10 bg-primary-500/10 rounded-full flex items-center justify-center mb-4">
+                  <item.icon className="h-5 w-5 text-primary-400" />
                 </div>
-                <div className="absolute top-4 right-4 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-400">
+                <div className="absolute top-4 right-4 w-8 h-8 bg-navy-900 rounded-full flex items-center justify-center text-sm font-bold text-gray-500">
                   {item.step}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-gray-500 text-sm">{item.desc}</p>
+                <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
+                <p className="text-gray-400 text-sm">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -217,10 +214,10 @@ export const LandingPage: React.FC = () => {
       {/* Feature Grid */}
       <section id="features" className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-center text-white mb-4">
             Everything you need for autonomous QA
           </h2>
-          <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">
+          <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">
             Replace manual testing with an AI that never sleeps.
           </p>
           <div className="grid md:grid-cols-2 gap-6">
@@ -229,19 +226,13 @@ export const LandingPage: React.FC = () => {
                 icon: FiZap,
                 title: 'Autonomous QA Loop',
                 desc: 'AI crawls your app, generates tests, runs them, finds bugs, and iterates — all without writing a single test.',
-                color: 'purple',
+                color: 'sky',
               },
               {
                 icon: FiGitPullRequest,
                 title: 'Auto-Fix + PR',
                 desc: 'Found a bug? WhyNot reads your code on GitHub, generates a fix, opens a PR, retests, and iterates until the bug is gone.',
-                color: 'green',
-              },
-              {
-                icon: FiShield,
-                title: 'Chaos Testing',
-                desc: 'Inject random failures, slow networks, and edge cases. Find breaking points before your users do.',
-                color: 'red',
+                color: 'emerald',
               },
               {
                 icon: FiEye,
@@ -253,7 +244,7 @@ export const LandingPage: React.FC = () => {
                 icon: FiClock,
                 title: 'Scheduled Monitoring',
                 desc: 'Run QA scans on a schedule — daily, weekly, on every deploy. Know about issues before your customers.',
-                color: 'orange',
+                color: 'amber',
               },
               {
                 icon: FiTrendingUp,
@@ -263,20 +254,20 @@ export const LandingPage: React.FC = () => {
               },
             ].map((feature) => {
               const colors: Record<string, string> = {
-                purple: 'bg-purple-50 text-purple-600',
-                green: 'bg-green-50 text-green-600',
-                red: 'bg-red-50 text-red-600',
-                blue: 'bg-blue-50 text-blue-600',
-                orange: 'bg-orange-50 text-orange-600',
-                teal: 'bg-teal-50 text-teal-600',
+                sky: 'bg-sky-500/10 text-sky-400',
+                emerald: 'bg-emerald-500/10 text-emerald-400',
+                red: 'bg-red-500/10 text-red-400',
+                blue: 'bg-blue-500/10 text-blue-400',
+                amber: 'bg-amber-500/10 text-amber-400',
+                teal: 'bg-teal-500/10 text-teal-400',
               };
               return (
-                <div key={feature.title} className="p-6 rounded-xl border border-gray-100 hover:shadow-md transition-shadow">
+                <div key={feature.title} className="p-6 rounded-xl border border-navy-700 hover:border-navy-700 hover:shadow-md transition-shadow bg-navy-800">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${colors[feature.color]}`}>
                     <feature.icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                  <p className="text-gray-500 text-sm">{feature.desc}</p>
+                  <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                  <p className="text-gray-400 text-sm">{feature.desc}</p>
                 </div>
               );
             })}
@@ -285,12 +276,12 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-20 bg-gray-50 px-6">
+      <section id="pricing" className="py-20 bg-navy-800 px-6">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-center text-white mb-4">
             Simple, transparent pricing
           </h2>
-          <p className="text-center text-gray-500 mb-12">
+          <p className="text-center text-gray-400 mb-12">
             Start free. Scale as you grow.
           </p>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
@@ -299,27 +290,27 @@ export const LandingPage: React.FC = () => {
               return (
                 <div
                   key={plan.id}
-                  className={`relative bg-white rounded-xl p-6 shadow-sm border ${isPopular ? 'border-purple-300 ring-2 ring-purple-100' : 'border-gray-200'}`}
+                  className={`relative bg-navy-900 rounded-xl p-6 shadow-sm border ${isPopular ? 'border-primary-500 ring-2 ring-primary-500/20' : 'border-navy-700'}`}
                 >
                   {isPopular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary-500 text-white text-xs font-medium rounded-full">
                       Most Popular
                     </div>
                   )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{plan.name}</h3>
+                  <h3 className="text-lg font-semibold text-white mb-1">{plan.name}</h3>
                   <div className="mb-4">
-                    <span className="text-3xl font-bold text-gray-900">
+                    <span className="text-3xl font-bold text-white">
                       {plan.price_monthly === 0 ? 'Free' : `$${plan.price_monthly}`}
                     </span>
-                    {plan.price_monthly > 0 && <span className="text-gray-500 text-sm">/mo</span>}
+                    {plan.price_monthly > 0 && <span className="text-gray-400 text-sm">/mo</span>}
                   </div>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-sm text-gray-400 mb-4">
                     {plan.monthly_credits.toLocaleString()} credits/month
                   </p>
                   <ul className="space-y-2 mb-6">
                     {Object.entries(plan.features || {}).slice(0, 5).map(([key, val]) => (
-                      <li key={key} className="flex items-center gap-2 text-sm text-gray-600">
-                        <FiCheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <li key={key} className="flex items-center gap-2 text-sm text-gray-300">
+                        <FiCheckCircle className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                         {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         {typeof val === 'number' && val > 0 ? `: ${val}` : ''}
                       </li>
@@ -329,8 +320,8 @@ export const LandingPage: React.FC = () => {
                     onClick={() => navigate('/login')}
                     className={`w-full py-2 rounded-lg font-medium text-sm transition-colors ${
                       isPopular
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        : 'bg-navy-700 text-gray-300 hover:bg-navy-700/80'
                     }`}
                   >
                     Get Started
@@ -346,23 +337,23 @@ export const LandingPage: React.FC = () => {
               ].map((plan, i) => (
                 <div
                   key={plan.name}
-                  className={`relative bg-white rounded-xl p-6 shadow-sm border ${i === 1 ? 'border-purple-300 ring-2 ring-purple-100' : 'border-gray-200'}`}
+                  className={`relative bg-navy-900 rounded-xl p-6 shadow-sm border ${i === 1 ? 'border-primary-500 ring-2 ring-primary-500/20' : 'border-navy-700'}`}
                 >
                   {i === 1 && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary-500 text-white text-xs font-medium rounded-full">
                       Most Popular
                     </div>
                   )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{plan.name}</h3>
+                  <h3 className="text-lg font-semibold text-white mb-1">{plan.name}</h3>
                   <div className="mb-4">
-                    <span className="text-3xl font-bold text-gray-900">{plan.price}</span>
-                    {plan.price !== 'Free' && <span className="text-gray-500 text-sm">/mo</span>}
+                    <span className="text-3xl font-bold text-white">{plan.price}</span>
+                    {plan.price !== 'Free' && <span className="text-gray-400 text-sm">/mo</span>}
                   </div>
-                  <p className="text-sm text-gray-500 mb-4">{plan.credits} credits/month</p>
+                  <p className="text-sm text-gray-400 mb-4">{plan.credits} credits/month</p>
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                        <FiCheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
+                        <FiCheckCircle className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                         {f}
                       </li>
                     ))}
@@ -371,8 +362,8 @@ export const LandingPage: React.FC = () => {
                     onClick={() => navigate('/login')}
                     className={`w-full py-2 rounded-lg font-medium text-sm transition-colors ${
                       i === 1
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        : 'bg-navy-700 text-gray-300 hover:bg-navy-700/80'
                     }`}
                   >
                     Get Started
@@ -387,15 +378,15 @@ export const LandingPage: React.FC = () => {
       {/* CTA */}
       <section className="py-20 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-white mb-4">
             Stop writing tests. Start shipping quality.
           </h2>
-          <p className="text-lg text-gray-500 mb-8">
+          <p className="text-lg text-gray-400 mb-8">
             WhyNot is the QA team you always wanted but never had the budget for.
           </p>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors text-lg"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-colors text-lg"
           >
             Try it free
             <FiArrowRight className="h-5 w-5" />
@@ -404,15 +395,12 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-8 px-6">
+      <footer className="border-t border-navy-700 py-8 px-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-purple-600 to-indigo-600 rounded flex items-center justify-center">
-              <FiZap className="h-3 w-3 text-white" />
-            </div>
-            <span className="text-sm font-semibold text-gray-700">WhyNot</span>
+            <img src="/logo.svg" alt="WhyNot" className="h-6" />
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             Autonomous QA Platform
           </p>
         </div>

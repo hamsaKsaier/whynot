@@ -88,9 +88,8 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
       return;
     }
 
-    // Get WebSocket URL - use ws:// for localhost, wss:// for production
-    // Port 3011 is the exposed port for test-executor service
-    const wsBaseUrl = wsUrl || (window.location.protocol === 'https:'
+    // Get WebSocket URL - use VITE_WS_URL env var, fallback to same-origin detection
+    const wsBaseUrl = wsUrl || import.meta.env.VITE_WS_URL || (window.location.protocol === 'https:'
       ? `wss://${window.location.hostname}:3011`
       : `ws://${window.location.hostname}:3011`);
     const wsUrlFull = `${wsBaseUrl}/ws/browser-stream/${executionId}`;

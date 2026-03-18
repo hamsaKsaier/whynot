@@ -12,7 +12,7 @@ const TABS = [
   { id: 'environments', label: 'Environments', icon: <FiServer className="h-4 w-4" /> },
   { id: 'integrations', label: 'Integrations', icon: <FiLink className="h-4 w-4" /> },
   { id: 'github', label: 'GitHub Repos', icon: <FiGithub className="h-4 w-4" /> },
-  { id: 'webhooks', label: 'Webhooks', icon: <FiBell className="h-4 w-4" /> },
+  { id: 'webhooks', label: 'Notifications', icon: <FiBell className="h-4 w-4" /> },
   { id: 'billing', label: 'Billing', icon: <FiCreditCard className="h-4 w-4" /> },
 ];
 

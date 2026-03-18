@@ -949,6 +949,90 @@ export class QALoopRepository {
       result.errorMessage || null
     ]);
   }
+
+  /**
+   * Auto-create a test suite from a completed QA Loop session.
+   * Creates a test_suite under the project's first user_story (or a default one),
+   * then links all qa_loop_test_cases to it.
+   * Returns the created test_suite ID.
+   */
+  async createTestSuiteFromSession(sessionId: string): Promise<string | null> {
+    const session = await this.getSession(sessionId);
+    if (!session || !session.project_id) {
+      logger.warn('Cannot create test suite: session not found or no project', { sessionId });
+      return null;
+    }
+
+    const projectId = session.project_id;
+    const targetUrl = session.target_url;
+    const date = new Date().toISOString().split('T')[0];
+    const suiteName = `QA Scan — ${date} — ${targetUrl}`;
+
+    try {
+      // Find or create a user story for QA-generated suites
+      let userStoryResult = await this.pool.query(
+        `SELECT id FROM user_stories WHERE project_id = $1 AND story LIKE 'QA Loop Auto-Generated%' LIMIT 1`,
+        [projectId]
+      );
+
+      let userStoryId: string;
+      if (userStoryResult.rows.length > 0) {
+        userStoryId = userStoryResult.rows[0].id;
+      } else {
+        // Create a placeholder user story for QA-generated content
+        const usResult = await this.pool.query(
+          `INSERT INTO user_stories (id, project_id, story, website_url, workspace_id)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4)
+           RETURNING id`,
+          [projectId, 'QA Loop Auto-Generated Tests', targetUrl, session.workspace_id || null]
+        );
+        userStoryId = usResult.rows[0].id;
+      }
+
+      // Create the test suite
+      const suiteResult = await this.pool.query(
+        `INSERT INTO test_suites (id, user_story_id, name, description)
+         VALUES (gen_random_uuid(), $1, $2, $3)
+         RETURNING id`,
+        [userStoryId, suiteName, `Auto-generated from QA Loop session ${sessionId}`]
+      );
+      const testSuiteId = suiteResult.rows[0].id;
+
+      // Link the session to this test suite
+      await this.pool.query(
+        `UPDATE qa_loop_sessions SET test_suite_id = $2 WHERE id = $1`,
+        [sessionId, testSuiteId]
+      );
+
+      // Link all QA-generated test cases to this suite
+      await this.pool.query(
+        `UPDATE qa_loop_test_cases SET test_suite_id = $2 WHERE session_id = $1`,
+        [sessionId, testSuiteId]
+      );
+
+      // Count linked items
+      const countResult = await this.pool.query(
+        `SELECT
+           (SELECT COUNT(*) FROM qa_loop_test_cases WHERE session_id = $1) as test_count,
+           (SELECT COUNT(*) FROM qa_loop_bugs WHERE session_id = $1) as bug_count`,
+        [sessionId]
+      );
+      const { test_count, bug_count } = countResult.rows[0];
+
+      logger.info('Auto-created test suite from QA session', {
+        sessionId,
+        testSuiteId,
+        projectId,
+        testCount: test_count,
+        bugCount: bug_count
+      });
+
+      return testSuiteId;
+    } catch (err) {
+      logger.error('Failed to create test suite from session', { sessionId, error: err });
+      return null;
+    }
+  }
 }
 
 // Document interface

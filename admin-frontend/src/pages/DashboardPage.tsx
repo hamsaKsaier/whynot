@@ -32,7 +32,7 @@ export const DashboardPage: React.FC = () => {
   const kpis = [
     { label: 'Total Users', value: stats?.total_users ?? 0, icon: FiUsers, color: 'bg-blue-50 text-blue-600' },
     { label: 'MRR', value: `$${((stats?.mrr_cents ?? 0) / 100).toFixed(0)}`, icon: FiDollarSign, color: 'bg-green-50 text-green-600' },
-    { label: 'Active Plans', value: stats?.subscriptions_by_plan?.length ?? 0, icon: FiCreditCard, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Active Plans', value: stats?.subscriptions_by_plan?.length ?? 0, icon: FiCreditCard, color: 'bg-sky-50 text-sky-600' },
     { label: 'ARR', value: `$${((stats?.mrr_cents ?? 0) * 12 / 100).toFixed(0)}`, icon: FiTrendingUp, color: 'bg-orange-50 text-orange-600' },
   ];
 

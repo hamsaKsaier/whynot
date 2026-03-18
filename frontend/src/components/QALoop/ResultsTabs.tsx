@@ -32,7 +32,7 @@ export interface ResultsTabsProps {
 export const ResultsTabs: React.FC<ResultsTabsProps> = ({
   testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning
 }) => {
-  const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'chaos' | 'analysis'>('tests');
+  const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'analysis'>('tests');
 
   const severityColor = (s: string) => {
     switch (s) {
@@ -66,10 +66,9 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
     <>
       <div className="border-b border-gray-200 mb-4">
         <nav className="flex gap-4 flex-wrap">
-          {tab('tests',    'Tests',    testCases.length, <FiFileText className="text-sm" />,     'border-purple-500 text-purple-600')}
+          {tab('tests',    'Tests',    testCases.length, <FiFileText className="text-sm" />,     'border-sky-500 text-sky-600')}
           {tab('bugs',     'Bugs',     bugs.length,      <FiAlertTriangle className="text-sm" />, 'border-red-500 text-red-600')}
           {tab('pages',    'Pages',    pages.length,     <FiGlobe className="text-sm" />,         'border-blue-500 text-blue-600')}
-          {tab('chaos',    'Security', vulns,            <FiShield className="text-sm" />,        'border-orange-500 text-orange-600')}
           {tab('analysis', 'Analysis', analyses.length,  <FiSearch className="text-sm" />,        'border-green-500 text-green-600')}
         </nav>
       </div>
@@ -142,9 +141,6 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
           </div>
         )}
 
-        {activeTab === 'chaos' && (
-          <ChaosResultsTab results={chaosResults} summary={chaosSummary} isRunning={isRunning} />
-        )}
         {activeTab === 'analysis' && (
           <AnalysisTab analyses={analyses} correlations={correlations} />
         )}

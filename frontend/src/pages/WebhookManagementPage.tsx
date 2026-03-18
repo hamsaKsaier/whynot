@@ -70,7 +70,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
   const [loadingChannels, setLoadingChannels] = useState(true);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [channelName, setChannelName] = useState('');
-  const [channelType, setChannelType] = useState<'slack' | 'discord' | 'webhook'>('slack');
+  const [channelType, setChannelType] = useState<'email' | 'slack'>('email');
   const [channelConfig, setChannelConfig] = useState({ webhookUrl: '' });
 
   // Webhook Logs State
@@ -228,11 +228,11 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
           <div className="page-header flex items-center justify-between">
             <div>
               <h1 className="page-title flex items-center gap-2">
-                <FiShield className="text-purple-500" />
-                Webhook Management
+                <FiShield className="text-sky-500" />
+                Notifications
               </h1>
               <p className="page-subtitle">
-                Manage API keys, notification channels, and monitor webhook activity
+                Manage API keys, notification channels, and monitor activity
               </p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               className={`
                 flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors
                 ${activeTab === tab.id
-                  ? 'border-purple-500 text-purple-600'
+                  ? 'border-sky-500 text-sky-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
                 }
               `}
@@ -299,7 +299,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
               <button
                 onClick={() => setCreatedKey(null)}
-                className="w-full py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                className="w-full py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
               >
                 Done
               </button>
@@ -316,7 +316,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               </h2>
               <button
                 onClick={() => setShowCreateKey(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
               >
                 <FiPlus /> Create Key
               </button>
@@ -357,7 +357,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                                 setNewKeyPermissions(newKeyPermissions.filter(p => p !== perm));
                               }
                             }}
-                            className="rounded text-purple-500 focus:ring-purple-500"
+                            className="rounded text-sky-500 focus:ring-sky-500"
                           />
                           <span className="text-sm text-gray-700 capitalize">{perm}</span>
                         </label>
@@ -391,7 +391,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                     <button
                       onClick={createAPIKey}
                       disabled={!newKeyName}
-                      className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Create
                     </button>
@@ -406,8 +406,8 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
             ) : apiKeys.length === 0 ? (
               <div className="rounded-xl border border-gray-200 bg-white text-center py-12 px-8">
                 <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-purple-50 flex items-center justify-center">
-                    <FiKey className="h-6 w-6 text-purple-400" />
+                  <div className="h-12 w-12 rounded-xl bg-sky-50 flex items-center justify-center">
+                    <FiKey className="h-6 w-6 text-sky-400" />
                   </div>
                 </div>
                 <h3 className="text-sm font-semibold text-gray-800 mb-1">No API keys yet</h3>
@@ -416,7 +416,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 </p>
                 <button
                   onClick={() => setShowCreateKey(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
                 >
                   <FiPlus className="h-3.5 w-3.5" /> Create Key
                 </button>
@@ -436,7 +436,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <FiKey className={key.revoked_at ? 'text-red-500' : 'text-purple-500'} />
+                        <FiKey className={key.revoked_at ? 'text-red-500' : 'text-sky-500'} />
                         <div>
                           <div className="font-medium text-gray-900">
                             {key.name}
@@ -506,10 +506,30 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               </h2>
               <button
                 onClick={() => setShowCreateChannel(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
               >
                 <FiPlus /> Add Channel
               </button>
+            </div>
+
+            {/* Triggers info */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 mb-4">
+              <h3 className="font-medium text-gray-900 mb-3">Notification Triggers</h3>
+              <div className="space-y-2">
+                {[
+                  { label: 'Scan complete', desc: 'When a QA session finishes running' },
+                  { label: 'Bug found (critical)', desc: 'When a critical-severity bug is discovered' },
+                  { label: 'Monitor alert', desc: 'When a scheduled monitor detects a regression' },
+                ].map(trigger => (
+                  <div key={trigger.label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <FiBell className="text-sky-500 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{trigger.label}</div>
+                      <div className="text-xs text-gray-500">{trigger.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Create Channel Form */}
@@ -539,24 +559,40 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       onChange={(e) => setChannelType(e.target.value as any)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
                     >
-                      <option value="slack">Slack</option>
-                      <option value="discord">Discord</option>
-                      <option value="webhook">Generic Webhook</option>
+                      <option value="email">Email</option>
+                      <option value="slack">Slack Webhook URL</option>
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Webhook URL
-                    </label>
-                    <input
-                      type="url"
-                      value={channelConfig.webhookUrl}
-                      onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
-                      placeholder="https://hooks.slack.com/services/..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
-                    />
-                  </div>
+                  {channelType === 'slack' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Slack Webhook URL
+                      </label>
+                      <input
+                        type="url"
+                        value={channelConfig.webhookUrl}
+                        onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
+                        placeholder="https://hooks.slack.com/services/..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                      />
+                    </div>
+                  )}
+
+                  {channelType === 'email' as any && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={channelConfig.webhookUrl}
+                        onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
+                        placeholder="team@example.com"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex justify-end gap-2">
                     <button
@@ -568,7 +604,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                     <button
                       onClick={createNotificationChannel}
                       disabled={!channelName || !channelConfig.webhookUrl}
-                      className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add Channel
                     </button>
@@ -647,7 +683,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-900">
-                Recent Webhook Activity
+                Recent Activity
               </h2>
               <button
                 onClick={loadWebhookLogs}
@@ -668,7 +704,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 </div>
                 <h3 className="text-sm font-semibold text-gray-800 mb-1">No activity yet</h3>
                 <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto">
-                  Webhook calls will appear here once your API key is used to trigger a test run.
+                  Activity will appear here once your API key is used to trigger a test run.
                 </p>
               </div>
             ) : (

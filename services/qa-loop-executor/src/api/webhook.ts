@@ -227,6 +227,7 @@ router.post('/webhook/retest', async (req: Request, res: Response) => {
 
     retestExecutor.run().then(async (results) => {
       await qaLoopRepository.updateSessionStatus(retestSession.id, 'completed');
+      await qaLoopRepository.createTestSuiteFromSession(retestSession.id);
 
       // Send callback if configured
       const callbackInfo = pendingCallbacks.get(runId);
@@ -443,6 +444,7 @@ router.post('/webhook/github-actions', async (req: Request, res: Response) => {
     // For GitHub Actions, we want synchronous results
     const results = await retestExecutor.run();
     await qaLoopRepository.updateSessionStatus(retestSession.id, 'completed');
+    await qaLoopRepository.createTestSuiteFromSession(retestSession.id);
 
     // Update GitHub commit status if token provided
     if (github_token && repository && sha) {

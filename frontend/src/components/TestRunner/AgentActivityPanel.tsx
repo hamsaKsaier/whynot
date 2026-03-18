@@ -42,7 +42,7 @@ export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({
       case 'recovery_failed':
         return <FiXCircle className="h-4 w-4 text-red-500" />;
       case 'needs_help':
-        return <FiMessageCircle className="h-4 w-4 text-purple-500" />;
+        return <FiMessageCircle className="h-4 w-4 text-sky-500" />;
       default:
         return <FiAlertCircle className="h-4 w-4 text-gray-500" />;
     }
@@ -59,7 +59,7 @@ export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({
       case 'recovery_failed':
         return 'bg-red-50 border-red-200';
       case 'needs_help':
-        return 'bg-purple-50 border-purple-200';
+        return 'bg-sky-50 border-sky-200';
       default:
         return 'bg-gray-50 border-gray-200';
     }

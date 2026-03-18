@@ -179,7 +179,7 @@ Common issues and solutions for WhyNot.
 **Solutions:**
 1. Check database performance:
    ```bash
-   docker compose exec database psql -U thundercode -d thundercode -c "SELECT * FROM pg_stat_activity;"
+   docker compose exec database psql -U whynot -d whynot -c "SELECT * FROM pg_stat_activity;"
    ```
 
 2. Increase service resources in docker-compose.yml
@@ -225,7 +225,7 @@ Common issues and solutions for WhyNot.
 2. Check database logs for migration errors
 3. Manually run migrations:
    ```bash
-   docker compose exec database psql -U thundercode -d thundercode -f /docker-entrypoint-initdb.d/001_initial_schema.sql
+   docker compose exec database psql -U whynot -d whynot -f /docker-entrypoint-initdb.d/001_initial_schema.sql
    ```
 
 ## General Debugging

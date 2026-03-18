@@ -68,7 +68,7 @@ export const AnalyticsPage: React.FC = () => {
             <XAxis dataKey="date" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip />
-            <Area type="monotone" dataKey="count" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} />
+            <Area type="monotone" dataKey="count" stroke="#0284c7" fill="#0284c7" fillOpacity={0.15} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -83,7 +83,7 @@ export const AnalyticsPage: React.FC = () => {
               <XAxis dataKey="plan_name" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 100).toFixed(0)}`} />
               <Tooltip formatter={(val: number) => `$${(val / 100).toFixed(2)}`} />
-              <Bar dataKey="mrr_cents" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="mrr_cents" fill="#0284c7" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

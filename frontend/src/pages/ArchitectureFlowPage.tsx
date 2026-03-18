@@ -50,16 +50,16 @@ const nodeTypes = {
 /** Edge stroke colors by source node type */
 const EDGE_COLORS: Record<string, string> = {
   project: '#0ea5e9',   // sky-blue
-  folder: '#6366f1',    // indigo
+  folder: '#0284c7',    // sky blue
   userStory: '#22c55e', // green
   testSuite: '#f97316', // orange
-  testCase: '#a855f7',  // purple
+  testCase: '#0EA5E9',  // sky blue
 };
 
 /** MiniMap colors by node type */
 const MINIMAP_COLORS: Record<string, string> = {
   project: '#0ea5e9',
-  folder: '#6366f1',
+  folder: '#0284c7',
   userStory: '#22c55e',
   testSuite: '#f97316',
   testCase: '#a855f7',
@@ -72,7 +72,7 @@ const FILTER_ITEMS: { type: FlowNodeType; label: string; color: string; borderCo
   { type: 'folder', label: 'Folder', color: 'bg-indigo-500', borderColor: 'border-indigo-300' },
   { type: 'userStory', label: 'User Story', color: 'bg-green-500', borderColor: 'border-green-300' },
   { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-300' },
-  { type: 'testCase', label: 'Test Case', color: 'bg-purple-500', borderColor: 'border-purple-300' },
+  { type: 'testCase', label: 'Test Case', color: 'bg-sky-500', borderColor: 'border-sky-300' },
   { type: 'testStep', label: 'Test Step', color: 'bg-gray-400', borderColor: 'border-gray-300' },
 ];
 
@@ -619,7 +619,7 @@ export const ArchitectureFlowPage: React.FC = () => {
         <StatPill icon={<FiGlobe className="h-3.5 w-3.5" />} label="Projects" value={stats.projects} colorClass="text-sky-500" />
         <StatPill icon={<FiBook className="h-3.5 w-3.5" />} label="Stories" value={stats.stories} colorClass="text-green-500" />
         <StatPill icon={<FiPackage className="h-3.5 w-3.5" />} label="Suites" value={stats.suites} colorClass="text-orange-500" />
-        <StatPill icon={<FiFileText className="h-3.5 w-3.5" />} label="Cases" value={stats.cases} colorClass="text-purple-500" />
+        <StatPill icon={<FiFileText className="h-3.5 w-3.5" />} label="Cases" value={stats.cases} colorClass="text-sky-500" />
         <StatPill icon={<FiActivity className="h-3.5 w-3.5" />} label="Steps" value={stats.steps} colorClass="text-gray-500" />
       </div>
 

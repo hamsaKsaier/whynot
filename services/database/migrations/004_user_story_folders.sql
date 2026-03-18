@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS user_story_folders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
-  color VARCHAR(7) DEFAULT '#6366f1',
+  color VARCHAR(7) DEFAULT '#0284c7',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

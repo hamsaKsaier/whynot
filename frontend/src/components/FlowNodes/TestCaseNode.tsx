@@ -29,20 +29,20 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
 
   return (
     <div
-      className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-purple-500 min-w-[240px] max-w-[280px] cursor-pointer transition-all duration-200 hover:shadow-md"
+      className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-sky-500 min-w-[240px] max-w-[280px] cursor-pointer transition-all duration-200 hover:shadow-md"
       onClick={handleToggleExpand}
     >
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-purple-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-sky-500"
       />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-1.5">
-          <div className="p-1.5 bg-purple-50 rounded-lg flex-shrink-0">
-            <FiFileText className="h-3.5 w-3.5 text-purple-600" />
+          <div className="p-1.5 bg-sky-50 rounded-lg flex-shrink-0">
+            <FiFileText className="h-3.5 w-3.5 text-sky-600" />
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-600">
             Test Case
           </span>
           <div className="ml-auto flex items-center gap-1">
@@ -64,15 +64,15 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
               disabled={data.isRunning}
               className={`p-1 rounded-lg transition-all ${
                 data.isRunning
-                  ? 'bg-purple-100 cursor-not-allowed'
-                  : 'hover:bg-purple-50 hover:scale-110'
+                  ? 'bg-sky-100 cursor-not-allowed'
+                  : 'hover:bg-sky-50 hover:scale-110'
               }`}
               title={data.isRunning ? 'Running...' : 'Run test'}
             >
               {data.isRunning ? (
-                <FiLoader className="h-3.5 w-3.5 text-purple-400 animate-spin" />
+                <FiLoader className="h-3.5 w-3.5 text-sky-400 animate-spin" />
               ) : (
-                <FiPlay className="h-3.5 w-3.5 text-purple-600" />
+                <FiPlay className="h-3.5 w-3.5 text-sky-600" />
               )}
             </button>
           </div>
@@ -87,7 +87,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
         )}
         {data.stepCount != null && (
           <div className="mt-2 pt-2 border-t border-gray-100">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-purple-50 text-[10px] font-medium text-purple-700">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-sky-50 text-[10px] font-medium text-sky-700">
               {data.stepCount} {data.stepCount === 1 ? 'step' : 'steps'}
             </span>
           </div>
@@ -96,7 +96,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-purple-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-sky-500"
       />
     </div>
   );

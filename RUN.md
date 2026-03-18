@@ -49,10 +49,10 @@ NODE_ENV=development
 LOG_LEVEL=info
 
 # Database Configuration
-POSTGRES_USER=thundercode
-POSTGRES_PASSWORD=thundercode
-POSTGRES_DB=thundercode
-DATABASE_URL=postgresql://thundercode:thundercode@database:5432/thundercode
+POSTGRES_USER=whynot
+POSTGRES_PASSWORD=whynot
+POSTGRES_DB=whynot
+DATABASE_URL=postgresql://whynot:whynot@database:5432/whynot
 
 # Gateway Service
 PORT=3000
@@ -179,7 +179,7 @@ docker compose ps
 
 ### Access Database
 ```bash
-docker compose exec database psql -U thundercode -d thundercode
+docker compose exec database psql -U whynot -d whynot
 ```
 
 ### Clean Everything (including volumes)
@@ -214,7 +214,7 @@ docker compose down -v
 1. **Wait for database to be ready:**
    ```bash
    # Check database health
-   docker compose exec database pg_isready -U thundercode
+   docker compose exec database pg_isready -U whynot
    ```
 
 2. **Verify DATABASE_URL in .env matches docker-compose.yml**

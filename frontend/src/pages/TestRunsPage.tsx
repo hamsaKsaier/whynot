@@ -4,7 +4,7 @@ import { FiFilter, FiSearch, FiPlay, FiActivity, FiSquare, FiDownload } from 're
 import { Card } from '../components/common/Card';
 import { AdvancedSearch } from '../components/common/AdvancedSearch';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { TestAutomationChatbot } from '../components/Chatbot/TestAutomationChatbot';
+
 import { formatRelativeTime, formatAbsoluteTime } from '../utils/dateFormat';
 import { getExecutions, getExecutionById, stopExecution } from '../services/api';
 import { useToastContext } from '../contexts/ToastContext';
@@ -412,9 +412,6 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
         </>
       )}
 
-      <TestAutomationChatbot
-        context={{}}
-      />
     </div>
   );
 };

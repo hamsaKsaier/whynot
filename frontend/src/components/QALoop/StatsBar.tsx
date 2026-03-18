@@ -48,7 +48,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
 }) => (
   <>
     {/* Five stat cards */}
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       <Card className="p-4 text-center">
         <FiGlobe className="mx-auto text-2xl text-blue-500 mb-2" />
         <div className="text-2xl font-bold text-gray-900">
@@ -73,19 +73,11 @@ export const StatsBar: React.FC<StatsBarProps> = ({
         <div className="text-xs text-gray-500">Bugs Found</div>
       </Card>
 
-      <Card className="p-4 text-center">
-        <FiShield className="mx-auto text-2xl text-orange-500 mb-2" />
-        <div className="text-2xl font-bold text-gray-900">
-          {chaosResults.filter(r => r.vulnerabilityConfirmed).length}
-        </div>
-        <div className="text-xs text-gray-500">Vulnerabilities</div>
-      </Card>
-
       <Card
         className="p-4 text-center cursor-pointer hover:bg-gray-50"
         onClick={onToggleQualityDashboard}
       >
-        <FiBarChart2 className="mx-auto text-2xl text-purple-500 mb-2" />
+        <FiBarChart2 className="mx-auto text-2xl text-sky-500 mb-2" />
         <div className="text-2xl font-bold text-gray-900">
           {qualityScore.overall}%
         </div>
@@ -97,7 +89,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
     {showQualityDashboard && (
       <Card className="p-4">
         <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <FiBarChart2 className="text-purple-500" />
+          <FiBarChart2 className="text-sky-500" />
           Quality Dashboard
           <button
             onClick={onToggleQualityDashboard}

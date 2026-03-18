@@ -17,6 +17,9 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ArchitectureFlowPage } from './pages/ArchitectureFlowPage';
 import { QALoopPage } from './pages/QALoopPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { LandingPage } from './pages/LandingPage';
+import { PublicScanResultsPage } from './pages/PublicScanResultsPage';
+import { MonitorsPage } from './pages/MonitorsPage';
 import { UpgradePrompt } from './components/common/UpgradePrompt';
 
 /** Wraps all authenticated routes inside the app shell (sidebar + header). */
@@ -50,8 +53,10 @@ function App() {
           <Router>
             <Routes>
               {/* Public routes — rendered without the app shell */}
+              <Route path="/landing" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route path="/scan/:sessionId" element={<PublicScanResultsPage />} />
 
               {/* All other routes require auth + workspace */}
               <Route element={<ProtectedRoute />}>
@@ -73,6 +78,7 @@ function App() {
                     <Route path="/integrations" element={<Navigate to="/settings?tab=integrations" replace />} />
                     <Route path="/github-repos" element={<Navigate to="/settings?tab=github" replace />} />
                     <Route path="/webhooks" element={<Navigate to="/settings?tab=webhooks" replace />} />
+                    <Route path="/notifications" element={<Navigate to="/settings?tab=webhooks" replace />} />
                     <Route path="/billing" element={<Navigate to="/settings?tab=billing" replace />} />
 
                     <Route path="*" element={<NotFoundPage />} />

@@ -70,7 +70,7 @@ export const PlansPage: React.FC = () => {
                       <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">Hidden</span>
                     )}
                     {plan.is_custom && (
-                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">Custom</span>
+                      <span className="px-2 py-0.5 bg-sky-100 text-sky-700 text-xs rounded-full">Custom</span>
                     )}
                   </div>
                   <p className="text-sm text-gray-500 mt-1">

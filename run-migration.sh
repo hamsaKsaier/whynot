@@ -16,7 +16,7 @@ else
 fi
 
 # Run migration
-$DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-thundercode} -d ${POSTGRES_DB:-thundercode} < services/database/migrations/004_user_story_folders.sql
+$DOCKER_COMPOSE exec -T database psql -U ${POSTGRES_USER:-whynot} -d ${POSTGRES_DB:-whynot} < services/database/migrations/004_user_story_folders.sql
 
 echo "Migration completed successfully!"
 

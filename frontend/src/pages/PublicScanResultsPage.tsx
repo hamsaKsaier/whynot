@@ -134,7 +134,7 @@ export const PublicScanResultsPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <FiLoader className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-3" />
+          <FiLoader className="h-8 w-8 animate-spin text-sky-600 mx-auto mb-3" />
           <p className="text-gray-500">Loading scan results...</p>
         </div>
       </div>
@@ -149,7 +149,7 @@ export const PublicScanResultsPage: React.FC = () => {
           <p className="text-red-500 mb-4">{error}</p>
           <button
             onClick={() => navigate('/landing')}
-            className="text-purple-600 hover:text-purple-700 font-medium"
+            className="text-sky-600 hover:text-sky-700 font-medium"
           >
             Back to home
           </button>
@@ -166,7 +166,7 @@ export const PublicScanResultsPage: React.FC = () => {
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <button onClick={() => navigate('/landing')} className="flex items-center gap-2 hover:opacity-80">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg flex items-center justify-center">
               <FiZap className="h-4 w-4 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">WhyNot</span>
@@ -177,7 +177,7 @@ export const PublicScanResultsPage: React.FC = () => {
             )}
             <button
               onClick={() => navigate('/login')}
-              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors"
             >
               Sign up for full access
             </button>
@@ -199,7 +199,7 @@ export const PublicScanResultsPage: React.FC = () => {
                     href={session?.target_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1 truncate"
+                    className="text-sm text-sky-600 hover:text-sky-700 flex items-center gap-1 truncate"
                   >
                     {session?.target_url}
                     <FiExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -209,14 +209,14 @@ export const PublicScanResultsPage: React.FC = () => {
                   {!showPreview && session?.target_url && (
                     <button
                       onClick={() => setShowPreview(true)}
-                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
                       title="Show site preview"
                     >
                       <FiMonitor className="h-4 w-4" />
                     </button>
                   )}
                   {isRunning && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-700 rounded-full text-sm font-medium">
                       <FiLoader className="h-3.5 w-3.5 animate-spin" />
                       Scanning
                     </div>
@@ -238,7 +238,7 @@ export const PublicScanResultsPage: React.FC = () => {
 
               {/* Live activity indicator */}
               {isRunning && (
-                <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-lg text-sm text-purple-700 transition-all">
+                <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-sky-50 rounded-lg text-sm text-sky-700 transition-all">
                   <ActivityMessage.icon className="h-4 w-4 flex-shrink-0 animate-pulse" />
                   <span className="truncate">{ActivityMessage.text}</span>
                 </div>
@@ -261,7 +261,7 @@ export const PublicScanResultsPage: React.FC = () => {
                   <div className="text-[11px] text-gray-500 mt-1">Tests Generated</div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{session?.pages_explored ?? 0}</div>
+                  <div className="text-2xl font-bold text-sky-600">{session?.pages_explored ?? 0}</div>
                   <div className="text-[11px] text-gray-500 mt-1">Pages Explored</div>
                 </div>
               </div>
@@ -274,7 +274,7 @@ export const PublicScanResultsPage: React.FC = () => {
                   onClick={() => setActiveTab('tests')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === 'tests'
-                      ? 'text-purple-700 border-b-2 border-purple-600 bg-purple-50/50'
+                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-50/50'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -284,7 +284,7 @@ export const PublicScanResultsPage: React.FC = () => {
                   onClick={() => setActiveTab('bugs')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === 'bugs'
-                      ? 'text-purple-700 border-b-2 border-purple-600 bg-purple-50/50'
+                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-50/50'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -411,14 +411,14 @@ export const PublicScanResultsPage: React.FC = () => {
             </div>
 
             {/* CTA */}
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-center text-white">
+            <div className="bg-gradient-to-r from-sky-500 to-sky-600 rounded-xl p-6 text-center text-white">
               <h2 className="text-xl font-bold mb-2">Want the full experience?</h2>
-              <p className="text-purple-100 mb-4 text-sm max-w-lg mx-auto">
+              <p className="text-sky-100 mb-4 text-sm max-w-lg mx-auto">
                 Sign up to get auto-fix PRs, scheduled monitoring, CI integration, and unlimited QA sessions.
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="px-6 py-2.5 bg-white text-purple-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                className="px-6 py-2.5 bg-white text-sky-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-sm"
               >
                 Sign up free
               </button>
@@ -435,8 +435,8 @@ export const PublicScanResultsPage: React.FC = () => {
                     <FiMonitor className="h-4 w-4 text-gray-400" />
                     <span className="text-xs font-medium text-gray-600">Live Preview</span>
                     {isRunning && (
-                      <span className="flex items-center gap-1 text-[10px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
+                      <span className="flex items-center gap-1 text-[10px] text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse" />
                         AI is testing this site
                       </span>
                     )}
@@ -480,7 +480,7 @@ export const PublicScanResultsPage: React.FC = () => {
                   {isRunning && (
                     <div className="absolute bottom-3 left-3 right-3">
                       <div className="bg-black/70 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                        <FiCpu className="h-3.5 w-3.5 text-purple-400 animate-pulse" />
+                        <FiCpu className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
                         <span>WhyNot AI is testing this page...</span>
                       </div>
                     </div>

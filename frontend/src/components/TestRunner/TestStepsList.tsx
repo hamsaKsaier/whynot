@@ -65,7 +65,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
       case 'fill':
         return 'bg-green-100 text-green-800';
       case 'navigate':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-sky-100 text-sky-800';
       case 'wait':
         return 'bg-yellow-100 text-yellow-800';
       case 'assert':

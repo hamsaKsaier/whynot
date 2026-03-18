@@ -113,7 +113,7 @@ All components of the Visual Regression Intelligence feature have been successfu
 ./run-visual-regression-migration.sh
 
 # Option 2: Manual execution (when Docker is running)
-docker compose exec database psql -U thundercode -d thundercode -f /docker-entrypoint-initdb.d/migrations/008_visual_regression.sql
+docker compose exec database psql -U whynot -d whynot -f /docker-entrypoint-initdb.d/migrations/008_visual_regression.sql
 
 # Option 3: Manual SQL execution (when Docker is not running)
 # Connect to database and execute the SQL from services/database/migrations/008_visual_regression.sql
@@ -131,10 +131,10 @@ docker compose restart test-executor gateway
 ### Step 3: Verify Installation
 ```bash
 # Check if baselines table exists
-docker compose exec database psql -U thundercode -d thundercode -c "\d visual_baselines"
+docker compose exec database psql -U whynot -d whynot -c "\d visual_baselines"
 
 # Check if comparisons table exists
-docker compose exec database psql -U thundercode -d thundercode -c "\d visual_comparisons"
+docker compose exec database psql -U whynot -d whynot -c "\d visual_comparisons"
 ```
 
 ### Step 4: Test the Feature
