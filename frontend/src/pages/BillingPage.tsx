@@ -25,7 +25,9 @@ import {
   FiCalendar,
 } from 'react-icons/fi';
 
-export const BillingPage: React.FC = () => {
+export const BillingContent: React.FC = () => <BillingPage embedded />;
+
+export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const [subscription, setSubscription] = useState<any>(null);
   const [plan, setPlan] = useState<any>(null);
   const [features, setFeatures] = useState<Record<string, string>>({});
@@ -138,19 +140,21 @@ export const BillingPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Billing & Usage</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your subscription, credits, and invoices</p>
+    <div className={embedded ? 'space-y-8' : 'p-6 max-w-6xl mx-auto space-y-8'}>
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Billing & Usage</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage your subscription, credits, and invoices</p>
+          </div>
+          {subscription?.stripe_subscription_id && (
+            <Button onClick={handleManageBilling} disabled={actionLoading} variant="secondary">
+              <FiCreditCard className="mr-2 h-4 w-4" />
+              Manage Billing
+            </Button>
+          )}
         </div>
-        {subscription?.stripe_subscription_id && (
-          <Button onClick={handleManageBilling} disabled={actionLoading} variant="secondary">
-            <FiCreditCard className="mr-2 h-4 w-4" />
-            Manage Billing
-          </Button>
-        )}
-      </div>
+      )}
 
       {/* Current Plan + Credits Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

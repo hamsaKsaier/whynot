@@ -55,7 +55,9 @@ const INTEGRATION_TYPES = [
   },
 ];
 
-export const IntegrationsPage: React.FC = () => {
+export const IntegrationsContent: React.FC = () => <IntegrationsPage embedded />;
+
+export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -141,21 +143,23 @@ export const IntegrationsPage: React.FC = () => {
   const getTypeInfo = (type: string) => INTEGRATION_TYPES.find(t => t.type === type);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className={embedded ? '' : 'p-6 max-w-4xl mx-auto'}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>
-          <p className="text-sm text-gray-500 mt-1">Connect bug trackers to create tasks from discovered bugs with one click</p>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>
+            <p className="text-sm text-gray-500 mt-1">Connect bug trackers to create tasks from discovered bugs with one click</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <FiPlus className="h-4 w-4" />
+            Add Integration
+          </button>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <FiPlus className="h-4 w-4" />
-          Add Integration
-        </button>
-      </div>
+      )}
 
       {/* Integrations List */}
       {loading ? (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
@@ -11,16 +11,11 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { HomePage } from './pages/HomePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
-import { TestCasesPage } from './pages/TestCasesPage';
-import { TestRunsPage } from './pages/TestRunsPage';
 import { TestRunDetailPage } from './pages/TestRunDetailPage';
-import { EnvironmentsPage } from './pages/EnvironmentsPage';
+import { TestResultsPage } from './pages/TestResultsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ArchitectureFlowPage } from './pages/ArchitectureFlowPage';
 import { QALoopPage } from './pages/QALoopPage';
-import { WebhookManagementPage } from './pages/WebhookManagementPage';
-import { IntegrationsPage } from './pages/IntegrationsPage';
-import { GitHubReposPage } from './pages/GitHubReposPage';
-import { BillingPage } from './pages/BillingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { UpgradePrompt } from './components/common/UpgradePrompt';
 
@@ -64,17 +59,22 @@ function App() {
                   <Route element={<LayoutWrapper />}>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/qa-loop" element={<QALoopPage />} />
-                    <Route path="/webhooks" element={<WebhookManagementPage />} />
                     <Route path="/projects" element={<ProjectsPage />} />
                     <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                    <Route path="/test-cases" element={<TestCasesPage />} />
+                    <Route path="/test-results" element={<TestResultsPage />} />
                     <Route path="/test-runs/:executionId" element={<TestRunDetailPage />} />
-                    <Route path="/test-runs" element={<TestRunsPage />} />
-                    <Route path="/environments" element={<EnvironmentsPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/architecture-flow" element={<ArchitectureFlowPage />} />
-                    <Route path="/integrations" element={<IntegrationsPage />} />
-                    <Route path="/github-repos" element={<GitHubReposPage />} />
-                    <Route path="/billing" element={<BillingPage />} />
+
+                    {/* Redirects from old routes */}
+                    <Route path="/test-runs" element={<Navigate to="/test-results?tab=runs" replace />} />
+                    <Route path="/test-cases" element={<Navigate to="/test-results?tab=cases" replace />} />
+                    <Route path="/environments" element={<Navigate to="/settings?tab=environments" replace />} />
+                    <Route path="/integrations" element={<Navigate to="/settings?tab=integrations" replace />} />
+                    <Route path="/github-repos" element={<Navigate to="/settings?tab=github" replace />} />
+                    <Route path="/webhooks" element={<Navigate to="/settings?tab=webhooks" replace />} />
+                    <Route path="/billing" element={<Navigate to="/settings?tab=billing" replace />} />
+
                     <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Route>

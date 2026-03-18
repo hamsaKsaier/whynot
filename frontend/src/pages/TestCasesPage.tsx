@@ -14,7 +14,9 @@ import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getTestCases, updateTestCase, deleteTestCase, executeTest } from '../services/api';
 import type { TestCase } from '../types';
 
-export const TestCasesPage: React.FC = () => {
+export const TestCasesContent: React.FC = () => <TestCasesPage embedded />;
+
+export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const { success, error: showError } = useToastContext();
   const { optimisticUpdate, optimisticDelete } = useOptimisticUpdate<TestCase>();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -165,19 +167,21 @@ export const TestCasesPage: React.FC = () => {
 
   return (
     <div>
-      <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Test Cases</h1>
-          <p className="page-subtitle">Manage and execute your saved test cases</p>
+      {!embedded && (
+        <div className="page-header flex items-center justify-between">
+          <div>
+            <h1 className="page-title">Test Cases</h1>
+            <p className="page-subtitle">Manage and execute your saved test cases</p>
+          </div>
+          <Button
+            className="flex items-center space-x-2"
+            onClick={() => navigate('/qa-loop')}
+          >
+            <FiPlus className="h-4 w-4" />
+            <span>New Test Case</span>
+          </Button>
         </div>
-        <Button
-          className="flex items-center space-x-2"
-          onClick={() => navigate('/qa-loop')}
-        >
-          <FiPlus className="h-4 w-4" />
-          <span>New Test Case</span>
-        </Button>
-      </div>
+      )}
 
       {/* Filter bar — only shown when there are test cases */}
       {testCases.length > 0 && (
