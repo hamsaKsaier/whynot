@@ -131,12 +131,14 @@ services:
       - .env
     environment:
       - PORT=3000
-      - FRONTEND_URL=http://localhost:5183
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5183}
+      - ADMIN_FRONTEND_URL=${ADMIN_FRONTEND_URL:-http://localhost:5184}
       - AI_SERVICE_URL=http://ai-service:8000
       - TEST_EXECUTOR_URL=http://test-executor:3001
       - QA_LOOP_EXECUTOR_URL=http://qa-loop-executor:3002
       - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
       - NODE_ENV=production
+      - ALLOW_INTERNAL_SCAN=${ALLOW_INTERNAL_SCAN:-true}
       - RATE_LIMIT_TEST_EXECUTION_MAX=${RATE_LIMIT_TEST_EXECUTION_MAX:-50}
       - RATE_LIMIT_TEST_GENERATION_MAX=${RATE_LIMIT_TEST_GENERATION_MAX:-50}
       - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-200}
@@ -149,6 +151,12 @@ services:
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3010/api/auth/google/callback}
       - SCREENSHOT_RETENTION_DAYS=${SCREENSHOT_RETENTION_DAYS:-30}
       - VIDEO_DIR=/app/videos
+      # Stripe
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-http://localhost:5183/billing?success=true}
+      - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-http://localhost:5183/billing?canceled=true}
     volumes:
       - ./gateway/src:/app/src
       - ./shared:/app/shared
@@ -173,19 +181,48 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-/api}
+        - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:3011}
+        - VITE_QA_LOOP_WS_URL=${VITE_QA_LOOP_WS_URL:-ws://localhost:3012}
     ports:
-      - "5183:5183"
-    environment:
-      - VITE_API_URL=http://localhost:3010/api
-      - VITE_WS_URL=ws://localhost:3011
-      - VITE_QA_LOOP_WS_URL=ws://localhost:3012
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      - "5183:80"
     depends_on:
       - gateway
     restart: unless-stopped
-    command: npm run dev -- --host 0.0.0.0
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${ADMIN_VITE_API_URL:-/api}
+    ports:
+      - "5184:80"
+    depends_on:
+      - gateway
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Test target app (buggy task manager for QA testing)
+  test-app:
+    build:
+      context: /Users/takiacademy/whynot-test-app
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+    restart: unless-stopped
 
 volumes:
   screenshots:

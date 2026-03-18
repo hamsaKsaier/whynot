@@ -1,0 +1,154 @@
+# WhyNot QA — GitHub Action
+# Run autonomous QA scans on every deploy
+#
+# Usage:
+# 1. Add your WhyNot API key as a GitHub secret: WHYNOT_API_KEY
+# 2. Copy this file to .github/workflows/qa-scan.yml
+# 3. Update the TARGET_URL to point to your staging/preview URL
+
+name: WhyNot QA Scan
+
+on:
+  # Run on deploys to main
+  push:
+    branches: [main]
+  # Run on PRs (use preview URL)
+  pull_request:
+    branches: [main]
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'URL to scan'
+        required: true
+        default: 'https://your-staging-app.com'
+
+env:
+  WHYNOT_API_URL: https://your-whynot-instance.com/api
+  # Default target URL (override with workflow_dispatch input)
+  TARGET_URL: https://your-staging-app.com
+
+jobs:
+  qa-scan:
+    name: QA Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Start QA Scan
+        id: start-scan
+        run: |
+          URL="${{ github.event.inputs.target_url || env.TARGET_URL }}"
+          echo "Scanning: $URL"
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ env.WHYNOT_API_URL }}/ci/scan" \
+            -H "Authorization: Bearer ${{ secrets.WHYNOT_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"targetUrl\": \"$URL\",
+              \"qualityThreshold\": 80,
+              \"maxIterations\": 5,
+              \"failOnThreshold\": true
+            }")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "Failed to start scan (HTTP $HTTP_CODE): $BODY"
+            exit 1
+          fi
+
+          SESSION_ID=$(echo "$BODY" | jq -r '.sessionId')
+          echo "session_id=$SESSION_ID" >> $GITHUB_OUTPUT
+          echo "Scan started: $SESSION_ID"
+
+      - name: Wait for Results
+        id: results
+        run: |
+          SESSION_ID="${{ steps.start-scan.outputs.session_id }}"
+          echo "Polling scan results for session: $SESSION_ID"
+
+          for i in $(seq 1 60); do
+            sleep 15
+
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+              "${{ env.WHYNOT_API_URL }}/ci/results/$SESSION_ID" \
+              -H "Authorization: Bearer ${{ secrets.WHYNOT_API_KEY }}")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+            BODY=$(echo "$RESPONSE" | head -n -1)
+
+            STATUS=$(echo "$BODY" | jq -r '.status')
+            echo "[$i/60] Status: $STATUS"
+
+            if [ "$STATUS" = "completed" ] || [ "$STATUS" = "stopped" ] || [ "$STATUS" = "failed" ]; then
+              QUALITY=$(echo "$BODY" | jq -r '.qualityScore')
+              PASSED=$(echo "$BODY" | jq -r '.passed')
+              BUGS=$(echo "$BODY" | jq -r '.bugsFound')
+              TESTS=$(echo "$BODY" | jq -r '.testsGenerated')
+
+              echo "quality_score=$QUALITY" >> $GITHUB_OUTPUT
+              echo "passed=$PASSED" >> $GITHUB_OUTPUT
+              echo "bugs_found=$BUGS" >> $GITHUB_OUTPUT
+              echo "tests_generated=$TESTS" >> $GITHUB_OUTPUT
+
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "  WhyNot QA Results"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "  Quality Score: $QUALITY/100"
+              echo "  Bugs Found:    $BUGS"
+              echo "  Tests Run:     $TESTS"
+              echo "  Passed:        $PASSED"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+              if [ "$HTTP_CODE" = "422" ]; then
+                echo ""
+                echo "Quality threshold not met!"
+
+                # Print bug summary
+                CRITICAL=$(echo "$BODY" | jq -r '.summary.critical // 0')
+                HIGH=$(echo "$BODY" | jq -r '.summary.high // 0')
+                MEDIUM=$(echo "$BODY" | jq -r '.summary.medium // 0')
+                LOW=$(echo "$BODY" | jq -r '.summary.low // 0')
+
+                echo "Bugs: $CRITICAL critical, $HIGH high, $MEDIUM medium, $LOW low"
+                exit 1
+              fi
+
+              exit 0
+            fi
+          done
+
+          echo "Scan timed out after 15 minutes"
+          exit 1
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const quality = '${{ steps.results.outputs.quality_score }}';
+            const passed = '${{ steps.results.outputs.passed }}';
+            const bugs = '${{ steps.results.outputs.bugs_found }}';
+            const tests = '${{ steps.results.outputs.tests_generated }}';
+            const icon = passed === 'true' ? '✅' : '❌';
+
+            const body = `## ${icon} WhyNot QA Scan Results
+
+            | Metric | Value |
+            |--------|-------|
+            | Quality Score | **${quality}/100** |
+            | Bugs Found | ${bugs} |
+            | Tests Generated | ${tests} |
+            | Status | ${passed === 'true' ? 'Passed ✅' : 'Failed ❌'} |
+
+            [View full results](https://your-whynot-instance.com/qa-loop?session=${{ steps.start-scan.outputs.session_id }})`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

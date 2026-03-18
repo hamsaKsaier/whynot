@@ -9,6 +9,7 @@ import {
   FiZap,
   FiClipboard,
   FiSettings,
+  FiLogOut,
 } from 'react-icons/fi';
 import { Tooltip } from '../common/Tooltip';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
@@ -66,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const location = useLocation();
   const { activeWorkspace } = useWorkspace();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const initials = user?.name
     ? user.name
@@ -97,13 +98,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
         } ${
           active
-            ? 'border-l-[3px] border-primary-500 bg-primary-50/80 text-primary-700 font-medium'
-            : 'border-l-[3px] border-transparent text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
+            ? 'bg-primary-600 text-white font-medium shadow-sm'
+            : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
         }`}
       >
         <Icon
           className={`h-5 w-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'} ${
-            active ? 'text-primary-600' : 'text-gray-500'
+            active ? 'text-white' : 'text-gray-500'
           }`}
         />
         {!collapsed && <span className="flex-1 text-sm">{item.label}</span>}
@@ -146,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
+      className={`h-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
@@ -224,6 +225,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {user.role?.replace(/_/g, ' ') || 'User'}
                   </p>
                 </div>
+                <button
+                  onClick={logout}
+                  className="p-1.5 rounded-md hover:bg-gray-200 transition-colors flex-shrink-0"
+                  title="Sign out"
+                  aria-label="Sign out"
+                >
+                  <FiLogOut className="h-3.5 w-3.5 text-gray-400" />
+                </button>
               </div>
             </div>
           )}
