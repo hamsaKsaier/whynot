@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { PlanRepository, PlanEntity } from '../../shared/database/repositories/plan-repository';
 import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
 import { InvoiceRepository } from '../../shared/database/repositories/invoice-repository';
@@ -14,22 +15,16 @@ const invoiceRepository = new InvoiceRepository();
 const creditRepository = new CreditRepository();
 const workspaceRepository = new WorkspaceRepository();
 
-// Lazy-load Stripe to avoid errors when not configured
-let stripeInstance: any = null;
+// Lazy-load Stripe instance to avoid errors when STRIPE_SECRET_KEY not configured
+let stripeInstance: Stripe | null = null;
 
-function getStripe(): any {
+function getStripe(): Stripe {
   if (!stripeInstance) {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not configured');
     }
-    // Dynamic require to avoid issues when stripe is not installed
-    try {
-      const Stripe = require('stripe');
-      stripeInstance = new Stripe(secretKey, { apiVersion: '2024-06-20' });
-    } catch (err) {
-      throw new Error('Stripe package is not installed. Run: npm install stripe');
-    }
+    stripeInstance = new Stripe(secretKey, { apiVersion: '2024-06-20' as any });
   }
   return stripeInstance;
 }
@@ -96,7 +91,7 @@ export class StripeService {
       },
     });
 
-    return { sessionId: session.id, url: session.url };
+    return { sessionId: session.id, url: session.url! };
   }
 
   /**

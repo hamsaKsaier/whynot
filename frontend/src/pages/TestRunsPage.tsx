@@ -21,7 +21,9 @@ const formatDuration = (ms: number): string => {
   return `${seconds}s`;
 };
 
-export const TestRunsPage: React.FC = () => {
+export const TestRunsContent: React.FC = () => <TestRunsPage embedded />;
+
+export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const navigate = useNavigate();
   const { success, error: showError } = useToastContext();
   const [executions, setExecutions] = useState<ExecutionResult[]>([]);
@@ -182,30 +184,32 @@ export const TestRunsPage: React.FC = () => {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Test Runs</h1>
-          <p className="text-gray-600 mt-1">View execution history and results</p>
-        </div>
-        {executions.length > 0 && (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handleExport('csv')}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <FiDownload className="h-4 w-4" />
-              <span>Export CSV</span>
-            </button>
-            <button
-              onClick={() => handleExport('json')}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <FiDownload className="h-4 w-4" />
-              <span>Export JSON</span>
-            </button>
+      {!embedded && (
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Test Runs</h1>
+            <p className="text-gray-600 mt-1">View execution history and results</p>
           </div>
-        )}
-      </div>
+          {executions.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleExport('csv')}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <FiDownload className="h-4 w-4" />
+                <span>Export CSV</span>
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <FiDownload className="h-4 w-4" />
+                <span>Export JSON</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Analytics/Metrics */}
       {executions.length > 0 && (

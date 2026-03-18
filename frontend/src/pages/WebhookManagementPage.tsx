@@ -50,7 +50,9 @@ interface WebhookLog {
   createdAt: string;
 }
 
-export const WebhookManagementPage: React.FC = () => {
+export const WebhookContent: React.FC = () => <WebhookManagementPage embedded />;
+
+export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const { success, error: showError } = useToastContext();
 
   // API Keys State
@@ -222,17 +224,19 @@ export const WebhookManagementPage: React.FC = () => {
   return (
     <div className="space-y-6">
         {/* Header */}
-        <div className="page-header flex items-center justify-between">
-          <div>
-            <h1 className="page-title flex items-center gap-2">
-              <FiShield className="text-purple-500" />
-              Webhook Management
-            </h1>
-            <p className="page-subtitle">
-              Manage API keys, notification channels, and monitor webhook activity
-            </p>
+        {!embedded && (
+          <div className="page-header flex items-center justify-between">
+            <div>
+              <h1 className="page-title flex items-center gap-2">
+                <FiShield className="text-purple-500" />
+                Webhook Management
+              </h1>
+              <p className="page-subtitle">
+                Manage API keys, notification channels, and monitor webhook activity
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-gray-200">

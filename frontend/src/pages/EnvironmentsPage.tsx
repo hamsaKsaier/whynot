@@ -17,7 +17,9 @@ import {
   type SavedEnvironment,
 } from '../services/api';
 
-export const EnvironmentsPage: React.FC = () => {
+export const EnvironmentsContent: React.FC = () => <EnvironmentsPage embedded />;
+
+export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const navigate = useNavigate();
   const { success, error: showError } = useToastContext();
 
@@ -102,16 +104,18 @@ export const EnvironmentsPage: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Environments</h1>
-          <p className="text-gray-600 mt-1">Manage test environments and URLs</p>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Environments</h1>
+            <p className="text-gray-600 mt-1">Manage test environments and URLs</p>
+          </div>
+          <Button onClick={openCreateModal} className="flex items-center space-x-2">
+            <FiPlus className="h-4 w-4" />
+            <span>New Environment</span>
+          </Button>
         </div>
-        <Button onClick={openCreateModal} className="flex items-center space-x-2">
-          <FiPlus className="h-4 w-4" />
-          <span>New Environment</span>
-        </Button>
-      </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

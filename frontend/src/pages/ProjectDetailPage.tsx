@@ -9,6 +9,7 @@ import {
   FiGlobe,
   FiFolder,
   FiCopy,
+  FiGitBranch,
 } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -401,6 +402,10 @@ export const ProjectDetailPage: React.FC = () => {
               <Button onClick={() => handleStartQASession()}>
                 <FiZap className="mr-1" />
                 Start QA Session
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => navigate('/architecture-flow')}>
+                <FiGitBranch className="mr-1" />
+                Architecture
               </Button>
               <Button variant="secondary" size="sm" onClick={() => setIsEditingProject(true)}>
                 <FiEdit2 className="mr-1" />

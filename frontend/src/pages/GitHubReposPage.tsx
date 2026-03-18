@@ -16,7 +16,9 @@ interface GitHubRepo {
   created_at: string;
 }
 
-export const GitHubReposPage: React.FC = () => {
+export const GitHubReposContent: React.FC = () => <GitHubReposPage embedded />;
+
+export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -102,20 +104,22 @@ export const GitHubReposPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">GitHub Repositories</h1>
-          <p className="text-sm text-gray-500 mt-1">Connect repos to enable Auto-Fix — AI generates PRs to fix discovered bugs</p>
+    <div className={embedded ? '' : 'p-6 max-w-4xl mx-auto'}>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">GitHub Repositories</h1>
+            <p className="text-sm text-gray-500 mt-1">Connect repos to enable Auto-Fix — AI generates PRs to fix discovered bugs</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <FiPlus className="h-4 w-4" />
+            Connect Repo
+          </button>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <FiPlus className="h-4 w-4" />
-          Connect Repo
-        </button>
-      </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-gray-500">Loading repositories...</div>
