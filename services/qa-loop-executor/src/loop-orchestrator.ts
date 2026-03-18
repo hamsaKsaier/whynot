@@ -519,6 +519,7 @@ Start now with get_session_state(), then navigate and explore.
             limit: this.config.maxDurationHours
           });
           await this.repository.updateSessionStatus(this.sessionId, 'completed');
+          await this.repository.createTestSuiteFromSession(this.sessionId);
           emitToSession(this.sessionId, {
             type: 'session_complete',
             data: {
@@ -548,6 +549,7 @@ Start now with get_session_state(), then navigate and explore.
           qualityScore: qualityScore.overall
         });
         await this.repository.updateSessionStatus(this.sessionId, 'completed');
+        await this.repository.createTestSuiteFromSession(this.sessionId);
         emitToSession(this.sessionId, {
           type: 'session_complete',
           data: {

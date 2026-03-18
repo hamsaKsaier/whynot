@@ -15,7 +15,17 @@ const PORT = process.env.PORT || 3002;
 const logger = createLogger('qa-loop-executor');
 
 // Middleware
-app.use(cors());
+// CORS: This is an internal service called by the gateway. Restrict origins.
+const qaLoopCorsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+  : (process.env.NODE_ENV === 'production'
+    ? [] // In production, only allow gateway (same-network, no browser access)
+    : ['http://localhost:3000', 'http://localhost:5183', 'http://localhost:5184']);
+app.use(cors({
+  origin: qaLoopCorsOrigins.length > 0 ? qaLoopCorsOrigins : false,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Workspace-ID', 'X-User-ID'],
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 

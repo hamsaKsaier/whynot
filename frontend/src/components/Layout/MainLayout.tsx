@@ -20,7 +20,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const { toasts, dismissToast } = useToastContext();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-navy-900 text-gray-100">
       {/* Skip to main content */}
       <a href="#main-content" className="skip-to-main">
         Skip to main content
@@ -56,7 +56,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {/* Content Area */}
         <div className="flex-1 flex overflow-hidden min-w-0">
           {/* Main Content Pane */}
-          <main id="main-content" className={`flex-1 overflow-y-auto ${showBrowserPreview ? 'border-r border-gray-200' : ''}`} role="main">
+          <main id="main-content" className={`flex-1 overflow-y-auto ${showBrowserPreview ? 'border-r border-navy-700' : ''}`} role="main">
             <div className="p-4 sm:p-6">
               {children}
             </div>
@@ -64,7 +64,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
           {/* Browser Preview Pane (Right) */}
           {showBrowserPreview && browserPreview && (
-            <div className="w-1/2 border-l border-gray-200 bg-white overflow-hidden hidden md:block">
+            <div className="w-1/2 border-l border-navy-700 bg-navy-800 overflow-hidden hidden md:block">
               {browserPreview}
             </div>
           )}

@@ -13,8 +13,8 @@ export const ProtectedRoute: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <FiLoader className="h-8 w-8 animate-spin text-primary-600" />
+      <div className="min-h-screen bg-navy-900 flex items-center justify-center">
+        <FiLoader className="h-8 w-8 animate-spin text-primary-400" />
       </div>
     );
   }

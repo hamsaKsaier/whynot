@@ -3,15 +3,14 @@ import { FiChevronUp, FiChevronDown, FiMonitor } from 'react-icons/fi';
 import { TestStepsList } from './TestStepsList';
 import { ExecutionControls } from './ExecutionControls';
 import { BrowserPreview } from '../BrowserPreview/BrowserPreview';
-import { TestAutomationChatbot } from '../Chatbot/TestAutomationChatbot';
 import { TestModificationConfirmationDialog } from '../common/TestModificationConfirmationDialog';
 import { AgentActivityPanel } from './AgentActivityPanel';
 import { ExecutionViewTabs, ExecutionViewTab } from './ExecutionViewTabs';
 import { StatusBadge } from '../common/StatusBadge';
 import { useBrowserStream } from '../../hooks/useBrowserStream';
 import { updateTestCase, executeTest } from '../../services/api';
-import type { TestCase, ExecutionResult, StepResult, TestStep } from '../../types';
-import type { ChatContext } from '../../services/chatbot-api';
+import type { TestCase, ExecutionResult, StepResult } from '../../types';
+
 
 interface TestExecutionViewProps {
   testCase: TestCase;
@@ -36,8 +35,6 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
 }) => {
   const [localCurrentStepIndex, setLocalCurrentStepIndex] = useState<number | undefined>();
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | undefined>();
-  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
-  const [chatbotContext, setChatbotContext] = useState<ChatContext | undefined>();
   const [pendingModification, setPendingModification] = useState<TestCase | null>(null);
   const [modificationTestResult, setModificationTestResult] = useState<ExecutionResult | null>(null);
   const [isTestingModification, setIsTestingModification] = useState(false);
@@ -130,27 +127,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
       element_found: false,
     }));
 
-  // Handle step fix - open chatbot with step context
-  const handleStepFix = (stepIndex: number, step: TestStep) => {
-    const stepResult = steps[stepIndex];
-    setChatbotContext({
-      test_case_id: testCase.id,
-      test_case: testCase,
-      execution_result: executionResult || undefined,
-      step_index: stepIndex,
-      step: step,
-      operation: 'fix',
-      step_id: step.id,
-      failure_analysis: stepResult?.failure_analysis,
-      page_state: stepResult?.page_state,
-      step_result: stepResult, // Include full step result
-      error_message: stepResult?.error,
-      attempted_selectors: stepResult?.attempted_selectors,
-    });
-    setIsChatbotOpen(true);
-  };
-
-  // Handle test modification request from chatbot - test before saving
+  // Handle test modification request - test before saving
   const handleTestModificationRequested = async (modifiedTestCase: TestCase) => {
     setPendingModification(modifiedTestCase);
     setIsTestingModification(true);
@@ -192,7 +169,6 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
       setIsModificationConfirmationOpen(false);
       setPendingModification(null);
       setModificationTestResult(null);
-      setIsChatbotOpen(false);
 
       // Notify parent component of update
       if (onTestCaseUpdated) {
@@ -212,31 +188,12 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
     setPendingModification(null);
     setModificationTestResult(null);
     setIsModificationConfirmationOpen(false);
-    // Keep chatbot open so user can try again
   };
 
   // Handle try again - allow user to modify further
   const handleTryAgain = () => {
     setModificationTestResult(null);
     setIsModificationConfirmationOpen(false);
-    // Keep chatbot open and pending modification so user can modify further
-  };
-
-  // Legacy handler for non-testing modifications (backwards compatibility)
-  const handleTestModified = async (modifiedTestCase: TestCase) => {
-    // This is for non-testing flows - just apply directly
-    try {
-      const updated = await updateTestCase(testCase.id, modifiedTestCase);
-      setIsChatbotOpen(false);
-      if (onTestCaseUpdated) {
-        onTestCaseUpdated(updated);
-      } else {
-        window.location.reload();
-      }
-    } catch (error: any) {
-      console.error('Failed to update test case:', error);
-      alert(`Failed to update test case: ${error.message}`);
-    }
   };
 
   // Render content based on active tab (mobile) or always show (desktop)
@@ -247,7 +204,6 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
       stepUpdates={stepUpdates}
       currentStepIndex={currentStepIndex ?? localCurrentStepIndex}
       onStepClick={setSelectedStepIndex}
-      onStepFix={handleStepFix}
     />
   );
 
@@ -662,17 +618,6 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
         </div>
       </div>
 
-      {/* Chatbot for step fixes */}
-      {isChatbotOpen && chatbotContext && (
-        <TestAutomationChatbot
-          isOpen={isChatbotOpen}
-          onClose={() => setIsChatbotOpen(false)}
-          context={chatbotContext}
-          onTestModified={handleTestModified}
-          onTestModificationRequested={handleTestModificationRequested}
-        />
-      )}
-
       {/* Test Modification Confirmation Dialog */}
       {pendingModification && (
         <TestModificationConfirmationDialog
@@ -686,43 +631,6 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
         />
       )}
 
-      {/* Chatbot for debugging - auto-open on failures or ambiguous failures */}
-      {!isChatbotOpen && executionResult && (
-        (() => {
-          const failedStep = executionResult.steps.find((s: StepResult) => s.success === false);
-          const failureAnalysis = failedStep?.failure_analysis;
-          const shouldAutoOpen = executionResult.status === 'failed' &&
-            failureAnalysis &&
-            failureAnalysis.confidence < 0.7; // Auto-open on ambiguous failures
-
-          return (
-            <TestAutomationChatbot
-              autoOpen={shouldAutoOpen}
-              context={{
-                test_case_id: testCase.id,
-                execution_id: executionResult.execution_id,
-                test_case: testCase,
-                execution_result: executionResult,
-                failure_analysis: failureAnalysis,
-                step: failedStep ? testCase.steps.find(s => s.id === failedStep.step_id) : undefined,
-                page_state: failedStep?.page_state
-              }}
-            />
-          );
-        })()
-      )}
-
-      {/* Always available chatbot button when no execution or execution not failed and not fixing step */}
-      {!isChatbotOpen && (!executionResult || executionResult.status !== 'failed') && (
-        <TestAutomationChatbot
-          context={{
-            test_case_id: testCase.id,
-            execution_id: executionResult?.execution_id,
-            test_case: testCase,
-            execution_result: executionResult
-          }}
-        />
-      )}
     </div>
   );
 };

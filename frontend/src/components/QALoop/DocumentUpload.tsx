@@ -151,8 +151,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         className={`
           border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
           ${isDragging
-            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-purple-400'
+            ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20'
+            : 'border-gray-300 dark:border-gray-600 hover:border-sky-400'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
@@ -168,14 +168,14 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
         {uploading ? (
           <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-2" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500 mb-2" />
             <span className="text-sm text-gray-500">Uploading...</span>
           </div>
         ) : (
           <>
             <FiUpload className="mx-auto h-10 w-10 text-gray-400 mb-2" />
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              <span className="font-medium text-purple-600 dark:text-purple-400">
+              <span className="font-medium text-sky-600 dark:text-sky-400">
                 Click to upload
               </span>
               {' '}or drag and drop

@@ -154,7 +154,7 @@ export const HomePage: React.FC = () => {
 
       {/* QA Loop Hero CTA */}
       {!showOnboarding && (
-        <div className="rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50 to-purple-50 p-10 text-center">
+        <div className="rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50 to-sky-50 p-10 text-center">
           <div className="flex justify-center mb-5">
             <div className="h-16 w-16 rounded-2xl bg-primary-600 flex items-center justify-center shadow-lg">
               <FiZap className="h-8 w-8 text-white" />

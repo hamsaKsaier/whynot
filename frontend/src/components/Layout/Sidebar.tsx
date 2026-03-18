@@ -57,8 +57,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         key={item.path}
         to={item.path}
         className={`flex items-center px-3 py-2 rounded-lg transition-colors group ${active
-          ? 'bg-primary-50 text-primary-700 font-medium'
-          : 'text-gray-700 hover:bg-gray-50'
+          ? 'bg-primary-500/10 text-primary-400 font-medium'
+          : 'text-gray-400 hover:bg-navy-700 hover:text-gray-200'
           }`}
       >
         <Icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? 'mx-auto' : 'mr-3'}`} />
@@ -79,29 +79,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'
+      className={`bg-navy-900 border-r border-navy-700 flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'
         }`}
     >
       {/* Logo/Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-navy-700">
         {!collapsed && (
           <div className="flex items-center">
-            <FiZap className="h-6 w-6 text-primary-600 mr-2" />
-            <span className="font-bold text-gray-900">{activeWorkspace?.name || 'WhyNot'}</span>
+            <img src="/logo.svg" alt="WhyNot" className="h-6" />
           </div>
         )}
         {collapsed && (
-          <FiZap className="h-6 w-6 text-primary-600 mx-auto" />
+          <img src="/favicon.svg" alt="WhyNot" className="h-6 w-6 mx-auto" />
         )}
         <button
           onClick={toggleCollapse}
-          className="p-1 rounded hover:bg-gray-100 transition-colors"
+          className="p-1 rounded hover:bg-navy-700 transition-colors"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (
-            <FiChevronRight className="h-5 w-5 text-gray-600" />
+            <FiChevronRight className="h-5 w-5 text-gray-400" />
           ) : (
-            <FiChevronLeft className="h-5 w-5 text-gray-600" />
+            <FiChevronLeft className="h-5 w-5 text-gray-400" />
           )}
         </button>
       </div>
@@ -114,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Bottom: Settings */}
-      <div className="border-t border-gray-200 py-3 px-2" onClick={onMobileClose}>
+      <div className="border-t border-navy-700 py-3 px-2" onClick={onMobileClose}>
         {bottomItems.map(renderNavItem)}
       </div>
     </div>

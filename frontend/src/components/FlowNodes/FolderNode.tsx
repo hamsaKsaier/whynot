@@ -13,7 +13,7 @@ interface FolderNodeData {
 }
 
 export const FolderNode: React.FC<NodeProps<FolderNodeData>> = ({ data }) => {
-  const folderColor = data.color || '#6366f1';
+  const folderColor = data.color || '#0284c7';
 
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();

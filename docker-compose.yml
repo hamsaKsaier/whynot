@@ -4,15 +4,15 @@ services:
     ports:
       - "5433:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-thundercode}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thundercode}
-      - POSTGRES_DB=${POSTGRES_DB:-thundercode}
+      - POSTGRES_USER=${POSTGRES_USER:-whynot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-whynot}
+      - POSTGRES_DB=${POSTGRES_DB:-whynot}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./services/database/migrations:/docker-entrypoint-initdb.d
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thundercode}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-whynot}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -52,7 +52,7 @@ services:
       - PORT=3001
       - AI_SERVICE_URL=http://ai-service:8000
       - SCREENSHOTS_DIR=/app/screenshots
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
       - DOCKER_ENV=true
       # Optimized timeouts for faster execution
@@ -104,7 +104,7 @@ services:
     environment:
       - PORT=3002
       - TEST_EXECUTOR_URL=http://test-executor:3001
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
     volumes:
       - ./services/qa-loop-executor/src:/app/src
@@ -136,7 +136,7 @@ services:
       - AI_SERVICE_URL=http://ai-service:8000
       - TEST_EXECUTOR_URL=http://test-executor:3001
       - QA_LOOP_EXECUTOR_URL=http://qa-loop-executor:3002
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-thundercode}:${POSTGRES_PASSWORD:-thundercode}@database:5432/${POSTGRES_DB:-thundercode}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
       - ALLOW_INTERNAL_SCAN=${ALLOW_INTERNAL_SCAN:-true}
       - RATE_LIMIT_TEST_EXECUTION_MAX=${RATE_LIMIT_TEST_EXECUTION_MAX:-50}

@@ -8,7 +8,7 @@ import { UserStory, TestCase } from '../../shared/types';
 import { errorHandler, asyncHandler, createError } from '../middleware/error-handler';
 import { requestLogger } from '../middleware/request-logger';
 import { validate, schemas, sanitizeUrl, sanitizeText } from '../middleware/validation';
-import { apiRateLimiter, testExecutionRateLimiter, testGenerationRateLimiter, qaLoopSessionRateLimiter } from '../middleware/rate-limit';
+import { apiRateLimiter, testExecutionRateLimiter, testGenerationRateLimiter, qaLoopSessionRateLimiter, loginRateLimiter, registerRateLimiter, publicEndpointRateLimiter } from '../middleware/rate-limit';
 import { createLogger } from '../../shared/logger/logger';
 import { metrics } from '../../shared/utils/metrics';
 import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
@@ -124,16 +124,23 @@ const logger = createLogger('gateway');
 
 // Middleware
 
-// Security headers
+// Security headers (Helmet.js)
+// Sets: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection,
+//       Strict-Transport-Security, X-DNS-Prefetch-Control, etc.
 app.use(helmet({
-  contentSecurityPolicy: false,  // We handle CSP separately if needed
+  contentSecurityPolicy: false,  // API-only service — CSP handled by frontends
   crossOriginEmbedderPolicy: false,  // Allow embedding for preview/testing features
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
 }));
 
 const corsOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5183',
   process.env.ADMIN_FRONTEND_URL || 'http://localhost:5184',
-];
+].filter(o => o && o !== '*'); // Never allow wildcard origins
 app.use(cors({
   origin: corsOrigins,
   credentials: true,
@@ -164,8 +171,8 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   }
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '12mb' })); // Allow document uploads (base64 encoded files)
+app.use(express.urlencoded({ extended: true, limit: '12mb' }));
 
 // Request logging middleware (before routes)
 app.use(requestLogger);
@@ -272,20 +279,14 @@ app.get('/health', async (req, res) => {
 
 // ==================== AUTH ROUTES (public — no auth middleware) ====================
 
-app.post('/api/auth/register', asyncHandler(async (req, res) => {
+app.post('/api/auth/register', registerRateLimiter, validate(schemas.register), asyncHandler(async (req, res) => {
   const { email, password, name } = req.body;
-  if (!email || !password || !name) {
-    throw createError('email, password, and name are required', 400, 'VALIDATION_ERROR');
-  }
   const result = await authService.register(String(email), String(password), String(name));
   res.status(201).json({ success: true, ...result });
 }));
 
-app.post('/api/auth/login', asyncHandler(async (req, res) => {
+app.post('/api/auth/login', loginRateLimiter, validate(schemas.login), asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
-    throw createError('email and password are required', 400, 'VALIDATION_ERROR');
-  }
   const result = await authService.login(String(email), String(password));
   res.json({ success: true, ...result });
 }));
@@ -352,11 +353,8 @@ app.get('/api/workspaces', requireAuth, asyncHandler(async (req, res) => {
   res.json({ success: true, workspaces });
 }));
 
-app.post('/api/workspaces', requireAuth, asyncHandler(async (req, res) => {
+app.post('/api/workspaces', requireAuth, validate(schemas.createWorkspace), asyncHandler(async (req, res) => {
   const { name } = req.body;
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    throw createError('Workspace name is required', 400, 'VALIDATION_ERROR');
-  }
   const workspace = await workspaceRepository.create({ name: name.trim(), owner_id: req.user!.id });
   res.status(201).json({ success: true, workspace });
 }));
@@ -395,9 +393,9 @@ app.delete('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => 
   res.json({ success: true, message: 'Workspace deleted' });
 }));
 
-// ─── Public routes (no auth required) ────────────────────────────────────────
+// ─── Public routes (no auth required, with dedicated rate limiting) ──────────
 import { publicRouter } from './public-router';
-app.use('/api/public', publicRouter);
+app.use('/api/public', publicEndpointRateLimiter, publicRouter);
 
 // ─── CI routes (API key auth — must be before requireAuth blanket) ───────────
 import { ciRouter } from './ci-router';
@@ -607,28 +605,12 @@ app.post('/api/execute-test', testExecutionRateLimiter, requireActiveSubscriptio
   res.json(executionResult);
 }));
 
-// Metrics endpoint
-app.get('/metrics', (req, res) => {
+// Metrics endpoint (requires auth — exposes internal operational data)
+app.get('/metrics', requireAuth, (req, res) => {
   res.json({
     service: 'gateway',
     timestamp: new Date().toISOString(),
     ...metrics.getSummary()
-  });
-});
-
-// Debug endpoint to check rate limit configuration
-app.get('/api/debug/rate-limits', (req, res) => {
-  res.json({
-    rate_limits: {
-      test_execution_max: process.env.RATE_LIMIT_TEST_EXECUTION_MAX || '10 (default)',
-      test_generation_max: process.env.RATE_LIMIT_TEST_GENERATION_MAX || '20 (default)',
-      max_requests: process.env.RATE_LIMIT_MAX_REQUESTS || '100 (default)',
-    },
-    parsed_values: {
-      test_execution_max: parseInt(process.env.RATE_LIMIT_TEST_EXECUTION_MAX || '10', 10),
-      test_generation_max: parseInt(process.env.RATE_LIMIT_TEST_GENERATION_MAX || '20', 10),
-      max_requests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
-    }
   });
 });
 
@@ -667,12 +649,8 @@ app.get('/api/projects', asyncHandler(async (req, res) => {
 // Create a new project (with plan limit check)
 app.post('/api/projects', requireFeatureLimit('max_projects', async (req) => {
   return await projectRepository.count(req.workspaceId);
-}), asyncHandler(async (req, res) => {
+}), validate(schemas.createProject), asyncHandler(async (req, res) => {
   const { name, description, website_url } = req.body;
-
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    throw createError('Project name is required', 400, 'VALIDATION_ERROR');
-  }
 
   logger.info('Creating project', { name });
   const project = await projectRepository.create({
@@ -745,7 +723,7 @@ app.get('/api/projects/:id/user-stories', asyncHandler(async (req, res) => {
 }));
 
 // Create user story in a project
-app.post('/api/projects/:id/user-stories', asyncHandler(async (req, res) => {
+app.post('/api/projects/:id/user-stories', validate(schemas.createUserStory), asyncHandler(async (req, res) => {
   const projectId = req.params.id;
   const { story, website_url, additional_context } = req.body;
 
@@ -753,10 +731,6 @@ app.post('/api/projects/:id/user-stories', asyncHandler(async (req, res) => {
   const project = await projectRepository.findById(projectId);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
-  }
-
-  if (!story || typeof story !== 'string' || story.trim().length === 0) {
-    throw createError('User story text is required', 400, 'VALIDATION_ERROR');
   }
 
   logger.info('Creating user story', { projectId, story: story.substring(0, 50) });
@@ -1014,7 +988,7 @@ app.post('/api/projects/:projectId/folders', asyncHandler(async (req, res) => {
   const folder = await folderRepository.create({
     project_id: projectId,
     name: name.trim(),
-    color: color || '#6366f1'
+    color: color || '#0284c7'
   });
 
   res.status(201).json({ success: true, folder });
@@ -1397,85 +1371,6 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
   }
 }));
 
-// Chatbot endpoints (proxy to AI service)
-const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-
-app.post('/api/chat/session', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
-    const response = await axios.post(
-      `${aiServiceUrl}/api/chat/session`,
-      req.body,
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-    res.json(response.data);
-  } catch (error: any) {
-    logger.error('Chat session creation failed', { error: error.message });
-    throw createError('Failed to create chat session', 500, 'INTERNAL_ERROR');
-  }
-}));
-
-app.post('/api/chat/message', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
-    const response = await axios.post(
-      `${aiServiceUrl}/api/chat/message`,
-      req.body,
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-    res.json(response.data);
-  } catch (error: any) {
-    logger.error('Chat message processing failed', { error: error.message });
-    throw createError('Failed to process chat message', 500, 'INTERNAL_ERROR');
-  }
-}));
-
-app.get('/api/chat/session/:id', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
-    const response = await axios.get(
-      `${aiServiceUrl}/api/chat/session/${req.params.id}`
-    );
-    res.json(response.data);
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw createError('Chat session not found', 404, 'NOT_FOUND');
-    }
-    logger.error('Failed to get chat session', { error: error.message });
-    throw createError('Failed to get chat session', 500, 'INTERNAL_ERROR');
-  }
-}));
-
-app.post('/api/chat/generate-test', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
-    const response = await axios.post(
-      `${aiServiceUrl}/api/chat/generate-test`,
-      req.body,
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-    res.json(response.data);
-  } catch (error: any) {
-    logger.error('Test generation from chat failed', { error: error.message });
-    throw createError('Failed to generate test from chat', 500, 'INTERNAL_ERROR');
-  }
-}));
-
-app.post('/api/chat/modify-test', asyncHandler(async (req, res) => {
-  try {
-    const axios = require('axios');
-    const response = await axios.post(
-      `${aiServiceUrl}/api/chat/modify-test`,
-      req.body,
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-    res.json(response.data);
-  } catch (error: any) {
-    logger.error('Test modification from chat failed', { error: error.message });
-    throw createError('Failed to modify test from chat', 500, 'INTERNAL_ERROR');
-  }
-}));
-
 // ==================== VISUAL REGRESSION ENDPOINTS ====================
 
 // Get baselines for a test case
@@ -1746,9 +1641,6 @@ app.get('/', (req, res) => {
       run_test: 'POST /api/run-test',
       generate_tests: 'POST /api/generate-tests',
       execute_test: 'POST /api/execute-test',
-      chat_session: 'POST /api/chat/session',
-      chat_message: 'POST /api/chat/message',
-      chat_session_get: 'GET /api/chat/session/:id',
       qa_loop_start: 'POST /api/qa-loop/sessions',
       qa_loop_list: 'GET /api/qa-loop/sessions',
       qa_loop_details: 'GET /api/qa-loop/sessions/:id',

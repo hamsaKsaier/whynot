@@ -14,7 +14,17 @@ const PORT = process.env.PORT || 3001;
 const logger = createLogger('test-executor');
 
 // Middleware
-app.use(cors());
+// CORS: This is an internal service called by the gateway. Restrict origins.
+const testExecCorsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+  : (process.env.NODE_ENV === 'production'
+    ? [] // In production, only allow gateway (same-network, no browser access)
+    : ['http://localhost:3000', 'http://localhost:5183']);
+app.use(cors({
+  origin: testExecCorsOrigins.length > 0 ? testExecCorsOrigins : false,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Workspace-ID'],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

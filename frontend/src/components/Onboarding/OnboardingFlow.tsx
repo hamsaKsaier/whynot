@@ -104,8 +104,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       description: 'WhyNot automatically creates test cases from your user stories',
       content: (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <FiPlay className="h-8 w-8 text-purple-600 flex-shrink-0" />
+          <div className="flex items-center gap-3 p-4 bg-sky-50 rounded-lg border border-sky-200">
+            <FiPlay className="h-8 w-8 text-sky-600 flex-shrink-0" />
             <div>
               <h3 className="font-semibold text-gray-900">AI-Powered Test Generation</h3>
               <p className="text-sm text-gray-600 mt-1">

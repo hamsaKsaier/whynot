@@ -1,5 +1,5 @@
 {
-  "name": "angry-buck",
+  "name": "whynot",
   "version": "1.0.0",
   "description": "A proof-of-concept implementation of an AI-powered test automation tool that converts user stories into executable test cases, automatically detects UI elements, and runs tests in a browser environment.",
   "main": "index.js",

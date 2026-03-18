@@ -124,7 +124,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
     blue:   'text-blue-500',
     green:  'text-green-500',
     red:    'text-red-500',
-    purple: 'text-purple-500',
+    sky: 'text-sky-500',
     yellow: 'text-yellow-500',
   };
 
@@ -191,7 +191,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
           {/* Target threshold marker */}
           <div
-            className="absolute w-1 h-4 bg-purple-500 rounded"
+            className="absolute w-1 h-4 bg-sky-500 rounded"
             style={{
               bottom: '0',
               left: '50%',
@@ -204,7 +204,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
         {/* Trend Info */}
         <div className="text-center">
           <div className="text-sm text-gray-500">Target</div>
-          <div className="text-2xl font-bold text-purple-500">{targetThreshold}%</div>
+          <div className="text-2xl font-bold text-sky-500">{targetThreshold}%</div>
           <div className="text-xs text-gray-400">
             {qualityScore.overall >= targetThreshold ? (
               <span className="text-green-500 flex items-center gap-1">
@@ -223,7 +223,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           { key: 'coverage', label: 'Coverage', icon: FiEye, color: 'blue' },
           { key: 'stability', label: 'Stability', icon: FiActivity, color: 'green' },
           { key: 'security', label: 'Security', icon: FiShield, color: 'red' },
-          { key: 'accessibility', label: 'A11y', icon: FiEye, color: 'purple' },
+          { key: 'accessibility', label: 'A11y', icon: FiEye, color: 'sky' },
           { key: 'performance', label: 'Perf', icon: FiZap, color: 'yellow' }
         ].map(({ key, label, icon: Icon, color }) => {
           const score = qualityScore.breakdown[key as keyof typeof qualityScore.breakdown];
@@ -331,7 +331,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
             {costTracking.costByPhase && (
               <div>
                 <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                  <FiActivity className="text-purple-500" /> By Phase
+                  <FiActivity className="text-sky-500" /> By Phase
                 </div>
                 <div className="space-y-1">
                   {Object.entries(costTracking.costByPhase)
@@ -431,14 +431,14 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       </div>
 
       {/* Current Status */}
-      <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+      <div className="flex items-center justify-between p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg">
         <div className="flex items-center gap-2">
-          <FiActivity className="text-purple-500 animate-pulse" />
+          <FiActivity className="text-sky-500 animate-pulse" />
           <span className="text-sm text-gray-700 dark:text-gray-300">
             Iteration <span className="font-bold">{currentIteration}</span>
           </span>
         </div>
-        <div className="text-sm text-purple-600 dark:text-purple-400">
+        <div className="text-sm text-sky-600 dark:text-sky-400">
           {qualityScore.overall >= targetThreshold ? (
             <span className="flex items-center gap-1">
               <FiCheckCircle /> Quality target reached

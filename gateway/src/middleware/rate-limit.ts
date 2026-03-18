@@ -79,6 +79,64 @@ export const qaLoopSessionRateLimiter = rateLimit({
   }
 });
 
+/**
+ * Strict rate limiter for login attempts — prevent brute-force attacks.
+ * Default: 10 attempts per 15-minute window per IP.
+ */
+export const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '10', 10),
+  message: 'Too many login attempts. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  handler: (_req: Request, res: Response) => {
+    throw createError(
+      'Too many login attempts from this IP. Please wait before trying again.',
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
+});
+
+/**
+ * Rate limiter for registration — prevent mass account creation.
+ * Default: 5 registrations per hour per IP.
+ */
+export const registerRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: parseInt(process.env.RATE_LIMIT_REGISTER_MAX || '5', 10),
+  message: 'Too many accounts created. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req: Request, res: Response) => {
+    throw createError(
+      'Too many registration attempts from this IP. Please wait before trying again.',
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
+});
+
+/**
+ * Rate limiter for public scan endpoints.
+ * Default: 10 requests per 15-minute window per IP.
+ */
+export const publicEndpointRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_PUBLIC_MAX || '10', 10),
+  message: 'Too many requests. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req: Request, res: Response) => {
+    throw createError(
+      'Too many requests from this IP. Please try again later.',
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
+});
+
 
 
 

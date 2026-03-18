@@ -346,6 +346,7 @@ router.post('/api/sessions/:id/retest', async (req: Request, res: Response) => {
 
     retestExecutor.run().then(async (results) => {
       await qaLoopRepository.updateSessionStatus(retestSession.id, 'completed');
+      await qaLoopRepository.createTestSuiteFromSession(retestSession.id);
       logger.info('Retest completed', { sessionId: retestSession.id, results });
     }).catch(async (error) => {
       await qaLoopRepository.updateSessionStatus(retestSession.id, 'failed');

@@ -32,7 +32,7 @@ export class FolderRepository {
       [
         input.project_id,
         input.name,
-        input.color || '#6366f1'
+        input.color || '#0284c7'
       ]
     );
 

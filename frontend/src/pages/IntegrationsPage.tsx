@@ -36,7 +36,7 @@ const INTEGRATION_TYPES = [
     label: 'ClickUp',
     description: 'Create tasks in ClickUp from discovered bugs',
     icon: '/clickup-icon.svg',
-    color: 'bg-purple-500',
+    color: 'bg-sky-500',
     fields: [
       { key: 'apiToken', label: 'API Token', placeholder: 'Your ClickUp API token', type: 'password' },
       { key: 'listId', label: 'List ID', placeholder: 'Target list ID for tasks', type: 'text' },

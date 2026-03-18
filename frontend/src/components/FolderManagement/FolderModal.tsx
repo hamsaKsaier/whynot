@@ -13,8 +13,8 @@ interface FolderModalProps {
 }
 
 const PRESET_COLORS = [
-  '#6366f1', // indigo
-  '#8b5cf6', // purple
+  '#0284c7', // sky blue dark
+  '#0EA5E9', // sky blue
   '#ec4899', // pink
   '#f59e0b', // amber
   '#10b981', // emerald
@@ -31,17 +31,17 @@ export const FolderModal: React.FC<FolderModalProps> = ({
   projectId,
 }) => {
   const [name, setName] = useState('');
-  const [color, setColor] = useState('#6366f1');
+  const [color, setColor] = useState('#0284c7');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (folder) {
       setName(folder.name);
-      setColor(folder.color || '#6366f1');
+      setColor(folder.color || '#0284c7');
     } else {
       setName('');
-      setColor('#6366f1');
+      setColor('#0284c7');
     }
     setError(null);
   }, [folder, isOpen]);

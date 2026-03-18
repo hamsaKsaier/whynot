@@ -91,7 +91,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'jira': return 'bg-blue-100 text-blue-700';
-      case 'clickup': return 'bg-purple-100 text-purple-700';
+      case 'clickup': return 'bg-sky-100 text-sky-700';
       case 'linear': return 'bg-indigo-100 text-indigo-700';
       default: return 'bg-gray-100 text-gray-700';
     }

@@ -193,5 +193,46 @@ export const schemas = {
     plan_id: z.string().uuid().optional(),
     status: z.enum(['active', 'trialing', 'past_due', 'canceled', 'paused', 'incomplete']).optional(),
   }),
+
+  // ─── Auth Schemas ──────────────────────────────────────────────────────────
+
+  register: z.object({
+    email: z.string().email('Invalid email address').max(255),
+    password: z.string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(128, 'Password must not exceed 128 characters'),
+    name: z.string()
+      .min(1, 'Name is required')
+      .max(100, 'Name must not exceed 100 characters'),
+  }),
+
+  login: z.object({
+    email: z.string().email('Invalid email address').max(255),
+    password: z.string().min(1, 'Password is required').max(128),
+  }),
+
+  // ─── Project / Workspace Schemas ──────────────────────────────────────────
+
+  createProject: z.object({
+    name: z.string()
+      .min(1, 'Project name is required')
+      .max(255, 'Project name must not exceed 255 characters'),
+    description: z.string().max(2000, 'Description must not exceed 2000 characters').optional(),
+    website_url: z.string().url('Must be a valid URL').optional(),
+  }),
+
+  createWorkspace: z.object({
+    name: z.string()
+      .min(1, 'Workspace name is required')
+      .max(255, 'Workspace name must not exceed 255 characters'),
+  }),
+
+  createUserStory: z.object({
+    story: z.string()
+      .min(1, 'User story text is required')
+      .max(10000, 'User story must not exceed 10000 characters'),
+    website_url: z.string().url('Must be a valid URL').optional(),
+    additional_context: z.string().max(5000, 'Additional context must not exceed 5000 characters').optional(),
+  }),
 };
 

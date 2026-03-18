@@ -15,10 +15,10 @@ NODE_ENV=development
 LOG_LEVEL=info
 
 # Database Configuration
-POSTGRES_USER=thundercode
-POSTGRES_PASSWORD=thundercode
-POSTGRES_DB=thundercode
-DATABASE_URL=postgresql://thundercode:thundercode@database:5432/thundercode
+POSTGRES_USER=whynot
+POSTGRES_PASSWORD=whynot
+POSTGRES_DB=whynot
+DATABASE_URL=postgresql://whynot:whynot@database:5432/whynot
 
 # Gateway Service
 PORT=3000

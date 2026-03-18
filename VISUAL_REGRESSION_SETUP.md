@@ -10,7 +10,7 @@
 
 Or manually:
 ```bash
-docker compose exec database psql -U thundercode -d thundercode -f /docker-entrypoint-initdb.d/migrations/008_visual_regression.sql
+docker compose exec database psql -U whynot -d whynot -f /docker-entrypoint-initdb.d/migrations/008_visual_regression.sql
 ```
 
 ### 2. Install Dependencies

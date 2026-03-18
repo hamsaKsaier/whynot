@@ -28,7 +28,7 @@ export const AuditLogPage: React.FC = () => {
   useEffect(() => { fetchLog(); }, [fetchLog]);
 
   const actionColors: Record<string, string> = {
-    'user.role_change': 'bg-purple-100 text-purple-800',
+    'user.role_change': 'bg-sky-100 text-sky-800',
     'user.suspend': 'bg-red-100 text-red-800',
     'user.unsuspend': 'bg-green-100 text-green-800',
     'user.impersonate': 'bg-yellow-100 text-yellow-800',

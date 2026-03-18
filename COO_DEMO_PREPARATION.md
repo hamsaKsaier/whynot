@@ -18,10 +18,10 @@
 ./run-migration.sh
 
 # Option 2: Manual execution
-docker-compose exec database psql -U thundercode -d thundercode < services/database/migrations/004_user_story_folders.sql
+docker-compose exec database psql -U whynot -d whynot < services/database/migrations/004_user_story_folders.sql
 
 # Verify migration
-docker-compose exec database psql -U thundercode -d thundercode -c "\d user_story_folders"
+docker-compose exec database psql -U whynot -d whynot -c "\d user_story_folders"
 ```
 
 ### 2. Prepare Demo Data
@@ -48,7 +48,7 @@ docker-compose exec database psql -U thundercode -d thundercode -c "\d user_stor
 3. Create folders like:
    - "Authentication" (color: blue)
    - "Dashboard" (color: green)
-   - "User Profile" (color: purple)
+   - "User Profile" (color: sky blue)
 
 **Assign User Stories to Folders:**
 1. Navigate to project detail page
