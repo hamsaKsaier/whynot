@@ -382,7 +382,6 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   });
 
   const phaseConfig = getPhaseConfig(currentPhase ?? null);
-  const costDollars = costInfo ? (costInfo.totalCostCents / 100).toFixed(3) : null;
 
   // Thinking text — keep last 5000 chars so user has time to read AI reasoning
   const displayThinking = thinkingText.slice(-5000);
@@ -554,10 +553,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             />
           </>
         )}
-        {costDollars && Number(costDollars) > 0 && (
-          <StatTile value={`$${costDollars}`} label="Cost" color="#fbbf24"
-            icon={<Icons.dollar />} />
-        )}
+        {/* Cost tile removed — shown only in post-scan summary */}
       </div>
 
       {/* ── Test Execution Feed ───────────────────────────────────────────────── */}

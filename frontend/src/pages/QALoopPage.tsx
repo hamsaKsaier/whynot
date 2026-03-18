@@ -413,6 +413,9 @@ export const QALoopPage: React.FC = () => {
                       analyses={analyses}
                       correlations={correlations}
                       isRunning={activeSession.status === 'running'}
+                      sessionId={activeSession.id}
+                      costInfo={costInfo}
+                      sessionComplete={activeSession.status === 'completed'}
                     />
                   </div>
                 </div>

@@ -156,8 +156,33 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
         </div>
       )}
 
-      {/* Current Plan + Credits Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Prominent Credits Card */}
+      <Card className="p-6 bg-slate-800 border-slate-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-500/20 rounded-xl">
+              <FiTrendingUp className="h-8 w-8 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-400">Credits Remaining</p>
+              <p className="text-4xl font-bold text-white">{balance?.balance ?? 0}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <CreditUsageBar
+              used={usage?.credits_used || 0}
+              total={usage?.credits_total || 0}
+              remaining={balance?.balance ?? 0}
+            />
+            <p className="text-xs text-slate-500 mt-2">
+              {usage?.credits_used || 0} used of {usage?.credits_total || 0} total this period
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Current Plan + Billing Period */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-primary-50 rounded-lg">
@@ -174,23 +199,6 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
           {subscription?.cancel_at_period_end && (
             <p className="text-xs text-orange-600 mt-2">Cancels at end of period</p>
           )}
-        </Card>
-
-        <Card className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-green-50 rounded-lg">
-              <FiTrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Credits Remaining</p>
-              <p className="text-lg font-semibold text-gray-900">{balance?.balance ?? 0}</p>
-            </div>
-          </div>
-          <CreditUsageBar
-            used={usage?.credits_used || 0}
-            total={usage?.credits_total || 0}
-            remaining={balance?.balance ?? 0}
-          />
         </Card>
 
         <Card className="p-5">

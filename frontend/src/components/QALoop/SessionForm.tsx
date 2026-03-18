@@ -2,7 +2,7 @@
  * SessionForm — "Start New Exploration" card extracted from QALoopPage (5.1).
  * Owns the start-form UI: URL input, advanced options, login credentials, documents.
  */
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card }     from '../common/Card';
 import { Button }   from '../common/Button';
 import { Input }    from '../common/Input';
@@ -21,8 +21,10 @@ import {
   FiToggleLeft,
   FiToggleRight,
   FiInfo,
+  FiAlertCircle,
 } from 'react-icons/fi';
 import { QALoopSession, QALoopDocument, LoginCredentials } from '../../services/qa-loop-api';
+import { getBillingCredits } from '../../services/api';
 import type { SavedEnvironment } from '../../services/api';
 
 export interface ExistingSessionInfo {
@@ -80,6 +82,24 @@ export interface SessionFormProps {
   onStart: () => void;
 }
 
+/** Estimate credits based on URL complexity heuristic */
+function estimateCreditCost(url: string): { estimate: string; range: [number, number] } {
+  if (!url) return { estimate: '~10-20', range: [10, 20] };
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname;
+    // Large app indicators: paths like /app, /dashboard, /admin, deep nesting
+    const hasAppPaths = /\/(app|dashboard|admin|portal|console)\b/.test(path);
+    const pathDepth = path.split('/').filter(Boolean).length;
+    if (hasAppPaths || pathDepth >= 3) return { estimate: '~25-30', range: [25, 30] };
+    if (pathDepth >= 1 && pathDepth < 3) return { estimate: '~10-20', range: [10, 20] };
+    // Simple single-page or root URL
+    return { estimate: '~5-10', range: [5, 10] };
+  } catch {
+    return { estimate: '~10-20', range: [10, 20] };
+  }
+}
+
 export const SessionForm: React.FC<SessionFormProps> = ({
   targetUrl, setTargetUrl,
   qualityThreshold, setQualityThreshold,
@@ -94,7 +114,29 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   environments,
   documents, activeSession, onUpload, onDelete, onToggle,
   isStarting, onStart,
-}) => (
+}) => {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+
+  // Fetch credit balance when form is first shown
+  useEffect(() => {
+    getBillingCredits()
+      .then((data: any) => setCreditsRemaining(data?.balance?.balance ?? data?.balance ?? null))
+      .catch(() => setCreditsRemaining(null));
+  }, []);
+
+  const costEstimate = useMemo(() => estimateCreditCost(targetUrl), [targetUrl]);
+
+  const handleStartClick = () => {
+    setShowConfirm(true);
+  };
+
+  const handleConfirmStart = () => {
+    setShowConfirm(false);
+    onStart();
+  };
+
+  return (
   <Card className="p-6">
     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
       <FiPlay className="text-green-500" />
@@ -242,29 +284,31 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             />
           </div>
 
-          {/* Login Credentials */}
-          <div className="border border-gray-200 rounded-lg p-3">
+          {/* Authentication Credentials */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setUseLogin(!useLogin)}
-              className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700"
+              className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700 p-3 hover:bg-gray-50 transition-colors"
             >
               {useLogin
-                ? <FiToggleRight className="text-blue-500" size={20} />
-                : <FiToggleLeft className="text-gray-400" size={20} />
+                ? <FiChevronUp className="text-gray-400" size={16} />
+                : <FiChevronDown className="text-gray-400" size={16} />
               }
               <FiLock className="text-gray-500" size={14} />
-              Login (optional)
+              Authentication
+              <span className="text-xs text-gray-400 font-normal ml-auto">Optional</span>
             </button>
 
             {useLogin && (
-              <div className="mt-3 space-y-3">
-                <p className="text-xs text-gray-500">
-                  Use a test account only. Credentials are sent securely to the test runner.
-                </p>
+              <div className="px-3 pb-3 space-y-3 border-t border-gray-100 pt-3">
+                <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                  <FiInfo className="shrink-0 mt-0.5" size={13} />
+                  <span>Credentials are encrypted and used only for automated testing</span>
+                </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Email / Username</label>
+                  <label className="block text-xs text-gray-600 mb-1">Test Username</label>
                   <div className="relative">
                     <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
                     <Input
@@ -278,7 +322,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Password</label>
+                  <label className="block text-xs text-gray-600 mb-1">Test Password</label>
                   <div className="relative">
                     <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
                     <Input
@@ -378,24 +422,85 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         </div>
       )}
 
-      {/* Start button */}
-      <Button
-        onClick={onStart}
-        disabled={isStarting || !targetUrl}
-        className="w-full"
-      >
-        {isStarting ? (
-          <span className="flex items-center gap-2">
-            <FiActivity className="animate-spin" />
-            Starting...
+      {/* Credit estimate */}
+      {targetUrl && !showConfirm && (
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg">
+          <FiInfo className="text-sky-400 shrink-0" size={14} />
+          <span className="text-sm text-slate-300">
+            Estimated cost: <span className="font-semibold text-white">{costEstimate.estimate} credits</span>
           </span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <FiPlay />
-            Start Exploration
-          </span>
-        )}
-      </Button>
+          <span className="text-xs text-slate-500 ml-auto">Actual cost depends on site complexity</span>
+        </div>
+      )}
+
+      {/* Confirmation dialog */}
+      {showConfirm && (
+        <div className="p-4 bg-slate-800 border border-slate-700 rounded-xl space-y-3">
+          <div className="flex items-start gap-2">
+            <FiAlertCircle className="text-sky-400 shrink-0 mt-0.5" size={16} />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-white">
+                This scan will use approximately {costEstimate.estimate} credits.
+              </p>
+              {creditsRemaining !== null && (
+                <p className="text-sm text-slate-400">
+                  You have <span className={`font-semibold ${creditsRemaining < costEstimate.range[1] ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {creditsRemaining} credits
+                  </span> remaining.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleConfirmStart}
+              disabled={isStarting}
+              className="flex-1"
+            >
+              {isStarting ? (
+                <span className="flex items-center gap-2">
+                  <FiActivity className="animate-spin" />
+                  Starting...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <FiPlay />
+                  Start Scan
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setShowConfirm(false)}
+              disabled={isStarting}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Start button (shown when not in confirmation state) */}
+      {!showConfirm && (
+        <Button
+          onClick={handleStartClick}
+          disabled={isStarting || !targetUrl}
+          className="w-full"
+        >
+          {isStarting ? (
+            <span className="flex items-center gap-2">
+              <FiActivity className="animate-spin" />
+              Starting...
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <FiPlay />
+              Start Exploration
+            </span>
+          )}
+        </Button>
+      )}
     </div>
   </Card>
-);
+  );
+};
