@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiHome, FiCommand, FiCreditCard, FiClipboard, FiSettings } from 'react-icons/fi';
+import { FiHelpCircle, FiMenu, FiX, FiZap, FiFolder, FiHome, FiCommand, FiCreditCard, FiClipboard, FiSettings } from 'react-icons/fi';
 import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { useAuth } from '../../contexts/AuthContext';
@@ -67,15 +67,23 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const [helpOpen, setHelpOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const helpRef = useRef<HTMLDivElement>(null);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   // Fetch credit balance
   useEffect(() => {
     if (!user) return;
     getBillingCredits()
       .then((data) => {
-        const bal = data?.balance;
-        setCreditBalance(typeof bal === 'object' && bal !== null ? bal.balance ?? 0 : bal ?? null);
+        // data may be { balance: number } or { balance: { balance: number, ... } } or the credit object itself
+        let bal: unknown = data;
+        if (bal && typeof bal === 'object' && 'balance' in (bal as Record<string, unknown>)) {
+          bal = (bal as Record<string, unknown>).balance;
+        }
+        // Unwrap one more level if still an object
+        if (bal && typeof bal === 'object' && 'balance' in (bal as Record<string, unknown>)) {
+          bal = (bal as Record<string, unknown>).balance;
+        }
+        setCreditBalance(typeof bal === 'number' ? bal : null);
       })
       .catch(() => {});
   }, [user, location.pathname]);
@@ -275,34 +283,21 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
           )}
         </div>
 
-        {/* User Avatar + Logout */}
-        <div className="flex items-center gap-1 ml-1">
+        {/* User Avatar (compact — full profile in sidebar) */}
+        <div className="flex items-center ml-1">
           <div className="flex items-center gap-2 px-2 py-1 rounded-lg">
             {user?.avatarUrl ? (
               <img
                 src={user.avatarUrl}
                 alt={user.name}
-                className="h-8 w-8 rounded-full object-cover"
+                className="h-7 w-7 rounded-full object-cover"
               />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
+              <div className="h-7 w-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold">
                 {initials}
               </div>
             )}
-            {user && (
-              <span className="text-sm font-medium text-gray-700 hidden sm:block max-w-[120px] truncate">
-                {user.name}
-              </span>
-            )}
           </div>
-          <button
-            onClick={logout}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            title="Sign out"
-            aria-label="Sign out"
-          >
-            <FiLogOut className="h-4 w-4 text-gray-600" />
-          </button>
         </div>
       </div>
       <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

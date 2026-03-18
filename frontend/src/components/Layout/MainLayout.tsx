@@ -20,7 +20,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const { toasts, dismissToast } = useToastContext();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Skip to main content */}
       <a href="#main-content" className="skip-to-main">
         Skip to main content

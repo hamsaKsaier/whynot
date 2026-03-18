@@ -44,6 +44,13 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
           {bug.bug_type && <span className="bg-gray-200 px-1.5 py-0.5 rounded">{bug.bug_type}</span>}
           {bug.page_url && <span className="truncate max-w-xs">{safePathname(bug.page_url)}</span>}
           <span className={bug.status === 'open' ? 'text-red-500' : 'text-green-500'}>{bug.status}</span>
+          {bug.video_path && (
+            <span className="text-blue-500 flex items-center gap-0.5" title="Video recording available">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </span>
+          )}
         </div>
       </div>
 
@@ -73,6 +80,20 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
               >
                 {bug.page_url}
               </a>
+            </div>
+          )}
+
+          {bug.video_path && (
+            <div>
+              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Session Recording</div>
+              <video
+                controls
+                preload="metadata"
+                className="w-full rounded-lg max-h-64 bg-black"
+                src={`/api/videos/${bug.video_path}`}
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
           )}
         </div>

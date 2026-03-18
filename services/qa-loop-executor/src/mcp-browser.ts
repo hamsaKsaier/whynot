@@ -1,6 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import Anthropic from '@anthropic-ai/sdk';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { createLogger } from '../../shared/logger/logger';
 import { emitToSession } from './api/websocket';
 
@@ -35,6 +38,12 @@ export class MCPBrowser {
   // Track navigation timing for load time reporting
   private lastNavigationTime = 0;
   private loadTimesCache = new Map<string, number>();
+
+  // Video recording: capture screenshots as frames to disk
+  private captureInterval: ReturnType<typeof setInterval> | null = null;
+  private frameDir: string | null = null;
+  private frameCount = 0;
+  private isRecording = false;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -150,6 +159,13 @@ export class MCPBrowser {
             screenshot: imageContent.data
           }
         });
+
+        // Also save as a video frame if recording is active
+        if (this.isRecording && this.frameDir) {
+          this.frameCount++;
+          const framePath = path.join(this.frameDir, `frame_${String(this.frameCount).padStart(4, '0')}.png`);
+          fs.promises.writeFile(framePath, Buffer.from(imageContent.data, 'base64')).catch(() => {});
+        }
       }
 
       // Auto-take screenshot for the frontend preview after key actions
@@ -211,6 +227,74 @@ export class MCPBrowser {
     }
   }
 
+  // ─── Video Recording ───
+
+  /**
+   * Start recording screenshots as video frames to disk.
+   * Captures a frame every FRAME_INTERVAL_MS milliseconds.
+   */
+  async startRecording(): Promise<void> {
+    if (this.isRecording) return;
+
+    const intervalMs = parseInt(process.env.VIDEO_FRAME_INTERVAL_MS || '2000', 10);
+    this.frameDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), `qa-frames-${this.sessionId}-`));
+    this.frameCount = 0;
+    this.isRecording = true;
+
+    logger.info('Video recording started', { sessionId: this.sessionId, frameDir: this.frameDir, intervalMs });
+
+    this.captureInterval = setInterval(async () => {
+      if (!this.isRecording || !this.client || !this.isConnected) return;
+      try {
+        await this.captureFrame();
+      } catch {
+        // Non-critical — skip this frame
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Capture a single screenshot frame and write it to disk.
+   */
+  private async captureFrame(): Promise<void> {
+    if (!this.client || !this.isConnected || !this.frameDir) return;
+
+    try {
+      const result = await this.client.callTool({
+        name: 'browser_take_screenshot',
+        arguments: {}
+      });
+      const content = result.content as Array<{ type: string; data?: string; mimeType?: string }>;
+      const img = content?.find(c => c.type === 'image');
+      if (img?.data) {
+        this.frameCount++;
+        const framePath = path.join(this.frameDir, `frame_${String(this.frameCount).padStart(4, '0')}.png`);
+        await fs.promises.writeFile(framePath, Buffer.from(img.data, 'base64'));
+      }
+    } catch {
+      // Silently skip — frame capture is best-effort
+    }
+  }
+
+  /**
+   * Stop recording and return frame info for stitching.
+   */
+  stopRecording(): { frameDir: string | null; frameCount: number } {
+    if (this.captureInterval) {
+      clearInterval(this.captureInterval);
+      this.captureInterval = null;
+    }
+    this.isRecording = false;
+
+    logger.info('Video recording stopped', {
+      sessionId: this.sessionId,
+      frameCount: this.frameCount,
+      frameDir: this.frameDir
+    });
+
+    return { frameDir: this.frameDir, frameCount: this.frameCount };
+  }
+
   /**
    * Stop the MCP server and clean up resources.
    */
@@ -224,6 +308,13 @@ export class MCPBrowser {
     } catch (error: any) {
       logger.warn('Error closing MCP client', { error: error.message });
     }
+
+    // Stop recording if still active
+    if (this.captureInterval) {
+      clearInterval(this.captureInterval);
+      this.captureInterval = null;
+    }
+    this.isRecording = false;
 
     this.client = null;
     this.transport = null;

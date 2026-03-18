@@ -58,6 +58,7 @@ export interface QALoopBug {
   bug_type: string | null;
   reproduction_steps: any[];
   page_url: string | null;
+  video_path: string | null;
   status: string;
   created_at: string;
 }

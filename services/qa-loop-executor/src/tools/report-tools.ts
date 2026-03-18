@@ -31,6 +31,7 @@ export interface BugInput {
   reproduction_steps?: string[];
   root_cause?: string;
   suggested_fix?: string;
+  video_path?: string;
 }
 
 export class ReportTools {
@@ -132,7 +133,8 @@ export class ReportTools {
         reproductionSteps: input.reproduction_steps || [],
         rootCause: input.root_cause,
         suggestedFix: input.suggested_fix,
-        iterationFound: session?.iteration_count
+        iterationFound: session?.iteration_count,
+        videoPath: input.video_path
       });
 
       // Emit event for UI update

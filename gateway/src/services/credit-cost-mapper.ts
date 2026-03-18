@@ -16,6 +16,16 @@ export const CREDIT_COSTS = {
 
   // Chaos testing
   CHAOS_TEST_ITERATION: 3,
+
+  // Auto-fix
+  AUTO_FIX_ATTEMPT: 5,
+  AUTO_FIX_RETEST_ITERATION: 3,
+
+  // Monitors
+  QA_MONITOR_SESSION: 10,
+
+  // CI Integration
+  CI_SCAN: 10,
 } as const;
 
 export type CreditCostKey = keyof typeof CREDIT_COSTS;
@@ -38,6 +48,10 @@ export function getCreditDescription(operation: CreditCostKey, detail?: string):
     QA_LOOP_SESSION_RESERVE: 'QA Loop session',
     VISUAL_REGRESSION_COMPARISON: 'Visual regression comparison',
     CHAOS_TEST_ITERATION: 'Chaos test iteration',
+    AUTO_FIX_ATTEMPT: 'Auto-fix code generation',
+    AUTO_FIX_RETEST_ITERATION: 'Auto-fix retest iteration',
+    QA_MONITOR_SESSION: 'Scheduled QA monitor session',
+    CI_SCAN: 'CI/CD integration scan',
   };
 
   const base = descriptions[operation] || operation;
