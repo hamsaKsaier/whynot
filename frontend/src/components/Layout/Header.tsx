@@ -54,7 +54,7 @@ const PAGE_HELP: Record<string, { icon: React.ReactNode; title: string; tips: st
     icon: <FiSettings className="h-4 w-4 text-primary-400" />,
     title: 'Settings',
     tips: [
-      'Configure environments, integrations, GitHub repos, webhooks, and billing.',
+      'Configure environments, integrations, GitHub repos, notifications, and billing.',
       'Use tabs to navigate between different settings sections.',
       'Connect Jira, ClickUp, or Linear to create bug tickets automatically.',
     ],

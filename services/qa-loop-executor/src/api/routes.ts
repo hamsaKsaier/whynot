@@ -310,6 +310,10 @@ router.post('/api/sessions/:id/stop', async (req: Request, res: Response) => {
     }
 
     await qaLoopRepository.updateSessionStatus(id, 'cancelled');
+    // Auto-create test suite from whatever was discovered before the stop
+    await qaLoopRepository.createTestSuiteFromSession(id).catch((err) => {
+      logger.warn('Failed to create test suite on stop', { sessionId: id, error: err.message });
+    });
 
     logger.info('QA Loop session stopped', { sessionId: id });
     res.json({ success: true, status: 'cancelled' });
@@ -362,6 +366,179 @@ router.post('/api/sessions/:id/retest', async (req: Request, res: Response) => {
   } catch (error: any) {
     logger.error('Failed to start retest', { error: error.message });
     res.status(500).json({ error: 'Failed to start retest' });
+  }
+});
+
+// Retest a single bug's test case
+router.post('/api/bugs/:bugId/retest', async (req: Request, res: Response) => {
+  try {
+    const { bugId } = req.params;
+
+    // Look up the bug to find its session and linked test case
+    const pool = (qaLoopRepository as any).pool;
+    const bugResult = await pool.query(
+      `SELECT b.*, b.regression_test_id, b.discovered_by_test_case_id
+       FROM qa_loop_bugs b WHERE b.id = $1`,
+      [bugId]
+    );
+    if (bugResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Bug not found' });
+    }
+    const bug = bugResult.rows[0];
+    const testCaseId = bug.discovered_by_test_case_id || bug.regression_test_id;
+
+    if (!testCaseId) {
+      return res.status(400).json({ error: 'Bug has no linked test case to retest' });
+    }
+
+    const testCase = await qaLoopRepository.getTestCaseById(testCaseId);
+    if (!testCase) {
+      return res.status(404).json({ error: 'Linked test case not found' });
+    }
+
+    // Create a mini retest session
+    const session = await qaLoopRepository.getSession(bug.session_id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const retestSession = await qaLoopRepository.createSession({
+      projectId: session.project_id || undefined,
+      targetUrl: session.target_url,
+      mode: 'retest',
+      qualityThreshold: 80,
+      maxIterations: 1,
+      config: { sourceSessionId: bug.session_id, singleBugRetest: true, bugId }
+    });
+
+    // Clone just this one test case into the new session
+    await pool.query(
+      `INSERT INTO qa_loop_test_cases (id, session_id, project_id, name, description, category, priority, risk_level, steps, selectors, source, source_page_url)
+       SELECT gen_random_uuid(), $2, project_id, name, description, category, priority, risk_level, steps, selectors, 'retest', source_page_url
+       FROM qa_loop_test_cases WHERE id = $1`,
+      [testCaseId, retestSession.id]
+    );
+
+    // Run the retest executor for this single test
+    const retestExecutor = new RetestExecutor(retestSession.id, bug.session_id, 'quick');
+    retestExecutor.run().then(async (results) => {
+      await qaLoopRepository.updateSessionStatus(retestSession.id, 'completed');
+
+      // Check the test run result to update the bug status
+      const testRuns = await qaLoopRepository.getTestRuns(retestSession.id);
+      const passed = testRuns.length > 0 && testRuns.every((r: any) => r.status === 'passed');
+      if (passed) {
+        await pool.query(
+          `UPDATE qa_loop_bugs SET status = 'fixed', verified_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [bugId]
+        );
+      } else {
+        await pool.query(
+          `UPDATE qa_loop_bugs SET status = 'confirmed' WHERE id = $1 AND status = 'open'`,
+          [bugId]
+        );
+      }
+      logger.info('Bug retest completed', { bugId, retestSessionId: retestSession.id, passed });
+    }).catch(async (error) => {
+      await qaLoopRepository.updateSessionStatus(retestSession.id, 'failed');
+      logger.error('Bug retest failed', { bugId, error: error.message });
+    });
+
+    res.status(201).json({
+      success: true,
+      retestSessionId: retestSession.id,
+      testCaseId,
+      status: 'running'
+    });
+  } catch (error: any) {
+    logger.error('Failed to retest bug', { error: error.message });
+    res.status(500).json({ error: 'Failed to retest bug' });
+  }
+});
+
+// Get project test suite hierarchy: suites > test cases > bugs
+router.get('/api/projects/:projectId/test-suite-hierarchy', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const pool = (qaLoopRepository as any).pool;
+
+    // Get all QA sessions that have a test_suite_id for this project
+    const sessionsResult = await pool.query(
+      `SELECT s.id, s.target_url, s.status, s.test_suite_id, s.quality_score,
+              s.tests_generated, s.bugs_found, s.created_at, s.completed_at,
+              ts.name as suite_name, ts.description as suite_description
+       FROM qa_loop_sessions s
+       LEFT JOIN test_suites ts ON s.test_suite_id = ts.id
+       WHERE s.project_id = $1 AND s.test_suite_id IS NOT NULL
+       ORDER BY s.created_at DESC`,
+      [projectId]
+    );
+
+    const suites = [];
+    for (const session of sessionsResult.rows) {
+      // Get test cases for this session's suite
+      const testCasesResult = await pool.query(
+        `SELECT id, name, description, category, priority, risk_level, steps,
+                last_run_status, last_run_at, pass_count, fail_count, source, created_at
+         FROM qa_loop_test_cases
+         WHERE test_suite_id = $1
+         ORDER BY priority DESC, created_at ASC`,
+        [session.test_suite_id]
+      );
+
+      // Get bugs for this session
+      const bugsResult = await pool.query(
+        `SELECT id, title, description, severity, category, bug_type, page_url,
+                reproduction_steps, evidence_screenshots, status, root_cause,
+                suggested_fix, video_path, regression_test_id, discovered_by_test_case_id,
+                created_at
+         FROM qa_loop_bugs
+         WHERE session_id = $1
+         ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, created_at DESC`,
+        [session.id]
+      );
+
+      // Group bugs by their linked test case
+      const bugsByTestCase = new Map<string, any[]>();
+      const unlinkedBugs: any[] = [];
+      for (const bug of bugsResult.rows) {
+        const tcId = bug.discovered_by_test_case_id || bug.regression_test_id;
+        if (tcId) {
+          if (!bugsByTestCase.has(tcId)) bugsByTestCase.set(tcId, []);
+          bugsByTestCase.get(tcId)!.push(bug);
+        } else {
+          unlinkedBugs.push(bug);
+        }
+      }
+
+      // Attach bugs to test cases
+      const testCasesWithBugs = testCasesResult.rows.map((tc: any) => ({
+        ...tc,
+        bugs: bugsByTestCase.get(tc.id) || []
+      }));
+
+      suites.push({
+        id: session.test_suite_id,
+        session_id: session.id,
+        name: session.suite_name,
+        description: session.suite_description,
+        target_url: session.target_url,
+        status: session.status,
+        quality_score: session.quality_score,
+        tests_generated: session.tests_generated,
+        bugs_found: session.bugs_found,
+        created_at: session.created_at,
+        completed_at: session.completed_at,
+        is_qa_generated: true,
+        test_cases: testCasesWithBugs,
+        unlinked_bugs: unlinkedBugs,
+      });
+    }
+
+    res.json({ suites });
+  } catch (error: any) {
+    logger.error('Failed to get project test suite hierarchy', { error: error.message });
+    res.status(500).json({ error: 'Failed to get project test suite hierarchy' });
   }
 });
 

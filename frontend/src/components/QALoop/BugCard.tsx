@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QALoopBug } from '../../services/qa-loop-api';
+import { QALoopBug, retestBug } from '../../services/qa-loop-api';
 import { CreateTaskButton } from './CreateTaskButton';
 import { AutoFixButton } from './AutoFixButton';
 
@@ -9,11 +9,29 @@ export interface BugCardProps {
   safePathname: (url: string | undefined | null, fallback?: string) => string;
 }
 
-/** Expandable bug card with reproduction steps and action buttons */
+/** Expandable bug card with reproduction steps, evidence, and action buttons */
 export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathname }) => {
   const [expanded, setExpanded] = useState(false);
+  const [retesting, setRetesting] = useState(false);
+  const [retestError, setRetestError] = useState<string | null>(null);
+  const [retestResult, setRetestResult] = useState<string | null>(null);
 
   const reproSteps = Array.isArray(bug.reproduction_steps) ? bug.reproduction_steps : [];
+  const screenshots = Array.isArray((bug as any).evidence_screenshots) ? (bug as any).evidence_screenshots : [];
+
+  const handleRetest = async () => {
+    setRetesting(true);
+    setRetestError(null);
+    setRetestResult(null);
+    try {
+      const result = await retestBug(bug.id);
+      setRetestResult(`Retest started (session: ${result.retestSessionId})`);
+    } catch (err: any) {
+      setRetestError(err.response?.data?.error || err.message || 'Retest failed');
+    } finally {
+      setRetesting(false);
+    }
+  };
 
   return (
     <div className="bg-gray-50 rounded-lg border-l-4 border-red-400 overflow-hidden">
@@ -33,6 +51,17 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
             <span className="font-medium text-gray-900">{bug.title}</span>
           </div>
           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={handleRetest}
+              disabled={retesting}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+              title="Re-run the test that found this bug"
+            >
+              <svg className={`w-3 h-3 ${retesting ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {retesting ? 'Retesting...' : 'Retest'}
+            </button>
             <AutoFixButton bugId={bug.id} bugTitle={bug.title} />
             <CreateTaskButton bugId={bug.id} bugTitle={bug.title} />
             <span className={`text-xs px-2 py-1 rounded ${severityColor(bug.severity)}`}>{bug.severity}</span>
@@ -43,7 +72,15 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
           {bug.category && <span className="bg-gray-200 px-1.5 py-0.5 rounded">{bug.category}</span>}
           {bug.bug_type && <span className="bg-gray-200 px-1.5 py-0.5 rounded">{bug.bug_type}</span>}
           {bug.page_url && <span className="truncate max-w-xs">{safePathname(bug.page_url)}</span>}
-          <span className={bug.status === 'open' ? 'text-red-500' : 'text-green-500'}>{bug.status}</span>
+          <span className={bug.status === 'open' ? 'text-red-500' : bug.status === 'fixed' ? 'text-green-500' : 'text-yellow-500'}>{bug.status}</span>
+          {screenshots.length > 0 && (
+            <span className="text-blue-500 flex items-center gap-0.5" title={`${screenshots.length} evidence screenshot(s)`}>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {screenshots.length}
+            </span>
+          )}
           {bug.video_path && (
             <span className="text-blue-500 flex items-center gap-0.5" title="Video recording available">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,6 +89,12 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
             </span>
           )}
         </div>
+        {retestResult && (
+          <div className="text-xs text-green-600 mt-1 ml-5">{retestResult}</div>
+        )}
+        {retestError && (
+          <div className="text-xs text-red-600 mt-1 ml-5">{retestError}</div>
+        )}
       </div>
 
       {expanded && (
@@ -66,6 +109,25 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
                   </li>
                 ))}
               </ol>
+            </div>
+          )}
+
+          {/* Evidence screenshots */}
+          {screenshots.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Evidence Screenshots</div>
+              <div className="grid grid-cols-2 gap-2">
+                {screenshots.map((src: string, i: number) => (
+                  <a key={i} href={src.startsWith('/') ? `/api/screenshots${src}` : src} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={src.startsWith('/') ? `/api/screenshots${src}` : src}
+                      alt={`Evidence ${i + 1}`}
+                      className="rounded border border-gray-300 w-full h-32 object-cover hover:opacity-80 transition-opacity"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 

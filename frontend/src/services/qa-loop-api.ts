@@ -349,3 +349,77 @@ export async function getCombinedDocuments(
   );
   return response.data;
 }
+
+// ==================== BUG RETEST API ====================
+
+export async function retestBug(bugId: string): Promise<{
+  success: boolean;
+  retestSessionId: string;
+  testCaseId: string;
+  status: string;
+}> {
+  const response = await apiClient.post(`/qa-loop/bugs/${bugId}/retest`);
+  return response.data;
+}
+
+// ==================== PROJECT HIERARCHY API ====================
+
+export interface TestSuiteHierarchyBug {
+  id: string;
+  title: string;
+  description: string | null;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string | null;
+  bug_type: string | null;
+  page_url: string | null;
+  reproduction_steps: any[];
+  evidence_screenshots: any[];
+  status: string;
+  root_cause: string | null;
+  suggested_fix: string | null;
+  video_path: string | null;
+  regression_test_id: string | null;
+  discovered_by_test_case_id: string | null;
+  created_at: string;
+}
+
+export interface TestSuiteHierarchyTestCase {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  priority: number;
+  risk_level: string;
+  steps: any[];
+  last_run_status: string | null;
+  last_run_at: string | null;
+  pass_count: number;
+  fail_count: number;
+  source: string;
+  created_at: string;
+  bugs: TestSuiteHierarchyBug[];
+}
+
+export interface TestSuiteHierarchy {
+  id: string;
+  session_id: string;
+  name: string;
+  description: string | null;
+  target_url: string;
+  status: string;
+  quality_score: number;
+  tests_generated: number;
+  bugs_found: number;
+  created_at: string;
+  completed_at: string | null;
+  is_qa_generated: boolean;
+  test_cases: TestSuiteHierarchyTestCase[];
+  unlinked_bugs: TestSuiteHierarchyBug[];
+}
+
+export async function getProjectTestSuiteHierarchy(projectId: string): Promise<{
+  suites: TestSuiteHierarchy[];
+}> {
+  const response = await apiClient.get(`/qa-loop/projects/${projectId}/test-suite-hierarchy`);
+  return response.data;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   FiEdit2,
@@ -10,6 +10,14 @@ import {
   FiFolder,
   FiCopy,
   FiGitBranch,
+  FiChevronDown,
+  FiChevronRight,
+  FiCheckCircle,
+  FiXCircle,
+  FiAlertTriangle,
+  FiRefreshCw,
+  FiClock,
+  FiImage,
 } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -38,7 +46,15 @@ import {
   FolderWithStats,
 } from '../services/api';
 import { Select } from '../components/common/Select';
-import { listQALoopSessions, QALoopSession } from '../services/qa-loop-api';
+import {
+  listQALoopSessions,
+  QALoopSession,
+  getProjectTestSuiteHierarchy,
+  retestBug,
+  TestSuiteHierarchy,
+  TestSuiteHierarchyTestCase,
+  TestSuiteHierarchyBug,
+} from '../services/qa-loop-api';
 
 interface UserStoryFormData {
   story: string;
@@ -52,6 +68,333 @@ const initialUserStoryFormData: UserStoryFormData = {
   additional_context: '',
 };
 
+// ── Severity helpers ──────────────────────────────────────────────────────────
+
+const severityColor = (severity: string): string => {
+  switch (severity) {
+    case 'critical': return 'bg-red-100 text-red-800 border-red-200';
+    case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
+    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const statusIcon = (status: string | null) => {
+  switch (status) {
+    case 'passed': return <FiCheckCircle className="h-4 w-4 text-emerald-500" />;
+    case 'failed': return <FiXCircle className="h-4 w-4 text-red-500" />;
+    case 'error': return <FiAlertTriangle className="h-4 w-4 text-orange-500" />;
+    default: return <FiClock className="h-4 w-4 text-gray-400" />;
+  }
+};
+
+// ── Bug Detail Component (Task 4) ─────────────────────────────────────────────
+
+const BugDetailCard: React.FC<{
+  bug: TestSuiteHierarchyBug;
+  testCaseName?: string;
+  onRetest: (bugId: string) => void;
+  retesting: string | null;
+}> = ({ bug, testCaseName, onRetest, retesting }) => {
+  const [expanded, setExpanded] = useState(false);
+  const reproSteps = Array.isArray(bug.reproduction_steps) ? bug.reproduction_steps : [];
+  const screenshots = Array.isArray(bug.evidence_screenshots) ? bug.evidence_screenshots : [];
+
+  return (
+    <div className="border border-gray-700 rounded-lg overflow-hidden bg-gray-800/50">
+      <div
+        className="p-3 cursor-pointer hover:bg-gray-700/50 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            {expanded ? (
+              <FiChevronDown className="h-3 w-3 text-gray-400 flex-shrink-0" />
+            ) : (
+              <FiChevronRight className="h-3 w-3 text-gray-400 flex-shrink-0" />
+            )}
+            <span className="font-medium text-gray-100 truncate">{bug.title}</span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => onRetest(bug.id)}
+              isLoading={retesting === bug.id}
+              disabled={retesting !== null}
+            >
+              <FiRefreshCw className="mr-1 h-3 w-3" />
+              Retest
+            </Button>
+            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${severityColor(bug.severity)}`}>
+              {bug.severity}
+            </span>
+          </div>
+        </div>
+        {bug.description && (
+          <p className="text-sm text-gray-400 mt-1 ml-5 line-clamp-2">{bug.description}</p>
+        )}
+        <div className="text-xs text-gray-500 mt-1.5 ml-5 flex items-center gap-3 flex-wrap">
+          {bug.category && <span className="bg-gray-700 px-1.5 py-0.5 rounded">{bug.category}</span>}
+          {bug.bug_type && <span className="bg-gray-700 px-1.5 py-0.5 rounded">{bug.bug_type}</span>}
+          <span className={bug.status === 'open' ? 'text-red-400' : bug.status === 'fixed' ? 'text-emerald-400' : 'text-amber-400'}>
+            {bug.status}
+          </span>
+          {screenshots.length > 0 && (
+            <span className="flex items-center gap-0.5 text-blue-400">
+              <FiImage className="h-3 w-3" /> {screenshots.length}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-gray-700 pt-3 ml-5 space-y-3">
+          {/* Test case that found this bug */}
+          {testCaseName && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Found by Test Case</div>
+              <p className="text-sm text-gray-300">{testCaseName}</p>
+            </div>
+          )}
+
+          {/* Reproduction steps */}
+          {reproSteps.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Reproduction Steps</div>
+              <ol className="list-decimal list-inside space-y-1">
+                {reproSteps.map((step: any, i: number) => (
+                  <li key={i} className="text-sm text-gray-300">
+                    {typeof step === 'string' ? step : step.description || step.action || JSON.stringify(step)}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Evidence screenshots */}
+          {screenshots.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Evidence Screenshots</div>
+              <div className="grid grid-cols-2 gap-2">
+                {screenshots.map((src: string, i: number) => (
+                  <a key={i} href={src.startsWith('/') ? `/api/screenshots${src}` : src} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={src.startsWith('/') ? `/api/screenshots${src}` : src}
+                      alt={`Evidence ${i + 1}`}
+                      className="rounded border border-gray-600 w-full h-32 object-cover hover:opacity-80 transition-opacity"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Video */}
+          {bug.video_path && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Session Recording</div>
+              <video
+                controls
+                preload="metadata"
+                className="w-full rounded-lg max-h-48 bg-black"
+                src={`/api/videos/${bug.video_path}`}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          )}
+
+          {/* Root cause */}
+          {bug.root_cause && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Root Cause</div>
+              <p className="text-sm text-gray-300">{bug.root_cause}</p>
+            </div>
+          )}
+
+          {/* Suggested fix */}
+          {bug.suggested_fix && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Suggested Fix</div>
+              <p className="text-sm text-gray-300">{bug.suggested_fix}</p>
+            </div>
+          )}
+
+          {/* Page URL */}
+          {bug.page_url && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Page URL</div>
+              <a
+                href={bug.page_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary-400 hover:text-primary-300 break-all"
+              >
+                {bug.page_url}
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Test Case Row Component ───────────────────────────────────────────────────
+
+const TestCaseRow: React.FC<{
+  testCase: TestSuiteHierarchyTestCase;
+  onRetestBug: (bugId: string) => void;
+  retestingBug: string | null;
+}> = ({ testCase, onRetestBug, retestingBug }) => {
+  const [expanded, setExpanded] = useState(false);
+  const hasBugs = testCase.bugs.length > 0;
+
+  return (
+    <div className="border border-gray-700 rounded-lg overflow-hidden">
+      <div
+        className="p-3 cursor-pointer hover:bg-gray-700/30 transition-colors flex items-center justify-between gap-3"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {hasBugs ? (
+            expanded ? <FiChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" /> : <FiChevronRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+          ) : (
+            <span className="w-3.5" />
+          )}
+          {statusIcon(testCase.last_run_status)}
+          <span className="text-sm text-gray-200 truncate">{testCase.name}</span>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {hasBugs && (
+            <span className="text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full">
+              {testCase.bugs.length} bug{testCase.bugs.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-400">{testCase.category}</span>
+          {testCase.pass_count > 0 && (
+            <span className="text-xs text-emerald-400">{testCase.pass_count}P</span>
+          )}
+          {testCase.fail_count > 0 && (
+            <span className="text-xs text-red-400">{testCase.fail_count}F</span>
+          )}
+        </div>
+      </div>
+
+      {expanded && hasBugs && (
+        <div className="border-t border-gray-700 p-3 space-y-2 bg-gray-800/30">
+          {testCase.bugs.map((bug) => (
+            <BugDetailCard
+              key={bug.id}
+              bug={bug}
+              testCaseName={testCase.name}
+              onRetest={onRetestBug}
+              retesting={retestingBug}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Test Suite Card Component ─────────────────────────────────────────────────
+
+const TestSuiteCard: React.FC<{
+  suite: TestSuiteHierarchy;
+  onRetestBug: (bugId: string) => void;
+  retestingBug: string | null;
+}> = ({ suite, onRetestBug, retestingBug }) => {
+  const [expanded, setExpanded] = useState(false);
+  const totalBugs = suite.test_cases.reduce((sum, tc) => sum + tc.bugs.length, 0) + suite.unlinked_bugs.length;
+  const passedTests = suite.test_cases.filter(tc => tc.last_run_status === 'passed').length;
+  const failedTests = suite.test_cases.filter(tc => tc.last_run_status === 'failed').length;
+
+  return (
+    <Card>
+      <div
+        className="cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            {expanded ? <FiChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" /> : <FiChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+            <FiZap className="h-5 w-5 text-primary-400 flex-shrink-0" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-100 truncate">{suite.name}</span>
+                {suite.is_qa_generated && (
+                  <span className="text-xs bg-primary-500/10 text-primary-400 px-2 py-0.5 rounded-full border border-primary-500/20 flex-shrink-0">
+                    QA Scan
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-3">
+                <span>{suite.test_cases.length} tests</span>
+                {passedTests > 0 && <span className="text-emerald-400">{passedTests} passed</span>}
+                {failedTests > 0 && <span className="text-red-400">{failedTests} failed</span>}
+                {totalBugs > 0 && <span className="text-red-400">{totalBugs} bugs</span>}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {suite.quality_score > 0 && (
+              <span className={`text-sm font-semibold ${
+                suite.quality_score >= 80 ? 'text-emerald-400' :
+                suite.quality_score >= 50 ? 'text-amber-400' :
+                'text-red-400'
+              }`}>{suite.quality_score}%</span>
+            )}
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              suite.status === 'running' ? 'bg-sky-500/10 text-sky-400' :
+              suite.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' :
+              'bg-gray-500/10 text-gray-400'
+            }`}>{suite.status}</span>
+          </div>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="mt-4 space-y-2 border-t border-gray-700 pt-4">
+          {suite.test_cases.length === 0 && suite.unlinked_bugs.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-4">No test cases or bugs in this suite.</p>
+          )}
+
+          {suite.test_cases.map((tc) => (
+            <TestCaseRow
+              key={tc.id}
+              testCase={tc}
+              onRetestBug={onRetestBug}
+              retestingBug={retestingBug}
+            />
+          ))}
+
+          {suite.unlinked_bugs.length > 0 && (
+            <div className="pt-2">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Unlinked Bugs</h4>
+              <div className="space-y-2">
+                {suite.unlinked_bugs.map((bug) => (
+                  <BugDetailCard
+                    key={bug.id}
+                    bug={bug}
+                    onRetest={onRetestBug}
+                    retesting={retestingBug}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+};
+
+// ── Main Page Component ───────────────────────────────────────────────────────
+
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -63,6 +406,8 @@ export const ProjectDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [qaLoopSessions, setQALoopSessions] = useState<QALoopSession[]>([]);
+  const [testSuiteHierarchy, setTestSuiteHierarchy] = useState<TestSuiteHierarchy[]>([]);
+  const [retestingBug, setRetestingBug] = useState<string | null>(null);
 
   // Project edit state
   const [isEditingProject, setIsEditingProject] = useState(false);
@@ -115,16 +460,18 @@ export const ProjectDetailPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [projectResponse, userStoriesResponse, foldersResponse, qaSessionsResponse] = await Promise.all([
+      const [projectResponse, userStoriesResponse, foldersResponse, qaSessionsResponse, hierarchyResponse] = await Promise.all([
         getProject(id),
         getUserStories(id),
-        getFolders(id).catch(() => ({ folders: [] })), // Folders may not exist yet
+        getFolders(id).catch(() => ({ folders: [] })),
         listQALoopSessions({ projectId: id, limit: 5 }).catch(() => ({ sessions: [], total: 0 })),
+        getProjectTestSuiteHierarchy(id).catch(() => ({ suites: [] })),
       ]);
       setProject(projectResponse.project);
       setUserStories(userStoriesResponse.user_stories);
       setFolders(foldersResponse.folders || []);
       setQALoopSessions(qaSessionsResponse.sessions || []);
+      setTestSuiteHierarchy(hierarchyResponse.suites || []);
 
       // Initialize edit form
       setProjectName(projectResponse.project.name);
@@ -137,10 +484,26 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  const handleRetestBug = useCallback(async (bugId: string) => {
+    setRetestingBug(bugId);
+    try {
+      await retestBug(bugId);
+      // Refresh hierarchy to pick up status changes after a short delay
+      setTimeout(() => {
+        if (id) {
+          getProjectTestSuiteHierarchy(id).then(r => setTestSuiteHierarchy(r.suites || [])).catch(() => {});
+        }
+      }, 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to start retest');
+    } finally {
+      setRetestingBug(null);
+    }
+  }, [id]);
+
   const handleAssignFolder = async (userStoryId: string, folderId: string | null) => {
     try {
       await assignUserStoryToFolder(userStoryId, folderId);
-      // Refresh user stories to get updated folder_id
       if (id) {
         const userStoriesResponse = await getUserStories(id);
         setUserStories(userStoriesResponse.user_stories);
@@ -180,7 +543,6 @@ export const ProjectDetailPage: React.FC = () => {
 
   const openCreateUserStoryModal = () => {
     setEditingUserStory(null);
-    // Try to load draft first
     const draft = loadDraft();
     if (draft) {
       setUserStoryFormData(draft);
@@ -256,7 +618,7 @@ export const ProjectDetailPage: React.FC = () => {
           additional_context: userStoryFormData.additional_context.trim() || undefined,
         });
       }
-      clearDraft(); // Clear draft on successful submission
+      clearDraft();
       closeUserStoryModal();
       fetchProjectData();
     } catch (err: any) {
@@ -416,6 +778,26 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* Test Suite Hierarchy (Task 2) */}
+      {testSuiteHierarchy.length > 0 && (
+        <div className="page-section">
+          <h2 className="section-title mb-4">
+            <FiZap className="inline h-5 w-5 mr-2 text-primary-400" />
+            Test Suites ({testSuiteHierarchy.length})
+          </h2>
+          <div className="space-y-3">
+            {testSuiteHierarchy.map((suite) => (
+              <TestSuiteCard
+                key={suite.id}
+                suite={suite}
+                onRetestBug={handleRetestBug}
+                retestingBug={retestingBug}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* User Stories Section */}
       <div className="page-section">
         <div className="flex items-center justify-between mb-4">
@@ -524,12 +906,12 @@ export const ProjectDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* QA Scan Suites — auto-generated from QA Loop sessions */}
-      {qaLoopSessions.length > 0 && (
+      {/* QA Scan Sessions (non-suite sessions for quick reference) */}
+      {qaLoopSessions.length > 0 && testSuiteHierarchy.length === 0 && (
         <div className="page-section">
           <h2 className="section-title mb-4">
             <FiZap className="inline h-5 w-5 mr-2 text-primary-400" />
-            QA Scan Suites ({qaLoopSessions.length})
+            QA Scan Sessions ({qaLoopSessions.length})
           </h2>
           <div className="space-y-3">
             {qaLoopSessions.map((session) => {
@@ -644,7 +1026,3 @@ export const ProjectDetailPage: React.FC = () => {
     </div>
   );
 };
-
-
-
-

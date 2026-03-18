@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiZap, FiGitPullRequest, FiShield, FiEye, FiArrowRight, FiCheckCircle, FiClock, FiTrendingUp } from 'react-icons/fi';
+import { FiZap, FiGitPullRequest, FiEye, FiArrowRight, FiCheckCircle, FiClock, FiTrendingUp, FiSearch } from 'react-icons/fi';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -14,10 +14,6 @@ interface PlanInfo {
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [url, setUrl] = useState('');
-  const [email, setEmail] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState('');
   const [plans, setPlans] = useState<PlanInfo[]>([]);
 
   const isLoggedIn = !!localStorage.getItem('auth_token');
@@ -29,42 +25,6 @@ export const LandingPage: React.FC = () => {
       .then(data => setPlans(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
-
-  const handleScan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url) return;
-
-    // Normalize URL
-    let targetUrl = url.trim();
-    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-      targetUrl = 'https://' + targetUrl;
-    }
-
-    setError('');
-    setScanning(true);
-
-    try {
-      const res = await fetch(`${API_BASE}/public/scan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUrl, email: email || undefined }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Scan failed (${res.status})`);
-      }
-
-      const data = await res.json();
-      if (data.sessionId) {
-        navigate(`/scan/${data.sessionId}`);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to start scan');
-    } finally {
-      setScanning(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-navy-900 text-gray-100">
@@ -122,50 +82,19 @@ export const LandingPage: React.FC = () => {
             all autonomously. Just paste a URL.
           </p>
 
-          {/* Scan Form */}
-          <form onSubmit={handleScan} className="max-w-xl mx-auto">
-            <div className="flex items-stretch bg-navy-800 border-2 border-navy-700 rounded-xl shadow-lg focus-within:border-primary-500 transition-colors">
-              <input
-                type="text"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                placeholder="https://your-app.com"
-                className="flex-1 px-5 py-4 text-lg bg-transparent outline-none rounded-l-xl text-white placeholder-gray-500"
-              />
-              <button
-                type="submit"
-                disabled={scanning || !url}
-                className="px-6 py-4 bg-emerald-500 text-white font-semibold rounded-r-xl hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-              >
-                {scanning ? (
-                  <>
-                    <FiSearch className="h-5 w-5 animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  <>
-                    <FiSearch className="h-5 w-5" />
-                    Free Scan
-                  </>
-                )}
-              </button>
-            </div>
-            <div className="mt-3 flex items-center justify-center gap-4">
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Email (optional — get results sent to you)"
-                className="text-sm text-gray-500 bg-transparent outline-none text-center w-72"
-              />
-            </div>
-            {error && (
-              <p className="mt-3 text-sm text-red-400">{error}</p>
-            )}
-            <p className="mt-3 text-xs text-gray-500">
-              3 free scans per day. No account needed.
+          {/* CTA */}
+          <div className="max-w-xl mx-auto flex flex-col items-center gap-4">
+            <button
+              onClick={() => navigate(isLoggedIn ? '/qa-loop' : '/login')}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-colors text-lg"
+            >
+              <FiArrowRight className="h-5 w-5" />
+              {isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}
+            </button>
+            <p className="text-xs text-gray-500">
+              No credit card required. Start testing in minutes.
             </p>
-          </form>
+          </div>
         </div>
       </section>
 

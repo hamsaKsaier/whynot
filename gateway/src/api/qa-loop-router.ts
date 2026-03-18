@@ -387,6 +387,14 @@ router.post(
   }),
 );
 
+// ── Bug retest (single bug) ────────────────────────────────────────────────────
+
+createProxy('post', '/bugs/:bugId/retest', 'Failed to retest bug', { status: 201, timeout: 30_000 });
+
+// ── Project hierarchy ─────────────────────────────────────────────────────────
+
+createProxy('get', '/projects/:projectId/test-suite-hierarchy', 'Failed to get test suite hierarchy');
+
 // ── Session sub-resources ──────────────────────────────────────────────────────
 
 createProxy('get', '/sessions/:id/test-cases', 'Failed to get test cases');
