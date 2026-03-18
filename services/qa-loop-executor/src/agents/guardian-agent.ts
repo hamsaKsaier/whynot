@@ -135,14 +135,12 @@ export interface BudgetStatus {
     retest: number;
   };
   costByModel: {
-    'claude-3-haiku-20240307': number;
-    'claude-sonnet-4-20250514': number;
-    'claude-3-opus-20240229': number;
+    'claude-3-5-haiku-20241022': number;
+    'claude-sonnet-4-6': number;
   };
   tokensByModel: {
-    'claude-3-haiku-20240307': number;
-    'claude-sonnet-4-20250514': number;
-    'claude-3-opus-20240229': number;
+    'claude-3-5-haiku-20241022': number;
+    'claude-sonnet-4-6': number;
   };
 }
 
@@ -167,6 +165,8 @@ export class GuardianAgent {
   private previousScore: QualityScore | null = null;
   private budgetTracking: BudgetStatus;
   private config: GuardianConfig;
+  private previousPageCount = 0;
+  private zeroProgressIterations = 0;
 
   constructor(sessionId: string, config?: GuardianConfig) {
     this.sessionId = sessionId;
@@ -198,14 +198,12 @@ export class GuardianAgent {
         retest: 0
       },
       costByModel: {
-        'claude-3-haiku-20240307': 0,
-        'claude-sonnet-4-20250514': 0,
-        'claude-3-opus-20240229': 0
+        'claude-3-5-haiku-20241022': 0,
+        'claude-sonnet-4-6': 0,
       },
       tokensByModel: {
-        'claude-3-haiku-20240307': 0,
-        'claude-sonnet-4-20250514': 0,
-        'claude-3-opus-20240229': 0
+        'claude-3-5-haiku-20241022': 0,
+        'claude-sonnet-4-6': 0,
       }
     };
   }
@@ -233,31 +231,37 @@ export class GuardianAgent {
       : 0;
 
     // Stability score based on test results — only count tests that have actually been executed
+    // When no tests exist yet, score is 0 (unknown, not "perfect")
     const executedTests = testCases.filter(tc => tc.last_run_status != null);
     const testsPassing = executedTests.filter(tc => tc.last_run_status === 'passed').length;
     const stabilityScore = executedTests.length > 0
       ? Math.round((testsPassing / executedTests.length) * 100)
-      : 100;
+      : 0;
 
     // Security score (inverted - fewer vulnerabilities = higher score)
+    // When no chaos testing has run yet, score is 0 (untested, not "secure")
     const securityBugs = bugs.filter(b => b.category === 'security');
     const criticalSecurity = securityBugs.filter(b => b.severity === 'critical').length;
     const highSecurity = securityBugs.filter(b => b.severity === 'high').length;
-    const securityScore = Math.max(0, 100 - (criticalSecurity * 25 + highSecurity * 15));
+    const hasChaosData = securityBugs.length > 0 || exploredPages > 3;
+    const securityScore = hasChaosData
+      ? Math.max(0, 100 - (criticalSecurity * 25 + highSecurity * 15))
+      : 0;
 
-    // 🔴 Fix: Real accessibility score — weighted by severity from actual a11y bugs in DB
+    // Real accessibility score — weighted by severity from actual a11y bugs in DB
+    // Score is 0 until pages have been explored (untested, not "accessible")
     const a11yBugs = bugs.filter(b => b.category === 'accessibility');
     const a11yCritical = a11yBugs.filter(b => b.severity === 'critical').length;
     const a11yHigh     = a11yBugs.filter(b => b.severity === 'high').length;
     const a11yMedium   = a11yBugs.filter(b => b.severity === 'medium').length;
     const a11yLow      = a11yBugs.filter(b => b.severity === 'low').length;
     // Weights: critical=-25, high=-15, medium=-8, low=-3
-    const accessibilityScore = Math.max(
-      0,
-      100 - (a11yCritical * 25 + a11yHigh * 15 + a11yMedium * 8 + a11yLow * 3)
-    );
+    const accessibilityScore = exploredPages > 0
+      ? Math.max(0, 100 - (a11yCritical * 25 + a11yHigh * 15 + a11yMedium * 8 + a11yLow * 3))
+      : 0;
 
-    // 🔴 Fix: Real performance score — bug-driven + page load times from discovered_elements
+    // Real performance score — bug-driven + page load times from discovered_elements
+    // Score is 0 until pages have been explored (untested, not "fast")
     const perfBugs    = bugs.filter(b => b.category === 'performance');
     const perfCritical = perfBugs.filter(b => b.severity === 'critical').length;
     const perfHigh     = perfBugs.filter(b => b.severity === 'high').length;
@@ -278,7 +282,9 @@ export class GuardianAgent {
       avgLoadMs > 2000 ? 5  : 0;
 
     const perfBugPenalty = perfCritical * 25 + perfHigh * 15 + perfMedium * 8;
-    const performanceScore = Math.max(0, 100 - loadPenalty - perfBugPenalty);
+    const performanceScore = exploredPages > 0
+      ? Math.max(0, 100 - loadPenalty - perfBugPenalty)
+      : 0;
 
     // Calculate overall score
     const overall = Math.round(
@@ -320,7 +326,7 @@ export class GuardianAgent {
         pagesTotal: totalPages,
         testsGenerated: testCases.length,
         testsPassing,
-        testsFailing: testCases.length - testsPassing,
+        testsFailing: executedTests.length - testsPassing,
         testsFlaky: 0,
         bugsFound: bugs.length,
         bugsCritical: risks.critical,
@@ -390,6 +396,17 @@ export class GuardianAgent {
         shouldContinue: false,
         reason: 'budget_exceeded',
         recommendation: 'Token/cost budget exceeded.'
+      };
+    }
+
+    // Check for zero-progress stagnation (exploration stuck, e.g. login-blocked)
+    // Only trigger when pages were previously discovered (previousPageCount > 0)
+    // to avoid killing sessions during the initial bootstrap phase
+    if (this.zeroProgressIterations >= 5 && this.previousPageCount > 0) {
+      return {
+        shouldContinue: false,
+        reason: 'zero_progress',
+        recommendation: 'No new pages discovered in 5 consecutive iterations. Exploration may be blocked (e.g. by a login wall). Provide login credentials and retry.'
       };
     }
 
@@ -468,6 +485,31 @@ export class GuardianAgent {
     const exploredPages   = pages.filter(p => p.is_explored);
     const unexploredPages = pages.filter(p => !p.is_explored);
     const coveragePct     = pages.length > 0 ? (exploredPages.length / pages.length) * 100 : 0;
+
+    // 0. Zero-progress stagnation: if page count hasn't grown for N iterations,
+    //    exploration is stuck (e.g. blocked by login). Stop wasting iterations.
+    //    IMPORTANT: Only start counting AFTER we've had at least 1 page discovered,
+    //    because the first few iterations need time to navigate and discover pages.
+    if (this.previousPageCount > 0 && pages.length === this.previousPageCount) {
+      this.zeroProgressIterations++;
+    } else if (pages.length > this.previousPageCount) {
+      // Progress was made — reset the counter
+      this.zeroProgressIterations = 0;
+    }
+    // Don't increment if previousPageCount is 0 — we're still bootstrapping
+    this.previousPageCount = pages.length;
+
+    if (this.zeroProgressIterations >= 3 && pages.length > 0) {
+      logger.warn('Zero-progress stagnation detected — exploration stuck', {
+        sessionId: this.sessionId,
+        iterations: this.zeroProgressIterations,
+        pageCount: pages.length,
+      });
+      // If we have some pages, investigate; otherwise keep exploring
+      if (testCases.length > 0) {
+        return 'investigate';
+      }
+    }
 
     // 1. Force exploration while coverage is very low
     if (coveragePct < 30 || (unexploredPages.length > 5 && coveragePct < 60)) {
@@ -966,8 +1008,8 @@ export class GuardianAgent {
     for (const [model, cost] of Object.entries(this.budgetTracking.costByModel)) {
       if (cost > 0) {
         // Use friendly model names
-        const friendlyName = model === 'claude-3-haiku-20240307' ? 'Haiku' :
-          model === 'claude-sonnet-4-20250514' ? 'Sonnet' : 'Opus';
+        const friendlyName = model === 'claude-3-5-haiku-20241022' ? 'Haiku 3.5' :
+          model === 'claude-sonnet-4-6' ? 'Sonnet 4.6' : model;
         costByModel[friendlyName] = formatCost(cost);
       }
     }

@@ -8,6 +8,7 @@ export interface UserEntity {
   avatar_url: string | null;
   github_id: string | null;
   google_id: string | null;
+  role: 'user' | 'admin' | 'super_admin';
   created_at: Date;
   updated_at: Date;
 }
@@ -133,5 +134,65 @@ export class UserRepository {
       values
     );
     return result[0] || null;
+  }
+
+  /**
+   * Update user role
+   */
+  async updateRole(id: string, role: 'user' | 'admin' | 'super_admin'): Promise<UserEntity | null> {
+    const result = await query<UserEntity>(
+      'UPDATE users SET role = $1 WHERE id = $2 RETURNING *',
+      [role, id]
+    );
+    return result[0] || null;
+  }
+
+  /**
+   * Find all users with pagination and optional search/filter
+   */
+  async findAllPaginated(
+    offset: number,
+    limit: number,
+    filters?: { search?: string; role?: string }
+  ): Promise<{ users: UserEntity[]; total: number }> {
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (filters?.search) {
+      conditions.push(`(name ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`);
+      values.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+    if (filters?.role) {
+      conditions.push(`role = $${paramIndex++}`);
+      values.push(filters.role);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM users ${whereClause}`,
+      values
+    );
+    const total = parseInt(countResult[0]?.count || '0', 10);
+
+    values.push(limit, offset);
+    const users = await query<UserEntity>(
+      `SELECT * FROM users ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+      values
+    );
+
+    return { users, total };
+  }
+
+  /**
+   * Count all users
+   */
+  async countAll(): Promise<number> {
+    const result = await query<{ count: string }>(
+      'SELECT COUNT(*) as count FROM users'
+    );
+    return parseInt(result[0]?.count || '0', 10);
   }
 }

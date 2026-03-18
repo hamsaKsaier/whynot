@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions for Thunder Code.
+Common issues and solutions for WhyNot.
 
 ## Database Connection Issues
 

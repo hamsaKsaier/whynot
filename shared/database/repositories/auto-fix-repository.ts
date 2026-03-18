@@ -15,14 +15,19 @@ export interface AutoFixAttemptEntity {
   id: string;
   bug_id: string;
   github_repo_id: string;
-  status: 'pending' | 'analyzing' | 'generating' | 'pr_created' | 'verified' | 'failed';
+  status: 'pending' | 'analyzing' | 'generating' | 'pr_created' | 'retesting' | 'verified' | 'failed' | 'needs_review';
   branch_name: string | null;
   pr_number: number | null;
   pr_url: string | null;
   relevant_files: any;
   generated_diff: string | null;
   claude_reasoning: string | null;
-  verification_status: string | null;
+  verification_status: 'pass' | 'fail' | 'partial' | 'regression' | null;
+  verification_session_id: string | null;
+  iteration_count: number;
+  max_iterations: number;
+  quality_score_before: number | null;
+  quality_score_after: number | null;
   error_message: string | null;
   created_at: Date;
   updated_at: Date;
@@ -92,7 +97,12 @@ export class AutoFixRepository {
     const values: any[] = [];
     let paramIndex = 1;
 
-    const allowedFields = ['status', 'branch_name', 'pr_number', 'pr_url', 'relevant_files', 'generated_diff', 'claude_reasoning', 'verification_status', 'error_message'];
+    const allowedFields = [
+      'status', 'branch_name', 'pr_number', 'pr_url', 'relevant_files',
+      'generated_diff', 'claude_reasoning', 'verification_status', 'error_message',
+      'verification_session_id', 'iteration_count', 'max_iterations',
+      'quality_score_before', 'quality_score_after',
+    ];
 
     for (const field of allowedFields) {
       if ((updates as any)[field] !== undefined) {
@@ -127,5 +137,26 @@ export class AutoFixRepository {
       'SELECT * FROM auto_fix_attempts WHERE bug_id = $1 ORDER BY created_at DESC',
       [bugId]
     );
+  }
+
+  async findActiveAttemptBySession(sessionId: string): Promise<AutoFixAttemptEntity | null> {
+    const result = await query<AutoFixAttemptEntity>(
+      `SELECT * FROM auto_fix_attempts
+       WHERE verification_session_id = $1
+       AND status IN ('retesting', 'pr_created')
+       ORDER BY updated_at DESC LIMIT 1`,
+      [sessionId]
+    );
+    return result[0] || null;
+  }
+
+  async findLatestAttemptForBug(bugId: string): Promise<AutoFixAttemptEntity | null> {
+    const result = await query<AutoFixAttemptEntity>(
+      `SELECT * FROM auto_fix_attempts
+       WHERE bug_id = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [bugId]
+    );
+    return result[0] || null;
   }
 }

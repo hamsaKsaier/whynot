@@ -13,62 +13,76 @@ interface FolderNodeData {
 }
 
 export const FolderNode: React.FC<NodeProps<FolderNodeData>> = ({ data }) => {
+  const folderColor = data.color || '#6366f1';
+
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     data.onToggleExpand?.(data.folderId);
   };
 
-  // Use provided color or default
-  const folderColor = data.color || '#6366f1';
-
-  // Generate color classes based on the color prop
-  const getBgColor = () => {
-    // Simple mapping for common colors, fallback to inline style
-    return 'bg-indigo-50';
-  };
-
   return (
     <div
-      className="px-4 py-3 rounded-lg shadow-md min-w-[200px] cursor-pointer hover:shadow-lg transition-all"
-      style={{
-        backgroundColor: `${folderColor}20`,
-        borderWidth: '2px',
-        borderStyle: 'solid',
-        borderColor: `${folderColor}60`
-      }}
+      className="bg-white rounded-xl shadow-sm border border-gray-200 min-w-[220px] max-w-[260px] cursor-pointer transition-all duration-200 hover:shadow-md"
+      style={{ borderLeftWidth: '4px', borderLeftColor: folderColor }}
       onClick={handleToggleExpand}
     >
-      <Handle type="target" position={Position.Top} />
-      <div className="flex items-center gap-2 mb-1">
-        {data.userStoryCount && data.userStoryCount > 0 ? (
-          <button
-            onClick={handleToggleExpand}
-            className="p-0.5 rounded transition-colors"
-            style={{ backgroundColor: `${folderColor}30` }}
-            title={data.isExpanded ? 'Collapse folder' : 'Expand folder'}
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ backgroundColor: folderColor }}
+        className="!w-2.5 !h-2.5 !border-2 !border-white"
+      />
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div
+            className="p-1.5 rounded-lg flex-shrink-0"
+            style={{ backgroundColor: `${folderColor}15` }}
           >
-            {data.isExpanded ? (
-              <FiChevronDown className="h-4 w-4" style={{ color: folderColor }} />
-            ) : (
-              <FiChevronRight className="h-4 w-4" style={{ color: folderColor }} />
-            )}
-          </button>
-        ) : null}
-        <FiFolder className="h-5 w-5" style={{ color: folderColor }} />
-        <div className="font-semibold text-gray-900 flex-1">{data.label}</div>
-      </div>
-      {data.userStoryCount !== undefined && (
-        <div className="text-xs mt-1" style={{ color: `${folderColor}` }}>
-          {data.userStoryCount} user {data.userStoryCount === 1 ? 'story' : 'stories'}
+            <FiFolder className="h-3.5 w-3.5" style={{ color: folderColor }} />
+          </div>
+          <span
+            className="text-[10px] font-semibold uppercase tracking-wider"
+            style={{ color: folderColor }}
+          >
+            Folder
+          </span>
+          {data.userStoryCount != null && data.userStoryCount > 0 && (
+            <button
+              onClick={handleToggleExpand}
+              className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors"
+              title={data.isExpanded ? 'Collapse folder' : 'Expand folder'}
+            >
+              {data.isExpanded ? (
+                <FiChevronDown className="h-3.5 w-3.5 text-gray-500" />
+              ) : (
+                <FiChevronRight className="h-3.5 w-3.5 text-gray-500" />
+              )}
+            </button>
+          )}
         </div>
-      )}
-      <Handle type="source" position={Position.Bottom} />
+        <div className="font-bold text-gray-900 text-sm leading-snug">
+          {data.label}
+        </div>
+        {data.userStoryCount != null && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+              style={{
+                backgroundColor: `${folderColor}15`,
+                color: folderColor,
+              }}
+            >
+              {data.userStoryCount} {data.userStoryCount === 1 ? 'story' : 'stories'}
+            </span>
+          </div>
+        )}
+      </div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ backgroundColor: folderColor }}
+        className="!w-2.5 !h-2.5 !border-2 !border-white"
+      />
     </div>
   );
 };
-
-
-
-
-
-

@@ -1,8 +1,8 @@
 # Live Browser Preview Architecture
 
-## How Thunder/Cypress/Playwright UI Implements Live Preview
+## How WhyNot/Cypress/Playwright UI Implements Live Preview
 
-Tools like Thunder, Cypress, and Playwright Test UI use the following pattern for live browser preview:
+Tools like WhyNot, Cypress, and Playwright Test UI use the following pattern for live browser preview:
 
 ### 1. **Immediate Execution ID Return**
 - Generate execution ID **before** test starts

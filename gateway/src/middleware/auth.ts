@@ -9,6 +9,7 @@ export interface AuthUser {
   id: string;
   email: string | null;
   name: string;
+  role: string;
 }
 
 // Extend Express Request to carry auth data
@@ -47,7 +48,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    req.user = { id: payload.id, email: payload.email, name: payload.name };
+    req.user = { id: payload.id, email: payload.email, name: payload.name, role: payload.role || 'user' };
 
     // Resolve workspace: use X-Workspace-ID header, fall back to user's first workspace
     const requestedWorkspaceId = req.headers['x-workspace-id'] as string | undefined;
@@ -71,7 +72,7 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
     const token = authHeader.slice(7);
     try {
       const payload: any = jwt.verify(token, getJwtSecret());
-      req.user = { id: payload.id, email: payload.email, name: payload.name };
+      req.user = { id: payload.id, email: payload.email, name: payload.name, role: payload.role || 'user' };
     } catch {
       // silently ignore invalid token in optional mode
     }

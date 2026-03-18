@@ -1,6 +1,6 @@
-# Thunder Code Frontend
+# WhyNot Frontend
 
-Modern React + Vite frontend for the Thunder Code POC.
+Modern React + Vite frontend for the WhyNot POC.
 
 ## Development
 

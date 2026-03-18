@@ -1,4 +1,4 @@
--- Initial database schema for Thunder Code
+-- Initial database schema for WhyNot
 
 -- Test cases table
 CREATE TABLE IF NOT EXISTS test_cases (

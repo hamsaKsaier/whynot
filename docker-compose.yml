@@ -30,7 +30,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - OPENAI_VISION_MODEL=${OPENAI_VISION_MODEL:-gpt-4o}
-      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-opus-4-5-20251101}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
       - CORS_ORIGINS=http://localhost:3010,http://localhost:3011,http://localhost:5183
     volumes:
       - ./services/ai-service/app:/app/app

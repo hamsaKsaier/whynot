@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactFlow, {
   Node,
@@ -12,7 +12,7 @@ import ReactFlow, {
   Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { getFlowData, executeTest, getTestCases, createFolder, updateFolder, deleteFolder } from '../services/api';
+import { getFlowData, executeTest, createFolder, updateFolder } from '../services/api';
 import { Alert } from '../components/common/Alert';
 import { Spinner } from '../components/common/Spinner';
 import { Button } from '../components/common/Button';
@@ -26,7 +26,17 @@ import {
   TestStepNode,
 } from '../components/FlowNodes';
 import type { FlowData, FlowNodeType, TestCase, UserStoryFolder } from '../types';
-import { FiFolderPlus } from 'react-icons/fi';
+import {
+  FiFolderPlus,
+  FiGlobe,
+  FiBook,
+  FiPackage,
+  FiFileText,
+  FiActivity,
+} from 'react-icons/fi';
+import { applyDagreLayout } from '../utils/dagreLayout';
+
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 const nodeTypes = {
   project: ProjectNode,
@@ -37,148 +47,218 @@ const nodeTypes = {
   testStep: TestStepNode,
 };
 
+/** Edge stroke colors by source node type */
+const EDGE_COLORS: Record<string, string> = {
+  project: '#0ea5e9',   // sky-blue
+  folder: '#6366f1',    // indigo
+  userStory: '#22c55e', // green
+  testSuite: '#f97316', // orange
+  testCase: '#a855f7',  // purple
+};
+
+/** MiniMap colors by node type */
+const MINIMAP_COLORS: Record<string, string> = {
+  project: '#0ea5e9',
+  folder: '#6366f1',
+  userStory: '#22c55e',
+  testSuite: '#f97316',
+  testCase: '#a855f7',
+  testStep: '#9ca3af',
+};
+
+/** Filter panel configuration */
+const FILTER_ITEMS: { type: FlowNodeType; label: string; color: string; borderColor: string }[] = [
+  { type: 'project', label: 'Project', color: 'bg-sky-500', borderColor: 'border-sky-300' },
+  { type: 'folder', label: 'Folder', color: 'bg-indigo-500', borderColor: 'border-indigo-300' },
+  { type: 'userStory', label: 'User Story', color: 'bg-green-500', borderColor: 'border-green-300' },
+  { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-300' },
+  { type: 'testCase', label: 'Test Case', color: 'bg-purple-500', borderColor: 'border-purple-300' },
+  { type: 'testStep', label: 'Test Step', color: 'bg-gray-400', borderColor: 'border-gray-300' },
+];
+
+// ─── Stat Pill (inline helper component) ────────────────────────────────────
+
+const StatPill: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  colorClass: string;
+}> = ({ icon, label, value, colorClass }) => (
+  <div className="flex items-center gap-1.5">
+    <span className={colorClass}>{icon}</span>
+    <span className="text-gray-500 text-xs">{label}</span>
+    <span className="font-bold text-gray-900 text-sm">{value}</span>
+  </div>
+);
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function makeEdge(
+  id: string,
+  source: string,
+  target: string,
+  sourceType: string,
+): Edge {
+  return {
+    id,
+    source,
+    target,
+    type: 'smoothstep',
+    style: { stroke: EDGE_COLORS[sourceType] || '#9ca3af', strokeWidth: 2 },
+  };
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
 export const ArchitectureFlowPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // Full (unfiltered) graph
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [allEdges, setAllEdges] = useState<Edge[]>([]);
+
+  // ReactFlow display state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Page state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [flowData, setFlowData] = useState<FlowData['projects']>([]);
 
-  // Store test cases for running
+  // Test case map for running tests
   const [testCasesMap, setTestCasesMap] = useState<Map<string, TestCase>>(new Map());
-
-  // Track running test cases
   const [runningTestCases, setRunningTestCases] = useState<Set<string>>(new Set());
 
-  // Track expanded folders (expanded by default)
+  // Expansion states
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-
-  // Track expanded test cases (collapsed by default)
   const [expandedTestCases, setExpandedTestCases] = useState<Set<string>>(new Set());
 
-  // Track visible node types (all visible by default except testStep)
+  // Visibility filter
   const [visibleTypes, setVisibleTypes] = useState<Set<FlowNodeType>>(
-    new Set(['project', 'folder', 'userStory', 'testSuite', 'testCase'])
+    new Set(['project', 'folder', 'userStory', 'testSuite', 'testCase']),
   );
 
-  // Folder management
+  // Folder modal
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<UserStoryFolder | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-  // Toggle test case expansion
-  const handleToggleExpand = useCallback((testCaseId: string) => {
-    setExpandedTestCases(prev => {
-      const next = new Set(prev);
-      if (next.has(testCaseId)) {
-        next.delete(testCaseId);
-      } else {
-        next.add(testCaseId);
-      }
-      return next;
-    });
-  }, []);
+  // ── Stats ───────────────────────────────────────────────────────────────
 
-  // Toggle folder expansion
-  const handleToggleFolderExpand = useCallback((folderId: string) => {
-    setExpandedFolders(prev => {
-      const next = new Set(prev);
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
-      return next;
-    });
-  }, []);
-
-  // Toggle visibility of node types
-  const toggleVisibility = useCallback((type: FlowNodeType) => {
-    setVisibleTypes(prev => {
-      const next = new Set(prev);
-      if (next.has(type)) {
-        next.delete(type);
-      } else {
-        next.add(type);
-      }
-      return next;
-    });
-  }, []);
-
-  // Handle running a test case
-  const handleRunTestCase = useCallback(async (testCaseId: string) => {
-    const testCase = testCasesMap.get(testCaseId);
-    if (!testCase) {
-      setError(`Test case not found. Please refresh the page.`);
-      return;
-    }
-
-    setRunningTestCases(prev => new Set(prev).add(testCaseId));
-    setError(null);
-
-    try {
-      // Execute the test (non-headless mode for live preview)
-      const result = await executeTest(testCase, false);
-
-      // Navigate to test runs page to see the execution
-      if ('execution_id' in result) {
-        navigate(`/test-runs?execution=${result.execution_id}`);
-      } else {
-        setError('Test execution started but no execution ID was returned. Please check the test runs page.');
-      }
-    } catch (err: any) {
-      // Enhanced error handling
-      let errorMessage = 'Failed to run test case';
-
-      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-        errorMessage = 'Test execution timed out. Please try again or check if the test executor service is running.';
-      } else if (err.code === 'ERR_NETWORK' || !err.response) {
-        errorMessage = 'Network error: Unable to connect to the server. Please check your connection and try again.';
-      } else if (err.response?.status === 429) {
-        errorMessage = 'Too many requests. Please wait a moment and try again.';
-      } else if (err.response?.status >= 500) {
-        errorMessage = 'Server error occurred. Please try again later or contact support.';
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      setError(errorMessage);
-    } finally {
-      setRunningTestCases(prev => {
-        const next = new Set(prev);
-        next.delete(testCaseId);
-        return next;
+  const stats = useMemo(() => {
+    let projects = 0;
+    let folders = 0;
+    let stories = 0;
+    let suites = 0;
+    let cases = 0;
+    let steps = 0;
+    flowData.forEach((p) => {
+      projects++;
+      folders += (p.folders || []).length;
+      p.user_stories.forEach((us) => {
+        stories++;
+        us.test_suites.forEach((ts) => {
+          suites++;
+          ts.test_cases.forEach((tc) => {
+            cases++;
+            steps += tc.test_case.steps.length;
+          });
+        });
+        (us.test_cases || []).forEach((tc) => {
+          cases++;
+          steps += tc.test_case.steps.length;
+        });
       });
-    }
-  }, [testCasesMap, navigate]);
+    });
+    return { projects, folders, stories, suites, cases, steps };
+  }, [flowData]);
+
+  // ── Callbacks ───────────────────────────────────────────────────────────
+
+  const handleToggleExpand = useCallback((testCaseId: string) => {
+    setExpandedTestCases((prev) => {
+      const next = new Set(prev);
+      next.has(testCaseId) ? next.delete(testCaseId) : next.add(testCaseId);
+      return next;
+    });
+  }, []);
+
+  const handleToggleFolderExpand = useCallback((folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      next.has(folderId) ? next.delete(folderId) : next.add(folderId);
+      return next;
+    });
+  }, []);
+
+  const toggleVisibility = useCallback((type: FlowNodeType) => {
+    setVisibleTypes((prev) => {
+      const next = new Set(prev);
+      next.has(type) ? next.delete(type) : next.add(type);
+      return next;
+    });
+  }, []);
+
+  const handleRunTestCase = useCallback(
+    async (testCaseId: string) => {
+      const testCase = testCasesMap.get(testCaseId);
+      if (!testCase) {
+        setError('Test case not found. Please refresh the page.');
+        return;
+      }
+      setRunningTestCases((prev) => new Set(prev).add(testCaseId));
+      setError(null);
+      try {
+        const result = await executeTest(testCase, false);
+        if ('execution_id' in result) {
+          navigate(`/test-runs?execution=${result.execution_id}`);
+        } else {
+          setError('Test execution started but no execution ID was returned.');
+        }
+      } catch (err: any) {
+        let msg = 'Failed to run test case';
+        if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+          msg = 'Test execution timed out. Please try again.';
+        } else if (err.code === 'ERR_NETWORK' || !err.response) {
+          msg = 'Network error: Unable to connect to the server.';
+        } else if (err.response?.status >= 500) {
+          msg = 'Server error occurred. Please try again later.';
+        } else if (err.response?.data?.error) {
+          msg = err.response.data.error;
+        } else if (err.message) {
+          msg = err.message;
+        }
+        setError(msg);
+      } finally {
+        setRunningTestCases((prev) => {
+          const next = new Set(prev);
+          next.delete(testCaseId);
+          return next;
+        });
+      }
+    },
+    [testCasesMap, navigate],
+  );
+
+  // ── Build graph (nodes + edges) — positions computed by dagre ───────────
 
   const buildFlowGraph = useCallback((projects: FlowData['projects']) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:196', message: 'buildFlowGraph called', data: { projectsCount: projects.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
     const newTestCasesMap = new Map<string, TestCase>();
-    let yPosition = 50;
-    const horizontalSpacing = 300;
-    const verticalSpacing = 150;
+    const zero = { x: 0, y: 0 }; // dagre will replace positions
 
-    projects.forEach((projectData, projectIndex) => {
+    projects.forEach((projectData) => {
       const project = projectData.project;
+      const projectNodeId = `project-${project.id}`;
       const folders = projectData.folders || [];
-      const projectX = 400;
-      const projectY = yPosition;
 
-      // Project node
+      // ── Project node
       newNodes.push({
-        id: `project-${project.id}`,
+        id: projectNodeId,
         type: 'project',
-        position: { x: projectX, y: projectY },
+        position: zero,
         data: {
           label: project.name,
           description: project.description,
@@ -188,32 +268,21 @@ export const ArchitectureFlowPage: React.FC = () => {
 
       // Group user stories by folder
       const userStoriesByFolder = new Map<string | null, typeof projectData.user_stories>();
-      projectData.user_stories.forEach(us => {
+      projectData.user_stories.forEach((us) => {
         const folderId = (us.user_story as any).folder_id || null;
-        if (!userStoriesByFolder.has(folderId)) {
-          userStoriesByFolder.set(folderId, []);
-        }
+        if (!userStoriesByFolder.has(folderId)) userStoriesByFolder.set(folderId, []);
         userStoriesByFolder.get(folderId)!.push(us);
       });
 
-      // Calculate positions for folders and unfiled user stories
-      const totalFolders = folders.length;
-      const unfiledStories = userStoriesByFolder.get(null) || [];
-      const totalTopLevel = totalFolders + unfiledStories.length;
-
-      let folderY = projectY + verticalSpacing;
-      let topLevelXStart = projectX - ((totalTopLevel - 1) * horizontalSpacing) / 2;
-      let topLevelIndex = 0;
-
-      // Create folder nodes
-      folders.forEach((folder, folderIndex) => {
-        const folderX = topLevelXStart + topLevelIndex * horizontalSpacing;
+      // ── Folder nodes
+      folders.forEach((folder) => {
+        const folderNodeId = `folder-${folder.id}`;
         const folderStories = userStoriesByFolder.get(folder.id) || [];
 
         newNodes.push({
-          id: `folder-${folder.id}`,
+          id: folderNodeId,
           type: 'folder',
-          position: { x: folderX, y: folderY },
+          position: zero,
           data: {
             label: folder.name,
             folderId: folder.id,
@@ -221,362 +290,188 @@ export const ArchitectureFlowPage: React.FC = () => {
             userStoryCount: folderStories.length,
           },
         });
+        newEdges.push(makeEdge(
+          `e-${projectNodeId}-${folderNodeId}`,
+          projectNodeId,
+          folderNodeId,
+          'project',
+        ));
 
-        // Edge from project to folder
-        newEdges.push({
-          id: `edge-project-${project.id}-folder-${folder.id}`,
-          source: `project-${project.id}`,
-          target: `folder-${folder.id}`,
-          type: 'smoothstep',
-        });
-
-        // Add user stories under this folder
-        let folderUserStoryY = folderY + verticalSpacing;
-        let folderUserStoryXStart = folderX - ((folderStories.length - 1) * (horizontalSpacing * 0.8)) / 2;
-
-        folderStories.forEach((userStoryData, usIndex) => {
-          const userStory = userStoryData.user_story;
-          const userStoryX = folderUserStoryXStart + usIndex * (horizontalSpacing * 0.8);
-
+        // User stories under folder
+        folderStories.forEach((usData) => {
+          const us = usData.user_story;
+          const usNodeId = `userstory-${us.id}`;
           newNodes.push({
-            id: `userstory-${userStory.id}`,
+            id: usNodeId,
             type: 'userStory',
-            position: { x: userStoryX, y: folderUserStoryY },
-            data: {
-              label: userStory.story,
-              story: userStory.story,
-              website_url: userStory.website_url,
-              folderId: folder.id,
-            },
+            position: zero,
+            data: { label: us.story, story: us.story, website_url: us.website_url, folderId: folder.id },
           });
-
-          // Edge from folder to user story
-          newEdges.push({
-            id: `edge-folder-${folder.id}-userstory-${userStory.id}`,
-            source: `folder-${folder.id}`,
-            target: `userstory-${userStory.id}`,
-            type: 'smoothstep',
-          });
+          newEdges.push(makeEdge(`e-${folderNodeId}-${usNodeId}`, folderNodeId, usNodeId, 'folder'));
         });
-
-        topLevelIndex++;
       });
 
-      // Create unfiled user stories (directly under project)
-      let userStoryY = folderY;
-      unfiledStories.forEach((userStoryData, userStoryIndex) => {
-        const userStory = userStoryData.user_story;
-        const userStoryX = topLevelXStart + topLevelIndex * horizontalSpacing;
-        const userStoryYPos = userStoryY;
-
-        // User Story node
+      // ── Unfiled user stories (directly under project)
+      const unfiled = userStoriesByFolder.get(null) || [];
+      unfiled.forEach((usData) => {
+        const us = usData.user_story;
+        const usNodeId = `userstory-${us.id}`;
         newNodes.push({
-          id: `userstory-${userStory.id}`,
+          id: usNodeId,
           type: 'userStory',
-          position: { x: userStoryX, y: userStoryYPos },
-          data: {
-            label: userStory.story,
-            story: userStory.story,
-            website_url: userStory.website_url,
-          },
+          position: zero,
+          data: { label: us.story, story: us.story, website_url: us.website_url },
         });
-
-        // Edge from project to user story
-        newEdges.push({
-          id: `edge-project-${project.id}-userstory-${userStory.id}`,
-          source: `project-${project.id}`,
-          target: `userstory-${userStory.id}`,
-          type: 'smoothstep',
-        });
-
-        topLevelIndex++;
+        newEdges.push(makeEdge(`e-${projectNodeId}-${usNodeId}`, projectNodeId, usNodeId, 'project'));
       });
 
-      // Process all user stories for test suites and test cases
-      projectData.user_stories.forEach((userStoryData, userStoryIndex) => {
-        const userStory = userStoryData.user_story;
-        const userStoryNodeId = `userstory-${userStory.id}`;
+      // ── Test suites, test cases, test steps for each user story
+      projectData.user_stories.forEach((usData) => {
+        const us = usData.user_story;
+        const usNodeId = `userstory-${us.id}`;
 
-        // Find the user story node position
-        const usNode = newNodes.find(n => n.id === userStoryNodeId);
-        if (!usNode) return;
+        // Test suites
+        usData.test_suites.forEach((tsData) => {
+          const ts = tsData.test_suite;
+          const tsNodeId = `testsuite-${ts.id}`;
 
-        const userStoryX = usNode.position.x;
-        const userStoryYPos = usNode.position.y;
-
-        let testSuiteY = userStoryYPos + verticalSpacing;
-        let testSuiteXStart = userStoryX - ((userStoryData.test_suites.length - 1) * horizontalSpacing) / 2;
-        let maxTestSuiteY = testSuiteY;
-
-        // Test Suites
-        userStoryData.test_suites.forEach((testSuiteData, testSuiteIndex) => {
-          const testSuite = testSuiteData.test_suite;
-          const testSuiteX = testSuiteXStart + testSuiteIndex * horizontalSpacing;
-          const testSuiteYPos = testSuiteY;
-
-          // Test Suite node
           newNodes.push({
-            id: `testsuite-${testSuite.id}`,
+            id: tsNodeId,
             type: 'testSuite',
-            position: { x: testSuiteX, y: testSuiteYPos },
+            position: zero,
+            data: { label: ts.name, description: ts.description },
+          });
+          newEdges.push(makeEdge(`e-${usNodeId}-${tsNodeId}`, usNodeId, tsNodeId, 'userStory'));
+
+          // Test cases in suite
+          tsData.test_cases.forEach((tcData) => {
+            const tc = tcData.test_case;
+            const tcNodeId = `testcase-${tc.id}`;
+            newTestCasesMap.set(tc.id, tc);
+
+            newNodes.push({
+              id: tcNodeId,
+              type: 'testCase',
+              position: zero,
+              data: {
+                label: tc.name,
+                description: tc.description,
+                stepCount: tc.steps.length,
+                testCaseId: tc.id,
+              },
+            });
+            newEdges.push(makeEdge(`e-${tsNodeId}-${tcNodeId}`, tsNodeId, tcNodeId, 'testSuite'));
+
+            // Test steps
+            tc.steps.forEach((step, si) => {
+              const stepNodeId = `teststep-${tc.id}-${step.id}`;
+              newNodes.push({
+                id: stepNodeId,
+                type: 'testStep',
+                position: zero,
+                data: {
+                  label: step.description || `Step ${si + 1}`,
+                  action: step.action,
+                  description: step.description,
+                },
+              });
+              newEdges.push(makeEdge(`e-${tcNodeId}-${stepNodeId}`, tcNodeId, stepNodeId, 'testCase'));
+            });
+          });
+        });
+
+        // Direct test cases (no suite)
+        (usData.test_cases || []).forEach((tcData) => {
+          const tc = tcData.test_case;
+          const tcNodeId = `testcase-${tc.id}`;
+          newTestCasesMap.set(tc.id, tc);
+
+          newNodes.push({
+            id: tcNodeId,
+            type: 'testCase',
+            position: zero,
             data: {
-              label: testSuite.name,
-              description: testSuite.description,
+              label: tc.name,
+              description: tc.description,
+              stepCount: tc.steps.length,
+              testCaseId: tc.id,
             },
           });
+          newEdges.push(makeEdge(`e-${usNodeId}-${tcNodeId}`, usNodeId, tcNodeId, 'userStory'));
 
-          // Edge from user story to test suite
-          newEdges.push({
-            id: `edge-userstory-${userStory.id}-testsuite-${testSuite.id}`,
-            source: `userstory-${userStory.id}`,
-            target: `testsuite-${testSuite.id}`,
-            type: 'smoothstep',
-          });
-
-          let testCaseY = testSuiteYPos + verticalSpacing;
-          let testCaseXStart = testSuiteX - ((testSuiteData.test_cases.length - 1) * (horizontalSpacing * 0.8)) / 2;
-          let maxTestCaseY = testCaseY;
-
-          // Test Cases in test suite
-          testSuiteData.test_cases.forEach((testCaseData, testCaseIndex) => {
-            const testCase = testCaseData.test_case;
-            const testCaseX = testCaseXStart + testCaseIndex * (horizontalSpacing * 0.8);
-            const testCaseYPos = testCaseY;
-
-            // Store test case for running
-            newTestCasesMap.set(testCase.id, testCase);
-
-            // Test Case node
+          tc.steps.forEach((step, si) => {
+            const stepNodeId = `teststep-${tc.id}-${step.id}`;
             newNodes.push({
-              id: `testcase-${testCase.id}`,
-              type: 'testCase',
-              position: { x: testCaseX, y: testCaseYPos },
+              id: stepNodeId,
+              type: 'testStep',
+              position: zero,
               data: {
-                label: testCase.name,
-                description: testCase.description,
-                stepCount: testCase.steps.length,
-                testCaseId: testCase.id,
+                label: step.description || `Step ${si + 1}`,
+                action: step.action,
+                description: step.description,
               },
             });
-
-            // Edge from test suite to test case
-            newEdges.push({
-              id: `edge-testsuite-${testSuite.id}-testcase-${testCase.id}`,
-              source: `testsuite-${testSuite.id}`,
-              target: `testcase-${testCase.id}`,
-              type: 'smoothstep',
-            });
-
-            let testStepY = testCaseYPos + verticalSpacing;
-            let testStepXStart = testCaseX - ((testCase.steps.length - 1) * (horizontalSpacing * 0.6)) / 2;
-
-            // Test Steps
-            testCase.steps.forEach((step, stepIndex) => {
-              const testStepX = testStepXStart + stepIndex * (horizontalSpacing * 0.6);
-              const testStepYPos = testStepY;
-
-              // Test Step node
-              newNodes.push({
-                id: `teststep-${testCase.id}-${step.id}`,
-                type: 'testStep',
-                position: { x: testStepX, y: testStepYPos },
-                data: {
-                  label: step.description || `Step ${stepIndex + 1}`,
-                  action: step.action,
-                  description: step.description,
-                },
-              });
-
-              // Edge from test case to test step
-              newEdges.push({
-                id: `edge-testcase-${testCase.id}-teststep-${step.id}`,
-                source: `testcase-${testCase.id}`,
-                target: `teststep-${testCase.id}-${step.id}`,
-                type: 'smoothstep',
-              });
-            });
-
-            // Update testCaseY for next test case
-            if (testCase.steps.length > 0) {
-              testCaseY = testCaseYPos + verticalSpacing + (testCase.steps.length * 50);
-            } else {
-              testCaseY = testCaseYPos + verticalSpacing;
-            }
-            maxTestCaseY = Math.max(maxTestCaseY, testCaseY);
+            newEdges.push(makeEdge(`e-${tcNodeId}-${stepNodeId}`, tcNodeId, stepNodeId, 'testCase'));
           });
-
-          // Update testSuiteY for next test suite
-          testSuiteY = Math.max(testSuiteY, maxTestCaseY);
-          maxTestSuiteY = Math.max(maxTestSuiteY, testSuiteY);
         });
-
-        // Test Cases directly under user story (without test suite)
-        let directTestCaseY = userStoryYPos + verticalSpacing;
-        if (userStoryData.test_suites.length > 0) {
-          directTestCaseY = maxTestSuiteY + verticalSpacing;
-        }
-
-        if (userStoryData.test_cases && userStoryData.test_cases.length > 0) {
-          let directTestCaseXStart = userStoryX - ((userStoryData.test_cases.length - 1) * (horizontalSpacing * 0.8)) / 2;
-
-          userStoryData.test_cases.forEach((testCaseData, testCaseIndex) => {
-            const testCase = testCaseData.test_case;
-            const testCaseX = directTestCaseXStart + testCaseIndex * (horizontalSpacing * 0.8);
-            const testCaseYPos = directTestCaseY;
-
-            // Store test case for running
-            newTestCasesMap.set(testCase.id, testCase);
-
-            // Test Case node
-            newNodes.push({
-              id: `testcase-${testCase.id}`,
-              type: 'testCase',
-              position: { x: testCaseX, y: testCaseYPos },
-              data: {
-                label: testCase.name,
-                description: testCase.description,
-                stepCount: testCase.steps.length,
-                testCaseId: testCase.id,
-              },
-            });
-
-            // Edge from user story to test case
-            newEdges.push({
-              id: `edge-userstory-${userStory.id}-testcase-${testCase.id}`,
-              source: `userstory-${userStory.id}`,
-              target: `testcase-${testCase.id}`,
-              type: 'smoothstep',
-            });
-
-            let testStepY = testCaseYPos + verticalSpacing;
-            let testStepXStart = testCaseX - ((testCase.steps.length - 1) * (horizontalSpacing * 0.6)) / 2;
-
-            // Test Steps
-            testCase.steps.forEach((step, stepIndex) => {
-              const testStepX = testStepXStart + stepIndex * (horizontalSpacing * 0.6);
-              const testStepYPos = testStepY;
-
-              // Test Step node
-              newNodes.push({
-                id: `teststep-${testCase.id}-${step.id}`,
-                type: 'testStep',
-                position: { x: testStepX, y: testStepYPos },
-                data: {
-                  label: step.description || `Step ${stepIndex + 1}`,
-                  action: step.action,
-                  description: step.description,
-                },
-              });
-
-              // Edge from test case to test step
-              newEdges.push({
-                id: `edge-testcase-${testCase.id}-teststep-${step.id}`,
-                source: `testcase-${testCase.id}`,
-                target: `teststep-${testCase.id}-${step.id}`,
-                type: 'smoothstep',
-              });
-            });
-          });
-        }
-
-        // Update userStoryY for next user story
-        let maxY = userStoryYPos + verticalSpacing;
-        if (userStoryData.test_suites.length > 0) {
-          maxY = Math.max(maxY, maxTestSuiteY + verticalSpacing);
-        }
-        if (userStoryData.test_cases && userStoryData.test_cases.length > 0) {
-          // Calculate max Y for direct test cases
-          let maxDirectTestCaseY = directTestCaseY;
-          userStoryData.test_cases.forEach((testCaseData) => {
-            const testCase = testCaseData.test_case;
-            if (testCase.steps.length > 0) {
-              maxDirectTestCaseY = Math.max(maxDirectTestCaseY, directTestCaseY + verticalSpacing + (testCase.steps.length * 50));
-            } else {
-              maxDirectTestCaseY = Math.max(maxDirectTestCaseY, directTestCaseY + verticalSpacing);
-            }
-          });
-          maxY = Math.max(maxY, maxDirectTestCaseY + verticalSpacing);
-        }
-        userStoryY = maxY;
       });
-
-      // Update yPosition for next project
-      yPosition = Math.max(yPosition, userStoryY + verticalSpacing * 2);
     });
 
-    // Store all nodes and edges - filtering will happen in the useEffect
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:543', message: 'buildFlowGraph completed', data: { nodesCount: newNodes.length, edgesCount: newEdges.length, testCasesCount: newTestCasesMap.size }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
-    setAllNodes(newNodes);
+    // Apply dagre layout to compute positions
+    const { nodes: layouted } = applyDagreLayout(newNodes, newEdges, {
+      rankdir: 'TB',
+      nodesep: 80,
+      ranksep: 100,
+    });
+
+    setAllNodes(layouted);
     setAllEdges(newEdges);
     setTestCasesMap(newTestCasesMap);
-  }, []); // State setters are stable, no need to include in deps
+  }, []);
+
+  // ── Data fetching ───────────────────────────────────────────────────────
 
   const fetchFlowData = useCallback(async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:546', message: 'fetchFlowData called', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-    // #endregion
     setLoading(true);
     setError(null);
     try {
       const response = await getFlowData();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:552', message: 'getFlowData response received', data: { projectsCount: response.projects.length, hasBuildFlowGraph: typeof buildFlowGraph === 'function' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-      // #endregion
       setFlowData(response.projects);
       buildFlowGraph(response.projects);
     } catch (err: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:554', message: 'fetchFlowData error', data: { errorMessage: err.message, errorCode: err.code, hasResponse: !!err.response, errorType: err.constructor.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-      // #endregion
-      let errorMessage = 'Failed to load architecture flow data';
-
+      let msg = 'Failed to load architecture flow data';
       if (err.code === 'ERR_NETWORK' || !err.response) {
-        errorMessage = 'Network error: Unable to connect to the server. Please check your connection.';
+        msg = 'Network error: Unable to connect to the server.';
       } else if (err.response?.status >= 500) {
-        errorMessage = 'Server error occurred. Please try again later.';
+        msg = 'Server error occurred. Please try again later.';
       } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
+        msg = err.response.data.error;
       } else if (err.message) {
-        errorMessage = err.message;
+        msg = err.message;
       }
-
-      setError(errorMessage);
+      setError(msg);
     } finally {
       setLoading(false);
     }
   }, [buildFlowGraph]);
 
-  // Handle folder creation/update
-  const handleFolderSubmit = useCallback(async (data: { name: string; color: string }) => {
-    if (!selectedProjectId) {
-      throw new Error('No project selected');
-    }
-
-    try {
-      if (editingFolder) {
-        await updateFolder(editingFolder.id, data);
-      } else {
-        await createFolder(selectedProjectId, data);
+  const handleFolderSubmit = useCallback(
+    async (data: { name: string; color: string }) => {
+      if (!selectedProjectId) throw new Error('No project selected');
+      try {
+        if (editingFolder) {
+          await updateFolder(editingFolder.id, data);
+        } else {
+          await createFolder(selectedProjectId, data);
+        }
+        await fetchFlowData();
+      } catch (err: any) {
+        const msg = editingFolder ? 'Failed to update folder' : 'Failed to create folder';
+        throw new Error(err.response?.data?.error || err.message || msg);
       }
-
-      // Refresh flow data
-      await fetchFlowData();
-    } catch (err: any) {
-      let errorMessage = editingFolder ? 'Failed to update folder' : 'Failed to create folder';
-
-      if (err.code === 'ERR_NETWORK' || !err.response) {
-        errorMessage = 'Network error: Unable to connect to the server.';
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      throw new Error(errorMessage);
-    }
-  }, [selectedProjectId, editingFolder, fetchFlowData]);
+    },
+    [selectedProjectId, editingFolder, fetchFlowData],
+  );
 
   const openCreateFolderModal = useCallback((projectId: string) => {
     setSelectedProjectId(projectId);
@@ -584,87 +479,45 @@ export const ArchitectureFlowPage: React.FC = () => {
     setFolderModalOpen(true);
   }, []);
 
+  // ── Effects ─────────────────────────────────────────────────────────────
+
   useEffect(() => {
-    // Global error handler for browser console errors
-    const handleError = (event: ErrorEvent) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:window.onerror', message: 'Browser console error', data: { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno, error: event.error?.toString() }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-      // #endregion
-    };
-
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ArchitectureFlowPage.tsx:window.unhandledrejection', message: 'Unhandled promise rejection', data: { reason: event.reason?.toString(), error: event.reason }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-      // #endregion
-    };
-
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-
     fetchFlowData();
-
-    return () => {
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-    };
   }, [fetchFlowData]);
 
-  // Initialize folder expansion state when flow data is loaded
+  // Auto-expand all folders on first load
   useEffect(() => {
     if (flowData.length > 0 && expandedFolders.size === 0) {
-      const allFolderIds: string[] = [];
-      flowData.forEach(projectData => {
-        const folders = projectData.folders || [];
-        folders.forEach(folder => {
-          allFolderIds.push(folder.id);
-        });
-      });
-      if (allFolderIds.length > 0) {
-        setExpandedFolders(new Set(allFolderIds));
-      }
+      const ids: string[] = [];
+      flowData.forEach((p) => (p.folders || []).forEach((f) => ids.push(f.id)));
+      if (ids.length > 0) setExpandedFolders(new Set(ids));
     }
   }, [flowData, expandedFolders.size]);
 
-  // Filter nodes and edges based on visibility and expansion state
+  // Filter nodes/edges AND re-layout with dagre so there are no gaps
   useEffect(() => {
-    // Build a map of user story folder assignments for quick lookup
-    const userStoryFolderMap = new Map<string, string>();
-    allNodes.forEach(node => {
-      if (node.type === 'userStory' && node.data.folderId) {
-        userStoryFolderMap.set(node.id, node.data.folderId);
-      }
-    });
+    if (allNodes.length === 0) return;
 
-    // Filter nodes based on visibility and expansion
-    const filteredNodes = allNodes.filter(node => {
-      const nodeType = node.type as FlowNodeType;
+    // 1. Filter by visibility + expansion state
+    const filteredNodes = allNodes.filter((node) => {
+      const t = node.type as FlowNodeType;
+      if (!visibleTypes.has(t)) return false;
 
-      // Check if node type is visible
-      if (!visibleTypes.has(nodeType)) {
+      // User stories in collapsed folders → hide
+      if (t === 'userStory' && node.data.folderId && !expandedFolders.has(node.data.folderId)) {
         return false;
       }
 
-      // For user stories in folders, check if folder is expanded
-      if (nodeType === 'userStory' && node.data.folderId) {
-        const folderId = node.data.folderId;
-        if (!expandedFolders.has(folderId)) {
-          return false;
-        }
-      }
-
-      // For test steps, also check if parent test case is expanded
-      if (nodeType === 'testStep') {
-        // Node id format: teststep-{testCaseId}-{stepId}
-        const parts = node.id.split('-');
-        const testCaseId = parts[1];
+      // Test steps in collapsed test cases → hide
+      if (t === 'testStep') {
+        const testCaseId = node.id.split('-')[1];
         return expandedTestCases.has(testCaseId);
       }
-
       return true;
     });
 
-    // Update nodes with expansion state and handlers
-    const updatedNodes = filteredNodes.map(node => {
+    // 2. Inject interactive callbacks
+    const withHandlers = filteredNodes.map((node) => {
       if (node.type === 'folder') {
         const folderId = node.id.replace('folder-', '');
         return {
@@ -694,15 +547,36 @@ export const ArchitectureFlowPage: React.FC = () => {
       return node;
     });
 
-    // Filter edges - only show edges where both source and target are visible
-    const visibleNodeIds = new Set(updatedNodes.map(n => n.id));
-    const filteredEdges = allEdges.filter(edge =>
-      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+    // 3. Filter edges (both ends must be visible)
+    const visibleIds = new Set(withHandlers.map((n) => n.id));
+    const filteredEdges = allEdges.filter(
+      (e) => visibleIds.has(e.source) && visibleIds.has(e.target),
     );
 
-    setNodes(updatedNodes);
+    // 4. Re-layout the visible subset so gaps collapse
+    const { nodes: relayouted } = applyDagreLayout(withHandlers, filteredEdges, {
+      rankdir: 'TB',
+      nodesep: 80,
+      ranksep: 100,
+    });
+
+    setNodes(relayouted);
     setEdges(filteredEdges);
-  }, [allNodes, allEdges, visibleTypes, expandedFolders, expandedTestCases, runningTestCases, handleToggleFolderExpand, handleToggleExpand, handleRunTestCase, setNodes, setEdges]);
+  }, [
+    allNodes,
+    allEdges,
+    visibleTypes,
+    expandedFolders,
+    expandedTestCases,
+    runningTestCases,
+    handleToggleFolderExpand,
+    handleToggleExpand,
+    handleRunTestCase,
+    setNodes,
+    setEdges,
+  ]);
+
+  // ── Render ──────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -720,30 +594,37 @@ export const ArchitectureFlowPage: React.FC = () => {
     );
   }
 
-  // Get first project ID for folder creation (for demo purposes)
   const firstProjectId = flowData.length > 0 ? flowData[0].project.id : null;
 
   return (
-    <div className="h-full w-full">
-      <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
+    <div className="h-full w-full flex flex-col">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-200 bg-white flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Architecture Flow</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Visual representation of projects, user stories, test suites, test cases, and test steps
+          <p className="text-sm text-gray-500 mt-0.5">
+            Visual map of your testing hierarchy
           </p>
         </div>
         {firstProjectId && (
-          <Button
-            onClick={() => openCreateFolderModal(firstProjectId)}
-            variant="primary"
-            size="sm"
-          >
+          <Button onClick={() => openCreateFolderModal(firstProjectId)} variant="primary" size="sm">
             <FiFolderPlus className="inline mr-2" />
             Create Folder
           </Button>
         )}
       </div>
-      <div className="h-[calc(100vh-120px)]">
+
+      {/* Stats bar */}
+      <div className="flex items-center gap-6 px-5 py-2.5 bg-gray-50 border-b border-gray-200">
+        <StatPill icon={<FiGlobe className="h-3.5 w-3.5" />} label="Projects" value={stats.projects} colorClass="text-sky-500" />
+        <StatPill icon={<FiBook className="h-3.5 w-3.5" />} label="Stories" value={stats.stories} colorClass="text-green-500" />
+        <StatPill icon={<FiPackage className="h-3.5 w-3.5" />} label="Suites" value={stats.suites} colorClass="text-orange-500" />
+        <StatPill icon={<FiFileText className="h-3.5 w-3.5" />} label="Cases" value={stats.cases} colorClass="text-purple-500" />
+        <StatPill icon={<FiActivity className="h-3.5 w-3.5" />} label="Steps" value={stats.steps} colorClass="text-gray-500" />
+      </div>
+
+      {/* Flow canvas */}
+      <div className="flex-1 min-h-0">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -752,101 +633,55 @@ export const ArchitectureFlowPage: React.FC = () => {
           nodeTypes={nodeTypes}
           connectionMode={ConnectionMode.Loose}
           fitView
+          fitViewOptions={{ padding: 0.2, maxZoom: 1.2 }}
+          minZoom={0.1}
+          maxZoom={2}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            style: { strokeWidth: 2 },
+          }}
         >
-          <Controls />
-          <Background />
-          <MiniMap />
-          <Panel position="top-right" className="bg-white p-3 rounded-lg shadow-lg">
-            <div className="text-xs font-semibold text-gray-700 mb-2">Visibility Filters</div>
-            <div className="text-sm space-y-2">
-              <label
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
-                onClick={() => toggleVisibility('project')}
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleTypes.has('project')}
-                  onChange={() => toggleVisibility('project')}
-                  className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
-                />
-                <div className="w-4 h-4 bg-blue-100 border-2 border-blue-300 rounded"></div>
-                <span>Project</span>
-              </label>
-              <label
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
-                onClick={() => toggleVisibility('folder')}
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleTypes.has('folder')}
-                  onChange={() => toggleVisibility('folder')}
-                  className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <div className="w-4 h-4 bg-indigo-100 border-2 border-indigo-300 rounded"></div>
-                <span>Folder</span>
-              </label>
-              <label
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
-                onClick={() => toggleVisibility('userStory')}
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleTypes.has('userStory')}
-                  onChange={() => toggleVisibility('userStory')}
-                  className="rounded border-green-300 text-green-600 focus:ring-green-500"
-                />
-                <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
-                <span>User Story</span>
-              </label>
-              <label
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
-                onClick={() => toggleVisibility('testSuite')}
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleTypes.has('testSuite')}
-                  onChange={() => toggleVisibility('testSuite')}
-                  className="rounded border-orange-300 text-orange-600 focus:ring-orange-500"
-                />
-                <div className="w-4 h-4 bg-orange-100 border-2 border-orange-300 rounded"></div>
-                <span>Test Suite</span>
-              </label>
-              <label
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
-                onClick={() => toggleVisibility('testCase')}
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleTypes.has('testCase')}
-                  onChange={() => toggleVisibility('testCase')}
-                  className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-                />
-                <div className="w-4 h-4 bg-purple-100 border-2 border-purple-300 rounded"></div>
-                <span>Test Case</span>
-              </label>
-              <label
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
-                onClick={() => toggleVisibility('testStep')}
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleTypes.has('testStep')}
-                  onChange={() => toggleVisibility('testStep')}
-                  className="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
-                />
-                <div className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded"></div>
-                <span>Test Step</span>
-              </label>
+          <Controls position="bottom-left" />
+          <Background color="#e5e7eb" gap={20} size={1} />
+          <MiniMap
+            nodeColor={(node) => MINIMAP_COLORS[node.type || ''] || '#9ca3af'}
+            maskColor="rgba(0,0,0,0.08)"
+            style={{ borderRadius: 8 }}
+          />
+
+          {/* Visibility filter panel */}
+          <Panel position="top-right" className="bg-white p-3 rounded-xl shadow-lg border border-gray-200">
+            <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Filters
             </div>
-            <div className="mt-3 pt-2 border-t border-gray-200">
-              <div className="text-xs text-gray-500">
-                Click test cases to expand/collapse steps
-              </div>
+            <div className="space-y-1.5">
+              {FILTER_ITEMS.map(({ type, label, color }) => (
+                <label
+                  key={type}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded-lg transition-colors text-sm"
+                  onClick={() => toggleVisibility(type)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={visibleTypes.has(type)}
+                    onChange={() => toggleVisibility(type)}
+                    className="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
+                  />
+                  <div className={`w-3 h-3 rounded-sm ${color}`} />
+                  <span className="text-gray-700">{label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-2.5 pt-2 border-t border-gray-100">
+              <p className="text-[11px] text-gray-400">
+                Click test cases to expand steps
+              </p>
             </div>
           </Panel>
         </ReactFlow>
       </div>
 
+      {/* Folder modal */}
       {firstProjectId && (
         <FolderModal
           isOpen={folderModalOpen}
@@ -863,11 +698,3 @@ export const ArchitectureFlowPage: React.FC = () => {
     </div>
   );
 };
-
-
-
-
-
-
-
-

@@ -87,7 +87,7 @@ class LLMClient:
             if not self.anthropic_client:
                 raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
             system_message = system_prompt or ""
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
             try:
                 response = await self._anthropic_with_retry(
                     lambda: self.anthropic_client.messages.create(
@@ -168,7 +168,7 @@ class LLMClient:
         repair needed.
         """
         system_message = system_prompt or ""
-        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         tool = {
             "name": "return_result",
             "description": "Return the complete structured result as valid JSON",
@@ -208,7 +208,7 @@ class LLMClient:
         Identical to _generate_with_tool_use but includes the image in the user message.
         """
         system_message = system_prompt or ""
-        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         tool = {
             "name": "return_result",
             "description": "Return the complete structured result as valid JSON",
@@ -613,7 +613,7 @@ class LLMClient:
             if not self.anthropic_client:
                 raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
             system_message = system_prompt or ""
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
             
             try:
                 # Anthropic vision API format — awaited via async client (3.8), with retry (3.4)

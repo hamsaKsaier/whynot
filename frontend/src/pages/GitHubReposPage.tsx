@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FiGithub, FiPlus, FiTrash2, FiRefreshCw, FiCheck, FiX } from 'react-icons/fi';
 import { apiClient } from '../services/api';
+import { useToastContext } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { Modal, ModalFooter } from '../components/common/Modal';
 
 interface GitHubRepo {
   id: string;
@@ -12,7 +16,9 @@ interface GitHubRepo {
   created_at: string;
 }
 
-export const GitHubReposPage: React.FC = () => {
+export const GitHubReposContent: React.FC = () => <GitHubReposPage embedded />;
+
+export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -24,8 +30,11 @@ export const GitHubReposPage: React.FC = () => {
   const [testing, setTesting] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const workspaceId = localStorage.getItem('workspace_id') || '';
+  const { success, error: showError } = useToastContext();
+  const { activeWorkspace } = useWorkspace();
+  const workspaceId = activeWorkspace?.id || '';
 
   useEffect(() => {
     loadRepos();
@@ -61,7 +70,7 @@ export const GitHubReposPage: React.FC = () => {
       setToken('');
       await loadRepos();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to connect repo');
+      showError(error.response?.data?.error || 'Failed to connect repo');
     } finally {
       setSaving(false);
     }
@@ -81,33 +90,36 @@ export const GitHubReposPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Disconnect this repository?')) return;
     try {
       setDeleting(id);
       await apiClient.delete(`/github-repos/${id}`);
       setRepos(prev => prev.filter(r => r.id !== id));
+      success('Repository disconnected successfully');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to disconnect');
+      showError(error.response?.data?.error || 'Failed to disconnect');
     } finally {
       setDeleting(null);
+      setDeleteConfirm(null);
     }
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">GitHub Repositories</h1>
-          <p className="text-sm text-gray-500 mt-1">Connect repos to enable Auto-Fix — AI generates PRs to fix discovered bugs</p>
+    <div className={embedded ? '' : 'p-6 max-w-4xl mx-auto'}>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">GitHub Repositories</h1>
+            <p className="text-sm text-gray-500 mt-1">Connect repos to enable Auto-Fix — AI generates PRs to fix discovered bugs</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <FiPlus className="h-4 w-4" />
+            Connect Repo
+          </button>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <FiPlus className="h-4 w-4" />
-          Connect Repo
-        </button>
-      </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-gray-500">Loading repositories...</div>
@@ -154,7 +166,7 @@ export const GitHubReposPage: React.FC = () => {
                     <FiRefreshCw className={`h-4 w-4 ${testing === r.id ? 'animate-spin' : ''}`} />
                   </button>
                   <button
-                    onClick={() => handleDelete(r.id)}
+                    onClick={() => setDeleteConfirm(r.id)}
                     disabled={deleting === r.id}
                     className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                     title="Disconnect"
@@ -169,81 +181,92 @@ export const GitHubReposPage: React.FC = () => {
       )}
 
       {/* Add Repo Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Connect GitHub Repository</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Provide a personal access token with <code className="bg-gray-100 px-1 rounded">repo</code> scope
-              </p>
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Connect GitHub Repository"
+        size="lg"
+      >
+        <p className="text-sm text-gray-500 mb-4">
+          Provide a personal access token with <code className="bg-gray-100 px-1 rounded">repo</code> scope
+        </p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+              <input
+                type="text"
+                value={owner}
+                onChange={e => setOwner(e.target.value)}
+                placeholder="octocat"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
-                  <input
-                    type="text"
-                    value={owner}
-                    onChange={e => setOwner(e.target.value)}
-                    placeholder="octocat"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Repository</label>
-                  <input
-                    type="text"
-                    value={repo}
-                    onChange={e => setRepo(e.target.value)}
-                    placeholder="my-app"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Default Branch</label>
-                <input
-                  type="text"
-                  value={branch}
-                  onChange={e => setBranch(e.target.value)}
-                  placeholder="main"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Personal Access Token</label>
-                <input
-                  type="password"
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Create at GitHub &gt; Settings &gt; Developer settings &gt; Personal access tokens.
-                  Needs <code className="bg-gray-100 px-1 rounded">repo</code> scope.
-                </p>
-              </div>
-            </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAdd}
-                disabled={saving || !owner.trim() || !repo.trim() || !token.trim()}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Connecting...' : 'Connect'}
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Repository</label>
+              <input
+                type="text"
+                value={repo}
+                onChange={e => setRepo(e.target.value)}
+                placeholder="my-app"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
             </div>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Branch</label>
+            <input
+              type="text"
+              value={branch}
+              onChange={e => setBranch(e.target.value)}
+              placeholder="main"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Personal Access Token</label>
+            <input
+              type="password"
+              value={token}
+              onChange={e => setToken(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Create at GitHub &gt; Settings &gt; Developer settings &gt; Personal access tokens.
+              Needs <code className="bg-gray-100 px-1 rounded">repo</code> scope.
+            </p>
+          </div>
         </div>
-      )}
+
+        <ModalFooter>
+          <button
+            onClick={() => setShowAddModal(false)}
+            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={saving || !owner.trim() || !repo.trim() || !token.trim()}
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Connecting...' : 'Connect'}
+          </button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        title="Disconnect Repository"
+        message="Are you sure you want to disconnect this repository? This action cannot be undone."
+        confirmText="Disconnect"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 };

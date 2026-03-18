@@ -65,18 +65,9 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
   }, [messages]);
 
   const initializeSession = async () => {
-    // #region agent log
-    try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:52', message: 'initializeSession called', data: { hasContext: !!context, currentSessionId: sessionId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { }); } catch (e) { }
-    // #endregion
     setIsInitializing(true);
     try {
-      // #region agent log
-      try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:55', message: 'Calling createChatSession', data: { context }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { }); } catch (e) { }
-      // #endregion
       const session = await createChatSession(context);
-      // #region agent log
-      try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:56', message: 'createChatSession success', data: { sessionId: session.session_id || session.id, sessionKeys: Object.keys(session), hasMessages: !!session.messages }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { }); } catch (e) { }
-      // #endregion
       // API returns session.id (not session.session_id)
       const newSessionId = (session.id || session.session_id) ?? null;
       setSessionId(newSessionId);
@@ -91,13 +82,7 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
           timestamp: new Date().toISOString()
         }]);
       }
-      // #region agent log
-      try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:68', message: 'Session initialized successfully', data: { sessionId: newSessionId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { }); } catch (e) { }
-      // #endregion
     } catch (error: any) {
-      // #region agent log
-      try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:70', message: 'initializeSession error', data: { error: error.message, stack: error.stack }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { }); } catch (e) { }
-      // #endregion
       console.error('Failed to initialize chat session:', error);
       setMessages([{
         role: 'assistant',
@@ -105,9 +90,6 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
         timestamp: new Date().toISOString()
       }]);
     } finally {
-      // #region agent log
-      try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:77', message: 'Setting isInitializing to false', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { }); } catch (e) { }
-      // #endregion
       setIsInitializing(false);
     }
   };
@@ -252,34 +234,22 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
   const quickActions = getQuickActions();
 
   const handleQuickAction = async (action: string) => {
-    // #region agent log
-    try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:166', message: 'handleQuickAction called', data: { action, currentSessionId: sessionIdRef.current, isInitializing }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { }); } catch (e) { }
-    // #endregion
     setInput(action);
 
     // Ensure session is initialized before sending
     if (!sessionIdRef.current && !isInitializing) {
-      // #region agent log
-      try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:170', message: 'Quick action: calling initializeSession', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { }); } catch (e) { }
-      // #endregion
       await initializeSession();
     }
 
     // Wait for session to be ready, then auto-send
     const attemptSend = async (retries = 0) => {
       const currentSessionId = sessionIdRef.current;
-      // #region agent log
-      try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:176', message: 'attemptSend check', data: { retries, currentSessionId, isInitializing }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { }); } catch (e) { }
-      // #endregion
 
       if (!currentSessionId) {
         if (retries < 10) {
           setTimeout(() => attemptSend(retries + 1), 200);
           return;
         } else {
-          // #region agent log
-          try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:183', message: 'attemptSend: max retries, falling back to handleSend', data: { retries }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { }); } catch (e) { }
-          // #endregion
           // Fallback: set input and let handleSend handle it
           setInput(action);
           setTimeout(() => handleSend(), 100);
@@ -462,21 +432,14 @@ export const TestAutomationChatbot: React.FC<TestAutomationChatbotProps> = ({
             disabled={!input.trim() || isLoading}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {/* #region agent log */}
             {(() => {
-              try { fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'TestAutomationChatbot.tsx:button-text', message: 'Button render check', data: { isInitializing, sessionId, input: input.trim(), isLoading, hasInput: !!input.trim() }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { }); } catch (e) { }
-              // Only show "Initializing..." if there's NO input text and we're initializing
-              // If there's input, show "Send" - handleSend will handle initialization
               if (isLoading) return 'Sending...';
               if (!input.trim() && (isInitializing || !sessionId)) return 'Initializing...';
               return 'Send';
             })()}
-            {/* #endregion */}
           </button>
         </div>
       </div>
     </div>
   );
 };
-
-

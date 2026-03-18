@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Thunder Code POC - Quick Start Script
+# WhyNot - Quick Start Script
 
-echo "🚀 Thunder Code POC - Quick Start"
+echo "🚀 WhyNot - Quick Start"
 echo "=================================="
 echo ""
 

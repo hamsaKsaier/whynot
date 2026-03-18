@@ -39,10 +39,15 @@ apiClient.interceptors.request.use((config) => {
 });
 
 /** On 401, clear token and redirect to /login (skip for auth-specific endpoints) */
+/** On 402/403 with billing codes, dispatch upgrade prompt event */
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const code = error.response?.data?.code;
+    const details = error.response?.data?.details;
+
+    if (status === 401) {
       const url: string = error.config?.url || '';
       const isAuthEndpoint = url.includes('/auth/');
       if (!isAuthEndpoint) {
@@ -52,6 +57,22 @@ apiClient.interceptors.response.use(
         }
       }
     }
+
+    // Credit / feature / subscription gates
+    if (status === 402 && code === 'INSUFFICIENT_CREDITS') {
+      window.dispatchEvent(new CustomEvent('upgrade-prompt', {
+        detail: { type: 'credits', details },
+      }));
+    } else if (status === 403 && (code === 'FEATURE_NOT_AVAILABLE' || code === 'FEATURE_LIMIT_REACHED')) {
+      window.dispatchEvent(new CustomEvent('upgrade-prompt', {
+        detail: { type: 'feature', details },
+      }));
+    } else if (status === 403 && (code === 'NO_SUBSCRIPTION' || code === 'SUBSCRIPTION_INACTIVE' || code === 'TRIAL_EXPIRED')) {
+      window.dispatchEvent(new CustomEvent('upgrade-prompt', {
+        detail: { type: 'subscription', details: { ...details, status: code } },
+      }));
+    }
+
     return Promise.reject(error);
   }
 );
@@ -207,23 +228,10 @@ export interface ProjectsResponse {
 
 // Get all projects
 export const getProjects = async (offset = 0, limit = 50): Promise<ProjectsResponse> => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'frontend/src/services/api.ts:128', message: 'getProjects called', data: { offset, limit, baseURL: API_BASE_URL, fullURL: `${API_BASE_URL}/projects` }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-  // #endregion
-  try {
-    const response = await apiClient.get<ProjectsResponse>('/projects', {
-      params: { offset, limit }
-    });
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'frontend/src/services/api.ts:131', message: 'getProjects success', data: { status: response.status, projectsCount: response.data?.projects?.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
-    return response.data;
-  } catch (error: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'frontend/src/services/api.ts:135', message: 'getProjects error', data: { errorMessage: error?.message, errorCode: error?.code, responseStatus: error?.response?.status, responseData: error?.response?.data }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
-    throw error;
-  }
+  const response = await apiClient.get<ProjectsResponse>('/projects', {
+    params: { offset, limit }
+  });
+  return response.data;
 };
 
 // Get project by ID
@@ -333,9 +341,6 @@ export interface GenerateTestsWithContextResponse extends GenerateTestsResponse 
 export const generateTestsWithContext = async (
   request: GenerateTestsWithContextRequest
 ): Promise<GenerateTestsWithContextResponse> => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af9684ef-fcb7-4ff5-bebb-77681f86059c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api.ts:generateTestsWithContext', message: 'Request payload being sent', data: { quick_mode: request.quick_mode, quick_mode_type: typeof request.quick_mode, requestKeys: Object.keys(request) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-  // #endregion
   const response = await apiClient.post<GenerateTestsWithContextResponse>(
     '/generate-tests',
     request
@@ -400,6 +405,74 @@ export const assignUserStoryToFolder = async (
     { folder_id: folderId }
   );
   return response.data;
+};
+
+// ==================== DASHBOARD API ====================
+
+export interface DashboardStats {
+  totalTestCases: number;
+  totalQASessions: number;
+  totalBugsFound: number;
+  successRate: number;
+  totalExecutions: number;
+  recentSessions: Array<{
+    id: string;
+    target_url: string;
+    status: string;
+    quality_score: number;
+    tests_generated: number;
+    bugs_found: number;
+    pages_explored: number;
+    created_at: string;
+    completed_at: string | null;
+  }>;
+}
+
+export const getDashboardStats = async (): Promise<DashboardStats> => {
+  const response = await apiClient.get<DashboardStats>('/dashboard/stats');
+  return response.data;
+};
+
+// ==================== ENVIRONMENTS API ====================
+
+export interface SavedEnvironment {
+  id: string;
+  workspace_id: string;
+  name: string;
+  url: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Get all saved environments
+export const getEnvironments = async (): Promise<{ environments: SavedEnvironment[] }> => {
+  const response = await apiClient.get<{ environments: SavedEnvironment[] }>('/environments');
+  return response.data;
+};
+
+// Create a new environment
+export const createEnvironment = async (data: {
+  name: string;
+  url: string;
+  description?: string;
+}): Promise<{ success: boolean; environment: SavedEnvironment }> => {
+  const response = await apiClient.post<{ success: boolean; environment: SavedEnvironment }>('/environments', data);
+  return response.data;
+};
+
+// Update an environment
+export const updateEnvironment = async (
+  id: string,
+  data: { name?: string; url?: string; description?: string }
+): Promise<{ success: boolean; environment: SavedEnvironment }> => {
+  const response = await apiClient.put<{ success: boolean; environment: SavedEnvironment }>(`/environments/${id}`, data);
+  return response.data;
+};
+
+// Delete an environment
+export const deleteEnvironment = async (id: string): Promise<void> => {
+  await apiClient.delete(`/environments/${id}`);
 };
 
 // ==================== VISUAL REGRESSION ENDPOINTS ====================
@@ -491,9 +564,57 @@ export const setVisualRegressionIgnored = async (
   return response.data;
 };
 
+// ─── Billing API ──────────────────────────────────────────────────────────────
+
+export const getBillingSubscription = async () => {
+  const response = await apiClient.get('/billing/subscription');
+  return response.data;
+};
+
+export const getBillingCredits = async () => {
+  const response = await apiClient.get('/billing/credits');
+  return response.data;
+};
+
+export const getBillingCreditsHistory = async (offset = 0, limit = 50) => {
+  const response = await apiClient.get('/billing/credits/history', { params: { offset, limit } });
+  return response.data;
+};
+
+export const getBillingUsage = async () => {
+  const response = await apiClient.get('/billing/usage');
+  return response.data;
+};
+
+export const getPublicPlans = async () => {
+  const response = await apiClient.get('/plans');
+  return response.data;
+};
+
+export const createCheckoutSession = async (planId: string) => {
+  const response = await apiClient.post('/billing/checkout', { plan_id: planId });
+  return response.data;
+};
+
+export const createPortalSession = async () => {
+  const response = await apiClient.post('/billing/portal');
+  return response.data;
+};
+
+export const getBillingInvoices = async () => {
+  const response = await apiClient.get('/billing/invoices');
+  return response.data;
+};
+
+export const cancelSubscription = async (immediate = false) => {
+  const response = await apiClient.post('/billing/cancel', { immediate });
+  return response.data;
+};
+
+export const reactivateSubscription = async () => {
+  const response = await apiClient.post('/billing/reactivate');
+  return response.data;
+};
+
 export default apiClient;
-
-
-
-
 

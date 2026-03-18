@@ -1,4 +1,4 @@
-# Thunder Code POC - AI-Powered Test Automation
+# WhyNot - AI-Powered Test Automation
 
 A proof-of-concept implementation of an AI-powered test automation tool that converts user stories into executable test cases, automatically detects UI elements, and runs tests in a browser environment.
 

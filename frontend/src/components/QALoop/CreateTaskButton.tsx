@@ -33,7 +33,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
   const [result, setResult] = useState<{ success: boolean; task?: BugTask; error?: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const workspaceId = localStorage.getItem('workspace_id') || '';
+  const workspaceId = localStorage.getItem('active_workspace_id') || '';
 
   const loadData = async () => {
     setLoading(true);

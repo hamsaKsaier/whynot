@@ -1,7 +1,7 @@
 {
   "name": "gateway",
   "version": "1.0.0",
-  "description": "API Gateway for Thunder Code POC",
+  "description": "API Gateway for WhyNot",
   "main": "dist/src/api/main.js",
   "scripts": {
     "build": "tsc",

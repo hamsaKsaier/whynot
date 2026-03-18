@@ -145,6 +145,53 @@ export const schemas = {
       })
     ).min(1, 'Test case must have at least one step'),
     metadata: z.any().optional().nullable()
-  })
+  }),
+
+  // ─── Admin: Plan Management ──────────────────────────────────────────────
+
+  createPlan: z.object({
+    name: z.string().min(1).max(100),
+    slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
+    description: z.string().max(500).optional(),
+    price_cents: z.number().int().min(0),
+    billing_interval: z.enum(['monthly', 'yearly', 'one_time']).optional(),
+    credits_per_period: z.number().int().min(0),
+    trial_days: z.number().int().min(0).optional(),
+    is_custom: z.boolean().optional(),
+    is_public: z.boolean().optional(),
+    sort_order: z.number().int().optional(),
+  }),
+
+  updatePlan: z.object({
+    name: z.string().min(1).max(100).optional(),
+    slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens').optional(),
+    description: z.string().max(500).optional(),
+    price_cents: z.number().int().min(0).optional(),
+    billing_interval: z.enum(['monthly', 'yearly', 'one_time']).optional(),
+    credits_per_period: z.number().int().min(0).optional(),
+    trial_days: z.number().int().min(0).optional(),
+    is_custom: z.boolean().optional(),
+    is_public: z.boolean().optional(),
+    sort_order: z.number().int().optional(),
+  }),
+
+  setPlanFeatures: z.object({
+    features: z.record(z.string(), z.string()),
+  }),
+
+  grantCredits: z.object({
+    amount: z.number().int().min(1, 'Amount must be at least 1'),
+    description: z.string().min(1).max(500),
+  }),
+
+  revokeCredits: z.object({
+    amount: z.number().int().min(1, 'Amount must be at least 1'),
+    description: z.string().min(1).max(500),
+  }),
+
+  adminUpdateSubscription: z.object({
+    plan_id: z.string().uuid().optional(),
+    status: z.enum(['active', 'trialing', 'past_due', 'canceled', 'paused', 'incomplete']).optional(),
+  }),
 };
 

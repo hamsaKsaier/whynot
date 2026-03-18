@@ -1,6 +1,6 @@
 # How to Run the Application
 
-This guide will help you get Thunder Code up and running quickly.
+This guide will help you get WhyNot up and running quickly.
 
 ## Prerequisites
 

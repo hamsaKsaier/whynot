@@ -16,6 +16,9 @@ import { requireAuth } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/error-handler';
 import { validate } from '../middleware/validation';
 import { qaLoopSessionRateLimiter } from '../middleware/rate-limit';
+import { requireCredits, deductCredits } from '../middleware/credit-gate';
+import { requireFeature } from '../middleware/feature-gate';
+import { requireActiveSubscription } from '../middleware/subscription-check';
 import { createLogger } from '../../shared/logger/logger';
 
 const router  = express.Router();
@@ -47,19 +50,39 @@ function validateTargetUrl(url: string): void {
   }
 
   const host = parsed.hostname.toLowerCase();
-  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
+
+  // Block localhost variants
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') {
     throw createError('targetUrl may not point to localhost', 400, 'VALIDATION_ERROR');
   }
 
+  // Block IPv4 private ranges
   const privateRanges = [
     /^10\./,
     /^192\.168\./,
     /^172\.(1[6-9]|2\d|3[01])\./,
     /^169\.254\./,
     /^0\./,
+    /^127\./,
   ];
   if (privateRanges.some(r => r.test(host))) {
     throw createError('targetUrl may not point to a private network address', 400, 'VALIDATION_ERROR');
+  }
+
+  // Block IPv6 private ranges: ULA (fc00::/7), link-local (fe80::/10), IPv4-mapped private
+  const ipv6PrivatePatterns = [
+    /^f[cd][0-9a-f]{2}:/i,                    // fc00::/7 (ULA)
+    /^fe[89ab][0-9a-f]:/i,                    // fe80::/10 (link-local)
+    /^::ffff:(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/i, // IPv4-mapped private
+    /^::ffff:0\./i,                            // IPv4-mapped 0.x
+  ];
+  if (ipv6PrivatePatterns.some(r => r.test(host))) {
+    throw createError('targetUrl may not point to a private network address', 400, 'VALIDATION_ERROR');
+  }
+
+  // Block decimal IP notation (e.g., 2130706433 = 127.0.0.1)
+  if (/^\d+$/.test(host)) {
+    throw createError('targetUrl may not use decimal IP notation', 400, 'VALIDATION_ERROR');
   }
 }
 
@@ -277,10 +300,13 @@ function createProxy(
 
 // ── Session lifecycle ──────────────────────────────────────────────────────────
 
-// Start session — rate-limited, SSRF-protected, Zod-validated
+// Start session — rate-limited, SSRF-protected, Zod-validated, credit + feature gated
 router.post(
   '/sessions',
   requireAuth,
+  requireActiveSubscription,
+  requireFeature('qa_loop'),
+  requireCredits('QA_LOOP_SESSION_RESERVE'),
   qaLoopSessionRateLimiter,
   validate(qaLoopSchemas.startSession),
   asyncHandler(async (req, res) => {
@@ -291,15 +317,35 @@ router.post(
         { ...req.body, workspaceId: req.workspaceId },
         { headers: qaLoopHeaders(req), timeout: 30_000 },
       );
+      // Deduct credits after successful session creation
+      if (req.workspaceId) {
+        await deductCredits(req.workspaceId, 'QA_LOOP_SESSION_RESERVE', `Session ${response.data?.session?.id || 'new'}`).catch(() => {});
+      }
       res.status(201).json(response.data);
     });
   }),
 );
 
-// Check for existing session by base URL (workspace-scoped)
-createProxy('get', '/sessions/check-existing', 'Failed to check existing session', {
-  injectWorkspaceQuery: true,
-});
+// Check for existing session by base URL (workspace-scoped, SSRF-protected)
+router.get(
+  '/sessions/check-existing',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const baseUrl = req.query.baseUrl as string | undefined;
+    if (baseUrl) {
+      validateTargetUrl(baseUrl);
+    }
+    await withQALoopBreaker(res, 'Failed to check existing session', async () => {
+      const params: Record<string, any> = { ...req.query };
+      if (req.workspaceId) params.workspaceId = req.workspaceId;
+      const response = await axios.get(
+        `${qaLoopExecutorUrl}/api/sessions/check-existing`,
+        { params, headers: qaLoopHeaders(req), timeout: 10_000 }
+      );
+      res.json(response.data);
+    });
+  }),
+);
 
 // List sessions (workspace-scoped)
 createProxy('get', '/sessions', 'Failed to list QA Loop sessions', {

@@ -3,10 +3,16 @@ import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { UserRepository, UserEntity } from '../../shared/database/repositories/user-repository';
 import { WorkspaceRepository } from '../../shared/database/repositories/workspace-repository';
+import { PlanRepository } from '../../shared/database/repositories/plan-repository';
+import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
+import { CreditRepository } from '../../shared/database/repositories/credit-repository';
 import { createError } from '../middleware/error-handler';
 
 const userRepository = new UserRepository();
 const workspaceRepository = new WorkspaceRepository();
+const planRepository = new PlanRepository();
+const subscriptionRepository = new SubscriptionRepository();
+const creditRepository = new CreditRepository();
 
 export interface AuthResult {
   token: string;
@@ -18,6 +24,7 @@ export interface PublicUser {
   email: string | null;
   name: string;
   avatarUrl: string | null;
+  role: string;
 }
 
 function getJwtSecret(): string {
@@ -32,15 +39,46 @@ function toPublicUser(user: UserEntity): PublicUser {
     email: user.email,
     name: user.name,
     avatarUrl: user.avatar_url,
+    role: user.role || 'user',
   };
 }
 
 export function generateJWT(user: UserEntity): string {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name },
+    { id: user.id, email: user.email, name: user.name, role: user.role || 'user' },
     getJwtSecret(),
     { expiresIn: '7d' }
   );
+}
+
+/**
+ * Provision subscription + credits for a new workspace.
+ * Assigns the free-trial plan and grants initial credits.
+ */
+async function provisionWorkspace(workspaceId: string): Promise<void> {
+  const freePlan = await planRepository.findBySlug('free-trial');
+  if (!freePlan) return; // Plans not seeded yet, skip provisioning
+
+  const now = new Date();
+  const trialEnd = new Date(now.getTime() + freePlan.trial_days * 24 * 60 * 60 * 1000);
+
+  await subscriptionRepository.create({
+    workspace_id: workspaceId,
+    plan_id: freePlan.id,
+    status: 'trialing',
+    current_period_start: now,
+    current_period_end: trialEnd,
+    trial_start: now,
+    trial_end: trialEnd,
+  });
+
+  await creditRepository.initBalance(workspaceId);
+  await creditRepository.addCredits({
+    workspace_id: workspaceId,
+    amount: freePlan.credits_per_period,
+    type: 'subscription_refill',
+    description: `Initial ${freePlan.name} credits`,
+  });
 }
 
 /**
@@ -55,8 +93,9 @@ export async function register(email: string, password: string, name: string): P
   const password_hash = await bcrypt.hash(password, 10);
   const user = await userRepository.create({ email, password_hash, name });
 
-  // Auto-create default workspace
-  await workspaceRepository.create({ name: `${name}'s Workspace`, owner_id: user.id });
+  // Auto-create default workspace + provision subscription & credits
+  const workspace = await workspaceRepository.create({ name: `${name}'s Workspace`, owner_id: user.id });
+  await provisionWorkspace(workspace.id);
 
   return { token: generateJWT(user), user: toPublicUser(user) };
 }
@@ -142,7 +181,8 @@ export async function handleGithubCallback(code: string): Promise<AuthResult> {
         avatar_url: profile.avatar_url,
         github_id: githubId,
       });
-      await workspaceRepository.create({ name: `${user.name}'s Workspace`, owner_id: user.id });
+      const workspace = await workspaceRepository.create({ name: `${user.name}'s Workspace`, owner_id: user.id });
+      await provisionWorkspace(workspace.id);
     }
   } else {
     // Update avatar/email if changed
@@ -210,7 +250,8 @@ export async function handleGoogleCallback(code: string): Promise<AuthResult> {
         avatar_url: profile.picture,
         google_id: googleId,
       });
-      await workspaceRepository.create({ name: `${user.name}'s Workspace`, owner_id: user.id });
+      const workspace = await workspaceRepository.create({ name: `${user.name}'s Workspace`, owner_id: user.id });
+      await provisionWorkspace(workspace.id);
     }
   } else {
     user = await userRepository.update(user.id, { avatar_url: profile.picture }) as typeof user;

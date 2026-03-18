@@ -2,7 +2,7 @@
 
 # Example test execution script
 
-echo "🧪 Running Thunder Code POC Test Example"
+echo "🧪 Running WhyNot Test Example"
 echo "========================================"
 echo ""
 

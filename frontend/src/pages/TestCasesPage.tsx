@@ -9,18 +9,16 @@ import { TestAutomationChatbot } from '../components/Chatbot/TestAutomationChatb
 import { EmptyState } from '../components/common/EmptyState';
 import { SkeletonCard } from '../components/common/SkeletonCard';
 import { QuickActions } from '../components/common/QuickActions';
-import { SuccessAnimation } from '../components/common/SuccessAnimation';
 import { useToastContext } from '../contexts/ToastContext';
-import { useClipboard } from '../hooks/useClipboard';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
-import { getTestCases, updateTestCase, deleteTestCase } from '../services/api';
+import { getTestCases, updateTestCase, deleteTestCase, executeTest } from '../services/api';
 import type { TestCase } from '../types';
 
-export const TestCasesPage: React.FC = () => {
+export const TestCasesContent: React.FC = () => <TestCasesPage embedded />;
+
+export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const { success, error: showError } = useToastContext();
-  const { copyToClipboard } = useClipboard();
   const { optimisticUpdate, optimisticDelete } = useOptimisticUpdate<TestCase>();
-  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +92,6 @@ export const TestCasesPage: React.FC = () => {
       setEditingId(null);
       setEditName('');
       setEditDescription('');
-      setShowSuccessAnimation(true);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || err.message || 'Failed to update test case';
       setError(errorMessage);
@@ -120,7 +117,6 @@ export const TestCasesPage: React.FC = () => {
       );
       setTestCases(updatedTestCases);
       setDeleteConfirm({ isOpen: false, testCase: null });
-      setShowSuccessAnimation(true);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || err.message || 'Failed to delete test case';
       setError(errorMessage);
@@ -132,10 +128,12 @@ export const TestCasesPage: React.FC = () => {
     setRunningTestId(testCase.id);
     setError(null);
     try {
-      // Navigate to home page with test case to execute
-      navigate('/', { state: { testCase, execute: true, headless: false } });
+      const result = await executeTest(testCase, false);
+      if ('execution_id' in result) {
+        navigate(`/test-runs/${result.execution_id}`);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to run test');
+      showError(err.response?.data?.error || err.message || 'Failed to run test');
       setRunningTestId(null);
     }
   };
@@ -169,19 +167,21 @@ export const TestCasesPage: React.FC = () => {
 
   return (
     <div>
-      <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Test Cases</h1>
-          <p className="page-subtitle">Manage and execute your saved test cases</p>
+      {!embedded && (
+        <div className="page-header flex items-center justify-between">
+          <div>
+            <h1 className="page-title">Test Cases</h1>
+            <p className="page-subtitle">Manage and execute your saved test cases</p>
+          </div>
+          <Button
+            className="flex items-center space-x-2"
+            onClick={() => navigate('/qa-loop')}
+          >
+            <FiPlus className="h-4 w-4" />
+            <span>New Test Case</span>
+          </Button>
         </div>
-        <Button 
-          className="flex items-center space-x-2"
-          onClick={() => navigate('/')}
-        >
-          <FiPlus className="h-4 w-4" />
-          <span>New Test Case</span>
-        </Button>
-      </div>
+      )}
 
       {/* Filter bar — only shown when there are test cases */}
       {testCases.length > 0 && (
@@ -281,7 +281,7 @@ export const TestCasesPage: React.FC = () => {
             title="No test cases yet"
             description="Test cases are generated from user stories. Create a project and add user stories to get started"
             action={
-              <Button onClick={() => navigate('/')}>
+              <Button onClick={() => navigate('/qa-loop')}>
                 <FiPlus className="mr-2" />
                 Create Your First Test Case
               </Button>
@@ -405,8 +405,7 @@ export const TestCasesPage: React.FC = () => {
       <TestAutomationChatbot
         context={{}}
         onTestGenerated={(testCase) => {
-          // Navigate to home page with generated test
-          navigate('/', { state: { testCase } });
+          navigate('/qa-loop');
         }}
       />
     </div>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Example Python script to test Thunder Code POC
+Example Python script to test WhyNot
 """
 
 import requests
@@ -10,7 +10,7 @@ import time
 GATEWAY_URL = "http://localhost:3000"
 
 def run_test(website_url: str, user_story: str, headless: bool = True):
-    """Run a test using the Thunder Code POC"""
+    """Run a test using the WhyNot"""
     
     payload = {
         "website_url": website_url,

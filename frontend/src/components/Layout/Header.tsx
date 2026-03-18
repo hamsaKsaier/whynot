@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { FiBell, FiSettings, FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiPlay, FiServer, FiFileText, FiHome, FiCommand } from 'react-icons/fi';
+import { FiHelpCircle, FiLogOut, FiMenu, FiX, FiZap, FiFolder, FiHome, FiCommand, FiCreditCard, FiClipboard, FiSettings } from 'react-icons/fi';
 import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { useAuth } from '../../contexts/AuthContext';
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher';
+import { getBillingCredits } from '../../services/api';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -40,39 +41,22 @@ const PAGE_HELP: Record<string, { icon: React.ReactNode; title: string; tips: st
       'Add a website URL to a project to pre-fill it in QA Loop.',
     ],
   },
-  '/environments': {
-    icon: <FiServer className="h-4 w-4 text-primary-500" />,
-    title: 'Environments',
+  '/test-results': {
+    icon: <FiClipboard className="h-4 w-4 text-primary-500" />,
+    title: 'Test Results',
     tips: [
-      'Save base URLs for Production, Staging, or Local environments.',
-      'Environments are optional — you can always paste a URL directly in QA Loop.',
-      'Switch environments to compare test results across deployments.',
-    ],
-  },
-  '/test-runs': {
-    icon: <FiPlay className="h-4 w-4 text-primary-500" />,
-    title: 'Test Runs',
-    tips: [
-      'Each QA Loop session creates a test run you can review here.',
+      'Use the tabs to switch between Test Runs and Test Cases.',
       'Click a run to see the full step-by-step execution log.',
-      'Filter by status to find failures quickly.',
-    ],
-  },
-  '/test-cases': {
-    icon: <FiFileText className="h-4 w-4 text-primary-500" />,
-    title: 'Test Cases',
-    tips: [
       'Test cases are generated automatically during QA Loop sessions.',
-      'Use the search bar to find cases by name, URL, or description.',
-      'Click the ▶ icon to re-run a test case from the QA Loop.',
     ],
   },
   '/settings': {
     icon: <FiSettings className="h-4 w-4 text-primary-500" />,
     title: 'Settings',
     tips: [
-      'Configure your workspace preferences and integrations here.',
-      'API keys let you trigger test runs from your CI/CD pipeline.',
+      'Configure environments, integrations, GitHub repos, webhooks, and billing.',
+      'Use tabs to navigate between different settings sections.',
+      'Connect Jira, ClickUp, or Linear to create bug tickets automatically.',
     ],
   },
 };
@@ -81,11 +65,20 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const location = useLocation();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
 
-  // Mock notification count — replace with real data when available
-  const notificationCount = 0;
+  // Fetch credit balance
+  useEffect(() => {
+    if (!user) return;
+    getBillingCredits()
+      .then((data) => {
+        const bal = data?.balance;
+        setCreditBalance(typeof bal === 'object' && bal !== null ? bal.balance ?? 0 : bal ?? null);
+      })
+      .catch(() => {});
+  }, [user, location.pathname]);
 
   /** Get up-to-two-letter initials from the user's name */
   const initials = user
@@ -134,12 +127,9 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
     // Top-level pages that stand alone (not nested under Projects)
     const topLevelMap: { [key: string]: string } = {
       'qa-loop': 'QA Loop',
-      'test-cases': 'Test Cases',
-      'test-runs': 'Test Runs',
-      'environments': 'Environments',
+      'test-results': 'Test Results',
       'settings': 'Settings',
-      'webhooks': 'Webhooks',
-      'organization-settings': 'Organization Settings',
+      'architecture-flow': 'Architecture',
     };
 
     const pathMap: { [key: string]: string } = {
@@ -165,7 +155,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
     // Otherwise show Projects > ... hierarchy
     const breadcrumbs = [{ label: 'Projects', path: '/projects' }];
     paths.forEach((path, index) => {
-      const label = pathMap[path] || path.charAt(0).toUpperCase() + path.slice(1);
+      let label = pathMap[path] || path.charAt(0).toUpperCase() + path.slice(1);
+      // Replace raw UUIDs with friendly labels in project sub-paths
+      if (paths[0] === 'projects' && index === 1 && path.includes('-')) {
+        label = 'Project Details';
+      }
       const fullPath = '/' + paths.slice(0, index + 1).join('/');
       breadcrumbs.push({ label, path: fullPath });
     });
@@ -207,6 +201,24 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
 
       {/* Right: Actions & User Menu */}
       <div className="flex items-center space-x-1 sm:space-x-2">
+        {/* Credit Balance Pill */}
+        {creditBalance !== null && (
+          <Link
+            to="/settings?tab=billing"
+            className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+              creditBalance <= 10
+                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                : creditBalance <= 50
+                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+            title="Credit balance"
+          >
+            <FiCreditCard className="h-3 w-3" />
+            {creditBalance} credits
+          </Link>
+        )}
+
         {/* Contextual Help ("?") */}
         <div className="relative" ref={helpRef}>
           <button
@@ -262,26 +274,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
             </div>
           )}
         </div>
-
-        {/* Plan badge */}
-        <span className="hidden sm:inline-flex items-center px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded-full hover:bg-gray-200 cursor-pointer transition-colors">
-          Free plan
-        </span>
-
-        {/* Notifications */}
-        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
-          <FiBell className="h-5 w-5 text-gray-600" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold leading-none">
-              {notificationCount > 99 ? '99+' : notificationCount}
-            </span>
-          )}
-        </button>
-
-        {/* Settings */}
-        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Settings">
-          <FiSettings className="h-5 w-5 text-gray-600" />
-        </button>
 
         {/* User Avatar + Logout */}
         <div className="flex items-center gap-1 ml-1">

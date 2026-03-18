@@ -5,10 +5,11 @@ import {
   FiTrash2,
   FiPlus,
   FiBook,
-  FiPlay,
+  FiZap,
   FiGlobe,
   FiFolder,
   FiCopy,
+  FiGitBranch,
 } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -37,6 +38,7 @@ import {
   FolderWithStats,
 } from '../services/api';
 import { Select } from '../components/common/Select';
+import { listQALoopSessions, QALoopSession } from '../services/qa-loop-api';
 
 interface UserStoryFormData {
   story: string;
@@ -60,6 +62,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [folders, setFolders] = useState<FolderWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [qaLoopSessions, setQALoopSessions] = useState<QALoopSession[]>([]);
 
   // Project edit state
   const [isEditingProject, setIsEditingProject] = useState(false);
@@ -76,8 +79,6 @@ export const ProjectDetailPage: React.FC = () => {
   );
   const [userStoryFormErrors, setUserStoryFormErrors] = useState<Partial<UserStoryFormData>>({});
   const [submittingUserStory, setSubmittingUserStory] = useState(false);
-  const [showDraftRestore, setShowDraftRestore] = useState(false);
-
   // Auto-save user story form data
   const { loadDraft, clearDraft, hasDraft } = useFormAutoSave(
     editingUserStory ? `user-story-edit-${editingUserStory.id}` : `user-story-create-${id}`,
@@ -93,7 +94,6 @@ export const ProjectDetailPage: React.FC = () => {
   // Check for draft when modal opens
   useEffect(() => {
     if (isUserStoryModalOpen && hasDraft() && !editingUserStory) {
-      setShowDraftRestore(true);
     }
   }, [isUserStoryModalOpen, hasDraft, editingUserStory]);
 
@@ -115,14 +115,16 @@ export const ProjectDetailPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [projectResponse, userStoriesResponse, foldersResponse] = await Promise.all([
+      const [projectResponse, userStoriesResponse, foldersResponse, qaSessionsResponse] = await Promise.all([
         getProject(id),
         getUserStories(id),
         getFolders(id).catch(() => ({ folders: [] })), // Folders may not exist yet
+        listQALoopSessions({ projectId: id, limit: 5 }).catch(() => ({ sessions: [], total: 0 })),
       ]);
       setProject(projectResponse.project);
       setUserStories(userStoriesResponse.user_stories);
       setFolders(foldersResponse.folders || []);
+      setQALoopSessions(qaSessionsResponse.sessions || []);
 
       // Initialize edit form
       setProjectName(projectResponse.project.name);
@@ -182,7 +184,6 @@ export const ProjectDetailPage: React.FC = () => {
     const draft = loadDraft();
     if (draft) {
       setUserStoryFormData(draft);
-      setShowDraftRestore(true);
     } else {
       setUserStoryFormData({
         ...initialUserStoryFormData,
@@ -209,7 +210,6 @@ export const ProjectDetailPage: React.FC = () => {
     setEditingUserStory(null);
     setUserStoryFormData(initialUserStoryFormData);
     setUserStoryFormErrors({});
-    setShowDraftRestore(false);
   };
 
   const validateUserStoryForm = (): boolean => {
@@ -279,14 +279,12 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const handleGenerateTests = (userStory: UserStoryWithStats) => {
-    // Navigate to home page with pre-selected project and user story
-    navigate('/', {
+  const handleStartQASession = (userStory?: UserStoryWithStats) => {
+    navigate('/qa-loop', {
       state: {
         projectId: id,
-        userStoryId: userStory.id,
-        websiteUrl: userStory.website_url || project?.website_url,
-        userStoryText: userStory.story,
+        websiteUrl: userStory?.website_url || project?.website_url,
+        userStoryContext: userStory?.story,
       },
     });
   };
@@ -400,10 +398,20 @@ export const ProjectDetailPage: React.FC = () => {
             )}
           </div>
           {!isEditingProject && (
-            <Button variant="secondary" size="sm" onClick={() => setIsEditingProject(true)}>
-              <FiEdit2 className="mr-1" />
-              Edit
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => handleStartQASession()}>
+                <FiZap className="mr-1" />
+                Start QA Session
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => navigate('/architecture-flow')}>
+                <FiGitBranch className="mr-1" />
+                Architecture
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setIsEditingProject(true)}>
+                <FiEdit2 className="mr-1" />
+                Edit
+              </Button>
+            </div>
           )}
         </div>
       </Card>
@@ -479,9 +487,9 @@ export const ProjectDetailPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={() => handleGenerateTests(userStory)}>
-                      <FiPlay className="mr-1" />
-                      Generate Tests
+                    <Button size="sm" onClick={() => handleStartQASession(userStory)}>
+                      <FiZap className="mr-1" />
+                      Start QA Session
                     </Button>
                     <QuickActions
                       actions={[
@@ -515,6 +523,46 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Recent QA Sessions */}
+      {qaLoopSessions.length > 0 && (
+        <div className="page-section">
+          <h2 className="section-title mb-4">Recent QA Sessions ({qaLoopSessions.length})</h2>
+          <div className="space-y-3">
+            {qaLoopSessions.map((session) => (
+              <Card key={session.id} hoverable clickable onClick={() => navigate('/qa-loop')}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FiZap className={`h-5 w-5 ${
+                      session.status === 'running' ? 'text-blue-500' :
+                      session.status === 'completed' ? 'text-green-500' :
+                      session.status === 'paused' ? 'text-yellow-500' :
+                      'text-gray-400'
+                    }`} />
+                    <div>
+                      <div className="font-medium text-gray-900 truncate max-w-md">{session.target_url}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {session.pages_explored} pages · {session.tests_generated} tests · {session.bugs_found} bugs
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {session.quality_score > 0 && (
+                      <span className="text-sm font-medium text-purple-600">{session.quality_score}%</span>
+                    )}
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      session.status === 'running' ? 'bg-blue-100 text-blue-700' :
+                      session.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      session.status === 'paused' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>{session.status}</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* User Story Modal */}
       <Modal
@@ -582,10 +630,6 @@ export const ProjectDetailPage: React.FC = () => {
     </div>
   );
 };
-
-
-
-
 
 
 

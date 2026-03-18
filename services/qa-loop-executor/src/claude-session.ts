@@ -137,7 +137,7 @@ export class ClaudeSession {
 
   async runIteration(
     prompt: string,
-    model: ClaudeModel = 'claude-sonnet-4-20250514'
+    model: ClaudeModel = 'claude-sonnet-4-6'
   ): Promise<IterationResult> {
     this.abortController = new AbortController();
 
@@ -324,10 +324,14 @@ export class ClaudeSession {
                 }
               });
 
+              // Avoid double-serialization: if data is already a string (e.g. MCP
+              // browser text), pass it as-is. Only JSON.stringify objects/arrays.
+              const rawData = toolResult.data ?? { error: toolResult.error };
+              const serialized = typeof rawData === 'string' ? rawData : JSON.stringify(rawData);
               toolResults.push({
                 type: 'tool_result',
                 tool_use_id: toolUse.id,
-                content: JSON.stringify(toolResult.data || { error: toolResult.error })
+                content: serialized
               });
 
             } catch (error: any) {
@@ -397,11 +401,15 @@ EXPLORATION STRATEGY:
 1. FIRST: Always call get_session_state() to understand your current progress
 2. NAVIGATE: Use browser_navigate() to visit pages, starting from the target URL
 3. OBSERVE: Call browser_snapshot() to get the full accessibility tree — this shows ALL text, buttons, links, forms, and interactive elements on the page
-4. INTERACT: Use browser_click() with element refs from the snapshot to click links and buttons
-5. OBSERVE AGAIN: After EVERY interaction, call browser_snapshot() to see the resulting page state
-6. ONLY THEN SAVE: Save test cases based on what you ACTUALLY observed using save_test_case()
-7. REPORT: Log any bugs or issues you find using save_bug()
-8. TRACK: Add pages you discover to the exploration queue using add_discovered_page()
+4. ★ DISCOVER PAGES IMMEDIATELY: After EVERY browser_snapshot(), scan ALL links and navigation items.
+   For EACH link that points to a different page/route on this domain, call add_discovered_page({ url }) RIGHT AWAY.
+   This is CRITICAL — it builds the queue of pages to explore. Do this BEFORE anything else.
+5. INTERACT: Use browser_click() with element refs from the snapshot to click links and buttons
+6. OBSERVE AGAIN: After EVERY interaction, call browser_snapshot() to see the resulting page state.
+   Again, call add_discovered_page() for any NEW links you see.
+7. ONLY THEN SAVE: Save test cases based on what you ACTUALLY observed using save_test_case()
+8. REPORT: Log any bugs or issues you find using save_bug()
+9. MARK DONE: Call mark_page_explored() when you've finished testing a page
 
 ⚠️ CRITICAL RULE — NEVER GENERATE SPECULATIVE TEST CASES ⚠️
 You MUST actually navigate to a page AND call browser_snapshot() to read its content
@@ -451,10 +459,14 @@ WORKFLOW: How to explore a page
 
 1. browser_navigate({ url: "..." }) — go to the page
 2. browser_snapshot() — read the accessibility tree to see EVERYTHING on the page
-3. Identify elements by their ref IDs (e.g., ref="e5" for a button)
-4. browser_click({ element: "Login button", ref: "e5" }) — interact with elements
-5. browser_snapshot() — observe the result of your action
-6. Repeat: interact → snapshot → observe → save test cases
+3. ★★★ IMMEDIATELY call add_discovered_page() for EVERY internal link you see ★★★
+   Look for all <a> links, nav items, sidebar links, footer links, breadcrumbs, etc.
+   Each unique URL on the same domain = one add_discovered_page() call.
+   This populates your exploration queue for future iterations!
+4. Identify elements by their ref IDs (e.g., ref="e5" for a button)
+5. browser_click({ element: "Login button", ref: "e5" }) — interact with elements
+6. browser_snapshot() — observe the result; call add_discovered_page() for any NEW links
+7. Save test cases for what you observed, then mark_page_explored() and move on
 
 RULES:
 - Be SYSTEMATIC: Don't revisit pages you've already explored
@@ -462,15 +474,17 @@ RULES:
 - Be OBSERVANT: Note anything unusual (console errors, slow responses, UI glitches)
 - Be EFFICIENT: Generate actionable test cases with clear steps
 - SAVE NOTES: Use add_note() to remember important observations for future iterations
-- MANDATORY WORKFLOW: For every page you test: navigate → snapshot → interact → snapshot → save_test_case
+- ★ DISCOVER FIRST: After EVERY browser_snapshot(), IMMEDIATELY call add_discovered_page() for all new links
+- MANDATORY WORKFLOW: For every page you test: navigate → snapshot → DISCOVER LINKS → interact → snapshot → save_test_case → mark_page_explored
 - NEVER save_test_case without having called browser_snapshot() on that page FIRST
 - ONLY ONE PAGE AT A TIME: Fully explore and test one page before moving to the next
 
 WHEN TO COMPLETE:
-Output "EXPLORATION_COMPLETE" when:
-- All discovered pages have been explored
-- No new pages can be found
-- You've generated sufficient test coverage
+Output "EXPLORATION_COMPLETE" ONLY when ALL of these conditions are met:
+- You have called add_discovered_page() for at least 3 different URLs
+- All discovered pages have been explored (get_unexplored_pages() returns empty)
+- You've generated at least 5 test cases with save_test_case()
+Do NOT output "EXPLORATION_COMPLETE" if you have unexplored pages or fewer than 3 discovered pages.
 
 ═══ TEST CASE FORMAT ═══
 
