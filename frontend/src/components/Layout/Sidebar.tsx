@@ -221,8 +221,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user.name}
                   </p>
-                  <p className="text-xs text-gray-500 truncate capitalize">
-                    {user.role?.replace(/_/g, ' ') || 'User'}
+                  <p className="text-xs text-gray-500 truncate">
+                    {user.email || user.role?.replace(/_/g, ' ') || 'User'}
                   </p>
                 </div>
                 <button
