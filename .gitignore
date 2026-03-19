@@ -40,5 +40,5 @@ screenshots/
 Thumbs.db
 
 # Docker
-.dockerignore
+# .dockerignore must be tracked for Railway builds
 

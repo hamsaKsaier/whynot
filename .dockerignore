@@ -1,0 +1,14 @@
+.claude/worktrees
+.git
+node_modules
+**/node_modules
+**/dist
+*.md
+.env
+.env.*
+tests
+assets
+docs
+examples
+.cursor
+.github
