@@ -7,6 +7,7 @@ import {
   FiChevronRight,
   FiZap,
   FiClipboard,
+  FiActivity,
   FiSettings,
 } from 'react-icons/fi';
 import { Tooltip } from '../common/Tooltip';
@@ -35,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { icon: FiHome,      label: 'Dashboard',     path: '/' },
     { icon: FiFolder,    label: 'Projects',      path: '/projects' },
     { icon: FiClipboard, label: 'Test Results',  path: '/test-results' },
+    { icon: FiActivity,  label: 'Monitors',      path: '/monitors' },
   ];
 
   const bottomItems = [

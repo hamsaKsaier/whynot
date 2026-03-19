@@ -69,6 +69,7 @@ function App() {
                     <Route path="/test-results" element={<TestResultsPage />} />
                     <Route path="/test-runs/:executionId" element={<TestRunDetailPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/monitors" element={<MonitorsPage />} />
                     <Route path="/architecture-flow" element={<ArchitectureFlowPage />} />
 
                     {/* Redirects from old routes */}

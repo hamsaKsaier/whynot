@@ -63,6 +63,25 @@ router.get('/', requireAuth, asyncHandler(async (req: any, res) => {
   res.json(safe);
 }));
 
+// Cron preview — returns human-readable text and next 3 run times
+// NOTE: This must be defined before /:id routes to avoid matching "cron-preview" as an id
+router.post('/cron-preview', requireAuth, asyncHandler(async (req: any, res) => {
+  const { cron_expression } = req.body;
+  if (!cron_expression || typeof cron_expression !== 'string') {
+    return res.status(400).json({ error: 'cron_expression is required' });
+  }
+
+  const parts = cron_expression.trim().split(/\s+/);
+  if (parts.length !== 5) {
+    return res.status(400).json({ error: 'Invalid cron expression — must have 5 fields' });
+  }
+
+  const humanReadable = cronToHumanReadable(cron_expression);
+  const nextRuns = getNextCronRuns(cron_expression, 3);
+
+  res.json({ humanReadable, nextRuns: nextRuns.map(d => d.toISOString()) });
+}));
+
 // Create a monitor
 router.post('/', requireAuth, validate(createMonitorSchema), asyncHandler(async (req: any, res) => {
   const workspaceId = req.workspaceId;
@@ -128,5 +147,162 @@ router.get('/:id/history', requireAuth, asyncHandler(async (req: any, res) => {
   const history = await monitorRepository.getHistory(req.params.id, limit);
   res.json(history);
 }));
+
+// Pause a monitor
+router.patch('/:id/pause', requireAuth, asyncHandler(async (req: any, res) => {
+  const monitor = await monitorRepository.update(req.params.id, { is_enabled: false });
+  if (!monitor) return res.status(404).json({ error: 'Monitor not found' });
+
+  logger.info('Monitor paused', { monitorId: monitor.id, name: monitor.name });
+
+  res.json({
+    ...monitor,
+    login_credentials: monitor.login_credentials ? { configured: true } : null,
+  });
+}));
+
+// Resume a monitor
+router.patch('/:id/resume', requireAuth, asyncHandler(async (req: any, res) => {
+  const monitor = await monitorRepository.findById(req.params.id);
+  if (!monitor) return res.status(404).json({ error: 'Monitor not found' });
+
+  // Calculate next run time when resuming
+  const nextRun = calculateNextRunFromCron(monitor.cron_expression);
+
+  const updated = await monitorRepository.update(req.params.id, {
+    is_enabled: true,
+    next_run_at: nextRun,
+  });
+
+  logger.info('Monitor resumed', { monitorId: monitor.id, name: monitor.name, nextRun: nextRun?.toISOString() });
+
+  res.json({
+    ...updated,
+    login_credentials: updated?.login_credentials ? { configured: true } : null,
+  });
+}));
+
+// ── Cron utilities ──────────────────────────────────────────────────────────
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function parseCronFieldUtil(field: string, min: number, max: number): number[] {
+  if (field === '*') return [];
+  const values: number[] = [];
+  for (const part of field.split(',')) {
+    if (part.includes('-')) {
+      const [start, end] = part.split('-').map(Number);
+      for (let i = start; i <= end; i++) values.push(i);
+    } else if (part.includes('/')) {
+      const [base, step] = part.split('/');
+      const startVal = base === '*' ? min : parseInt(base, 10);
+      const stepN = parseInt(step, 10);
+      for (let i = startVal; i <= max; i += stepN) values.push(i);
+    } else {
+      const v = parseInt(part, 10);
+      if (!isNaN(v)) values.push(v);
+    }
+  }
+  return values.filter(v => v >= min && v <= max);
+}
+
+function formatTime12(hour: number, minute: number): string {
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h = hour % 12 || 12;
+  const m = minute.toString().padStart(2, '0');
+  return `${h}:${m} ${ampm}`;
+}
+
+function cronToHumanReadable(cron: string): string {
+  try {
+    const parts = cron.trim().split(/\s+/);
+    if (parts.length !== 5) return cron;
+
+    const [minuteF, hourF, domF, _monthF, dowF] = parts;
+    const minutes = parseCronFieldUtil(minuteF, 0, 59);
+    const hours = parseCronFieldUtil(hourF, 0, 23);
+    const doms = parseCronFieldUtil(domF, 1, 31);
+    const dows = parseCronFieldUtil(dowF, 0, 6);
+
+    if (minuteF === '*' && hourF === '*') return 'Every minute';
+    if (minuteF.startsWith('*/') && hourF === '*') {
+      const step = parseInt(minuteF.split('/')[1], 10);
+      return `Every ${step} minute${step !== 1 ? 's' : ''}`;
+    }
+    if (minuteF !== '*' && hourF.startsWith('*/')) {
+      const step = parseInt(hourF.split('/')[1], 10);
+      const min = minutes[0] ?? 0;
+      return `Every ${step} hour${step !== 1 ? 's' : ''} at :${min.toString().padStart(2, '0')}`;
+    }
+
+    const hour = hours.length > 0 ? hours[0] : 0;
+    const minute = minutes.length > 0 ? minutes[0] : 0;
+    const timeStr = formatTime12(hour, minute);
+
+    if (doms.length > 0 && dowF === '*') {
+      const dayStr = doms.map(d => {
+        const suffix = d === 1 || d === 21 || d === 31 ? 'st' : d === 2 || d === 22 ? 'nd' : d === 3 || d === 23 ? 'rd' : 'th';
+        return `${d}${suffix}`;
+      }).join(', ');
+      return `Monthly on the ${dayStr} at ${timeStr}`;
+    }
+
+    if (dows.length > 0) {
+      if (dows.length === 5 && dows.every((d, i) => d === i + 1)) return `Weekdays at ${timeStr}`;
+      if (dows.length === 7) return `Every day at ${timeStr}`;
+      const dayNames = dows.map(d => DAY_NAMES[d]);
+      if (dayNames.length === 1) return `Every ${dayNames[0]} at ${timeStr}`;
+      const last = dayNames.pop();
+      return `Every ${dayNames.join(', ')} and ${last} at ${timeStr}`;
+    }
+
+    if (hours.length > 0 && dowF === '*' && domF === '*') return `Every day at ${timeStr}`;
+    if (hourF === '*' && minutes.length > 0) return `Every hour at :${minutes[0].toString().padStart(2, '0')}`;
+
+    return cron;
+  } catch {
+    return cron;
+  }
+}
+
+function getNextCronRuns(cron: string, count: number): Date[] {
+  try {
+    const parts = cron.trim().split(/\s+/);
+    if (parts.length !== 5) return [];
+
+    const [minuteF, hourF, domF, _monthF, dowF] = parts;
+    const runs: Date[] = [];
+    const now = new Date();
+    const candidate = new Date(now);
+    candidate.setSeconds(0);
+    candidate.setMilliseconds(0);
+
+    for (let attempt = 0; attempt < 1000 && runs.length < count; attempt++) {
+      candidate.setMinutes(candidate.getMinutes() + 1);
+      const min = candidate.getMinutes();
+      const hr = candidate.getHours();
+      const dom = candidate.getDate();
+      const dow = candidate.getDay();
+
+      if (minuteF !== '*' && !parseCronFieldUtil(minuteF, 0, 59).includes(min)) continue;
+      if (hourF !== '*' && !parseCronFieldUtil(hourF, 0, 23).includes(hr)) continue;
+      if (domF !== '*' && !parseCronFieldUtil(domF, 1, 31).includes(dom)) continue;
+      if (dowF !== '*' && !parseCronFieldUtil(dowF, 0, 6).includes(dow)) continue;
+
+      runs.push(new Date(candidate));
+    }
+    return runs;
+  } catch {
+    return [];
+  }
+}
+
+function calculateNextRunFromCron(cron: string): Date {
+  const runs = getNextCronRuns(cron, 1);
+  if (runs.length > 0) return runs[0];
+  const fallback = new Date();
+  fallback.setHours(fallback.getHours() + 24);
+  return fallback;
+}
 
 export { router as monitorRouter };

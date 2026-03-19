@@ -196,6 +196,33 @@ async function pollSessionCompletion(
           previousScore,
         });
 
+        // ── Regression detection ──────────────────────────────────────
+        // Compare current bugs with previous run to detect new regressions
+        let newBugCount = 0;
+        const currentBugs = session.bugs_found || 0;
+        try {
+          if (monitor?.workspace_id) {
+            const previousSessions = await dbQuery<{ bugs_found: number }>(
+              `SELECT bugs_found FROM qa_loop_sessions
+               WHERE workspace_id = $1 AND target_url = $2 AND id != $3
+               ORDER BY created_at DESC LIMIT 1`,
+              [monitor.workspace_id, monitor.target_url, sessionId],
+            );
+            if (previousSessions.length > 0) {
+              const previousBugs = previousSessions[0].bugs_found || 0;
+              newBugCount = Math.max(0, currentBugs - previousBugs);
+              if (newBugCount > 0) {
+                logger.info('Regression detected', {
+                  monitorId, sessionId,
+                  currentBugs, previousBugs, newBugCount,
+                });
+              }
+            }
+          }
+        } catch (regrErr: any) {
+          logger.warn('Failed to check for regressions', { error: regrErr.message });
+        }
+
         // Send email notifications to workspace members
         try {
           const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -206,6 +233,7 @@ async function pollSessionCompletion(
               [monitor.workspace_id],
             );
             for (const member of members) {
+              // Alert on failure
               if (!isPass) {
                 sendMonitorAlertEmail(member.user_id, {
                   monitorName: monitor.name,
@@ -214,9 +242,20 @@ async function pollSessionCompletion(
                   dashboardUrl: `${frontendUrl}/monitors`,
                 }).catch(e => logger.warn('Monitor alert email failed', { error: e.message }));
               }
+
+              // Alert on regressions (new bugs detected compared to previous run)
+              if (newBugCount > 0 && monitor.notify_on_regression) {
+                sendMonitorAlertEmail(member.user_id, {
+                  monitorName: monitor.name,
+                  url: monitor.target_url,
+                  alertType: `${newBugCount} new bug${newBugCount !== 1 ? 's' : ''} detected (regression)`,
+                  dashboardUrl: `${frontendUrl}/qa-loop?session=${sessionId}`,
+                }).catch(e => logger.warn('Regression alert email failed', { error: e.message }));
+              }
+
               sendScanCompleteEmail(member.user_id, {
                 projectName: monitor.name,
-                bugCount: session.bugs_found || 0,
+                bugCount: currentBugs,
                 criticalCount: 0,
                 scanUrl: `${frontendUrl}/qa-loop?session=${sessionId}`,
               }).catch(e => logger.warn('Scan complete email failed', { error: e.message }));
