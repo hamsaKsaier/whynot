@@ -3,14 +3,14 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy package files
-COPY gateway/package*.json ./
-COPY gateway/tsconfig.json ./
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # Install dependencies
 RUN npm install
 
 # Copy source code
-COPY gateway/src/ ./src/
+COPY src/ ./src/
 # Copy shared types (needed for build)
 COPY shared/ ./shared/
 
@@ -22,4 +22,3 @@ EXPOSE 3000
 
 # Run application
 CMD ["npm", "start"]
-

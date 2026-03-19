@@ -3,8 +3,8 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy package files
-COPY services/qa-loop-executor/package*.json ./
-COPY services/qa-loop-executor/tsconfig.json ./
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # Install dependencies
 RUN npm install
@@ -12,13 +12,10 @@ RUN npm install
 # Install ffmpeg for video stitching (screenshot frames → MP4)
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Install Firefox browser WITH all system dependencies (libX11-xcb, libgtk, etc.)
-# --with-deps tells Playwright to auto-install all required OS packages for the browser.
-# This replaces the manual apt-get of a few packages which missed critical libs like libX11-xcb.
+# Install Firefox browser WITH all system dependencies
 RUN npx playwright install --with-deps firefox
 
 # Create directory structure that matches local dev environment
-# shared is at ../../shared relative to /app/src, which means /shared
 RUN mkdir -p /shared
 
 # Copy shared directory to the location expected by relative imports
@@ -28,7 +25,7 @@ COPY shared/ /shared/
 RUN ln -s /app/node_modules /shared/node_modules
 
 # Copy source code
-COPY services/qa-loop-executor/src/ ./src/
+COPY src/ ./src/
 
 # Build TypeScript
 RUN npm run build
