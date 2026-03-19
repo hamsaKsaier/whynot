@@ -49,8 +49,8 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <div className="w-64 bg-gray-900 text-white flex flex-col">
-      <div className="h-16 flex items-center px-6 border-b border-gray-800">
+    <div className="w-64 bg-slate-900 text-white flex flex-col">
+      <div className="h-16 flex items-center px-6 border-b border-slate-800">
         <FiShield className="h-6 w-6 text-primary-400 mr-3" />
         <span className="font-bold text-lg">Admin Panel</span>
       </div>
@@ -59,7 +59,7 @@ export const AdminSidebar: React.FC = () => {
         {navSections.map((section, si) => (
           <div key={si}>
             {section.title && (
-              <p className="px-3 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">{section.title}</p>
+              <p className="px-3 mb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">{section.title}</p>
             )}
             <div className="space-y-0.5">
               {section.items.map((item) => {
@@ -72,7 +72,7 @@ export const AdminSidebar: React.FC = () => {
                     className={`flex items-center px-3 py-2.5 rounded-lg text-sm transition-colors ${
                       active
                         ? 'bg-primary-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                     }`}
                   >
                     <Icon className="h-5 w-5 mr-3" />
@@ -85,7 +85,7 @@ export const AdminSidebar: React.FC = () => {
         ))}
       </nav>
 
-      <div className="px-4 py-3 border-t border-gray-800 text-xs text-gray-500">
+      <div className="px-4 py-3 border-t border-slate-800 text-xs text-slate-400">
         WhyNot Admin v0.1
       </div>
     </div>

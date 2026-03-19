@@ -51,49 +51,49 @@ export const StatsBar: React.FC<StatsBarProps> = ({
     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       <Card className="p-4 text-center">
         <FiGlobe className="mx-auto text-2xl text-blue-500 mb-2" />
-        <div className="text-2xl font-bold text-gray-900">
+        <div className="text-2xl font-bold text-white">
           {pagesExplored.length || activeSession.pages_explored}
         </div>
-        <div className="text-xs text-gray-500">Pages Explored</div>
+        <div className="text-xs text-slate-400">Pages Explored</div>
       </Card>
 
       <Card className="p-4 text-center">
         <FiFileText className="mx-auto text-2xl text-green-500 mb-2" />
-        <div className="text-2xl font-bold text-gray-900">
+        <div className="text-2xl font-bold text-white">
           {testsGenerated.length || activeSession.tests_generated}
         </div>
-        <div className="text-xs text-gray-500">Tests Generated</div>
+        <div className="text-xs text-slate-400">Tests Generated</div>
       </Card>
 
       <Card className="p-4 text-center">
         <FiAlertTriangle className="mx-auto text-2xl text-red-500 mb-2" />
-        <div className="text-2xl font-bold text-gray-900">
+        <div className="text-2xl font-bold text-white">
           {bugsFound.length || activeSession.bugs_found}
         </div>
-        <div className="text-xs text-gray-500">Bugs Found</div>
+        <div className="text-xs text-slate-400">Bugs Found</div>
       </Card>
 
       <Card
-        className="p-4 text-center cursor-pointer hover:bg-gray-50"
+        className="p-4 text-center cursor-pointer hover:bg-slate-900"
         onClick={onToggleQualityDashboard}
       >
         <FiBarChart2 className="mx-auto text-2xl text-sky-500 mb-2" />
-        <div className="text-2xl font-bold text-gray-900">
+        <div className="text-2xl font-bold text-white">
           {qualityScore.overall}%
         </div>
-        <div className="text-xs text-gray-500">Quality Score</div>
+        <div className="text-xs text-slate-400">Quality Score</div>
       </Card>
     </div>
 
     {/* Collapsible quality dashboard */}
     {showQualityDashboard && (
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
           <FiBarChart2 className="text-sky-500" />
           Quality Dashboard
           <button
             onClick={onToggleQualityDashboard}
-            className="ml-auto text-sm text-gray-500 hover:text-gray-700"
+            className="ml-auto text-sm text-slate-400 hover:text-slate-200"
           >
             Hide
           </button>

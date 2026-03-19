@@ -84,13 +84,13 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-4">
+    <div className="bg-slate-800 border-b border-slate-700 px-4 py-2 flex items-center justify-between gap-4">
       {/* Navigation Controls */}
       <div className="flex items-center gap-2">
         <button
           onClick={onGoToFirstFrame}
           disabled={!canGoPrev}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title="First frame"
         >
           <FiSkipBack className="w-4 h-4" />
@@ -98,7 +98,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
         <button
           onClick={onGoToPrevFrame}
           disabled={!canGoPrev}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title="Previous frame"
         >
           <FiChevronLeft className="w-4 h-4" />
@@ -106,7 +106,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
         <button
           onClick={onGoToNextFrame}
           disabled={!canGoNext}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title="Next frame"
         >
           <FiChevronRight className="w-4 h-4" />
@@ -114,7 +114,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
         <button
           onClick={onGoToLastFrame}
           disabled={!canGoNext}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title="Last frame"
         >
           <FiSkipForward className="w-4 h-4" />
@@ -124,11 +124,11 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
       {/* Step Selector */}
       {sortedSteps.length > 0 && (
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600 whitespace-nowrap">Step:</label>
+          <label className="text-sm text-slate-400 whitespace-nowrap">Step:</label>
           <select
             value={currentStepIndex ?? ''}
             onChange={handleStepSelect}
-            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-2 py-1 border border-slate-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {sortedSteps.map((stepIdx) => (
               <option key={stepIdx} value={stepIdx}>
@@ -140,12 +140,12 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
       )}
 
       {/* Frame Counter */}
-      <div className="text-sm text-gray-600 whitespace-nowrap">
+      <div className="text-sm text-slate-400 whitespace-nowrap">
         {framePosition.total > 0 ? (
           <>
             Frame {getTimelineValue() + 1} of {framePosition.total}
             {framePosition.step > 0 && (
-              <span className="text-gray-400 ml-2">
+              <span className="text-slate-500 ml-2">
                 (Step {framePosition.step}, Frame {framePosition.frame})
               </span>
             )}
@@ -164,7 +164,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
             max={totalFrames - 1}
             value={getTimelineValue()}
             onChange={handleTimelineChange}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
             style={{
               background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(getTimelineValue() / (totalFrames - 1)) * 100}%, #e5e7eb ${(getTimelineValue() / (totalFrames - 1)) * 100}%, #e5e7eb 100%)`
             }}

@@ -76,6 +76,10 @@ export interface QALoopTestCase {
   is_active: boolean;
   last_run_status: string | null;
   last_run_at: Date | null;
+  playwright_code: string | null;
+  confidence_score: number | null;
+  total_runs: number;
+  pass_count: number;
   created_at: Date;
 }
 
@@ -190,10 +194,10 @@ export class QALoopRepository {
   async cloneSessionData(sourceId: string, targetId: string): Promise<void> {
     logger.info('Cloning session data', { sourceId, targetId });
 
-    // Clone test cases
+    // Clone test cases (including playwright_code)
     await this.pool.query(`
-      INSERT INTO qa_loop_test_cases (id, session_id, name, description, category, priority, risk_level, steps, selectors, source, source_page_url)
-      SELECT gen_random_uuid(), $2, name, description, category, priority, risk_level, steps, selectors, source, source_page_url
+      INSERT INTO qa_loop_test_cases (id, session_id, name, description, category, priority, risk_level, steps, selectors, source, source_page_url, playwright_code)
+      SELECT gen_random_uuid(), $2, name, description, category, priority, risk_level, steps, selectors, source, source_page_url, playwright_code
       FROM qa_loop_test_cases WHERE session_id = $1
     `, [sourceId, targetId]);
 
@@ -412,14 +416,15 @@ export class QALoopRepository {
     source?: string;
     sourcePageUrl?: string;
     observedResult?: 'pass' | 'fail';
+    playwrightCode?: string;
   }): Promise<QALoopTestCase> {
     const id = uuidv4();
     const query = `
       INSERT INTO qa_loop_test_cases (
         id, session_id, project_id, name, description, category,
         priority, risk_level, steps, selectors, source, source_page_url,
-        observed_result
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        observed_result, playwright_code
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
 
@@ -436,7 +441,8 @@ export class QALoopRepository {
       JSON.stringify(testCase.selectors || {}),
       testCase.source || 'exploration',
       testCase.sourcePageUrl || null,
-      testCase.observedResult || null
+      testCase.observedResult || null,
+      testCase.playwrightCode || null
     ]);
 
     logger.info('Added test case', { sessionId, testCaseId: id, name: testCase.name, observedResult: testCase.observedResult });
@@ -497,16 +503,51 @@ export class QALoopRepository {
     // appears in both a SET clause and a CASE expression in the same query.
     const passIncrement = status === 'passed' ? 1 : 0;
     const failIncrement = status === 'failed' ? 1 : 0;
+    const totalIncrement = (status === 'passed' || status === 'failed') ? 1 : 0;
     const query = `
       UPDATE qa_loop_test_cases
       SET last_run_status    = $2,
           last_run_at        = CURRENT_TIMESTAMP,
           last_run_duration_ms = $3,
           pass_count         = pass_count + $4,
-          fail_count         = fail_count + $5
+          fail_count         = fail_count + $5,
+          total_runs         = COALESCE(total_runs, 0) + $6,
+          confidence_score   = CASE
+            WHEN (COALESCE(total_runs, 0) + $6) > 0
+            THEN ROUND(((COALESCE(pass_count, 0) + $4)::DECIMAL / (COALESCE(total_runs, 0) + $6)) * 100, 2)
+            ELSE NULL
+          END
       WHERE id = $1
     `;
-    await this.pool.query(query, [testCaseId, status, durationMs || null, passIncrement, failIncrement]);
+    await this.pool.query(query, [testCaseId, status, durationMs || null, passIncrement, failIncrement, totalIncrement]);
+  }
+
+  /**
+   * Get confidence score for a test case based on its pass/fail history.
+   */
+  async getTestCaseConfidence(testCaseId: string): Promise<{
+    confidence: number | null;
+    totalRuns: number;
+    passRate: number;
+  }> {
+    const query = `
+      SELECT confidence_score, total_runs, pass_count
+      FROM qa_loop_test_cases
+      WHERE id = $1
+    `;
+    const result = await this.pool.query(query, [testCaseId]);
+    if (result.rows.length === 0) {
+      return { confidence: null, totalRuns: 0, passRate: 0 };
+    }
+    const row = result.rows[0];
+    const totalRuns = row.total_runs || 0;
+    const passCount = row.pass_count || 0;
+    const passRate = totalRuns > 0 ? (passCount / totalRuns) * 100 : 0;
+    return {
+      confidence: row.confidence_score ? parseFloat(row.confidence_score) : null,
+      totalRuns,
+      passRate,
+    };
   }
 
   // Bug methods

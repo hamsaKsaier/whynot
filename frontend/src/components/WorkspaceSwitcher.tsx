@@ -41,7 +41,7 @@ export const WorkspaceSwitcher: React.FC = () => {
 
   if (isLoading || !activeWorkspace) {
     return (
-      <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-400">
         <FiLoader className="h-3.5 w-3.5 animate-spin" />
         <span className="hidden sm:inline">Loading…</span>
       </div>
@@ -52,28 +52,28 @@ export const WorkspaceSwitcher: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors max-w-[180px]"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-800 transition-colors max-w-[180px]"
       >
         <span className="truncate">{activeWorkspace.name}</span>
         <FiChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
-          <p className="px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <div className="absolute left-0 top-full mt-1 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-lg z-50 py-1">
+          <p className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Workspaces
           </p>
 
           {workspaces.map((ws) => (
             <div
               key={ws.id}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer group"
+              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-900 cursor-pointer group"
               onClick={() => {
                 if (ws.id !== activeWorkspace.id) switchWorkspace(ws.id);
                 setOpen(false);
               }}
             >
-              <span className="flex-1 text-sm text-gray-700 truncate">{ws.name}</span>
+              <span className="flex-1 text-sm text-slate-200 truncate">{ws.name}</span>
               {ws.id === activeWorkspace.id && (
                 <FiCheck className="h-4 w-4 text-primary-600 shrink-0" />
               )}
@@ -95,7 +95,7 @@ export const WorkspaceSwitcher: React.FC = () => {
             </div>
           ))}
 
-          <div className="border-t border-gray-100 mt-1 pt-1">
+          <div className="border-t border-slate-700 mt-1 pt-1">
             {creating ? (
               <form onSubmit={handleCreate} className="px-3 py-2 flex gap-2">
                 <input
@@ -103,7 +103,7 @@ export const WorkspaceSwitcher: React.FC = () => {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Workspace name"
-                  className="flex-1 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="flex-1 text-sm border border-slate-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
                 <button
                   type="submit"
@@ -116,7 +116,7 @@ export const WorkspaceSwitcher: React.FC = () => {
             ) : (
               <button
                 onClick={(e) => { e.stopPropagation(); setCreating(true); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-400 hover:bg-slate-900 transition-colors"
               >
                 <FiPlus className="h-4 w-4" />
                 New workspace

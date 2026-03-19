@@ -4,6 +4,7 @@ import { createLogger } from '../../shared/logger/logger';
 import { AutoFixRepository, AutoFixAttemptEntity } from '../../shared/database/repositories/auto-fix-repository';
 import { GitHubService } from './github-service';
 import { query } from '../../shared/database/connection';
+import { sendAutoFixPREmail } from './email-service';
 
 const logger = createLogger('auto-fix-service');
 
@@ -259,6 +260,32 @@ export class AutoFixService {
         prNumber: pr.number,
         prUrl: pr.html_url,
       });
+
+      // Send auto-fix PR email notification to workspace members
+      try {
+        const sessionRows = await query<{ workspace_id: string | null }>(
+          `SELECT s.workspace_id FROM qa_loop_sessions s
+           JOIN qa_loop_bugs b ON b.session_id = s.id
+           WHERE b.id = $1 LIMIT 1`,
+          [bugId],
+        );
+        const wsId = sessionRows[0]?.workspace_id;
+        if (wsId) {
+          const members = await query<{ user_id: string }>(
+            'SELECT user_id FROM workspace_members WHERE workspace_id = $1',
+            [wsId],
+          );
+          for (const m of members) {
+            sendAutoFixPREmail(m.user_id, {
+              projectName: bug.website_url || bug.page_url || 'Unknown project',
+              prUrl: pr.html_url,
+              bugTitle: bug.title,
+            }).catch(e => logger.warn('Auto-fix PR email failed', { error: e.message }));
+          }
+        }
+      } catch (emailErr: any) {
+        logger.warn('Failed to send auto-fix PR email', { error: emailErr.message });
+      }
 
       // Step 6: Auto-merge + retest loop (if enabled)
       if (enableRetestLoop && loopOptions) {

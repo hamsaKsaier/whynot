@@ -33,7 +33,7 @@ export const TestInputFormStep1: React.FC<TestInputFormStep1Props> = ({
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-slate-200">
             Project <span className="text-red-500">*</span>
           </label>
           <Button
@@ -55,7 +55,7 @@ export const TestInputFormStep1: React.FC<TestInputFormStep1Props> = ({
           disabled={disabled || loadingProjects}
         />
         {projects.length === 0 && !loadingProjects && (
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-slate-400">
             No projects found.{' '}
             <button
               onClick={() => navigate('/projects')}

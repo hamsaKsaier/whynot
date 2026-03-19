@@ -317,13 +317,13 @@ export const ProjectsPage: React.FC = () => {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-2 bg-blue-900/30 rounded-lg">
                     <FiFolder className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                    <h3 className="font-semibold text-white">{project.name}</h3>
                     {project.website_url && (
-                      <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                      <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
                         <FiGlobe className="h-3 w-3" />
                         <span className="truncate max-w-[200px]">{project.website_url}</span>
                       </div>
@@ -360,13 +360,13 @@ export const ProjectsPage: React.FC = () => {
               </div>
 
               {project.description && (
-                <p className="mt-3 text-sm text-gray-600 line-clamp-2">
+                <p className="mt-3 text-sm text-slate-400 line-clamp-2">
                   {project.description}
                 </p>
               )}
 
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="mt-4 pt-4 border-t border-slate-700">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
                   <FiBook className="h-4 w-4" />
                   <span>{project.user_story_count} user stories</span>
                 </div>

@@ -81,13 +81,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
   const stateClasses = {
     error: 'border-red-500 focus:ring-red-500 focus:border-red-500',
     success: 'border-green-500 focus:ring-green-500 focus:border-green-500',
-    default: 'border-gray-300 focus:ring-primary-500 focus:border-primary-500',
+    default: 'border-slate-600 focus:ring-primary-500 focus:border-primary-500',
   };
 
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-slate-200 mb-1">
           {label}
         </label>
       )}
@@ -123,7 +123,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
           </p>
         )}
         {maxLength && showCharCount && (
-          <span className={`text-xs ml-auto ${error ? 'text-red-600' : 'text-gray-500'}`}>
+          <span className={`text-xs ml-auto ${error ? 'text-red-600' : 'text-slate-400'}`}>
             {(value?.toString().length || 0)} / {maxLength}
           </span>
         )}

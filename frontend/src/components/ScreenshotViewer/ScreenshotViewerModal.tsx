@@ -21,13 +21,13 @@ export const ScreenshotViewerModal: React.FC<ScreenshotViewerModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <Card className="max-w-6xl w-full max-h-[90vh] overflow-y-auto relative">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-700">
+          <h3 className="text-lg font-semibold text-white">
             Screenshots ({screenshots.length})
           </h3>
           <button
             onClick={onClose}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-colors"
             aria-label="Close"
           >
             <FiX className="h-5 w-5" />

@@ -59,7 +59,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       case 'html':
         return <FiFile className="text-orange-500" />;
       default:
-        return <FiFile className="text-gray-500" />;
+        return <FiFile className="text-slate-400" />;
     }
   };
 
@@ -151,8 +151,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         className={`
           border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
           ${isDragging
-            ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-sky-400'
+            ? 'border-sky-500 bg-sky-900/20'
+            : 'border-slate-600 hover:border-sky-400'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
@@ -169,18 +169,18 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         {uploading ? (
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500 mb-2" />
-            <span className="text-sm text-gray-500">Uploading...</span>
+            <span className="text-sm text-slate-400">Uploading...</span>
           </div>
         ) : (
           <>
-            <FiUpload className="mx-auto h-10 w-10 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              <span className="font-medium text-sky-600 dark:text-sky-400">
+            <FiUpload className="mx-auto h-10 w-10 text-slate-500 mb-2" />
+            <p className="text-sm text-slate-400">
+              <span className="font-medium text-sky-400">
                 Click to upload
               </span>
               {' '}or drag and drop
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               {acceptedTypes.join(', ')} up to {formatFileSize(maxFileSize)}
             </p>
           </>
@@ -189,12 +189,12 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg flex items-center gap-2">
+        <div className="bg-red-900/20 text-red-400 text-sm p-3 rounded-lg flex items-center gap-2">
           <FiX className="flex-shrink-0" />
           <span>{error}</span>
           <button
             onClick={() => setError(null)}
-            className="ml-auto hover:bg-red-100 dark:hover:bg-red-900/40 p-1 rounded"
+            className="ml-auto hover:bg-red-900/40 p-1 rounded"
           >
             <FiX />
           </button>
@@ -204,7 +204,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       {/* Document List */}
       {documents.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <h4 className="text-sm font-medium text-slate-200">
             Uploaded Documents ({documents.length})
           </h4>
           <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -214,8 +214,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                 className={`
                   flex items-center gap-3 p-3 rounded-lg border transition-colors
                   ${doc.isActive
-                    ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                    : 'bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-800 opacity-60'
+                    ? 'bg-slate-800 border-slate-700'
+                    : 'bg-slate-900 border-slate-700 opacity-60'
                   }
                 `}
               >
@@ -226,10 +226,10 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
                 {/* File Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p className="text-sm font-medium text-white truncate">
                     {doc.filename}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-slate-400">
                     {formatFileSize(doc.fileSizeBytes)}
                     {doc.estimatedTokens && ` • ~${doc.estimatedTokens.toLocaleString()} tokens`}
                     {doc.chunkCount > 1 && ` • ${doc.chunkCount} chunks`}
@@ -244,8 +244,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                     className={`
                       p-1.5 rounded-lg transition-colors
                       ${doc.isActive
-                        ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                        : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        ? 'text-green-600 hover:bg-green-900/20'
+                        : 'text-slate-500 hover:bg-slate-800'
                       }
                     `}
                     title={doc.isActive ? 'Click to disable' : 'Click to enable'}
@@ -257,7 +257,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   {onPreview && (
                     <button
                       onClick={() => onPreview(doc)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-400 hover:bg-slate-800 transition-colors"
                       title="Preview"
                     >
                       <FiEye />
@@ -267,7 +267,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   {/* Delete */}
                   <button
                     onClick={() => handleDeleteClick(doc.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-900/20 transition-colors"
                     title="Delete"
                   >
                     <FiTrash2 />
@@ -280,7 +280,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       )}
 
       {/* Help Text */}
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-slate-400">
         Upload PRDs, specifications, or documentation to help the AI understand your application better.
         Active documents will be included in the AI&apos;s context.
       </p>

@@ -28,7 +28,7 @@ export const ExecutionViewTabs: React.FC<ExecutionViewTabsProps> = ({
   ];
 
   return (
-    <div className={`border-b border-gray-200 bg-white ${className}`}>
+    <div className={`border-b border-slate-700 bg-slate-800 ${className}`}>
       <div className="flex overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -39,8 +39,8 @@ export const ExecutionViewTabs: React.FC<ExecutionViewTabsProps> = ({
               className={`
                 flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors
                 ${isActive
-                  ? 'border-primary-600 text-primary-600 bg-primary-50'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'border-primary-600 text-primary-600 bg-primary-900/20'
+                  : 'border-transparent text-slate-400 hover:text-white hover:border-slate-600'
                 }
                 whitespace-nowrap
               `}

@@ -24,10 +24,10 @@ const icons = {
 };
 
 const typeStyles = {
-  success: 'bg-green-50 border-green-200 text-green-800',
-  error: 'bg-red-50 border-red-200 text-red-800',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800',
+  success: 'bg-green-900/20 border-green-800 text-green-300',
+  error: 'bg-red-900/20 border-red-800 text-red-300',
+  warning: 'bg-yellow-900/20 border-yellow-700 text-yellow-300',
+  info: 'bg-blue-900/20 border-blue-800 text-blue-300',
 };
 
 const iconStyles = {

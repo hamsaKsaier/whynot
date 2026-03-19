@@ -185,16 +185,16 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
 
       {/* Filter bar — only shown when there are test cases */}
       {testCases.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-900 rounded-xl border border-slate-700">
           {/* Search */}
           <div className="relative flex-1 min-w-[180px]">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name or URL…"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400"
             />
           </div>
 
@@ -203,7 +203,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
             <select
               value={domainFilter}
               onChange={(e) => setDomainFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-700"
+              className="px-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400 text-slate-200"
             >
               <option value="">All domains</option>
               {uniqueDomains.map((d) => (
@@ -216,7 +216,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-700"
+            className="px-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400 text-slate-200"
           >
             <option value="all">All statuses</option>
             <option value="passed">Passed</option>
@@ -228,14 +228,14 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
           {hasActiveFilters && (
             <button
               onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-800 transition-colors"
             >
               <FiX className="h-3 w-3" /> Clear
             </button>
           )}
 
           {/* Result count */}
-          <span className="text-xs text-gray-400 ml-auto">
+          <span className="text-xs text-slate-500 ml-auto">
             {filteredTestCases.length} of {testCases.length}
           </span>
         </div>
@@ -291,11 +291,11 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         </Card>
       ) : filteredTestCases.length === 0 ? (
         <Card className="text-center py-12">
-          <FiFilter className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm mb-2">No test cases match your filters</p>
+          <FiFilter className="h-8 w-8 text-slate-400 mx-auto mb-3" />
+          <p className="text-slate-400 text-sm mb-2">No test cases match your filters</p>
           <button
             onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            className="text-sm text-primary-600 hover:text-primary-300 font-medium"
           >
             Clear filters
           </button>
@@ -314,13 +314,13 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="Test case name"
                     />
                     <textarea
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                       rows={3}
                       placeholder="Description"
                     />
@@ -346,37 +346,37 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-semibold text-gray-900 mb-2">{testCase.name}</h3>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    <h3 className="font-semibold text-white mb-2">{testCase.name}</h3>
+                    <p className="text-sm text-slate-400 mb-3 line-clamp-2">
                       {testCase.description || 'No description'}
                     </p>
-                    <div className="flex items-center text-xs text-gray-500 mb-3">
+                    <div className="flex items-center text-xs text-slate-400 mb-3">
                       <FiGlobe className="h-3 w-3 mr-1" />
                       <span className="truncate">{testCase.website_url}</span>
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                      <span className="text-xs text-gray-500">
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-700">
+                      <span className="text-xs text-slate-400">
                         {testCase.steps.length} step{testCase.steps.length !== 1 ? 's' : ''}
                       </span>
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleRunTest(testCase)}
                           disabled={isRunning}
-                          className="p-2 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
+                          className="p-2 rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
                           title="Run test"
                         >
-                          <FiPlay className={`h-4 w-4 ${isRunning ? 'text-gray-400' : 'text-primary-600'}`} />
+                          <FiPlay className={`h-4 w-4 ${isRunning ? 'text-slate-500' : 'text-primary-600'}`} />
                         </button>
                         <button
                           onClick={() => handleEdit(testCase)}
-                          className="p-2 rounded hover:bg-gray-100 transition-colors"
+                          className="p-2 rounded hover:bg-slate-800 transition-colors"
                           title="Edit"
                         >
-                          <FiEdit className="h-4 w-4 text-gray-600" />
+                          <FiEdit className="h-4 w-4 text-slate-400" />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(testCase)}
-                          className="p-2 rounded hover:bg-gray-100 transition-colors"
+                          className="p-2 rounded hover:bg-slate-800 transition-colors"
                           title="Delete"
                         >
                           <FiTrash2 className="h-4 w-4 text-red-600" />

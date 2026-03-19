@@ -28,7 +28,7 @@ const typeLabels: Record<string, string> = {
 export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transactions }) => {
   if (transactions.length === 0) {
     return (
-      <Card className="p-6 text-center text-gray-500">
+      <Card className="p-6 text-center text-slate-400">
         No credit transactions yet
       </Card>
     );
@@ -36,30 +36,30 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transact
 
   return (
     <Card className="overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-slate-700">
+        <thead className="bg-slate-900">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Date</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Type</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Description</th>
+            <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Amount</th>
+            <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Balance</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-slate-800 divide-y divide-slate-700">
           {transactions.map((txn) => (
             <tr key={txn.id}>
-              <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+              <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">
                 {new Date(txn.created_at).toLocaleDateString()}
               </td>
               <td className="px-4 py-3 text-sm">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                  txn.amount > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  txn.amount > 0 ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'
                 }`}>
                   {typeLabels[txn.type] || txn.type}
                 </span>
               </td>
-              <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">
+              <td className="px-4 py-3 text-sm text-slate-200 max-w-xs truncate">
                 {txn.description || '-'}
               </td>
               <td className={`px-4 py-3 text-sm text-right font-medium ${
@@ -67,7 +67,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transact
               }`}>
                 {txn.amount > 0 ? '+' : ''}{txn.amount}
               </td>
-              <td className="px-4 py-3 text-sm text-right text-gray-500">
+              <td className="px-4 py-3 text-sm text-right text-slate-400">
                 {txn.balance_after}
               </td>
             </tr>

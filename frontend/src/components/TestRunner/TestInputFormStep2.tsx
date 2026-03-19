@@ -61,7 +61,7 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
       <div className="space-y-4">
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-slate-200">
               User Story <span className="text-red-500">*</span>
             </label>
             <Button
@@ -88,7 +88,7 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
             disabled={disabled || loadingUserStories}
           />
           {userStories.length === 0 && !loadingUserStories && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-slate-400">
               No user stories in this project.{' '}
               <button
                 onClick={() => setIsNewUserStoryModalOpen(true)}
@@ -102,10 +102,10 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
 
         {/* Selected User Story Preview */}
         {selectedUserStoryId && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="p-3 bg-green-900/20 border border-green-800 rounded-lg">
             <div className="flex items-start gap-2">
               <FiBook className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-green-800">{getSelectedUserStoryText()}</p>
+              <p className="text-sm text-green-300">{getSelectedUserStoryText()}</p>
             </div>
           </div>
         )}

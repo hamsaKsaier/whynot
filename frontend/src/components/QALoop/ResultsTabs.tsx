@@ -51,18 +51,18 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
 
   const severityColor = (s: string) => {
     switch (s) {
-      case 'critical': return 'text-red-600 bg-red-100';
-      case 'high':     return 'text-orange-600 bg-orange-100';
-      case 'medium':   return 'text-yellow-600 bg-yellow-100';
-      case 'low':      return 'text-blue-600 bg-blue-100';
-      default:         return 'text-gray-600 bg-gray-100';
+      case 'critical': return 'text-red-600 bg-red-900/30';
+      case 'high':     return 'text-orange-600 bg-orange-900/30';
+      case 'medium':   return 'text-yellow-600 bg-yellow-900/30';
+      case 'low':      return 'text-blue-600 bg-blue-900/30';
+      default:         return 'text-slate-400 bg-slate-800';
     }
   };
 
   const statusIcon = (s: string | null) => {
     if (s === 'passed') return <FiCheckCircle className="text-green-500" />;
     if (s === 'failed') return <FiAlertTriangle className="text-red-500" />;
-    return <FiClock className="text-gray-400" />;
+    return <FiClock className="text-slate-500" />;
   };
 
   const vulns = chaosResults.filter(r => r.vulnerabilityConfirmed).length;
@@ -70,7 +70,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
   const tab = (id: typeof activeTab, label: string, count: number, icon: React.ReactNode, activeClass: string) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`pb-2 flex items-center gap-1 ${activeTab === id ? `border-b-2 ${activeClass} font-medium` : 'text-gray-500 hover:text-gray-700'}`}
+      className={`pb-2 flex items-center gap-1 ${activeTab === id ? `border-b-2 ${activeClass} font-medium` : 'text-slate-400 hover:text-slate-200'}`}
     >
       {icon}
       {label} ({count})
@@ -174,7 +174,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
         </div>
       )}
 
-      <div className="border-b border-gray-200 mb-4">
+      <div className="border-b border-slate-700 mb-4">
         <nav className="flex gap-4 flex-wrap items-center">
           {tab('tests',    'Tests',    testCases.length, <FiFileText className="text-sm" />,     'border-sky-500 text-sky-600')}
           {tab('bugs',     'Bugs',     bugs.length,      <FiAlertTriangle className="text-sm" />, 'border-red-500 text-red-600')}
@@ -194,16 +194,16 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
                 <FiChevronDown className="h-3 w-3" />
               </button>
               {showReportMenu && (
-                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                <div className="absolute right-0 mt-1 w-48 bg-slate-800 rounded-lg shadow-lg border border-slate-700 py-1 z-20">
                   <button
                     onClick={() => handleBatchReport('clickup')}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                    className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-sky-900/20 hover:text-sky-700 transition-colors"
                   >
                     All to ClickUp
                   </button>
                   <button
                     onClick={() => handleBatchReport('github')}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-900 hover:text-white transition-colors"
                   >
                     All to GitHub Issues
                   </button>
@@ -218,21 +218,21 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
         {activeTab === 'tests' && (
           <div className="space-y-2">
             {testCases.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No test cases generated yet</div>
+              <div className="text-center py-8 text-slate-400">No test cases generated yet</div>
             ) : testCases.map(tc => (
-              <div key={tc.id} className="p-3 bg-gray-50 rounded-lg">
+              <div key={tc.id} className="p-3 bg-slate-900 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {statusIcon(tc.last_run_status)}
-                    <span className="font-medium text-gray-900">{tc.name}</span>
+                    <span className="font-medium text-white">{tc.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">{tc.category}</span>
-                    <span className="text-xs text-gray-400">P{tc.priority}</span>
+                    <span className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-700">{tc.category}</span>
+                    <span className="text-xs text-slate-500">P{tc.priority}</span>
                   </div>
                 </div>
-                {tc.description && <p className="text-sm text-gray-500 mt-1 ml-6">{tc.description}</p>}
-                <div className="text-xs text-gray-400 mt-1 ml-6 flex items-center gap-3">
+                {tc.description && <p className="text-sm text-slate-400 mt-1 ml-6">{tc.description}</p>}
+                <div className="text-xs text-slate-500 mt-1 ml-6 flex items-center gap-3">
                   <span>{tc.steps?.length || 0} steps</span>
                   {tc.last_run_status && (
                     <span className={tc.last_run_status === 'passed' ? 'text-green-500' : 'text-red-500'}>
@@ -248,7 +248,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
         {activeTab === 'bugs' && (
           <div className="space-y-2">
             {bugs.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No bugs found yet — that's a good sign!</div>
+              <div className="text-center py-8 text-slate-400">No bugs found yet — that's a good sign!</div>
             ) : bugs.map(bug => (
               <BugCard key={bug.id} bug={bug} severityColor={severityColor} safePathname={safePathname} />
             ))}
@@ -258,25 +258,25 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
         {activeTab === 'pages' && (
           <div className="space-y-2">
             {pages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No pages explored yet</div>
+              <div className="text-center py-8 text-slate-400">No pages explored yet</div>
             ) : pages.map(page => (
-              <div key={page.id} className="p-3 bg-gray-50 rounded-lg">
+              <div key={page.id} className="p-3 bg-slate-900 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {page.is_explored
                       ? <FiCheckCircle className="text-green-500" />
                       : <FiClock className="text-yellow-500" />
                     }
-                    <span className="font-medium text-gray-900 truncate max-w-md">
+                    <span className="font-medium text-white truncate max-w-md">
                       {page.title || safePathname(page.url, page.url)}
                     </span>
                   </div>
                   {page.page_type && (
-                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">{page.page_type}</span>
+                    <span className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400">{page.page_type}</span>
                   )}
                 </div>
-                <div className="text-xs text-gray-400 mt-1 ml-6 truncate">{page.url}</div>
-                {page.description && <p className="text-sm text-gray-500 mt-1 ml-6">{page.description}</p>}
+                <div className="text-xs text-slate-500 mt-1 ml-6 truncate">{page.url}</div>
+                {page.description && <p className="text-sm text-slate-400 mt-1 ml-6">{page.description}</p>}
               </div>
             ))}
           </div>

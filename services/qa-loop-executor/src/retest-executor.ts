@@ -26,6 +26,7 @@ export interface TestRunResult {
   status: 'passed' | 'failed' | 'skipped' | 'error';
   duration: number;
   failureReason?: string;
+  humanError?: string;
   failureStep?: number;
   failureType?: string;
   selfHealed?: boolean;
@@ -192,6 +193,66 @@ export class RetestExecutor {
   }
 
   private async executeTestCase(testCase: QALoopTestCase): Promise<TestRunResult> {
+    // If the test case has playwright_code, prefer the direct Playwright runner
+    if (testCase.playwright_code) {
+      return this.executeViaPlaywright(testCase);
+    }
+
+    return this.executeViaSteps(testCase);
+  }
+
+  /**
+   * Execute a test case using its Playwright code directly.
+   */
+  private async executeViaPlaywright(testCase: QALoopTestCase): Promise<TestRunResult> {
+    const startTime = Date.now();
+
+    try {
+      const response = await axios.post(`${this.testExecutorUrl}/api/run-playwright`, {
+        playwrightCode: testCase.playwright_code,
+        timeoutMs: 30_000,
+      }, {
+        timeout: 60_000,
+      });
+
+      const duration = Date.now() - startTime;
+      const result = response.data;
+
+      if (result.passed) {
+        return {
+          testCaseId: testCase.id,
+          testCaseName: testCase.name,
+          status: 'passed',
+          duration,
+        };
+      } else {
+        return {
+          testCaseId: testCase.id,
+          testCaseName: testCase.name,
+          status: 'failed',
+          duration,
+          failureReason: result.error || 'Playwright test failed',
+          humanError: result.humanError,
+          failureType: 'assertion',
+        };
+      }
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      return {
+        testCaseId: testCase.id,
+        testCaseName: testCase.name,
+        status: 'error',
+        duration,
+        failureReason: error.message,
+        failureType: 'network_error',
+      };
+    }
+  }
+
+  /**
+   * Execute a test case using the step-based test executor (legacy).
+   */
+  private async executeViaSteps(testCase: QALoopTestCase): Promise<TestRunResult> {
     const startTime = Date.now();
 
     try {

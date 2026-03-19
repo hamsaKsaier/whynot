@@ -21,8 +21,8 @@ export const TestResultsPage: React.FC = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Test Results</h1>
-        <p className="text-gray-600 mt-1">View test runs and manage test cases</p>
+        <h1 className="text-3xl font-bold text-white">Test Results</h1>
+        <p className="text-slate-400 mt-1">View test runs and manage test cases</p>
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />

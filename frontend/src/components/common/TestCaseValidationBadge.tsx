@@ -21,9 +21,9 @@ export const TestCaseValidationBadge: React.FC<TestCaseValidationBadgeProps> = (
   const hasIssues = errors.length > 0 || warnings.length > 0;
 
   const getStatusColor = () => {
-    if (!is_valid) return 'text-red-600 bg-red-50 border-red-200';
-    if (warnings.length > 0) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    return 'text-green-600 bg-green-50 border-green-200';
+    if (!is_valid) return 'text-red-600 bg-red-900/20 border-red-800';
+    if (warnings.length > 0) return 'text-yellow-600 bg-yellow-900/20 border-yellow-700';
+    return 'text-green-600 bg-green-900/20 border-green-800';
   };
 
   const getStatusIcon = () => {
@@ -58,11 +58,11 @@ export const TestCaseValidationBadge: React.FC<TestCaseValidationBadgeProps> = (
       </button>
 
       {isExpanded && hasIssues && (
-        <div className="absolute mt-10 z-10 bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[300px] max-w-md">
+        <div className="absolute mt-10 z-10 bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-4 min-w-[300px] max-w-md">
           <div className="space-y-3">
             {errors.length > 0 && (
               <div>
-                <h4 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                <h4 className="font-semibold text-red-300 mb-2 flex items-center gap-2">
                   <FiXCircle className="h-4 w-4" />
                   Errors ({errors.length})
                 </h4>
@@ -76,7 +76,7 @@ export const TestCaseValidationBadge: React.FC<TestCaseValidationBadgeProps> = (
 
             {warnings.length > 0 && (
               <div>
-                <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                <h4 className="font-semibold text-yellow-300 mb-2 flex items-center gap-2">
                   <FiAlertCircle className="h-4 w-4" />
                   Warnings ({warnings.length})
                 </h4>

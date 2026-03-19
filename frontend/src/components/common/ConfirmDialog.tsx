@@ -26,9 +26,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!isOpen) return null;
 
   const variantStyles = {
-    danger: 'bg-red-50 border-red-200',
-    warning: 'bg-yellow-50 border-yellow-200',
-    info: 'bg-blue-50 border-blue-200',
+    danger: 'bg-red-900/20 border-red-800',
+    warning: 'bg-yellow-900/20 border-yellow-700',
+    info: 'bg-blue-900/20 border-blue-800',
   };
 
   const buttonStyles = {
@@ -39,7 +39,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className={`bg-white rounded-lg shadow-xl max-w-md w-full border-2 ${variantStyles[variant]}`}>
+      <div className={`bg-slate-800 rounded-lg shadow-xl max-w-md w-full border-2 ${variantStyles[variant]}`}>
         <div className="p-6">
           <div className="flex items-start mb-4">
             <FiAlertTriangle className={`h-6 w-6 mr-3 flex-shrink-0 ${
@@ -48,8 +48,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               'text-blue-600'
             }`} />
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-              <p className="text-sm text-gray-700">{message}</p>
+              <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+              <p className="text-sm text-slate-200">{message}</p>
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">

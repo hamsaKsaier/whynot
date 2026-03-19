@@ -39,10 +39,10 @@ interface ScanTestCase {
 }
 
 const severityColor: Record<string, string> = {
-  critical: 'bg-red-100 text-red-700',
-  high: 'bg-orange-100 text-orange-700',
-  medium: 'bg-yellow-100 text-yellow-700',
-  low: 'bg-blue-100 text-blue-700',
+  critical: 'bg-red-900/30 text-red-700',
+  high: 'bg-orange-900/30 text-orange-700',
+  medium: 'bg-yellow-900/30 text-yellow-700',
+  low: 'bg-blue-900/30 text-blue-700',
 };
 
 // Animated activity messages while scanning
@@ -118,7 +118,7 @@ export const PublicScanResultsPage: React.FC = () => {
 
   const isRunning = session && ['running', 'pending', 'paused'].includes(session.status);
   const isComplete = session && ['completed', 'stopped', 'failed'].includes(session.status);
-  const qualityColor = !session ? 'text-gray-400' :
+  const qualityColor = !session ? 'text-slate-500' :
     session.quality_score >= 80 ? 'text-green-600' :
     session.quality_score >= 50 ? 'text-yellow-600' : 'text-red-600';
 
@@ -132,10 +132,10 @@ export const PublicScanResultsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <FiLoader className="h-8 w-8 animate-spin text-sky-600 mx-auto mb-3" />
-          <p className="text-gray-500">Loading scan results...</p>
+          <p className="text-slate-400">Loading scan results...</p>
         </div>
       </div>
     );
@@ -143,7 +143,7 @@ export const PublicScanResultsPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <FiAlertTriangle className="h-8 w-8 text-red-400 mx-auto mb-3" />
           <p className="text-red-500 mb-4">{error}</p>
@@ -161,19 +161,19 @@ export const PublicScanResultsPage: React.FC = () => {
   const ActivityMessage = SCAN_ACTIVITIES[activityIndex];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-900">
       {/* Nav */}
-      <nav className="bg-white border-b border-gray-200">
+      <nav className="bg-slate-800 border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <button onClick={() => navigate('/landing')} className="flex items-center gap-2 hover:opacity-80">
             <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg flex items-center justify-center">
               <FiZap className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">WhyNot</span>
+            <span className="text-xl font-bold text-white">WhyNot</span>
           </button>
           <div className="flex items-center gap-3">
             {isRunning && (
-              <span className="text-xs text-gray-400">{formatElapsed(elapsedTime)} elapsed</span>
+              <span className="text-xs text-slate-500">{formatElapsed(elapsedTime)} elapsed</span>
             )}
             <button
               onClick={() => navigate('/login')}
@@ -191,10 +191,10 @@ export const PublicScanResultsPage: React.FC = () => {
           {/* Left column: Results */}
           <div className="space-y-5">
             {/* Header + Stats */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold text-gray-900 mb-1">Scan Results</h1>
+                  <h1 className="text-xl font-bold text-white mb-1">Scan Results</h1>
                   <a
                     href={session?.target_url}
                     target="_blank"
@@ -209,26 +209,26 @@ export const PublicScanResultsPage: React.FC = () => {
                   {!showPreview && session?.target_url && (
                     <button
                       onClick={() => setShowPreview(true)}
-                      className="p-2 text-gray-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-500 hover:text-sky-600 hover:bg-sky-900/20 rounded-lg transition-colors"
                       title="Show site preview"
                     >
                       <FiMonitor className="h-4 w-4" />
                     </button>
                   )}
                   {isRunning && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-700 rounded-full text-sm font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-900/20 text-sky-700 rounded-full text-sm font-medium">
                       <FiLoader className="h-3.5 w-3.5 animate-spin" />
                       Scanning
                     </div>
                   )}
                   {isComplete && session?.status === 'completed' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-900/20 text-green-700 rounded-full text-sm font-medium">
                       <FiCheck className="h-3.5 w-3.5" />
                       Complete
                     </div>
                   )}
                   {isComplete && session?.status === 'failed' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-full text-sm font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/20 text-red-700 rounded-full text-sm font-medium">
                       <FiAlertTriangle className="h-3.5 w-3.5" />
                       Failed
                     </div>
@@ -238,7 +238,7 @@ export const PublicScanResultsPage: React.FC = () => {
 
               {/* Live activity indicator */}
               {isRunning && (
-                <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-sky-50 rounded-lg text-sm text-sky-700 transition-all">
+                <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-sky-900/20 rounded-lg text-sm text-sky-700 transition-all">
                   <ActivityMessage.icon className="h-4 w-4 flex-shrink-0 animate-pulse" />
                   <span className="truncate">{ActivityMessage.text}</span>
                 </div>
@@ -246,36 +246,36 @@ export const PublicScanResultsPage: React.FC = () => {
 
               {/* Stats grid */}
               <div className="grid grid-cols-4 gap-3">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-center p-3 bg-slate-900 rounded-lg">
                   <div className={`text-2xl font-bold ${qualityColor}`}>
                     {session?.quality_score ?? '—'}
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-1">Quality Score</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Quality Score</div>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-center p-3 bg-slate-900 rounded-lg">
                   <div className="text-2xl font-bold text-red-600">{session?.bugs_found ?? 0}</div>
-                  <div className="text-[11px] text-gray-500 mt-1">Bugs Found</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Bugs Found</div>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-center p-3 bg-slate-900 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">{session?.tests_generated ?? 0}</div>
-                  <div className="text-[11px] text-gray-500 mt-1">Tests Generated</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Tests Generated</div>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-center p-3 bg-slate-900 rounded-lg">
                   <div className="text-2xl font-bold text-sky-600">{session?.pages_explored ?? 0}</div>
-                  <div className="text-[11px] text-gray-500 mt-1">Pages Explored</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Pages Explored</div>
                 </div>
               </div>
             </div>
 
             {/* Tabs: Tests / Bugs */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="flex border-b border-gray-200">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+              <div className="flex border-b border-slate-700">
                 <button
                   onClick={() => setActiveTab('tests')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === 'tests'
-                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-50/50'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-900/20/50'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   Tests ({testCases.length || session?.tests_generated || 0})
@@ -284,13 +284,13 @@ export const PublicScanResultsPage: React.FC = () => {
                   onClick={() => setActiveTab('bugs')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === 'bugs'
-                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-50/50'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-900/20/50'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   Bugs ({bugs.length})
                   {bugs.length > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-red-100 text-red-600 rounded-full">
+                    <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-red-900/30 text-red-600 rounded-full">
                       {bugs.length}
                     </span>
                   )}
@@ -301,7 +301,7 @@ export const PublicScanResultsPage: React.FC = () => {
                 {activeTab === 'tests' && (
                   <>
                     {testCases.length === 0 && !session?.tests_generated ? (
-                      <div className="text-center py-8 text-gray-400">
+                      <div className="text-center py-8 text-slate-500">
                         {isRunning ? (
                           <div className="flex flex-col items-center gap-2">
                             <FiLoader className="h-5 w-5 animate-spin" />
@@ -312,29 +312,29 @@ export const PublicScanResultsPage: React.FC = () => {
                     ) : (
                       <div className="space-y-2">
                         {testCases.map((tc) => (
-                          <div key={tc.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                          <div key={tc.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-900">
                             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                               tc.last_run_status === 'passed' ? 'bg-green-400' :
                               tc.last_run_status === 'failed' ? 'bg-red-400' :
-                              'bg-gray-300'
+                              'bg-slate-600'
                             }`} />
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm font-medium text-gray-800 truncate">{tc.name}</div>
+                              <div className="text-sm font-medium text-slate-200 truncate">{tc.name}</div>
                               {tc.source_page_url && (
-                                <div className="text-[11px] text-gray-400 truncate">{tc.source_page_url}</div>
+                                <div className="text-[11px] text-slate-500 truncate">{tc.source_page_url}</div>
                               )}
                             </div>
                             <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${
-                              tc.last_run_status === 'passed' ? 'bg-green-100 text-green-700' :
-                              tc.last_run_status === 'failed' ? 'bg-red-100 text-red-700' :
-                              'bg-gray-100 text-gray-500'
+                              tc.last_run_status === 'passed' ? 'bg-green-900/30 text-green-700' :
+                              tc.last_run_status === 'failed' ? 'bg-red-900/30 text-red-700' :
+                              'bg-slate-800 text-slate-400'
                             }`}>
                               {tc.last_run_status || 'pending'}
                             </span>
                           </div>
                         ))}
                         {testCases.length === 0 && (session?.tests_generated ?? 0) > 0 && (
-                          <div className="text-center py-4 text-sm text-gray-400">
+                          <div className="text-center py-4 text-sm text-slate-500">
                             {session!.tests_generated} tests generated — details loading...
                           </div>
                         )}
@@ -346,7 +346,7 @@ export const PublicScanResultsPage: React.FC = () => {
                 {activeTab === 'bugs' && (
                   <>
                     {bugs.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">
+                      <div className="text-center py-8 text-slate-500">
                         {isRunning ? (
                           <div className="flex flex-col items-center gap-2">
                             <FiSearch className="h-5 w-5 animate-pulse" />
@@ -362,37 +362,37 @@ export const PublicScanResultsPage: React.FC = () => {
                     ) : (
                       <div className="space-y-2">
                         {bugs.map((bug) => (
-                          <div key={bug.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                          <div key={bug.id} className="border border-slate-700 rounded-lg overflow-hidden">
                             <button
                               onClick={() => setExpandedBug(expandedBug === bug.id ? null : bug.id)}
-                              className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                              className="w-full p-3 flex items-center justify-between hover:bg-slate-900 transition-colors text-left"
                             >
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${severityColor[bug.severity] || severityColor.low}`}>
                                   {bug.severity}
                                 </span>
-                                <span className="text-sm font-medium text-gray-900 truncate">{bug.title}</span>
+                                <span className="text-sm font-medium text-white truncate">{bug.title}</span>
                               </div>
                               {expandedBug === bug.id ? (
-                                <FiChevronUp className="h-4 w-4 text-gray-400" />
+                                <FiChevronUp className="h-4 w-4 text-slate-500" />
                               ) : (
-                                <FiChevronDown className="h-4 w-4 text-gray-400" />
+                                <FiChevronDown className="h-4 w-4 text-slate-500" />
                               )}
                             </button>
                             {expandedBug === bug.id && (
-                              <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                              <div className="px-4 pb-4 border-t border-slate-700 pt-3">
                                 {bug.description && (
-                                  <p className="text-sm text-gray-600 mb-3">{bug.description}</p>
+                                  <p className="text-sm text-slate-400 mb-3">{bug.description}</p>
                                 )}
                                 {bug.page_url && (
-                                  <div className="text-xs text-gray-400 mb-2">Page: {bug.page_url}</div>
+                                  <div className="text-xs text-slate-500 mb-2">Page: {bug.page_url}</div>
                                 )}
                                 {bug.reproduction_steps && bug.reproduction_steps.length > 0 && (
                                   <div>
-                                    <div className="text-xs font-medium text-gray-500 mb-1">Reproduction Steps:</div>
+                                    <div className="text-xs font-medium text-slate-400 mb-1">Reproduction Steps:</div>
                                     <ol className="list-decimal list-inside space-y-1">
                                       {bug.reproduction_steps.map((step: any, i: number) => (
-                                        <li key={i} className="text-xs text-gray-600">
+                                        <li key={i} className="text-xs text-slate-400">
                                           {typeof step === 'string' ? step : step.description || step.action || JSON.stringify(step)}
                                         </li>
                                       ))}
@@ -418,7 +418,7 @@ export const PublicScanResultsPage: React.FC = () => {
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="px-6 py-2.5 bg-white text-sky-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                className="px-6 py-2.5 bg-slate-800 text-sky-700 font-semibold rounded-lg hover:bg-slate-800 transition-colors text-sm"
               >
                 Sign up free
               </button>
@@ -428,14 +428,14 @@ export const PublicScanResultsPage: React.FC = () => {
           {/* Right column: Live Preview */}
           {showPreview && session?.target_url && (
             <div className="hidden lg:block">
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-6">
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden sticky top-6">
                 {/* Preview header */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-700">
                   <div className="flex items-center gap-2">
-                    <FiMonitor className="h-4 w-4 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-600">Live Preview</span>
+                    <FiMonitor className="h-4 w-4 text-slate-500" />
+                    <span className="text-xs font-medium text-slate-400">Live Preview</span>
                     {isRunning && (
-                      <span className="flex items-center gap-1 text-[10px] text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full">
+                      <span className="flex items-center gap-1 text-[10px] text-sky-600 bg-sky-900/20 px-2 py-0.5 rounded-full">
                         <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse" />
                         AI is testing this site
                       </span>
@@ -446,14 +446,14 @@ export const PublicScanResultsPage: React.FC = () => {
                       href={session.target_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-1 text-slate-500 hover:text-slate-400 transition-colors"
                       title="Open in new tab"
                     >
                       <FiExternalLink className="h-3.5 w-3.5" />
                     </a>
                     <button
                       onClick={() => setShowPreview(false)}
-                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-1 text-slate-500 hover:text-slate-400 transition-colors"
                       title="Hide preview"
                     >
                       <FiX className="h-3.5 w-3.5" />
@@ -461,9 +461,9 @@ export const PublicScanResultsPage: React.FC = () => {
                   </div>
                 </div>
                 {/* URL bar */}
-                <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-100">
-                  <div className="flex items-center gap-2 bg-white rounded px-3 py-1 text-[11px] text-gray-500 border border-gray-200">
-                    <FiGlobe className="h-3 w-3 text-gray-400" />
+                <div className="px-4 py-1.5 bg-slate-900 border-b border-slate-700">
+                  <div className="flex items-center gap-2 bg-slate-800 rounded px-3 py-1 text-[11px] text-slate-400 border border-slate-700">
+                    <FiGlobe className="h-3 w-3 text-slate-500" />
                     <span className="truncate">{session.target_url}</span>
                   </div>
                 </div>

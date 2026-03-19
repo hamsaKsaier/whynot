@@ -30,14 +30,14 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
     return (
       <button
         onClick={handleCopy}
-        className={`p-2 rounded hover:bg-gray-100 transition-colors ${className}`}
+        className={`p-2 rounded hover:bg-slate-800 transition-colors ${className}`}
         aria-label="Copy to clipboard"
         title="Copy to clipboard"
       >
         {copied ? (
           <FiCheck className="h-4 w-4 text-green-600" />
         ) : (
-          <FiCopy className="h-4 w-4 text-gray-600" />
+          <FiCopy className="h-4 w-4 text-slate-400" />
         )}
       </button>
     );

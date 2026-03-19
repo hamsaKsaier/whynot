@@ -28,8 +28,8 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
                   isCompleted
                     ? 'bg-primary-600 border-primary-600 text-white'
                     : isCurrent
-                    ? 'bg-primary-50 border-primary-600 text-primary-600'
-                    : 'bg-white border-gray-300 text-gray-400'
+                    ? 'bg-primary-900/20 border-primary-600 text-primary-600'
+                    : 'bg-slate-800 border-slate-600 text-slate-500'
                 }`}
               >
                 {isCompleted ? (
@@ -40,7 +40,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
               </div>
               <span
                 className={`mt-2 text-xs font-medium text-center ${
-                  isCurrent ? 'text-primary-600' : isCompleted ? 'text-gray-700' : 'text-gray-400'
+                  isCurrent ? 'text-primary-600' : isCompleted ? 'text-slate-200' : 'text-slate-500'
                 }`}
               >
                 {step}
@@ -51,7 +51,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
             {index < steps.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mx-2 ${
-                  isCompleted ? 'bg-primary-600' : 'bg-gray-300'
+                  isCompleted ? 'bg-primary-600' : 'bg-slate-600'
                 }`}
               />
             )}

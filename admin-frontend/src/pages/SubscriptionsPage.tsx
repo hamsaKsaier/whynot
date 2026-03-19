@@ -24,21 +24,21 @@ export const SubscriptionsPage: React.FC = () => {
   useEffect(() => { fetch(); }, [fetch]);
 
   const statusColors: Record<string, string> = {
-    active: 'bg-green-100 text-green-800',
-    trialing: 'bg-blue-100 text-blue-800',
-    past_due: 'bg-red-100 text-red-800',
-    canceled: 'bg-gray-100 text-gray-800',
-    paused: 'bg-yellow-100 text-yellow-800',
+    active: 'bg-green-900/30 text-green-300',
+    trialing: 'bg-blue-900/30 text-blue-300',
+    past_due: 'bg-red-900/30 text-red-300',
+    canceled: 'bg-slate-800 text-slate-200',
+    paused: 'bg-yellow-900/30 text-yellow-300',
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Subscriptions</h1>
+        <h1 className="text-2xl font-bold text-white">Subscriptions</h1>
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          className="px-3 py-2 border border-slate-600 rounded-lg text-sm"
         >
           <option value="">All Statuses</option>
           <option value="active">Active</option>
@@ -48,37 +48,37 @@ export const SubscriptionsPage: React.FC = () => {
         </select>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <table className="min-w-full divide-y divide-slate-700">
+          <thead className="bg-slate-900">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Workspace</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Credits</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period End</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Workspace</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Owner</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Plan</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Credits</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Period End</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-slate-700">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>{Array.from({ length: 6 }).map((__, j) => (
-                  <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse" /></td>
+                  <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-700 rounded animate-pulse" /></td>
                 ))}</tr>
               ))
             ) : subscriptions.map((sub: any) => (
-              <tr key={sub.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{sub.workspace_name || sub.workspace_id}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{sub.owner_name || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{sub.plan_name || '-'}</td>
+              <tr key={sub.id} className="hover:bg-slate-900">
+                <td className="px-4 py-3 text-sm font-medium text-white">{sub.workspace_name || sub.workspace_id}</td>
+                <td className="px-4 py-3 text-sm text-slate-400">{sub.owner_name || '-'}</td>
+                <td className="px-4 py-3 text-sm text-slate-400">{sub.plan_name || '-'}</td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[sub.status] || 'bg-gray-100 text-gray-800'}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[sub.status] || 'bg-slate-800 text-slate-200'}`}>
                     {sub.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">{sub.credits_remaining}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">
+                <td className="px-4 py-3 text-sm text-right font-medium text-white">{sub.credits_remaining}</td>
+                <td className="px-4 py-3 text-sm text-slate-400">
                   {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '-'}
                 </td>
               </tr>
@@ -89,7 +89,7 @@ export const SubscriptionsPage: React.FC = () => {
 
       {Math.ceil(total / limit) > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">Page {Math.floor(offset / limit) + 1} of {Math.ceil(total / limit)}</span>
+          <span className="text-sm text-slate-400">Page {Math.floor(offset / limit) + 1} of {Math.ceil(total / limit)}</span>
           <div className="flex gap-2">
             <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))} className="p-2 border rounded-lg disabled:opacity-50">
               <FiChevronLeft className="h-4 w-4" />

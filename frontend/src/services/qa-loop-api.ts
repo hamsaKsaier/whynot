@@ -362,6 +362,54 @@ export async function retestBug(bugId: string): Promise<{
   return response.data;
 }
 
+// ==================== PLAYWRIGHT EXPORT API ====================
+
+// Export a single test case as Playwright .spec.ts file download
+export async function exportTestCasePlaywright(testCaseId: string): Promise<void> {
+  const response = await apiClient.get(
+    `/qa-loop/test-cases/${testCaseId}/export-playwright`,
+    { responseType: 'blob' }
+  );
+
+  // Extract filename from Content-Disposition header
+  const disposition = response.headers['content-disposition'] || '';
+  const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1] : `test-case-${testCaseId}.spec.ts`;
+
+  // Trigger browser download
+  const blob = new Blob([response.data], { type: 'text/typescript' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+// Export an entire test suite as a combined Playwright .spec.ts file download
+export async function exportTestSuitePlaywright(suiteId: string): Promise<void> {
+  const response = await apiClient.get(
+    `/qa-loop/test-suites/${suiteId}/export-playwright`,
+    { responseType: 'blob' }
+  );
+
+  const disposition = response.headers['content-disposition'] || '';
+  const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1] : `test-suite-${suiteId}.spec.ts`;
+
+  const blob = new Blob([response.data], { type: 'text/typescript' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
 // ==================== PROJECT HIERARCHY API ====================
 
 export interface TestSuiteHierarchyBug {
@@ -395,6 +443,8 @@ export interface TestSuiteHierarchyTestCase {
   last_run_at: string | null;
   pass_count: number;
   fail_count: number;
+  confidence_score: number | null;
+  total_runs: number;
   source: string;
   created_at: string;
   bugs: TestSuiteHierarchyBug[];

@@ -21,24 +21,24 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className = '' 
     >
       <Link
         to="/"
-        className="text-gray-500 hover:text-gray-700 transition-colors"
+        className="text-slate-400 hover:text-slate-200 transition-colors"
         aria-label="Home"
       >
         <FiHome className="h-4 w-4" />
       </Link>
       {items.map((item, index) => (
         <React.Fragment key={index}>
-          <FiChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+          <FiChevronRight className="h-4 w-4 text-slate-500 flex-shrink-0" aria-hidden="true" />
           {item.path && index < items.length - 1 ? (
             <Link
               to={item.path}
-              className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+              className="text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1"
             >
               {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
               <span>{item.label}</span>
             </Link>
           ) : (
-            <span className="text-gray-900 font-medium flex items-center gap-1" aria-current="page">
+            <span className="text-white font-medium flex items-center gap-1" aria-current="page">
               {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
               <span>{item.label}</span>
             </span>

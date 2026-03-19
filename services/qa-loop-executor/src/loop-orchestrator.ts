@@ -10,6 +10,7 @@ import { ParallelTestExecutor } from './parallel-test-executor';
 import { selectModel, ClaudeModel, FOCUS_AREA_MODELS, getModelDisplayName } from './model-selector';
 import { MCPBrowser } from './mcp-browser';
 import { stitchVideo, cleanupFrames } from './video-stitcher';
+import { notifyGateway } from './notifications/email-notifier';
 
 
 const logger = createLogger('loop-orchestrator');
@@ -40,6 +41,8 @@ export interface LoopConfig {
   isResume?: boolean;
   /** The iteration number the session was paused at — used to restore currentIteration */
   resumeFromIteration?: number;
+  /** Workspace ID for notification routing */
+  workspaceId?: string;
 }
 
 export type FocusArea = 'explore' | 'chaos' | 'retest' | 'investigate';
@@ -185,6 +188,27 @@ export class LoopOrchestrator {
       } catch (e) {
         logger.warn('Failed to generate final report', { error: e });
       }
+
+      // Send session-complete email notification via gateway
+      if (this.config.workspaceId) {
+        try {
+          const sessionData = await this.repository.getSession(this.sessionId);
+          notifyGateway({
+            type: 'scan_complete',
+            workspaceId: this.config.workspaceId,
+            data: {
+              sessionId: this.sessionId,
+              targetUrl: this.config.targetUrl,
+              projectName: this.config.targetUrl,
+              bugCount: sessionData?.bugs_found || 0,
+              criticalCount: 0,
+            },
+          }).catch(() => {});
+        } catch {
+          // non-critical
+        }
+      }
+
       // Stitch video from captured frames
       if (this.mcpBrowser) {
         try {
@@ -750,9 +774,17 @@ Start now with get_session_state(), then navigate and explore.
         `Instead, ONLY explore pages that are publicly accessible (no login required).\n`
       : '';
 
+    // Credential context: inform the AI that login was established so it can
+    // reference credentials from process.env rather than hardcoding them.
+    const credentialContext = this.loginEstablished && this.config.loginCredentials
+      ? `\n🔐 AUTHENTICATION: You are logged in with test credentials (available via process.env.TEST_USERNAME / process.env.TEST_PASSWORD). ` +
+        `If you encounter a login form during exploration, use the provided credentials through environment variables — ` +
+        `NEVER hardcode credentials in generated test code. The login session should already be established.\n`
+      : '';
+
     const prompt = isFirstEverIteration
       ? `You are a QA engineer systematically testing ${this.config.targetUrl}.
-${noLoginWarning}
+${noLoginWarning}${credentialContext}
 STEP 1 — Initialise: call get_session_state() first.
 STEP 2 — Use browser_navigate() to go to ${this.config.targetUrl}, then call browser_snapshot() to see the full page.
 STEP 3 — ★★★ DISCOVER ALL LINKS ★★★
@@ -781,7 +813,7 @@ IMPORTANT RULES:
 - The app may be in ANY language — always call browser_snapshot() and use observed text.
 - ALWAYS include observed_result ("pass" or "fail") in every save_test_case() call.`
       : `You are continuing a QA exploration of ${this.config.targetUrl}. Iteration ${this.currentIteration}.
-${noLoginWarning}${skipBlock}
+${noLoginWarning}${credentialContext}${skipBlock}
 STEP 1 — ${targetHint}
 STEP 2 — For EVERY page you visit (that is NOT in the skip list above):
   a) Call browser_snapshot() to observe the page — read ALL text, elements, and structure.

@@ -216,9 +216,9 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
   };
 
   const getStatusBadgeColor = (status: number) => {
-    if (status >= 200 && status < 300) return 'bg-green-100 text-green-800';
-    if (status >= 400 && status < 500) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
+    if (status >= 200 && status < 300) return 'bg-green-900/30 text-green-300';
+    if (status >= 400 && status < 500) return 'bg-yellow-900/30 text-yellow-300';
+    return 'bg-red-900/30 text-red-300';
   };
 
   return (
@@ -239,7 +239,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <div className="flex gap-2 mb-6 border-b border-slate-700">
           {[
             { id: 'keys', label: 'API Keys', icon: FiKey },
             { id: 'channels', label: 'Notifications', icon: FiBell },
@@ -252,7 +252,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors
                 ${activeTab === tab.id
                   ? 'border-sky-500 text-sky-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
                 }
               `}
             >
@@ -265,18 +265,18 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {/* Created Key Modal */}
         {createdKey && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl">
+            <div className="bg-slate-800 rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-green-100 rounded-full">
+                <div className="p-2 bg-green-900/30 rounded-full">
                   <FiCheck className="text-green-500 text-xl" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-white">
                   API Key Created
                 </h3>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-2 text-yellow-800 mb-2">
+              <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 text-yellow-300 mb-2">
                   <FiAlertTriangle />
                   <span className="font-medium">Save this key now!</span>
                 </div>
@@ -285,13 +285,13 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-3 mb-4">
-                <code className="flex-1 font-mono text-sm text-gray-800 break-all">
+              <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-3 mb-4">
+                <code className="flex-1 font-mono text-sm text-slate-200 break-all">
                   {createdKey}
                 </code>
                 <button
                   onClick={() => copyToClipboard(createdKey)}
-                  className="p-2 text-gray-500 hover:text-gray-700"
+                  className="p-2 text-slate-400 hover:text-slate-200"
                 >
                   {copiedKey ? <FiCheck className="text-green-500" /> : <FiCopy />}
                 </button>
@@ -311,7 +311,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {activeTab === 'keys' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-white">
                 API Keys ({apiKeys.length})
               </h2>
               <button
@@ -324,11 +324,11 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
             {/* Create Key Form */}
             {showCreateKey && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-4">Create New API Key</h3>
+              <div className="bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-700">
+                <h3 className="font-medium text-white mb-4">Create New API Key</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-200 mb-1">
                       Name
                     </label>
                     <input
@@ -336,12 +336,12 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       value={newKeyName}
                       onChange={(e) => setNewKeyName(e.target.value)}
                       placeholder="e.g., CI/CD Pipeline"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-200 mb-1">
                       Permissions
                     </label>
                     <div className="flex flex-wrap gap-2">
@@ -359,20 +359,20 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                             }}
                             className="rounded text-sky-500 focus:ring-sky-500"
                           />
-                          <span className="text-sm text-gray-700 capitalize">{perm}</span>
+                          <span className="text-sm text-slate-200 capitalize">{perm}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-200 mb-1">
                       Expires In
                     </label>
                     <select
                       value={newKeyExpiry || ''}
                       onChange={(e) => setNewKeyExpiry(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
                     >
                       <option value="">Never</option>
                       <option value="30">30 days</option>
@@ -384,7 +384,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setShowCreateKey(false)}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      className="px-4 py-2 text-slate-400 hover:text-slate-200"
                     >
                       Cancel
                     </button>
@@ -402,16 +402,16 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
             {/* Keys List */}
             {loadingKeys ? (
-              <div className="text-center py-8 text-gray-500">Loading API keys…</div>
+              <div className="text-center py-8 text-slate-400">Loading API keys…</div>
             ) : apiKeys.length === 0 ? (
-              <div className="rounded-xl border border-gray-200 bg-white text-center py-12 px-8">
+              <div className="rounded-xl border border-slate-700 bg-slate-800 text-center py-12 px-8">
                 <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-sky-50 flex items-center justify-center">
+                  <div className="h-12 w-12 rounded-xl bg-sky-900/20 flex items-center justify-center">
                     <FiKey className="h-6 w-6 text-sky-400" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-1">No API keys yet</h3>
-                <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto">
+                <h3 className="text-sm font-semibold text-slate-200 mb-1">No API keys yet</h3>
+                <p className="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
                   Create an API key to trigger test runs from your CI/CD pipeline or external tools.
                 </p>
                 <button
@@ -427,10 +427,10 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                   <div
                     key={key.id}
                     className={`
-                      bg-white rounded-xl p-4 shadow-sm border
+                      bg-slate-800 rounded-xl p-4 shadow-sm border
                       ${key.revoked_at
-                        ? 'border-red-200 opacity-60'
-                        : 'border-gray-200'
+                        ? 'border-red-800 opacity-60'
+                        : 'border-slate-700'
                       }
                     `}
                   >
@@ -438,15 +438,15 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       <div className="flex items-center gap-3">
                         <FiKey className={key.revoked_at ? 'text-red-500' : 'text-sky-500'} />
                         <div>
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-white">
                             {key.name}
                             {key.revoked_at && (
-                              <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">
+                              <span className="ml-2 text-xs bg-red-900/30 text-red-600 px-2 py-0.5 rounded">
                                 Revoked
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-slate-400">
                             {key.key_prefix}••••••••
                           </div>
                         </div>
@@ -454,8 +454,8 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
                       <div className="flex items-center gap-4">
                         <div className="text-right text-sm">
-                          <div className="text-gray-500">Last used</div>
-                          <div className="text-gray-700">
+                          <div className="text-slate-400">Last used</div>
+                          <div className="text-slate-200">
                             {formatDate(key.last_used_at)}
                           </div>
                         </div>
@@ -463,7 +463,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                         {!key.revoked_at && (
                           <button
                             onClick={() => revokeAPIKey(key.id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-red-500 hover:bg-red-900/20 rounded-lg transition-colors"
                             title="Revoke key"
                           >
                             <FiTrash2 />
@@ -476,16 +476,16 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       {key.permissions.map(perm => (
                         <span
                           key={perm}
-                          className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
+                          className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded"
                         >
                           {perm}
                         </span>
                       ))}
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-slate-400">
                         • {key.rate_limit_per_hour}/hr limit
                       </span>
                       {key.expires_at && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-slate-400">
                           • Expires {new Date(key.expires_at).toLocaleDateString()}
                         </span>
                       )}
@@ -501,7 +501,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {activeTab === 'channels' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-white">
                 Notification Channels ({channels.length})
               </h2>
               <button
@@ -513,19 +513,19 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
             </div>
 
             {/* Triggers info */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 mb-4">
-              <h3 className="font-medium text-gray-900 mb-3">Notification Triggers</h3>
+            <div className="bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-700 mb-4">
+              <h3 className="font-medium text-white mb-3">Notification Triggers</h3>
               <div className="space-y-2">
                 {[
                   { label: 'Scan complete', desc: 'When a QA session finishes running' },
                   { label: 'Bug found (critical)', desc: 'When a critical-severity bug is discovered' },
                   { label: 'Monitor alert', desc: 'When a scheduled monitor detects a regression' },
                 ].map(trigger => (
-                  <div key={trigger.label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={trigger.label} className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg">
                     <FiBell className="text-sky-500 flex-shrink-0" />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{trigger.label}</div>
-                      <div className="text-xs text-gray-500">{trigger.desc}</div>
+                      <div className="text-sm font-medium text-white">{trigger.label}</div>
+                      <div className="text-xs text-slate-400">{trigger.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -534,11 +534,11 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
             {/* Create Channel Form */}
             {showCreateChannel && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-4">Add Notification Channel</h3>
+              <div className="bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-700">
+                <h3 className="font-medium text-white mb-4">Add Notification Channel</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-200 mb-1">
                       Channel Name
                     </label>
                     <input
@@ -546,18 +546,18 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       value={channelName}
                       onChange={(e) => setChannelName(e.target.value)}
                       placeholder="e.g., Team Slack"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-200 mb-1">
                       Channel Type
                     </label>
                     <select
                       value={channelType}
                       onChange={(e) => setChannelType(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
                     >
                       <option value="email">Email</option>
                       <option value="slack">Slack Webhook URL</option>
@@ -566,7 +566,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
                   {channelType === 'slack' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-slate-200 mb-1">
                         Slack Webhook URL
                       </label>
                       <input
@@ -574,14 +574,14 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                         value={channelConfig.webhookUrl}
                         onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
                         placeholder="https://hooks.slack.com/services/..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                        className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
                       />
                     </div>
                   )}
 
                   {channelType === 'email' as any && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-slate-200 mb-1">
                         Email Address
                       </label>
                       <input
@@ -589,7 +589,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                         value={channelConfig.webhookUrl}
                         onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
                         placeholder="team@example.com"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+                        className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
                       />
                     </div>
                   )}
@@ -597,7 +597,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setShowCreateChannel(false)}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      className="px-4 py-2 text-slate-400 hover:text-slate-200"
                     >
                       Cancel
                     </button>
@@ -615,16 +615,16 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
             {/* Channels List */}
             {loadingChannels ? (
-              <div className="text-center py-8 text-gray-500">Loading channels…</div>
+              <div className="text-center py-8 text-slate-400">Loading channels…</div>
             ) : channels.length === 0 ? (
-              <div className="rounded-xl border border-gray-200 bg-white text-center py-12 px-8">
+              <div className="rounded-xl border border-slate-700 bg-slate-800 text-center py-12 px-8">
                 <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <div className="h-12 w-12 rounded-xl bg-blue-900/20 flex items-center justify-center">
                     <FiBell className="h-6 w-6 text-blue-400" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-1">No notification channels</h3>
-                <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto">
+                <h3 className="text-sm font-semibold text-slate-200 mb-1">No notification channels</h3>
+                <p className="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
                   Connect Slack, Discord, or a generic webhook to receive test result notifications automatically.
                 </p>
                 <button
@@ -639,16 +639,16 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 {channels.map(channel => (
                   <div
                     key={channel.id}
-                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
+                    className="bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-700"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <FiBell className="text-blue-500" />
                         <div>
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-white">
                             {channel.name}
                           </div>
-                          <div className="text-sm text-gray-500 capitalize">
+                          <div className="text-sm text-slate-400 capitalize">
                             {channel.channelType}
                           </div>
                         </div>
@@ -657,14 +657,14 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => testNotificationChannel(channel.id)}
-                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-500 hover:bg-blue-900/20 rounded-lg transition-colors"
                           title="Send test notification"
                         >
                           <FiSend />
                         </button>
                         <button
                           onClick={() => deleteNotificationChannel(channel.id)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-500 hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Delete channel"
                         >
                           <FiTrash2 />
@@ -682,66 +682,66 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {activeTab === 'logs' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-white">
                 Recent Activity
               </h2>
               <button
                 onClick={loadWebhookLogs}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800"
+                className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-slate-200"
               >
                 <FiRefreshCw /> Refresh
               </button>
             </div>
 
             {loadingLogs ? (
-              <div className="text-center py-8 text-gray-500">Loading logs…</div>
+              <div className="text-center py-8 text-slate-400">Loading logs…</div>
             ) : logs.length === 0 ? (
-              <div className="rounded-xl border border-gray-200 bg-white text-center py-12 px-8">
+              <div className="rounded-xl border border-slate-700 bg-slate-800 text-center py-12 px-8">
                 <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-gray-50 flex items-center justify-center">
-                    <FiActivity className="h-6 w-6 text-gray-400" />
+                  <div className="h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center">
+                    <FiActivity className="h-6 w-6 text-slate-500" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-1">No activity yet</h3>
-                <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto">
+                <h3 className="text-sm font-semibold text-slate-200 mb-1">No activity yet</h3>
+                <p className="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
                   Activity will appear here once your API key is used to trigger a test run.
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-slate-900">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
                         Endpoint
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
                         Status
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
                         Duration
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
                         Time
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-slate-700">
                     {logs.map(log => (
-                      <tr key={log.id} className="hover:bg-gray-50">
+                      <tr key={log.id} className="hover:bg-slate-900">
                         <td className="px-4 py-3 text-sm">
-                          <span className="text-gray-500 mr-2">{log.method}</span>
-                          <span className="text-gray-900">{log.endpoint}</span>
+                          <span className="text-slate-400 mr-2">{log.method}</span>
+                          <span className="text-white">{log.endpoint}</span>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(log.responseStatus)}`}>
                             {log.responseStatus}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
+                        <td className="px-4 py-3 text-sm text-slate-400">
                           {log.durationMs}ms
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
+                        <td className="px-4 py-3 text-sm text-slate-400">
                           {formatDate(log.createdAt)}
                         </td>
                       </tr>
@@ -754,14 +754,14 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         )}
 
         {/* Documentation Section */}
-        <div className="mt-8 p-6 bg-gray-100 rounded-xl">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <div className="mt-8 p-6 bg-slate-800 rounded-xl">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <FiExternalLink /> API Documentation
           </h3>
           <div className="space-y-4 text-sm">
             <div>
-              <h4 className="font-medium text-gray-700 mb-2">Trigger Retest</h4>
-              <pre className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto">
+              <h4 className="font-medium text-slate-200 mb-2">Trigger Retest</h4>
+              <pre className="bg-slate-900 text-green-400 p-3 rounded-lg overflow-x-auto">
                 {`curl -X POST https://your-domain/api/qa-loop/webhook/retest \\
   -H "X-QALoop-Key: qal_your_api_key" \\
   -H "Content-Type: application/json" \\
@@ -769,8 +769,8 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               </pre>
             </div>
             <div>
-              <h4 className="font-medium text-gray-700 mb-2">Trigger New Session</h4>
-              <pre className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto">
+              <h4 className="font-medium text-slate-200 mb-2">Trigger New Session</h4>
+              <pre className="bg-slate-900 text-green-400 p-3 rounded-lg overflow-x-auto">
                 {`curl -X POST https://your-domain/api/qa-loop/webhook/trigger \\
   -H "X-QALoop-Key: qal_your_api_key" \\
   -H "Content-Type: application/json" \\

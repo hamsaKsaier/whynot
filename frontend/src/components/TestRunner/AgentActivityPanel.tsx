@@ -44,31 +44,31 @@ export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({
       case 'needs_help':
         return <FiMessageCircle className="h-4 w-4 text-sky-500" />;
       default:
-        return <FiAlertCircle className="h-4 w-4 text-gray-500" />;
+        return <FiAlertCircle className="h-4 w-4 text-slate-400" />;
     }
   };
 
   const getBgColor = (type: AgentMessage['type']) => {
     switch (type) {
       case 'analyzing':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-900/20 border-blue-800';
       case 'recovery_attempt':
-        return 'bg-yellow-50 border-yellow-200';
+        return 'bg-yellow-900/20 border-yellow-700';
       case 'recovery_success':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-900/20 border-green-800';
       case 'recovery_failed':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-900/20 border-red-800';
       case 'needs_help':
-        return 'bg-sky-50 border-sky-200';
+        return 'bg-sky-900/20 border-sky-700';
       default:
-        return 'bg-gray-50 border-gray-200';
+        return 'bg-slate-900 border-slate-700';
     }
   };
 
   if (displayMessages.length === 0) {
     return (
-      <div className="h-full bg-white border-t border-gray-200 p-4">
-        <h3 className="font-semibold text-gray-900 mb-4">Agent Activity</h3>
+      <div className="h-full bg-slate-800 border-t border-slate-700 p-4">
+        <h3 className="font-semibold text-white mb-4">Agent Activity</h3>
         <EmptyState
           icon={<FiMessageCircle />}
           title="No agent activity yet"
@@ -81,10 +81,10 @@ export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({
   }
 
   return (
-    <div className="h-full bg-white border-t border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="font-semibold text-gray-900">Agent Activity</h3>
-        <p className="text-xs text-gray-500 mt-1">
+    <div className="h-full bg-slate-800 border-t border-slate-700 flex flex-col">
+      <div className="p-4 border-b border-slate-700">
+        <h3 className="font-semibold text-white">Agent Activity</h3>
+        <p className="text-xs text-slate-400 mt-1">
           Real-time analysis and recovery attempts
         </p>
       </div>
@@ -100,10 +100,10 @@ export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({
                 {getIcon(message.type)}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                <div className="text-sm text-white whitespace-pre-wrap">
                   {message.message}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-slate-400 mt-1">
                   Step {message.stepIndex + 1} • {new Date(message.timestamp).toLocaleTimeString()}
                 </div>
               </div>

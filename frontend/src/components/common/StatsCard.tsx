@@ -47,12 +47,12 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 mb-1">
-            <p className="text-sm font-medium text-gray-600">{title}</p>
+            <p className="text-sm font-medium text-slate-400">{title}</p>
             {onClick && (
-              <FiChevronRight className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+              <FiChevronRight className="h-3.5 w-3.5 text-slate-500 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
             )}
           </div>
-          <p className="text-2xl font-bold text-gray-900">{formatValue(value)}</p>
+          <p className="text-2xl font-bold text-white">{formatValue(value)}</p>
           {change && (
             <div
               className={`flex items-center gap-1 mt-2 text-sm ${
@@ -82,7 +82,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           )}
         </div>
         {icon && (
-          <div className="p-3 bg-primary-50 group-hover:bg-primary-100 rounded-lg flex-shrink-0 ml-4 transition-colors">
+          <div className="p-3 bg-primary-900/20 group-hover:bg-primary-900/30 rounded-lg flex-shrink-0 ml-4 transition-colors">
             <div className="text-primary-600">{icon}</div>
           </div>
         )}

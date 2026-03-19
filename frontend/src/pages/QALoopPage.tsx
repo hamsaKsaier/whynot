@@ -37,8 +37,8 @@ function getStatusColor(status: string): string {
     case 'completed': return 'text-green-500';
     case 'paused':    return 'text-yellow-500';
     case 'failed':    return 'text-red-500';
-    case 'cancelled': return 'text-gray-500';
-    default:          return 'text-gray-400';
+    case 'cancelled': return 'text-slate-400';
+    default:          return 'text-slate-500';
   }
 }
 
@@ -228,21 +228,21 @@ export const QALoopPage: React.FC = () => {
 
         {/*
          * Escape the MainLayout's p-4 sm:p-6 padding so we get edge-to-edge.
-         * bg-gray-950 gives a deep dark cinema feel.
+         * bg-slate-950 gives a deep dark cinema feel.
          * overflow-hidden prevents the cinema container itself from adding scroll.
          */}
         <div
-          className="flex flex-col bg-gray-950 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 overflow-hidden"
+          className="flex flex-col bg-slate-950 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 overflow-hidden"
           style={{ height: 'calc(100vh - 64px)' }}
         >
 
           {/* ── Cinema Top Bar ──────────────────────────────────────────────── */}
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-900/95 border-b border-gray-800/80 shrink-0 backdrop-blur-sm">
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-900/95 border-b border-slate-800/80 shrink-0 backdrop-blur-sm">
 
             {/* Sidebar toggle */}
             <button
               onClick={() => setShowSidebar(v => !v)}
-              className="text-gray-400 hover:text-gray-200 p-1.5 rounded-lg hover:bg-gray-700/50 transition-colors shrink-0"
+              className="text-slate-500 hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors shrink-0"
               title={showSidebar ? 'Collapse sidebar' : 'Expand sidebar'}
             >
               <FiMenu size={16} />
@@ -250,7 +250,7 @@ export const QALoopPage: React.FC = () => {
 
             {/* Session URL */}
             <FiGlobe className="text-sky-400 shrink-0" size={14} />
-            <span className="text-sm font-semibold text-gray-200 truncate max-w-xs">
+            <span className="text-sm font-semibold text-slate-300 truncate max-w-xs">
               {activeSession.target_url}
             </span>
 
@@ -262,7 +262,7 @@ export const QALoopPage: React.FC = () => {
                 ? 'border-yellow-700/50 bg-yellow-950/50 text-yellow-300'
                 : activeSession.status === 'completed'
                 ? 'border-green-700/50 bg-green-950/50 text-green-300'
-                : 'border-gray-700/50 bg-gray-800/50 text-gray-400'
+                : 'border-slate-700/50 bg-slate-800/50 text-slate-500'
             }`}>
               <FiActivity
                 size={11}
@@ -272,13 +272,13 @@ export const QALoopPage: React.FC = () => {
             </span>
 
             {/* Iteration counter */}
-            <span className="text-xs text-gray-500 shrink-0">
-              Iter <span className="text-gray-300 font-semibold">{iteration || activeSession.iteration_count}</span>
+            <span className="text-xs text-slate-400 shrink-0">
+              Iter <span className="text-slate-400 font-semibold">{iteration || activeSession.iteration_count}</span>
             </span>
 
             {/* Quality score */}
             {activeSession.quality_score > 0 && (
-              <span className="text-xs text-gray-500 shrink-0">
+              <span className="text-xs text-slate-400 shrink-0">
                 Q: <span className="text-sky-300 font-semibold">{activeSession.quality_score}%</span>
               </span>
             )}
@@ -341,8 +341,8 @@ export const QALoopPage: React.FC = () => {
 
             {/* Loading overlay while session details fetched */}
             {isLoadingDetails && (
-              <div className="absolute inset-0 bg-gray-950/70 flex items-center justify-center z-20 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-gray-300 bg-gray-900 px-4 py-2 rounded-full shadow-xl border border-gray-700">
+              <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center z-20 backdrop-blur-sm">
+                <div className="flex items-center gap-2 text-slate-400 bg-slate-900 px-4 py-2 rounded-full shadow-xl border border-slate-700">
                   <FiRefreshCw className="animate-spin text-sky-400" size={14} />
                   <span className="text-sm font-medium">Loading session…</span>
                 </div>
@@ -351,7 +351,7 @@ export const QALoopPage: React.FC = () => {
 
             {/* ── Collapsible Sidebar ──────────────────────────────────────── */}
             <div
-              className={`shrink-0 bg-gray-900/40 border-r border-gray-800/60 overflow-hidden transition-all duration-300 ease-in-out`}
+              className={`shrink-0 bg-slate-900/40 border-r border-slate-800/60 overflow-hidden transition-all duration-300 ease-in-out`}
               style={{ width: showSidebar ? '320px' : '0px' }}
             >
               <div className="w-80 h-full overflow-y-auto p-4 space-y-4">
@@ -402,7 +402,7 @@ export const QALoopPage: React.FC = () => {
                 />
 
                 {/* Results tabs — wrapped in a light-bg card for readability */}
-                <div className="rounded-xl overflow-hidden border border-gray-700/40 bg-white shadow-sm">
+                <div className="rounded-xl overflow-hidden border border-slate-700/40 bg-slate-800 shadow-sm">
                   <div className="p-4">
                     <ResultsTabs
                       testCases={sessionTestCases}
@@ -435,11 +435,11 @@ export const QALoopPage: React.FC = () => {
 
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
           <FiZap className="text-sky-500" />
           QA Loop
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-slate-400 mt-2">
           Autonomous exploration and testing powered by AI. Point at a URL, let it explore overnight.
         </p>
       </div>
@@ -449,22 +449,22 @@ export const QALoopPage: React.FC = () => {
         <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-primary-200 bg-gradient-to-r from-primary-50 to-sky-50 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
                 <FiZap className="text-primary-600" /> How QA Loop works
               </h3>
-              <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
+              <div className="flex flex-col sm:flex-row gap-4 text-sm text-slate-400">
                 {[
                   { n: '1', title: 'Enter a URL',           sub: 'Any public or internal app' },
                   { n: '2', title: 'AI explores overnight',  sub: 'Clicks, forms, edge cases' },
                   { n: '3', title: 'See results',            sub: 'Bugs, tests, quality score' },
                 ].map(({ n, title, sub }, i) => (
                   <React.Fragment key={n}>
-                    {i > 0 && <div className="hidden sm:block text-gray-300 self-center">→</div>}
+                    {i > 0 && <div className="hidden sm:block text-slate-400 self-center">→</div>}
                     <div className="flex items-start gap-2">
                       <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">{n}</span>
                       <div>
-                        <p className="font-medium text-gray-800">{title}</p>
-                        <p className="text-xs text-gray-500">{sub}</p>
+                        <p className="font-medium text-slate-200">{title}</p>
+                        <p className="text-xs text-slate-400">{sub}</p>
                       </div>
                     </div>
                   </React.Fragment>
@@ -473,7 +473,7 @@ export const QALoopPage: React.FC = () => {
             </div>
             <button
               onClick={dismissOnboarding}
-              className="flex-shrink-0 text-xs text-gray-400 hover:text-gray-600 transition-colors mt-0.5"
+              className="flex-shrink-0 text-xs text-slate-500 hover:text-slate-400 transition-colors mt-0.5"
               aria-label="Dismiss"
             >
               Got it ✕

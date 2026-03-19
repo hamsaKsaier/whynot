@@ -446,4 +446,55 @@ router.patch(
 
 createProxy('delete', '/sessions/:id/documents/:docId', 'Failed to delete document');
 
+// ── Playwright Export Endpoints ───────────────────────────────────────────────
+
+// Export single test case as Playwright .spec.ts
+router.get(
+  '/test-cases/:testCaseId/export-playwright',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    await withQALoopBreaker(res, 'Failed to export Playwright code', async () => {
+      const response = await axios.get(
+        `${qaLoopExecutorUrl}/api/test-cases/${req.params.testCaseId}/export-playwright`,
+        {
+          headers: qaLoopHeaders(req),
+          timeout: 10_000,
+          responseType: 'arraybuffer',
+        },
+      );
+
+      // Forward content-type and disposition headers
+      res.setHeader('Content-Type', response.headers['content-type'] || 'text/typescript');
+      if (response.headers['content-disposition']) {
+        res.setHeader('Content-Disposition', response.headers['content-disposition']);
+      }
+      res.send(Buffer.from(response.data));
+    });
+  }),
+);
+
+// Export entire test suite as combined Playwright .spec.ts
+router.get(
+  '/test-suites/:suiteId/export-playwright',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    await withQALoopBreaker(res, 'Failed to export Playwright suite', async () => {
+      const response = await axios.get(
+        `${qaLoopExecutorUrl}/api/test-suites/${req.params.suiteId}/export-playwright`,
+        {
+          headers: qaLoopHeaders(req),
+          timeout: 10_000,
+          responseType: 'arraybuffer',
+        },
+      );
+
+      res.setHeader('Content-Type', response.headers['content-type'] || 'text/typescript');
+      if (response.headers['content-disposition']) {
+        res.setHeader('Content-Disposition', response.headers['content-disposition']);
+      }
+      res.send(Buffer.from(response.data));
+    });
+  }),
+);
+
 export { router as qaLoopRouter };

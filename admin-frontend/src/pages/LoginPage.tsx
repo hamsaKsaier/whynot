@@ -26,37 +26,37 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="bg-slate-800 rounded-xl shadow-lg p-8 w-full max-w-md">
         <div className="flex items-center justify-center mb-6">
           <FiShield className="h-8 w-8 text-primary-600 mr-2" />
-          <h1 className="text-2xl font-bold text-gray-900">Admin Login</h1>
+          <h1 className="text-2xl font-bold text-white">Admin Login</h1>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+          <div className="mb-4 p-3 bg-red-900/20 border border-red-800 text-red-400 text-sm rounded-lg">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               required
             />
           </div>
@@ -69,7 +69,7 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="mt-4 text-xs text-center text-gray-400">
+        <p className="mt-4 text-xs text-center text-slate-500">
           Admin access only. Regular users cannot log in here.
         </p>
       </div>

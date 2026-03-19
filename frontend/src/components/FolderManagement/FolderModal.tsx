@@ -75,7 +75,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
     >
       <form onSubmit={handleSubmit}>
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-900/20 border border-red-800 rounded text-red-700 text-sm">
             {error}
           </div>
         )}
@@ -91,7 +91,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
               Color
             </label>
             <div className="flex flex-wrap gap-2">
@@ -101,8 +101,8 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                   type="button"
                   onClick={() => setColor(presetColor)}
                   className={`w-10 h-10 rounded-lg border-2 transition-all ${color === presetColor
-                      ? 'border-gray-900 scale-110 shadow-md'
-                      : 'border-gray-300 hover:border-gray-400'
+                      ? 'border-slate-900 scale-110 shadow-md'
+                      : 'border-slate-600 hover:border-slate-500'
                     }`}
                   style={{ backgroundColor: presetColor }}
                   title={presetColor}
@@ -114,9 +114,9 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
+                className="w-12 h-8 rounded border border-slate-600 cursor-pointer"
               />
-              <span className="text-sm text-gray-600">{color}</span>
+              <span className="text-sm text-slate-400">{color}</span>
             </div>
           </div>
         </div>

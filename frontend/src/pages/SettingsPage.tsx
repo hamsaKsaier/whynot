@@ -7,6 +7,7 @@ import { IntegrationsContent } from './IntegrationsPage';
 import { GitHubReposContent } from './GitHubReposPage';
 import { WebhookContent } from './WebhookManagementPage';
 import { BillingContent } from './BillingPage';
+import { NotificationPreferences } from '../components/NotificationPreferences';
 
 const TABS = [
   { id: 'environments', label: 'Environments', icon: <FiServer className="h-4 w-4" /> },
@@ -27,8 +28,8 @@ export const SettingsPage: React.FC = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Configure environments, integrations, and billing</p>
+        <h1 className="text-3xl font-bold text-white">Settings</h1>
+        <p className="text-slate-400 mt-1">Configure environments, integrations, and billing</p>
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
@@ -37,7 +38,12 @@ export const SettingsPage: React.FC = () => {
         {activeTab === 'environments' && <EnvironmentsContent />}
         {activeTab === 'integrations' && <IntegrationsContent />}
         {activeTab === 'github' && <GitHubReposContent />}
-        {activeTab === 'webhooks' && <WebhookContent />}
+        {activeTab === 'webhooks' && (
+          <div className="space-y-6">
+            <NotificationPreferences />
+            <WebhookContent />
+          </div>
+        )}
         {activeTab === 'billing' && <BillingContent />}
       </div>
     </div>

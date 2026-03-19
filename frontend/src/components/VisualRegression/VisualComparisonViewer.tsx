@@ -31,10 +31,10 @@ export const VisualComparisonViewer: React.FC<VisualComparisonViewerProps> = ({
   if (!comparison || !isOpen) return null;
 
   const severityColors = {
-    low: 'bg-green-100 text-green-800 border-green-300',
-    medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    high: 'bg-orange-100 text-orange-800 border-orange-300',
-    critical: 'bg-red-100 text-red-800 border-red-300',
+    low: 'bg-green-900/30 text-green-300 border-green-700',
+    medium: 'bg-yellow-900/30 text-yellow-300 border-yellow-700',
+    high: 'bg-orange-900/30 text-orange-300 border-orange-700',
+    critical: 'bg-red-900/30 text-red-300 border-red-700',
   };
 
   const severityIcons = {
@@ -179,12 +179,12 @@ export const VisualComparisonViewer: React.FC<VisualComparisonViewerProps> = ({
         {comparison.ai_diff_analysis && (
           <Card title="AI Analysis" className="space-y-3">
             <div>
-              <h4 className="font-semibold text-sm text-gray-700 mb-2">Difference Types:</h4>
+              <h4 className="font-semibold text-sm text-slate-200 mb-2">Difference Types:</h4>
               <div className="flex flex-wrap gap-2">
                 {comparison.ai_diff_analysis.difference_types.map((type, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                    className="px-2 py-1 bg-blue-900/30 text-blue-300 rounded text-xs"
                   >
                     {type}
                   </span>
@@ -193,8 +193,8 @@ export const VisualComparisonViewer: React.FC<VisualComparisonViewerProps> = ({
             </div>
 
             <div>
-              <h4 className="font-semibold text-sm text-gray-700 mb-2">Descriptions:</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+              <h4 className="font-semibold text-sm text-slate-200 mb-2">Descriptions:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-slate-400">
                 {comparison.ai_diff_analysis.descriptions.map((desc, idx) => (
                   <li key={idx}>{desc}</li>
                 ))}
@@ -203,12 +203,12 @@ export const VisualComparisonViewer: React.FC<VisualComparisonViewerProps> = ({
 
             {comparison.ai_diff_analysis.affected_areas && comparison.ai_diff_analysis.affected_areas.length > 0 && (
               <div>
-                <h4 className="font-semibold text-sm text-gray-700 mb-2">Affected Areas:</h4>
+                <h4 className="font-semibold text-sm text-slate-200 mb-2">Affected Areas:</h4>
                 <ul className="space-y-2">
                   {comparison.ai_diff_analysis.affected_areas.map((area, idx) => (
                     <li key={idx} className="text-sm">
                       <span className="font-medium">{area.region}:</span>{' '}
-                      <span className="text-gray-600">{area.description}</span>
+                      <span className="text-slate-400">{area.description}</span>
                     </li>
                   ))}
                 </ul>
@@ -217,8 +217,8 @@ export const VisualComparisonViewer: React.FC<VisualComparisonViewerProps> = ({
 
             {comparison.ai_diff_analysis.recommendations && comparison.ai_diff_analysis.recommendations.length > 0 && (
               <div>
-                <h4 className="font-semibold text-sm text-gray-700 mb-2">Recommendations:</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <h4 className="font-semibold text-sm text-slate-200 mb-2">Recommendations:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-slate-400">
                   {comparison.ai_diff_analysis.recommendations.map((rec, idx) => (
                     <li key={idx}>{rec}</li>
                   ))}
@@ -230,7 +230,7 @@ export const VisualComparisonViewer: React.FC<VisualComparisonViewerProps> = ({
 
         {/* Actions */}
         <div className="flex items-center justify-between pt-4 border-t">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-slate-400">
             <FiInfo className="h-4 w-4" />
             <span>
               Step ID: {comparison.step_id} | Created: {new Date(comparison.created_at).toLocaleString()}

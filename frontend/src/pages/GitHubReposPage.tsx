@@ -108,12 +108,12 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       {!embedded && (
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">GitHub Repositories</h1>
-            <p className="text-sm text-gray-500 mt-1">Connect repos to enable Auto-Fix — AI generates PRs to fix discovered bugs</p>
+            <h1 className="text-2xl font-bold text-white">GitHub Repositories</h1>
+            <p className="text-sm text-slate-400 mt-1">Connect repos to enable Auto-Fix — AI generates PRs to fix discovered bugs</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
             <FiPlus className="h-4 w-4" />
             Connect Repo
@@ -122,15 +122,15 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading repositories...</div>
+        <div className="text-center py-12 text-slate-400">Loading repositories...</div>
       ) : repos.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-          <FiGithub className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No repositories connected</h3>
-          <p className="text-sm text-gray-500 mb-4">Connect a GitHub repository to enable automatic bug fixes via pull requests</p>
+        <div className="text-center py-16 bg-slate-900 rounded-xl border border-dashed border-slate-600">
+          <FiGithub className="h-12 w-12 text-slate-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">No repositories connected</h3>
+          <p className="text-sm text-slate-400 mb-4">Connect a GitHub repository to enable automatic bug fixes via pull requests</p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
             <FiGithub className="h-4 w-4" />
             Connect Repository
@@ -139,20 +139,20 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       ) : (
         <div className="space-y-4">
           {repos.map(r => (
-            <div key={r.id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow">
+            <div key={r.id} className="bg-slate-800 rounded-lg border border-slate-700 p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <FiGithub className="h-8 w-8 text-gray-800" />
+                  <FiGithub className="h-8 w-8 text-slate-200" />
                   <div>
-                    <h3 className="font-medium text-gray-900">
-                      <span className="text-gray-500">{r.owner}/</span>{r.repo}
+                    <h3 className="font-medium text-white">
+                      <span className="text-slate-400">{r.owner}/</span>{r.repo}
                     </h3>
-                    <p className="text-xs text-gray-500">Branch: {r.default_branch} &middot; Connected {new Date(r.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-400">Branch: {r.default_branch} &middot; Connected {new Date(r.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {testResult?.id === r.id && (
-                    <span className={`text-xs px-2 py-1 rounded ${testResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`text-xs px-2 py-1 rounded ${testResult.success ? 'bg-green-900/30 text-green-700' : 'bg-red-900/30 text-red-700'}`}>
                       {testResult.success ? <FiCheck className="inline mr-1" /> : <FiX className="inline mr-1" />}
                       {testResult.message}
                     </span>
@@ -160,7 +160,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
                   <button
                     onClick={() => handleTest(r.id)}
                     disabled={testing === r.id}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                    className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
                     title="Test connection"
                   >
                     <FiRefreshCw className={`h-4 w-4 ${testing === r.id ? 'animate-spin' : ''}`} />
@@ -168,7 +168,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
                   <button
                     onClick={() => setDeleteConfirm(r.id)}
                     disabled={deleting === r.id}
-                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-900/20 rounded transition-colors"
                     title="Disconnect"
                   >
                     <FiTrash2 className="h-4 w-4" />
@@ -187,54 +187,54 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
         title="Connect GitHub Repository"
         size="lg"
       >
-        <p className="text-sm text-gray-500 mb-4">
-          Provide a personal access token with <code className="bg-gray-100 px-1 rounded">repo</code> scope
+        <p className="text-sm text-slate-400 mb-4">
+          Provide a personal access token with <code className="bg-slate-800 px-1 rounded">repo</code> scope
         </p>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Owner</label>
               <input
                 type="text"
                 value={owner}
                 onChange={e => setOwner(e.target.value)}
                 placeholder="octocat"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Repository</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Repository</label>
               <input
                 type="text"
                 value={repo}
                 onChange={e => setRepo(e.target.value)}
                 placeholder="my-app"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Default Branch</label>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Default Branch</label>
             <input
               type="text"
               value={branch}
               onChange={e => setBranch(e.target.value)}
               placeholder="main"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Personal Access Token</label>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Personal Access Token</label>
             <input
               type="password"
               value={token}
               onChange={e => setToken(e.target.value)}
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Create at GitHub &gt; Settings &gt; Developer settings &gt; Personal access tokens.
-              Needs <code className="bg-gray-100 px-1 rounded">repo</code> scope.
+              Needs <code className="bg-slate-800 px-1 rounded">repo</code> scope.
             </p>
           </div>
         </div>
@@ -242,14 +242,14 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
         <ModalFooter>
           <button
             onClick={() => setShowAddModal(false)}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="px-4 py-2 text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleAdd}
             disabled={saving || !owner.trim() || !repo.trim() || !token.trim()}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
           >
             {saving ? 'Connecting...' : 'Connect'}
           </button>

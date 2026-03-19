@@ -66,7 +66,7 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div className="relative">
-        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 h-5 w-5" />
         <Input
           ref={inputRef}
           type="text"
@@ -83,7 +83,7 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               setLocalValue('');
               onChange('');
             }}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-400"
             aria-label="Clear search"
           >
             <FiX className="h-4 w-4" />
@@ -97,7 +97,7 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
           {filters.map((filter) => (
             <span
               key={filter.key}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-md"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-primary-900/30 text-primary-300 text-xs rounded-md"
             >
               <span className="font-medium">{filter.label}:</span>
               <span>{filter.value}</span>
@@ -127,8 +127,8 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 
       {/* Keyboard shortcut hint */}
       {isFocused && (
-        <div className="absolute right-3 top-full mt-1 text-xs text-gray-500 bg-white border border-gray-200 rounded px-2 py-1 shadow-sm">
-          Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">⌘K</kbd> to focus
+        <div className="absolute right-3 top-full mt-1 text-xs text-slate-400 bg-slate-800 border border-slate-700 rounded px-2 py-1 shadow-sm">
+          Press <kbd className="px-1 py-0.5 bg-slate-800 rounded text-xs">⌘K</kbd> to focus
         </div>
       )}
     </div>

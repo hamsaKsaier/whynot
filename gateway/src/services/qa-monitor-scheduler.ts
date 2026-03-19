@@ -8,6 +8,8 @@
 import axios from 'axios';
 import { createLogger } from '../../shared/logger/logger';
 import { QAMonitorRepository, QAMonitorEntity } from '../../shared/database/repositories/qa-monitor-repository';
+import { sendMonitorAlertEmail, sendScanCompleteEmail } from './email-service';
+import { query as dbQuery } from '../../shared/database/connection';
 
 const logger = createLogger('qa-monitor-scheduler');
 
@@ -193,6 +195,36 @@ async function pollSessionCompletion(
           status: isPass ? 'pass' : 'fail',
           previousScore,
         });
+
+        // Send email notifications to workspace members
+        try {
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          if (monitor?.workspace_id) {
+            // Find workspace members to notify
+            const members = await dbQuery<{ user_id: string }>(
+              'SELECT user_id FROM workspace_members WHERE workspace_id = $1',
+              [monitor.workspace_id],
+            );
+            for (const member of members) {
+              if (!isPass) {
+                sendMonitorAlertEmail(member.user_id, {
+                  monitorName: monitor.name,
+                  url: monitor.target_url,
+                  alertType: status === 'failed' ? 'Session failed' : `Quality score ${qualityScore}% below threshold ${qualityThreshold}%`,
+                  dashboardUrl: `${frontendUrl}/monitors`,
+                }).catch(e => logger.warn('Monitor alert email failed', { error: e.message }));
+              }
+              sendScanCompleteEmail(member.user_id, {
+                projectName: monitor.name,
+                bugCount: session.bugs_found || 0,
+                criticalCount: 0,
+                scanUrl: `${frontendUrl}/qa-loop?session=${sessionId}`,
+              }).catch(e => logger.warn('Scan complete email failed', { error: e.message }));
+            }
+          }
+        } catch (emailErr: any) {
+          logger.warn('Failed to send monitor notification emails', { error: emailErr.message });
+        }
 
         return;
       }

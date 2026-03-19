@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         to={item.path}
         className={`flex items-center px-3 py-2 rounded-lg transition-colors group ${active
           ? 'bg-primary-500/10 text-primary-400 font-medium'
-          : 'text-gray-400 hover:bg-navy-700 hover:text-gray-200'
+          : 'text-slate-500 hover:bg-navy-700 hover:text-slate-300'
           }`}
       >
         <Icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? 'mx-auto' : 'mr-3'}`} />
@@ -98,9 +98,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (
-            <FiChevronRight className="h-5 w-5 text-gray-400" />
+            <FiChevronRight className="h-5 w-5 text-slate-500" />
           ) : (
-            <FiChevronLeft className="h-5 w-5 text-gray-400" />
+            <FiChevronLeft className="h-5 w-5 text-slate-500" />
           )}
         </button>
       </div>

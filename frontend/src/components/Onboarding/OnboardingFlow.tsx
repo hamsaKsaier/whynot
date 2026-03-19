@@ -19,36 +19,36 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       content: (
         <div className="space-y-4 text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-primary-100 rounded-full">
+            <div className="p-4 bg-primary-900/30 rounded-full">
               <FiZap className="h-12 w-12 text-primary-600" />
             </div>
           </div>
           <div className="space-y-2 text-left">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-semibold text-sm">
+              <div className="flex-shrink-0 w-6 h-6 bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 font-semibold text-sm">
                 1
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Create Projects</h3>
-                <p className="text-sm text-gray-600">Organize your test cases by application or feature</p>
+                <h3 className="font-semibold text-white">Create Projects</h3>
+                <p className="text-sm text-slate-400">Organize your test cases by application or feature</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-semibold text-sm">
+              <div className="flex-shrink-0 w-6 h-6 bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 font-semibold text-sm">
                 2
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Add User Stories</h3>
-                <p className="text-sm text-gray-600">Describe what users want to accomplish</p>
+                <h3 className="font-semibold text-white">Add User Stories</h3>
+                <p className="text-sm text-slate-400">Describe what users want to accomplish</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-semibold text-sm">
+              <div className="flex-shrink-0 w-6 h-6 bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 font-semibold text-sm">
                 3
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Generate & Run Tests</h3>
-                <p className="text-sm text-gray-600">AI automatically creates and executes test cases</p>
+                <h3 className="font-semibold text-white">Generate & Run Tests</h3>
+                <p className="text-sm text-slate-400">AI automatically creates and executes test cases</p>
               </div>
             </div>
           </div>
@@ -60,16 +60,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       description: 'Projects help you organize test cases by application or feature',
       content: (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center gap-3 p-4 bg-blue-900/20 rounded-lg border border-blue-800">
             <FiFolder className="h-8 w-8 text-blue-600 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-gray-900">Example: E-commerce Website</h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <h3 className="font-semibold text-white">Example: E-commerce Website</h3>
+              <p className="text-sm text-slate-400 mt-1">
                 A project for testing your online store functionality
               </p>
             </div>
           </div>
-          <div className="text-sm text-gray-600 space-y-2">
+          <div className="text-sm text-slate-400 space-y-2">
             <p>• Click "Projects" in the sidebar to get started</p>
             <p>• Give your project a name and optional description</p>
             <p>• Add a website URL if you have one</p>
@@ -82,16 +82,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       description: 'User stories describe what users want to accomplish',
       content: (
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+          <div className="flex items-start gap-3 p-4 bg-green-900/20 rounded-lg border border-green-800">
             <FiBook className="h-8 w-8 text-green-600 flex-shrink-0 mt-1" />
             <div>
-              <h3 className="font-semibold text-gray-900 mb-1">Example User Story</h3>
-              <p className="text-sm text-gray-700 italic">
+              <h3 className="font-semibold text-white mb-1">Example User Story</h3>
+              <p className="text-sm text-slate-200 italic">
                 "As a user, I want to login to the website so that I can access my account"
               </p>
             </div>
           </div>
-          <div className="text-sm text-gray-600 space-y-2">
+          <div className="text-sm text-slate-400 space-y-2">
             <p>• Navigate to your project and click "Add User Story"</p>
             <p>• Write in natural language what the user wants to do</p>
             <p>• Add additional context if needed</p>
@@ -104,16 +104,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       description: 'WhyNot automatically creates test cases from your user stories',
       content: (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-sky-50 rounded-lg border border-sky-200">
+          <div className="flex items-center gap-3 p-4 bg-sky-900/20 rounded-lg border border-sky-700">
             <FiPlay className="h-8 w-8 text-sky-600 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-gray-900">AI-Powered Test Generation</h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <h3 className="font-semibold text-white">AI-Powered Test Generation</h3>
+              <p className="text-sm text-slate-400 mt-1">
                 WhyNot analyzes your user story and creates executable test cases
               </p>
             </div>
           </div>
-          <div className="text-sm text-gray-600 space-y-2">
+          <div className="text-sm text-slate-400 space-y-2">
             <p>• Select a project and user story</p>
             <p>• Click "Generate Tests" to create test cases</p>
             <p>• Or click "Run Test" to generate and execute immediately</p>
@@ -154,14 +154,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
         {/* Progress Indicator */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-slate-200">
               Step {currentStep + 1} of {steps.length}
             </span>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-slate-400">
               {Math.round(((currentStep + 1) / steps.length) * 100)}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-slate-700 rounded-full h-2">
             <div
               className="bg-primary-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}

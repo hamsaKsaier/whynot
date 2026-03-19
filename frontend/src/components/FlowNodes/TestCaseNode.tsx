@@ -29,7 +29,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
 
   return (
     <div
-      className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-sky-500 min-w-[240px] max-w-[280px] cursor-pointer transition-all duration-200 hover:shadow-md"
+      className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 border-l-4 border-l-sky-500 min-w-[240px] max-w-[280px] cursor-pointer transition-all duration-200 hover:shadow-md"
       onClick={handleToggleExpand}
     >
       <Handle
@@ -39,7 +39,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
       />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-1.5">
-          <div className="p-1.5 bg-sky-50 rounded-lg flex-shrink-0">
+          <div className="p-1.5 bg-sky-900/20 rounded-lg flex-shrink-0">
             <FiFileText className="h-3.5 w-3.5 text-sky-600" />
           </div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-600">
@@ -49,13 +49,13 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
             {data.stepCount != null && data.stepCount > 0 && (
               <button
                 onClick={handleToggleExpand}
-                className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-1 rounded-lg hover:bg-slate-800 transition-colors"
                 title={data.isExpanded ? 'Collapse steps' : 'Expand steps'}
               >
                 {data.isExpanded ? (
-                  <FiChevronDown className="h-3.5 w-3.5 text-gray-500" />
+                  <FiChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 ) : (
-                  <FiChevronRight className="h-3.5 w-3.5 text-gray-500" />
+                  <FiChevronRight className="h-3.5 w-3.5 text-slate-400" />
                 )}
               </button>
             )}
@@ -64,8 +64,8 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
               disabled={data.isRunning}
               className={`p-1 rounded-lg transition-all ${
                 data.isRunning
-                  ? 'bg-sky-100 cursor-not-allowed'
-                  : 'hover:bg-sky-50 hover:scale-110'
+                  ? 'bg-sky-900/30 cursor-not-allowed'
+                  : 'hover:bg-sky-900/20 hover:scale-110'
               }`}
               title={data.isRunning ? 'Running...' : 'Run test'}
             >
@@ -77,17 +77,17 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
             </button>
           </div>
         </div>
-        <div className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
+        <div className="font-bold text-white text-sm leading-snug line-clamp-2">
           {data.label}
         </div>
         {data.description && (
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
             {data.description}
           </p>
         )}
         {data.stepCount != null && (
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-sky-50 text-[10px] font-medium text-sky-700">
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-sky-900/20 text-[10px] font-medium text-sky-700">
               {data.stepCount} {data.stepCount === 1 ? 'step' : 'steps'}
             </span>
           </div>

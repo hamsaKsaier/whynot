@@ -138,7 +138,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   return (
   <Card className="p-6">
-    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+    <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
       <FiPlay className="text-green-500" />
       Start New Exploration
     </h2>
@@ -148,7 +148,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       <div>
         {environments && environments.length > 0 && (
           <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-200 mb-1">
               Environment
             </label>
             <select
@@ -156,7 +156,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               onChange={e => {
                 if (e.target.value) setTargetUrl(e.target.value);
               }}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="">Select an environment or type URL below</option>
               {environments.map(env => (
@@ -167,7 +167,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             </select>
           </div>
         )}
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-slate-200 mb-1">
           Target URL
         </label>
         <Input
@@ -182,7 +182,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
       {/* Existing session prompt (Phase 3) */}
       {existingSession && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="p-3 bg-blue-900/20 border border-blue-800 rounded-lg">
           <div className="flex items-start gap-3">
             <FiRefreshCw className="text-blue-500 mt-0.5" />
             <div className="flex-1">
@@ -198,7 +198,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   type="button"
                   onClick={() => setUseExisting(true)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    useExisting ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    useExisting ? 'bg-blue-600 text-white' : 'bg-blue-900/30 text-blue-700 hover:bg-blue-200'
                   }`}
                 >
                   Continue from last run
@@ -207,7 +207,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   type="button"
                   onClick={() => setUseExisting(false)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    !useExisting ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    !useExisting ? 'bg-blue-600 text-white' : 'bg-blue-900/30 text-blue-700 hover:bg-blue-200'
                   }`}
                 >
                   Start fresh
@@ -222,21 +222,21 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       <button
         type="button"
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+        className="flex items-center gap-1 text-sm text-slate-400 hover:text-white"
       >
         {showAdvanced ? <FiChevronUp /> : <FiChevronDown />}
         Advanced Options
       </button>
 
       {showAdvanced && (
-        <div className="space-y-4 pt-2 border-t border-gray-200">
+        <div className="space-y-4 pt-2 border-t border-slate-700">
           {/* Test Priority */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+            <label className="block text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
               Test Priority
               <span className="group relative">
-                <FiInfo className="text-gray-400 cursor-help" size={14} />
-                <span className="invisible group-hover:visible absolute left-0 top-6 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10">
+                <FiInfo className="text-slate-500 cursor-help" size={14} />
+                <span className="invisible group-hover:visible absolute left-0 top-6 w-64 p-2 bg-slate-900 text-white text-xs rounded shadow-lg z-10">
                   <strong>Functional First:</strong> Explore functionality before security testing<br />
                   <strong>Balanced:</strong> Mix of exploration, security, and stability<br />
                   <strong>Security First:</strong> Start security testing earlier
@@ -246,7 +246,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             <select
               value={testPriority}
               onChange={e => setTestPriority(e.target.value as any)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="functional_first">Functional First (recommended)</option>
               <option value="balanced">Balanced</option>
@@ -256,7 +256,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
           {/* Quality Threshold */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-200 mb-1">
               Quality Threshold (%)
             </label>
             <Input
@@ -271,7 +271,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
           {/* Max Iterations */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-200 mb-1">
               Max Iterations
             </label>
             <Input
@@ -285,32 +285,32 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           </div>
 
           {/* Authentication Credentials */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-slate-700 rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setUseLogin(!useLogin)}
-              className="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-700 p-3 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 w-full text-left text-sm font-medium text-slate-200 p-3 hover:bg-slate-900 transition-colors"
             >
               {useLogin
-                ? <FiChevronUp className="text-gray-400" size={16} />
-                : <FiChevronDown className="text-gray-400" size={16} />
+                ? <FiChevronUp className="text-slate-500" size={16} />
+                : <FiChevronDown className="text-slate-500" size={16} />
               }
-              <FiLock className="text-gray-500" size={14} />
+              <FiLock className="text-slate-400" size={14} />
               Authentication
-              <span className="text-xs text-gray-400 font-normal ml-auto">Optional</span>
+              <span className="text-xs text-slate-500 font-normal ml-auto">Optional</span>
             </button>
 
             {useLogin && (
-              <div className="px-3 pb-3 space-y-3 border-t border-gray-100 pt-3">
-                <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+              <div className="px-3 pb-3 space-y-3 border-t border-slate-700 pt-3">
+                <div className="flex items-start gap-2 p-2 bg-amber-900/20 border border-amber-700 rounded text-xs text-amber-800">
                   <FiInfo className="shrink-0 mt-0.5" size={13} />
                   <span>Credentials are encrypted and used only for automated testing</span>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Test Username</label>
+                  <label className="block text-xs text-slate-400 mb-1">Test Username</label>
                   <div className="relative">
-                    <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                    <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={14} />
                     <Input
                       type="text"
                       placeholder="test@example.com"
@@ -322,9 +322,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Test Password</label>
+                  <label className="block text-xs text-slate-400 mb-1">Test Password</label>
                   <div className="relative">
-                    <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                    <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={14} />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
@@ -335,7 +335,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-400"
                     >
                       {showPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
                     </button>
@@ -343,7 +343,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Login URL (optional)</label>
+                  <label className="block text-xs text-slate-400 mb-1">Login URL (optional)</label>
                   <Input
                     type="text"
                     placeholder="Leave empty to use target URL"
@@ -354,7 +354,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 </div>
 
                 <details className="text-xs">
-                  <summary className="text-gray-500 cursor-pointer hover:text-gray-700">
+                  <summary className="text-slate-400 cursor-pointer hover:text-slate-200">
                     Custom selectors (advanced)
                   </summary>
                   <div className="mt-2 space-y-2">
@@ -387,7 +387,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
           {/* Quick context paste */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-200 mb-1">
               Quick Context (paste)
             </label>
             <Textarea
@@ -401,7 +401,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
           {/* Document upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
               Documents (upload files)
             </label>
             <DocumentUpload
@@ -413,9 +413,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               disabled={!activeSession}
             />
             {!activeSession && (
-              <p className="text-xs text-gray-500 mt-1">Start a session to upload documents</p>
+              <p className="text-xs text-slate-400 mt-1">Start a session to upload documents</p>
             )}
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               Upload PRDs, specs, or documentation to help the AI understand your application.
             </p>
           </div>

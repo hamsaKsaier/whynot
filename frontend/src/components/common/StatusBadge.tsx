@@ -14,27 +14,27 @@ interface StatusBadgeProps {
 const statusConfig = {
   success: {
     icon: FiCheckCircle,
-    color: 'bg-green-100 text-green-800 border-green-200',
+    color: 'bg-green-900/30 text-green-300 border-green-800',
   },
   error: {
     icon: FiXCircle,
-    color: 'bg-red-100 text-red-800 border-red-200',
+    color: 'bg-red-900/30 text-red-300 border-red-800',
   },
   warning: {
     icon: FiAlertCircle,
-    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    color: 'bg-yellow-900/30 text-yellow-300 border-yellow-700',
   },
   info: {
     icon: FiInfo,
-    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    color: 'bg-blue-900/30 text-blue-300 border-blue-800',
   },
   pending: {
     icon: FiClock,
-    color: 'bg-gray-100 text-gray-800 border-gray-200',
+    color: 'bg-slate-800 text-slate-200 border-slate-700',
   },
   running: {
     icon: FiClock,
-    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    color: 'bg-blue-900/30 text-blue-300 border-blue-800',
   },
 };
 

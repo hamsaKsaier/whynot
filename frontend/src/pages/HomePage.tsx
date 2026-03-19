@@ -71,7 +71,7 @@ export const HomePage: React.FC = () => {
       {!showOnboarding && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Overview</h2>
+            <h2 className="text-lg font-semibold text-white">Overview</h2>
             {statsError && (
               <Button variant="secondary" onClick={fetchStats} className="text-sm">
                 <FiRefreshCw className="mr-1 h-3 w-3" /> Retry
@@ -111,8 +111,8 @@ export const HomePage: React.FC = () => {
       {!showOnboarding && stats?.recentSessions && stats.recentSessions.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Recent QA Sessions</h2>
-            <Link to="/qa-loop" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+            <h2 className="text-lg font-semibold text-white">Recent QA Sessions</h2>
+            <Link to="/qa-loop" className="text-sm text-primary-600 hover:text-primary-300 font-medium">
               View all
             </Link>
           </div>
@@ -127,17 +127,17 @@ export const HomePage: React.FC = () => {
                       size="sm"
                     />
                     <div>
-                      <div className="font-medium text-gray-900 truncate max-w-md">
+                      <div className="font-medium text-white truncate max-w-md">
                         {(() => {
                           try { return new URL(session.target_url).hostname; } catch { return session.target_url; }
                         })()}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-400">
                         {formatRelativeTime(session.created_at)}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-4 text-sm text-slate-400">
                     {session.quality_score > 0 && (
                       <span className="font-medium">{session.quality_score}% quality</span>
                     )}
@@ -160,13 +160,13 @@ export const HomePage: React.FC = () => {
               <FiZap className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Autonomous QA Loop</h2>
-          <p className="text-gray-600 mb-8 max-w-xl mx-auto text-base leading-relaxed">
+          <h2 className="text-2xl font-bold text-white mb-2">Autonomous QA Loop</h2>
+          <p className="text-slate-400 mb-8 max-w-xl mx-auto text-base leading-relaxed">
             Point the AI at any URL and let it autonomously explore your app, generate test cases,
             and find bugs — while you focus on building.
           </p>
 
-          <div className="flex justify-center gap-6 text-sm text-gray-500 mb-8">
+          <div className="flex justify-center gap-6 text-sm text-slate-400 mb-8">
             <div className="flex items-center gap-2">
               <FiGlobe className="text-blue-500 h-4 w-4" />
               <span>Explores all pages</span>

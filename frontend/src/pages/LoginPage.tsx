@@ -53,7 +53,7 @@ export const LoginPage: React.FC = () => {
             <FiZap className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">WhyNot QA</h1>
-          <p className="text-sm text-gray-400 mt-1">AI-powered test automation</p>
+          <p className="text-sm text-slate-500 mt-1">AI-powered test automation</p>
         </div>
 
         <div className="bg-navy-800 rounded-2xl shadow-lg border border-navy-700 p-8">
@@ -63,7 +63,7 @@ export const LoginPage: React.FC = () => {
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                 mode === 'login'
                   ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-white'
+                  : 'text-slate-500 hover:text-white'
               }`}
               onClick={() => { setMode('login'); setError(null); }}
             >
@@ -73,7 +73,7 @@ export const LoginPage: React.FC = () => {
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                 mode === 'register'
                   ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-white'
+                  : 'text-slate-500 hover:text-white'
               }`}
               onClick={() => { setMode('register'); setError(null); }}
             >
@@ -85,14 +85,14 @@ export const LoginPage: React.FC = () => {
           <div className="space-y-3 mb-6">
             <a
               href={`${apiBase}/auth/github`}
-              className="flex items-center justify-center gap-3 w-full py-2.5 px-4 border border-navy-700 rounded-lg text-sm font-medium text-gray-200 hover:bg-navy-700 transition-colors"
+              className="flex items-center justify-center gap-3 w-full py-2.5 px-4 border border-navy-700 rounded-lg text-sm font-medium text-slate-300 hover:bg-navy-700 transition-colors"
             >
               <FiGithub className="h-5 w-5" />
               Continue with GitHub
             </a>
             <a
               href={`${apiBase}/auth/google`}
-              className="flex items-center justify-center gap-3 w-full py-2.5 px-4 border border-navy-700 rounded-lg text-sm font-medium text-gray-200 hover:bg-navy-700 transition-colors"
+              className="flex items-center justify-center gap-3 w-full py-2.5 px-4 border border-navy-700 rounded-lg text-sm font-medium text-slate-300 hover:bg-navy-700 transition-colors"
             >
               <FcGoogle className="h-5 w-5" />
               Continue with Google
@@ -101,7 +101,7 @@ export const LoginPage: React.FC = () => {
 
           <div className="flex items-center gap-3 mb-6">
             <div className="flex-1 h-px bg-navy-700" />
-            <span className="text-xs text-gray-500">or</span>
+            <span className="text-xs text-slate-400">or</span>
             <div className="flex-1 h-px bg-navy-700" />
           </div>
 
@@ -109,11 +109,11 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-400 mb-1">
                   Full name
                 </label>
                 <div className="relative">
-                  <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
                     value={name}
@@ -127,11 +127,11 @@ export const LoginPage: React.FC = () => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-400 mb-1">
                 Email address
               </label>
               <div className="relative">
-                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="email"
                   value={email}
@@ -144,11 +144,11 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-400 mb-1">
                 Password
               </label>
               <div className="relative">
-                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="password"
                   value={password}

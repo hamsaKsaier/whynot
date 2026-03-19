@@ -15,7 +15,7 @@ export const UserStoryNode: React.FC<NodeProps<UserStoryNodeData>> = ({ data }) 
   const displayUrl = data.website_url || parsedUrl;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-green-500 min-w-[240px] max-w-[280px] transition-all duration-200 hover:shadow-md">
+    <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 border-l-4 border-l-green-500 min-w-[240px] max-w-[280px] transition-all duration-200 hover:shadow-md">
       <Handle
         type="target"
         position={Position.Top}
@@ -23,19 +23,19 @@ export const UserStoryNode: React.FC<NodeProps<UserStoryNodeData>> = ({ data }) 
       />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-1.5">
-          <div className="p-1.5 bg-green-50 rounded-lg flex-shrink-0">
+          <div className="p-1.5 bg-green-900/20 rounded-lg flex-shrink-0">
             <FiBook className="h-3.5 w-3.5 text-green-600" />
           </div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-green-600">
             User Story
           </span>
         </div>
-        <div className="text-sm text-gray-800 leading-snug line-clamp-3">
+        <div className="text-sm text-slate-200 leading-snug line-clamp-3">
           {parsedStory}
         </div>
         {displayUrl && (
-          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100">
-            <FiGlobe className="h-3 w-3 text-gray-400 flex-shrink-0" />
+          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-700">
+            <FiGlobe className="h-3 w-3 text-slate-500 flex-shrink-0" />
             <span className="text-[11px] text-green-600 truncate">
               {displayUrl}
             </span>

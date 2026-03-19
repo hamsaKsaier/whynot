@@ -41,23 +41,23 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, isCurrentPlan, onUpgra
       {isCurrentPlan && (
         <div className="text-xs font-semibold text-primary-600 uppercase mb-2">Current Plan</div>
       )}
-      <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-      <p className="text-sm text-gray-500 mt-1 flex-1">{plan.description}</p>
+      <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+      <p className="text-sm text-slate-400 mt-1 flex-1">{plan.description}</p>
 
       <div className="mt-4">
         {plan.is_custom ? (
-          <span className="text-2xl font-bold text-gray-900">Custom</span>
+          <span className="text-2xl font-bold text-white">Custom</span>
         ) : plan.price_cents === 0 ? (
-          <span className="text-2xl font-bold text-gray-900">Free</span>
+          <span className="text-2xl font-bold text-white">Free</span>
         ) : (
           <div>
-            <span className="text-2xl font-bold text-gray-900">${price}</span>
-            <span className="text-sm text-gray-500">{interval}</span>
+            <span className="text-2xl font-bold text-white">${price}</span>
+            <span className="text-sm text-slate-400">{interval}</span>
           </div>
         )}
       </div>
 
-      <div className="mt-2 text-sm text-gray-600">
+      <div className="mt-2 text-sm text-slate-400">
         {plan.credits_per_period > 0
           ? `${plan.credits_per_period.toLocaleString()} credits${interval}`
           : 'Custom credits'}
@@ -65,13 +65,13 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, isCurrentPlan, onUpgra
 
       <ul className="mt-4 space-y-2">
         {enabledFeatures.map((f) => (
-          <li key={f} className="flex items-center text-sm text-gray-700">
+          <li key={f} className="flex items-center text-sm text-slate-200">
             <FiCheck className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
             {f}
           </li>
         ))}
         {plan.features.max_projects && (
-          <li className="flex items-center text-sm text-gray-700">
+          <li className="flex items-center text-sm text-slate-200">
             <FiCheck className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
             {plan.features.max_projects === '-1' ? 'Unlimited' : plan.features.max_projects} projects
           </li>

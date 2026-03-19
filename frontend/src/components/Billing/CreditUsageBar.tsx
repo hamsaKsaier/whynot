@@ -12,13 +12,13 @@ export const CreditUsageBar: React.FC<CreditUsageBarProps> = ({ used, total, rem
 
   return (
     <div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-slate-700 rounded-full h-2">
         <div
           className={`${color} h-2 rounded-full transition-all duration-300`}
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <div className="flex justify-between text-xs text-gray-500 mt-1">
+      <div className="flex justify-between text-xs text-slate-400 mt-1">
         <span>{used} used</span>
         <span>{remaining} remaining</span>
       </div>

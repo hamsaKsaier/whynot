@@ -35,7 +35,7 @@ interface AutoFixButtonProps {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending: { label: 'Starting...', color: 'text-gray-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
+  pending: { label: 'Starting...', color: 'text-slate-400', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
   analyzing: { label: 'Analyzing code...', color: 'text-blue-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
   generating: { label: 'Generating fix...', color: 'text-sky-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
   pr_created: { label: 'PR Created', color: 'text-green-600', icon: <FiGitPullRequest className="h-3 w-3" /> },
@@ -180,37 +180,37 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
     <>
       <button
         onClick={handleOpen}
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-sky-50 text-sky-600 hover:bg-sky-100 transition-colors ${className}`}
+        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-sky-900/20 text-sky-600 hover:bg-sky-900/30 transition-colors ${className}`}
         title="Auto-fix: Generate a PR to fix this bug"
       >
         <FiGitPullRequest className="h-3 w-3" />
         <span>Auto-Fix</span>
-        <span className="text-[10px] px-1 py-0.5 bg-amber-100 text-amber-700 rounded font-medium leading-none">Experimental</span>
+        <span className="text-[10px] px-1 py-0.5 bg-amber-900/30 text-amber-300 rounded font-medium leading-none">Experimental</span>
       </button>
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleClose}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-slate-800 rounded-xl shadow-xl w-full max-w-xl mx-4 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="p-5 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <div className="p-5 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <FiGitPullRequest className="h-5 w-5 text-sky-600" />
                 Auto-Fix Bug
-                <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">Experimental</span>
+                <span className="text-xs px-1.5 py-0.5 bg-amber-900/30 text-amber-300 rounded font-medium">Experimental</span>
               </h3>
-              <p className="text-sm text-gray-500 mt-1 truncate">{bugTitle}</p>
+              <p className="text-sm text-slate-400 mt-1 truncate">{bugTitle}</p>
             </div>
 
             {/* Body */}
             <div className="p-5 overflow-y-auto flex-1">
               {loading ? (
-                <div className="text-center py-4 text-gray-500">Loading...</div>
+                <div className="text-center py-4 text-slate-400">Loading...</div>
               ) : repos.length === 0 ? (
                 <div className="text-center py-6">
-                  <p className="text-gray-500 mb-3">No GitHub repositories connected</p>
+                  <p className="text-slate-400 mb-3">No GitHub repositories connected</p>
                   <a
                     href="/github-repos"
-                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                    className="text-primary-600 hover:text-primary-300 text-sm font-medium"
                   >
                     Go to GitHub Repos to connect your repository
                   </a>
@@ -220,23 +220,23 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                   {/* Previous attempts */}
                   {attempts.length > 0 && !currentAttempt && (
                     <div className="mb-4">
-                      <div className="text-xs font-medium text-gray-500 uppercase mb-2">Previous Attempts</div>
+                      <div className="text-xs font-medium text-slate-400 uppercase mb-2">Previous Attempts</div>
                       <div className="space-y-2">
                         {attempts.slice(0, 5).map((attempt) => {
                           const statusInfo = STATUS_LABELS[attempt.status] || STATUS_LABELS.pending;
                           return (
-                            <div key={attempt.id} className="p-3 bg-gray-50 rounded-lg">
+                            <div key={attempt.id} className="p-3 bg-slate-900 rounded-lg">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   {statusInfo.icon}
                                   <span className={`text-sm font-medium ${statusInfo.color}`}>{statusInfo.label}</span>
                                   {attempt.iteration_count > 1 && (
-                                    <span className="text-xs text-gray-400">
+                                    <span className="text-xs text-slate-500">
                                       (iter {attempt.iteration_count}/{attempt.max_iterations})
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-xs text-gray-400">{new Date(attempt.created_at).toLocaleString()}</span>
+                                <span className="text-xs text-slate-500">{new Date(attempt.created_at).toLocaleString()}</span>
                               </div>
                               <div className="flex items-center gap-3 mt-1">
                                 {attempt.pr_url && (
@@ -244,14 +244,14 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                                     href={attempt.pr_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
+                                    className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-300"
                                   >
                                     <FiExternalLink className="h-3 w-3" />
                                     PR #{attempt.pr_number}
                                   </a>
                                 )}
                                 {attempt.quality_score_after !== null && (
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-slate-400">
                                     Quality: {attempt.quality_score_before ?? '?'} → {attempt.quality_score_after}
                                   </span>
                                 )}
@@ -280,9 +280,9 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                               const isCurrent = step === currentAttempt.status || (currentAttempt.status === 'pending' && step === 'analyzing');
                               return (
                                 <React.Fragment key={step}>
-                                  {i > 0 && <div className={`h-0.5 w-6 ${isActive ? 'bg-sky-500' : 'bg-gray-200'}`} />}
+                                  {i > 0 && <div className={`h-0.5 w-6 ${isActive ? 'bg-sky-500' : 'bg-slate-700'}`} />}
                                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                                    ${isActive ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-500'}
+                                    ${isActive ? 'bg-sky-500 text-white' : 'bg-slate-700 text-slate-400'}
                                     ${isCurrent ? 'ring-2 ring-sky-300' : ''}`}>
                                     {i + 1}
                                   </div>
@@ -292,7 +292,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           </div>
                           <div className="flex justify-center mt-2" style={{ gap: isLoopMode ? '0.5rem' : '1rem' }}>
                             {stepLabels.map((label) => (
-                              <span key={label} className="text-xs text-gray-500">{label}</span>
+                              <span key={label} className="text-xs text-slate-400">{label}</span>
                             ))}
                           </div>
                         </div>
@@ -300,12 +300,12 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                         {/* Iteration indicator for loop mode */}
                         {currentAttempt.iteration_count > 0 && currentAttempt.max_iterations > 1 && (
                           <div className="mb-3">
-                            <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                            <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
                               <FiRefreshCw className="h-3 w-3" />
                               Iteration {currentAttempt.iteration_count} of {currentAttempt.max_iterations}
                             </div>
                             {/* Iteration progress bar */}
-                            <div className="w-48 mx-auto mt-1.5 bg-gray-100 rounded-full h-1.5">
+                            <div className="w-48 mx-auto mt-1.5 bg-slate-800 rounded-full h-1.5">
                               <div
                                 className="bg-sky-500 h-1.5 rounded-full transition-all"
                                 style={{ width: `${(currentAttempt.iteration_count / currentAttempt.max_iterations) * 100}%` }}
@@ -324,22 +324,22 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                       {/* Verified state */}
                       {currentAttempt.status === 'verified' && (
-                        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                        <div className="bg-green-900/20 border border-green-800 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-green-700 font-semibold mb-2">
                             <FiCheck className="h-5 w-5" />
                             Bug Verified Fixed!
                           </div>
                           <div className="grid grid-cols-2 gap-3 mb-3">
                             {currentAttempt.quality_score_before !== null && (
-                              <div className="text-center p-2 bg-green-100 rounded">
+                              <div className="text-center p-2 bg-green-900/30 rounded">
                                 <div className="text-xs text-green-600">Before</div>
-                                <div className="text-lg font-bold text-green-800">{currentAttempt.quality_score_before}</div>
+                                <div className="text-lg font-bold text-green-300">{currentAttempt.quality_score_before}</div>
                               </div>
                             )}
                             {currentAttempt.quality_score_after !== null && (
-                              <div className="text-center p-2 bg-green-100 rounded">
+                              <div className="text-center p-2 bg-green-900/30 rounded">
                                 <div className="text-xs text-green-600">After</div>
-                                <div className="text-lg font-bold text-green-800">{currentAttempt.quality_score_after}</div>
+                                <div className="text-lg font-bold text-green-300">{currentAttempt.quality_score_after}</div>
                               </div>
                             )}
                           </div>
@@ -356,7 +356,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           )}
                           {currentAttempt.claude_reasoning && (
                             <div className="mt-3">
-                              <div className="text-sm font-medium text-green-800 mb-1">Fix Explanation:</div>
+                              <div className="text-sm font-medium text-green-300 mb-1">Fix Explanation:</div>
                               <p className="text-sm text-green-700">{currentAttempt.claude_reasoning}</p>
                             </div>
                           )}
@@ -365,7 +365,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                       {/* PR Created (simple mode) */}
                       {currentAttempt.status === 'pr_created' && mode === 'simple' && (
-                        <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="bg-green-900/20 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
                             <FiCheck className="h-5 w-5" />
                             Pull Request Created!
@@ -383,16 +383,16 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           )}
                           {currentAttempt.claude_reasoning && (
                             <div className="mt-3">
-                              <div className="text-sm font-medium text-green-800 mb-1">Fix Explanation:</div>
+                              <div className="text-sm font-medium text-green-300 mb-1">Fix Explanation:</div>
                               <p className="text-sm text-green-700">{currentAttempt.claude_reasoning}</p>
                             </div>
                           )}
                           {currentAttempt.relevant_files && currentAttempt.relevant_files.length > 0 && (
                             <div className="mt-3">
-                              <div className="text-sm font-medium text-green-800 mb-1">Files Modified:</div>
+                              <div className="text-sm font-medium text-green-300 mb-1">Files Modified:</div>
                               <div className="space-y-1">
                                 {(Array.isArray(currentAttempt.relevant_files) ? currentAttempt.relevant_files : []).map((f: string) => (
-                                  <div key={f} className="text-xs text-green-700 font-mono bg-green-100 px-2 py-1 rounded">{f}</div>
+                                  <div key={f} className="text-xs text-green-700 font-mono bg-green-900/30 px-2 py-1 rounded">{f}</div>
                                 ))}
                               </div>
                             </div>
@@ -402,7 +402,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                       {/* Needs Review state */}
                       {currentAttempt.status === 'needs_review' && (
-                        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                        <div className="bg-yellow-900/20 border border-yellow-700 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-yellow-700 font-semibold mb-2">
                             <FiAlertTriangle className="h-5 w-5" />
                             Manual Review Needed
@@ -414,15 +414,15 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           </p>
                           <div className="grid grid-cols-2 gap-3 mb-3">
                             {currentAttempt.quality_score_before !== null && (
-                              <div className="text-center p-2 bg-yellow-100 rounded">
+                              <div className="text-center p-2 bg-yellow-900/30 rounded">
                                 <div className="text-xs text-yellow-600">Before</div>
-                                <div className="text-lg font-bold text-yellow-800">{currentAttempt.quality_score_before}</div>
+                                <div className="text-lg font-bold text-yellow-300">{currentAttempt.quality_score_before}</div>
                               </div>
                             )}
                             {currentAttempt.quality_score_after !== null && (
-                              <div className="text-center p-2 bg-yellow-100 rounded">
+                              <div className="text-center p-2 bg-yellow-900/30 rounded">
                                 <div className="text-xs text-yellow-600">After</div>
-                                <div className="text-lg font-bold text-yellow-800">{currentAttempt.quality_score_after}</div>
+                                <div className="text-lg font-bold text-yellow-300">{currentAttempt.quality_score_after}</div>
                               </div>
                             )}
                           </div>
@@ -442,7 +442,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                       {/* Failed state */}
                       {currentAttempt.status === 'failed' && (
-                        <div className="bg-red-50 p-4 rounded-lg">
+                        <div className="bg-red-900/20 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-red-700 font-medium mb-1">
                             <FiX className="h-5 w-5" />
                             Auto-Fix Failed
@@ -456,11 +456,11 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                     <div className="space-y-4">
                       {/* Repo selector */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Repository</label>
+                        <label className="block text-sm font-medium text-slate-200 mb-1">Target Repository</label>
                         <select
                           value={selectedRepo}
                           onChange={e => setSelectedRepo(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500"
                         >
                           {repos.map(r => (
                             <option key={r.id} value={r.id}>{r.owner}/{r.repo}</option>
@@ -470,24 +470,24 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                       {/* Mode selector */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Fix Mode</label>
+                        <label className="block text-sm font-medium text-slate-200 mb-2">Fix Mode</label>
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
                             onClick={() => setMode('loop')}
                             className={`p-3 rounded-lg border-2 text-left transition-all ${
                               mode === 'loop'
-                                ? 'border-sky-500 bg-sky-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-sky-500 bg-sky-900/20'
+                                : 'border-slate-700 hover:border-slate-600'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
-                              <FiZap className={`h-4 w-4 ${mode === 'loop' ? 'text-sky-600' : 'text-gray-400'}`} />
-                              <span className={`text-sm font-semibold ${mode === 'loop' ? 'text-sky-700' : 'text-gray-700'}`}>
+                              <FiZap className={`h-4 w-4 ${mode === 'loop' ? 'text-sky-600' : 'text-slate-500'}`} />
+                              <span className={`text-sm font-semibold ${mode === 'loop' ? 'text-sky-700' : 'text-slate-200'}`}>
                                 Fix + Merge + Verify
                               </span>
                             </div>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-slate-400">
                               Fix → PR → Merge → Retest → Iterate until quality met
                             </p>
                           </button>
@@ -496,17 +496,17 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                             onClick={() => setMode('simple')}
                             className={`p-3 rounded-lg border-2 text-left transition-all ${
                               mode === 'simple'
-                                ? 'border-sky-500 bg-sky-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-sky-500 bg-sky-900/20'
+                                : 'border-slate-700 hover:border-slate-600'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
-                              <FiCode className={`h-4 w-4 ${mode === 'simple' ? 'text-sky-600' : 'text-gray-400'}`} />
-                              <span className={`text-sm font-semibold ${mode === 'simple' ? 'text-sky-700' : 'text-gray-700'}`}>
+                              <FiCode className={`h-4 w-4 ${mode === 'simple' ? 'text-sky-600' : 'text-slate-500'}`} />
+                              <span className={`text-sm font-semibold ${mode === 'simple' ? 'text-sky-700' : 'text-slate-200'}`}>
                                 PR Only
                               </span>
                             </div>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-slate-400">
                               Generate fix and create PR (no retest)
                             </p>
                           </button>
@@ -516,16 +516,16 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       {/* Loop options */}
                       {mode === 'loop' && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg">
                             <div>
-                              <div className="text-sm font-medium text-gray-700">Auto-merge PRs</div>
-                              <div className="text-xs text-gray-500">Automatically merge PRs into the default branch</div>
+                              <div className="text-sm font-medium text-slate-200">Auto-merge PRs</div>
+                              <div className="text-xs text-slate-400">Automatically merge PRs into the default branch</div>
                             </div>
                             <button
                               type="button"
                               onClick={() => setAutoMerge(!autoMerge)}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                autoMerge ? 'bg-sky-500' : 'bg-gray-300'
+                                autoMerge ? 'bg-sky-500' : 'bg-slate-600'
                               }`}
                             >
                               <span
@@ -537,11 +537,11 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Max Iterations</label>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">Max Iterations</label>
                             <select
                               value={maxIterations}
                               onChange={e => setMaxIterations(Number(e.target.value))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                              className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
                             >
                               <option value={1}>1</option>
                               <option value={2}>2</option>
@@ -550,11 +550,11 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                             </select>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Quality Target</label>
+                            <label className="block text-xs font-medium text-slate-400 mb-1">Quality Target</label>
                             <select
                               value={qualityThreshold}
                               onChange={e => setQualityThreshold(Number(e.target.value))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                              className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
                             >
                               <option value={60}>60% (lenient)</option>
                               <option value={70}>70%</option>
@@ -567,7 +567,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       )}
 
                       {/* How it works */}
-                      <div className="bg-sky-50 p-4 rounded-lg text-sm text-sky-700">
+                      <div className="bg-sky-900/20 p-4 rounded-lg text-sm text-sky-700">
                         <p className="font-medium mb-1">How it works:</p>
                         <ol className="list-decimal list-inside space-y-1 text-xs">
                           <li>AI analyzes the bug report and finds relevant source files</li>
@@ -589,10 +589,10 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
             </div>
 
             {/* Footer */}
-            <div className="p-5 border-t border-gray-200 flex justify-end gap-3">
+            <div className="p-5 border-t border-slate-700 flex justify-end gap-3">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 Close
               </button>

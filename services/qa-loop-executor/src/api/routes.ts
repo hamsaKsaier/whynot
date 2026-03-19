@@ -87,7 +87,8 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
       documentContext,
       config: sessionConfig,
       loginCredentials,
-      testPriority
+      testPriority,
+      workspaceId: resolvedWorkspaceId,
     });
 
     activeSessions.set(session.id, orchestrator);
@@ -270,7 +271,8 @@ router.post('/api/sessions/:id/resume', async (req: Request, res: Response) => {
         resumeFromIteration: session.iteration_count || 0,
         // Re-inject login credentials if the client supplies them (needed to
         // re-login after the browser context was destroyed)
-        ...(loginCredentials ? { loginCredentials } : {})
+        ...(loginCredentials ? { loginCredentials } : {}),
+        workspaceId: session.workspace_id || undefined,
       });
 
       activeSessions.set(id, newOrchestrator);
@@ -411,10 +413,10 @@ router.post('/api/bugs/:bugId/retest', async (req: Request, res: Response) => {
       config: { sourceSessionId: bug.session_id, singleBugRetest: true, bugId }
     });
 
-    // Clone just this one test case into the new session
+    // Clone just this one test case into the new session (including playwright_code)
     await pool.query(
-      `INSERT INTO qa_loop_test_cases (id, session_id, project_id, name, description, category, priority, risk_level, steps, selectors, source, source_page_url)
-       SELECT gen_random_uuid(), $2, project_id, name, description, category, priority, risk_level, steps, selectors, 'retest', source_page_url
+      `INSERT INTO qa_loop_test_cases (id, session_id, project_id, name, description, category, priority, risk_level, steps, selectors, source, source_page_url, playwright_code)
+       SELECT gen_random_uuid(), $2, project_id, name, description, category, priority, risk_level, steps, selectors, 'retest', source_page_url, playwright_code
        FROM qa_loop_test_cases WHERE id = $1`,
       [testCaseId, retestSession.id]
     );
@@ -814,6 +816,154 @@ router.delete('/api/sessions/:id/documents/:docId', async (req: Request, res: Re
     res.status(500).json({ error: 'Failed to delete document' });
   }
 });
+
+// ==================== PLAYWRIGHT EXPORT ENDPOINTS ====================
+
+// Export single test case as Playwright .spec.ts file
+router.get('/api/test-cases/:testCaseId/export-playwright', async (req: Request, res: Response) => {
+  try {
+    const { testCaseId } = req.params;
+    const testCase = await qaLoopRepository.getTestCaseById(testCaseId);
+
+    if (!testCase) {
+      return res.status(404).json({ error: 'Test case not found' });
+    }
+
+    if (!testCase.playwright_code) {
+      return res.status(404).json({ error: 'No Playwright code available for this test case' });
+    }
+
+    // Get session for target URL
+    const session = await qaLoopRepository.getSession(testCase.session_id);
+    const targetUrl = session?.target_url || 'unknown';
+
+    // Mask any hardcoded credentials
+    let code = testCase.playwright_code;
+    code = maskCredentials(code);
+
+    const header = generateExportHeader(targetUrl);
+    const fullCode = `${header}\n${code}\n`;
+    const filename = sanitizeFilename(testCase.name) + '.spec.ts';
+
+    res.setHeader('Content-Type', 'text/typescript');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(fullCode);
+  } catch (error: any) {
+    logger.error('Failed to export test case Playwright code', { error: error.message });
+    res.status(500).json({ error: 'Failed to export Playwright code' });
+  }
+});
+
+// Export entire test suite as combined Playwright file
+router.get('/api/test-suites/:suiteId/export-playwright', async (req: Request, res: Response) => {
+  try {
+    const { suiteId } = req.params;
+    const pool = (qaLoopRepository as any).pool;
+
+    // Get suite info
+    const suiteResult = await pool.query(
+      'SELECT ts.name, ts.description FROM test_suites ts WHERE ts.id = $1',
+      [suiteId]
+    );
+
+    if (suiteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Test suite not found' });
+    }
+
+    const suiteName = suiteResult.rows[0].name;
+
+    // Get all test cases in this suite that have playwright_code
+    const testCasesResult = await pool.query(
+      `SELECT tc.name, tc.playwright_code, tc.source_page_url
+       FROM qa_loop_test_cases tc
+       WHERE tc.test_suite_id = $1 AND tc.playwright_code IS NOT NULL
+       ORDER BY tc.priority DESC, tc.created_at ASC`,
+      [suiteId]
+    );
+
+    if (testCasesResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No test cases with Playwright code found in this suite' });
+    }
+
+    // Get target URL from session linked to the suite
+    const sessionResult = await pool.query(
+      'SELECT target_url FROM qa_loop_sessions WHERE test_suite_id = $1 LIMIT 1',
+      [suiteId]
+    );
+    const targetUrl = sessionResult.rows[0]?.target_url || 'unknown';
+
+    // Build combined file: extract test() blocks from each test case's code
+    const header = generateExportHeader(targetUrl);
+    let combinedTests = '';
+
+    for (const tc of testCasesResult.rows) {
+      let code = tc.playwright_code as string;
+      code = maskCredentials(code);
+
+      // Extract the test body (remove import statements since we'll add them once)
+      const withoutImports = code
+        .replace(/^import\s+.*?;\s*$/gm, '')
+        .trim();
+
+      combinedTests += `\n  // --- ${tc.name} ---\n`;
+      // If the code contains test(...), extract just the inner function
+      // Otherwise, wrap it in a test() call
+      if (/test\s*\(/.test(withoutImports)) {
+        // Indent inner content for the describe block
+        combinedTests += withoutImports.split('\n').map((l: string) => `  ${l}`).join('\n') + '\n';
+      } else {
+        combinedTests += `  test('${tc.name.replace(/'/g, "\\'")}', async ({ page }) => {\n`;
+        combinedTests += withoutImports.split('\n').map((l: string) => `    ${l}`).join('\n') + '\n';
+        combinedTests += `  });\n`;
+      }
+    }
+
+    const fullCode = `${header}
+import { test, expect } from '@playwright/test';
+
+test.describe('${suiteName.replace(/'/g, "\\'")}', () => {
+${combinedTests}
+});
+`;
+
+    const filename = sanitizeFilename(suiteName) + '.spec.ts';
+
+    res.setHeader('Content-Type', 'text/typescript');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(fullCode);
+  } catch (error: any) {
+    logger.error('Failed to export test suite Playwright code', { error: error.message });
+    res.status(500).json({ error: 'Failed to export Playwright suite' });
+  }
+});
+
+// Helper: generate export header
+function generateExportHeader(targetUrl: string): string {
+  return `// Auto-generated by WhyNot
+// Date: ${new Date().toISOString()}
+// Target URL: ${targetUrl}
+//
+// Run with: npx playwright test ${sanitizeFilename('this-file')}.spec.ts
+`;
+}
+
+// Helper: mask credentials in code
+function maskCredentials(code: string): string {
+  // Replace any hardcoded-looking username/email strings near fill/type calls
+  // But preserve process.env references
+  return code
+    .replace(/process\.env\.TEST_USERNAME/g, 'process.env.TEST_USERNAME')
+    .replace(/process\.env\.TEST_PASSWORD/g, 'process.env.TEST_PASSWORD');
+}
+
+// Helper: sanitize filename
+function sanitizeFilename(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+}
 
 // Mount webhook routes last so /api/sessions and other session routes are matched first (webhook has auth middleware)
 router.use('/api', webhookRoutes);

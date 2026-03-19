@@ -89,10 +89,10 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
   // Get alert color based on level
   const getAlertColor = (level: string) => {
     switch (level) {
-      case 'critical': return 'text-red-500 bg-red-100 dark:bg-red-900/30';
-      case 'warning': return 'text-orange-500 bg-orange-100 dark:bg-orange-900/30';
-      case 'info': return 'text-blue-500 bg-blue-100 dark:bg-blue-900/30';
-      default: return 'text-green-500 bg-green-100 dark:bg-green-900/30';
+      case 'critical': return 'text-red-500 bg-red-900/30';
+      case 'warning': return 'text-orange-500 bg-orange-900/30';
+      case 'info': return 'text-blue-500 bg-blue-900/30';
+      default: return 'text-green-500 bg-green-900/30';
     }
   };
 
@@ -107,7 +107,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
     switch (qualityScore.trend) {
       case 'improving': return <FiTrendingUp className="text-green-500" />;
       case 'declining': return <FiTrendingDown className="text-red-500" />;
-      default: return <FiMinus className="text-gray-400" />;
+      default: return <FiMinus className="text-slate-500" />;
     }
   };
 
@@ -115,7 +115,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
     switch (qualityScore.trend) {
       case 'improving': return 'text-green-500';
       case 'declining': return 'text-red-500';
-      default: return 'text-gray-400';
+      default: return 'text-slate-500';
     }
   };
 
@@ -156,7 +156,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
         {/* Gauge */}
         <div className="relative w-48 h-24 overflow-hidden">
           {/* Gauge Background */}
-          <div className="absolute w-48 h-48 rounded-full border-8 border-gray-200 dark:border-gray-700"
+          <div className="absolute w-48 h-48 rounded-full border-8 border-slate-700"
             style={{ top: '0', clipPath: 'inset(50% 0 0 0)' }} />
 
           {/* Colored arc based on score */}
@@ -176,7 +176,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
               <div className={`text-3xl font-bold ${getScoreColor(qualityScore.overall)}`}>
                 {qualityScore.overall}%
               </div>
-              <div className="text-xs text-gray-500 flex items-center gap-1">
+              <div className="text-xs text-slate-400 flex items-center gap-1">
                 {getTrendIcon()}
                 <span className={getTrendColor()}>
                   {qualityScore.scoreDelta > 0 ? '+' : ''}{qualityScore.scoreDelta}
@@ -186,8 +186,8 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           </div>
 
           {/* Min/Max labels */}
-          <div className="absolute bottom-0 left-2 text-xs text-gray-400">0</div>
-          <div className="absolute bottom-0 right-2 text-xs text-gray-400">100</div>
+          <div className="absolute bottom-0 left-2 text-xs text-slate-500">0</div>
+          <div className="absolute bottom-0 right-2 text-xs text-slate-500">100</div>
 
           {/* Target threshold marker */}
           <div
@@ -203,9 +203,9 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
         {/* Trend Info */}
         <div className="text-center">
-          <div className="text-sm text-gray-500">Target</div>
+          <div className="text-sm text-slate-400">Target</div>
           <div className="text-2xl font-bold text-sky-500">{targetThreshold}%</div>
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-slate-500">
             {qualityScore.overall >= targetThreshold ? (
               <span className="text-green-500 flex items-center gap-1">
                 <FiCheckCircle /> Reached!
@@ -230,16 +230,16 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           return (
             <div key={key} className="text-center">
               {/* 6.5 — use static map, never interpolate class names at runtime */}
-              <Icon className={`mx-auto text-lg ${iconColorClass[color] ?? 'text-gray-500'} mb-1`} />
-              <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <Icon className={`mx-auto text-lg ${iconColorClass[color] ?? 'text-slate-400'} mb-1`} />
+              <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-gray-300 dark:bg-gray-600'}`}
+                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-slate-600'}`}
                   style={{ width: `${score !== null ? score : 0}%` }}
                 />
               </div>
-              <div className="text-xs text-gray-500 mt-1">{label}</div>
+              <div className="text-xs text-slate-400 mt-1">{label}</div>
               {/* 6.4 — null means no real data: show N/A instead of a made-up number */}
-              <div className={`text-sm font-medium ${score !== null ? getScoreColor(score) : 'text-gray-400'}`}>
+              <div className={`text-sm font-medium ${score !== null ? getScoreColor(score) : 'text-slate-500'}`}>
                 {score !== null ? `${score}%` : 'N/A'}
               </div>
             </div>
@@ -248,41 +248,41 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       </div>
 
       {/* Risk Summary */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <div className="p-4 bg-slate-900 rounded-lg">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <h4 className="text-sm font-medium text-slate-200 flex items-center gap-2">
             <FiAlertTriangle className="text-yellow-500" />
             Risk Summary
           </h4>
-          <span className="text-xs text-gray-500">{totalRisks} total issues</span>
+          <span className="text-xs text-slate-400">{totalRisks} total issues</span>
         </div>
         <div className="flex gap-2">
           {risks.critical > 0 && (
-            <div className="flex-1 p-2 bg-red-100 dark:bg-red-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-red-900/30 rounded text-center">
               <div className="text-lg font-bold text-red-600">{risks.critical}</div>
               <div className="text-xs text-red-500">Critical</div>
             </div>
           )}
           {risks.high > 0 && (
-            <div className="flex-1 p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-orange-900/30 rounded text-center">
               <div className="text-lg font-bold text-orange-600">{risks.high}</div>
               <div className="text-xs text-orange-500">High</div>
             </div>
           )}
           {risks.medium > 0 && (
-            <div className="flex-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-yellow-900/30 rounded text-center">
               <div className="text-lg font-bold text-yellow-600">{risks.medium}</div>
               <div className="text-xs text-yellow-500">Medium</div>
             </div>
           )}
           {risks.low > 0 && (
-            <div className="flex-1 p-2 bg-blue-100 dark:bg-blue-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-blue-900/30 rounded text-center">
               <div className="text-lg font-bold text-blue-600">{risks.low}</div>
               <div className="text-xs text-blue-500">Low</div>
             </div>
           )}
           {totalRisks === 0 && (
-            <div className="flex-1 p-2 bg-green-100 dark:bg-green-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-green-900/30 rounded text-center">
               <FiCheckCircle className="mx-auto text-lg text-green-500" />
               <div className="text-xs text-green-500 mt-1">No issues!</div>
             </div>
@@ -292,9 +292,9 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
       {/* Phase 8: Cost Tracking Section */}
       {costTracking && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="p-4 bg-slate-900 rounded-lg">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <h4 className="text-sm font-medium text-slate-200 flex items-center gap-2">
               <FiDollarSign className="text-green-500" />
               Cost Tracking
             </h4>
@@ -309,17 +309,17 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           {/* Budget Progress Bar */}
           {costTracking.maxCostCents && (
             <div className="mb-3">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <div className="flex justify-between text-xs text-slate-400 mb-1">
                 <span>{formatCost(costTracking.totalCostCents)}</span>
                 <span>Budget: {formatCost(costTracking.maxCostCents)}</span>
               </div>
-              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${getBudgetBarColor(costTracking.alertPercentage)}`}
                   style={{ width: `${Math.min(costTracking.alertPercentage, 100)}%` }}
                 />
               </div>
-              <div className="text-center text-xs text-gray-500 mt-1">
+              <div className="text-center text-xs text-slate-400 mt-1">
                 {Math.round(costTracking.alertPercentage)}% used
               </div>
             </div>
@@ -330,7 +330,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
             {/* By Phase */}
             {costTracking.costByPhase && (
               <div>
-                <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                <div className="text-xs text-slate-400 mb-2 flex items-center gap-1">
                   <FiActivity className="text-sky-500" /> By Phase
                 </div>
                 <div className="space-y-1">
@@ -338,13 +338,13 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                     .filter(([_, cost]) => cost > 0)
                     .map(([phase, cost]) => (
                       <div key={phase} className="flex justify-between text-xs">
-                        <span className="capitalize text-gray-600 dark:text-gray-400">{phase}</span>
+                        <span className="capitalize text-slate-400">{phase}</span>
                         <span className="font-medium">{formatCost(cost)}</span>
                       </div>
                     ))
                   }
                   {Object.values(costTracking.costByPhase).every(c => c === 0) && (
-                    <span className="text-xs text-gray-400">No usage yet</span>
+                    <span className="text-xs text-slate-500">No usage yet</span>
                   )}
                 </div>
               </div>
@@ -353,7 +353,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
             {/* By Model */}
             {costTracking.costByModel && (
               <div>
-                <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                <div className="text-xs text-slate-400 mb-2 flex items-center gap-1">
                   <FiCpu className="text-blue-500" /> By Model
                 </div>
                 <div className="space-y-1">
@@ -361,13 +361,13 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                     .filter(([_, cost]) => cost > 0)
                     .map(([model, cost]) => (
                       <div key={model} className="flex justify-between text-xs">
-                        <span className="text-gray-600 dark:text-gray-400">{model}</span>
+                        <span className="text-slate-400">{model}</span>
                         <span className="font-medium">{formatCost(cost)}</span>
                       </div>
                     ))
                   }
                   {Object.values(costTracking.costByModel).every(c => c === 0) && (
-                    <span className="text-xs text-gray-400">No usage yet</span>
+                    <span className="text-xs text-slate-500">No usage yet</span>
                   )}
                 </div>
               </div>
@@ -376,16 +376,16 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
           {/* Total Tokens */}
           {costTracking.totalTokens !== undefined && costTracking.totalTokens > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 text-center">
+            <div className="mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400 text-center">
               Total tokens: {costTracking.totalTokens.toLocaleString()}
             </div>
           )}
 
           {/* Budget Warning */}
           {costTracking.budgetExceeded && (
-            <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-center">
+            <div className="mt-3 p-2 bg-red-900/30 rounded-lg text-center">
               <FiAlertTriangle className="inline text-red-500 mr-1" />
-              <span className="text-xs text-red-600 dark:text-red-400 font-medium">
+              <span className="text-xs text-red-400 font-medium">
                 Budget limit reached! Session will stop automatically.
               </span>
             </div>
@@ -395,13 +395,13 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
       {/* Iteration Timeline */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+        <h4 className="text-sm font-medium text-slate-200 mb-3 flex items-center gap-2">
           <FiClock className="text-blue-500" />
           Iteration Timeline
         </h4>
         <div className="relative">
           {/* Timeline bar */}
-          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
+          <div className="h-2 bg-slate-700 rounded-full overflow-hidden flex">
             {iterationHistory.map((item, idx) => {
               const width = 100 / Math.max(iterationHistory.length, 1);
               return (
@@ -422,8 +422,8 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                 <div className={`text-xs font-medium ${getScoreColor(item.score)}`}>
                   {item.score}%
                 </div>
-                <div className="text-xs text-gray-400">#{item.iteration}</div>
-                <div className="text-xs text-gray-400 capitalize">{item.focus}</div>
+                <div className="text-xs text-slate-500">#{item.iteration}</div>
+                <div className="text-xs text-slate-500 capitalize">{item.focus}</div>
               </div>
             ))}
           </div>
@@ -431,14 +431,14 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       </div>
 
       {/* Current Status */}
-      <div className="flex items-center justify-between p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg">
+      <div className="flex items-center justify-between p-3 bg-sky-900/20 rounded-lg">
         <div className="flex items-center gap-2">
           <FiActivity className="text-sky-500 animate-pulse" />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
+          <span className="text-sm text-slate-200">
             Iteration <span className="font-bold">{currentIteration}</span>
           </span>
         </div>
-        <div className="text-sm text-sky-600 dark:text-sky-400">
+        <div className="text-sm text-sky-400">
           {qualityScore.overall >= targetThreshold ? (
             <span className="flex items-center gap-1">
               <FiCheckCircle /> Quality target reached

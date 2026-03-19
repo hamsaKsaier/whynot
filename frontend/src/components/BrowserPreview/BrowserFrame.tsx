@@ -15,13 +15,13 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
   url,
 }) => {
   return (
-    <div className="flex-1 bg-gray-100 flex items-center justify-center overflow-auto p-4">
+    <div className="flex-1 bg-slate-800 flex items-center justify-center overflow-auto p-4">
       {isLoading && !imageUrl && (
         <div className="flex flex-col items-center justify-center space-y-4">
-          <FiLoader className="h-8 w-8 text-gray-400 animate-spin" />
-          <p className="text-sm text-gray-500">Connecting to browser stream...</p>
+          <FiLoader className="h-8 w-8 text-slate-500 animate-spin" />
+          <p className="text-sm text-slate-400">Connecting to browser stream...</p>
           {url && (
-            <p className="text-xs text-gray-400">URL: {url}</p>
+            <p className="text-xs text-slate-500">URL: {url}</p>
           )}
         </div>
       )}
@@ -30,7 +30,7 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
         <div className="flex flex-col items-center justify-center space-y-4 p-8">
           <div className="text-red-500 text-lg">⚠️</div>
           <p className="text-sm text-red-600 font-medium">{error}</p>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-slate-400 mt-2">
             Check browser console for more details. Make sure WebSocket server is running.
           </p>
         </div>
@@ -41,12 +41,12 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
           <img
             src={imageUrl}
             alt="Browser preview"
-            className="max-w-full h-auto rounded-lg shadow-lg border border-gray-300"
+            className="max-w-full h-auto rounded-lg shadow-lg border border-slate-600"
             style={{ maxHeight: 'calc(100vh - 200px)' }}
           />
           {isLoading && (
-            <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center rounded-lg">
-              <FiLoader className="h-6 w-6 text-gray-400 animate-spin" />
+            <div className="absolute inset-0 bg-slate-800 bg-opacity-50 flex items-center justify-center rounded-lg">
+              <FiLoader className="h-6 w-6 text-slate-500 animate-spin" />
             </div>
           )}
         </div>
@@ -54,16 +54,16 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
 
       {!isLoading && !error && !imageUrl && (
         <div className="flex flex-col items-center justify-center space-y-4 p-8 text-center">
-          <div className="text-gray-400 text-4xl">🌐</div>
-          <p className="text-sm text-gray-500">
+          <div className="text-slate-500 text-4xl">🌐</div>
+          <p className="text-sm text-slate-400">
             Waiting for browser frames...
           </p>
           {url && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               URL: {url}
             </p>
           )}
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-slate-500 mt-2">
             Frames will appear here once WebSocket connection is established and test execution begins
           </p>
         </div>

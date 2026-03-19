@@ -98,7 +98,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
         <div
           ref={tooltipRef}
           role="tooltip"
-          className="absolute z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg pointer-events-none whitespace-nowrap"
+          className="absolute z-50 px-2 py-1 text-xs text-white bg-slate-900 rounded shadow-lg pointer-events-none whitespace-nowrap"
           style={{
             top: `${tooltipPosition.top}px`,
             left: `${tooltipPosition.left}px`,
@@ -106,7 +106,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
         >
           {content}
           <div
-            className={`absolute w-2 h-2 bg-gray-900 transform rotate-45 ${
+            className={`absolute w-2 h-2 bg-slate-900 transform rotate-45 ${
               position === 'top' ? 'bottom-[-4px] left-1/2 -translate-x-1/2' :
               position === 'bottom' ? 'top-[-4px] left-1/2 -translate-x-1/2' :
               position === 'left' ? 'right-[-4px] top-1/2 -translate-y-1/2' :

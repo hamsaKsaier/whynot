@@ -189,6 +189,10 @@ export function getToolDefinitions(): Anthropic.Tool[] {
           source_page_url: {
             type: 'string',
             description: 'The URL of the page this test was generated from'
+          },
+          playwright_code: {
+            type: 'string',
+            description: 'Complete, runnable Playwright .spec.ts code for this test case. Must use test() and expect() from @playwright/test. Use exact CSS selectors discovered during exploration. Include await page.screenshot() at key verification points. Use process.env.TEST_USERNAME / process.env.TEST_PASSWORD for credentials — never hardcode them.'
           }
         },
         required: ['name', 'steps', 'observed_result']

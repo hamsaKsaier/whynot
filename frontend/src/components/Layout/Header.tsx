@@ -172,18 +172,18 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
           className="lg:hidden p-2 rounded-lg hover:bg-navy-700 transition-colors"
           aria-label="Open navigation menu"
         >
-          <FiMenu className="h-5 w-5 text-gray-400" />
+          <FiMenu className="h-5 w-5 text-slate-500" />
         </button>
         <WorkspaceSwitcher />
         <span className="text-navy-700">|</span>
-        <div className="flex items-center space-x-1 text-sm text-gray-400">
+        <div className="flex items-center space-x-1 text-sm text-slate-500">
           {breadcrumbs.map((crumb, index) => (
             <React.Fragment key={crumb.path}>
-              {index > 0 && <span className="text-gray-600">/</span>}
+              {index > 0 && <span className="text-slate-400">/</span>}
               <Link
                 to={crumb.path}
                 className={`hover:text-white transition-colors ${
-                  index === breadcrumbs.length - 1 ? 'text-gray-200 font-medium' : ''
+                  index === breadcrumbs.length - 1 ? 'text-slate-300 font-medium' : ''
                 }`}
               >
                 {crumb.label}
@@ -217,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
         <div className="relative" ref={helpRef}>
           <button
             onClick={() => setHelpOpen((o) => !o)}
-            className={`p-2 rounded-lg transition-colors ${helpOpen ? 'bg-primary-500/10 text-primary-400' : 'hover:bg-navy-700 text-gray-400'}`}
+            className={`p-2 rounded-lg transition-colors ${helpOpen ? 'bg-primary-500/10 text-primary-400' : 'hover:bg-navy-700 text-slate-500'}`}
             aria-label="Show page help"
             title="Page help"
           >
@@ -230,12 +230,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
               <div className="flex items-center justify-between px-4 py-3 border-b border-navy-700 bg-navy-900">
                 <div className="flex items-center gap-2">
                   {pageHelp?.icon}
-                  <span className="text-sm font-semibold text-gray-200">
+                  <span className="text-sm font-semibold text-slate-300">
                     {pageHelp ? `${pageHelp.title} — Help` : 'Help'}
                   </span>
                 </div>
                 <button onClick={() => setHelpOpen(false)} className="p-1 rounded hover:bg-navy-700 transition-colors">
-                  <FiX className="h-3.5 w-3.5 text-gray-400" />
+                  <FiX className="h-3.5 w-3.5 text-slate-500" />
                 </button>
               </div>
 
@@ -243,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
               {pageHelp ? (
                 <ul className="p-4 space-y-2">
                   {pageHelp.tips.map((tip, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-gray-300">
+                    <li key={i} className="flex gap-2 text-sm text-slate-400">
                       <span className="mt-0.5 flex-shrink-0 h-4 w-4 rounded-full bg-primary-500/10 text-primary-400 text-xs flex items-center justify-center font-semibold">
                         {i + 1}
                       </span>
@@ -252,14 +252,14 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
                   ))}
                 </ul>
               ) : (
-                <p className="p-4 text-sm text-gray-500">No tips available for this page.</p>
+                <p className="p-4 text-sm text-slate-400">No tips available for this page.</p>
               )}
 
               {/* Footer — Keyboard shortcuts link */}
               <div className="px-4 py-2 border-t border-navy-700 bg-navy-900">
                 <button
                   onClick={() => { setHelpOpen(false); setShortcutsOpen(true); }}
-                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary-400 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-primary-400 transition-colors"
                 >
                   <FiCommand className="h-3 w-3" />
                   View keyboard shortcuts
@@ -284,7 +284,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
               </div>
             )}
             {user && (
-              <span className="text-sm font-medium text-gray-300 hidden sm:block max-w-[120px] truncate">
+              <span className="text-sm font-medium text-slate-400 hidden sm:block max-w-[120px] truncate">
                 {user.name}
               </span>
             )}
@@ -295,7 +295,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
             title="Sign out"
             aria-label="Sign out"
           >
-            <FiLogOut className="h-4 w-4 text-gray-400" />
+            <FiLogOut className="h-4 w-4 text-slate-500" />
           </button>
         </div>
       </div>

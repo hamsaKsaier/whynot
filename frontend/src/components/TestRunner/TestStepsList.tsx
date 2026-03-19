@@ -60,22 +60,22 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
   const getActionBadgeColor = (action: string) => {
     switch (action.toLowerCase()) {
       case 'click':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-900/30 text-blue-300';
       case 'type':
       case 'fill':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-900/30 text-green-300';
       case 'navigate':
-        return 'bg-sky-100 text-sky-800';
+        return 'bg-sky-900/30 text-sky-300';
       case 'wait':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-900/30 text-yellow-300';
       case 'assert':
-        return 'bg-indigo-100 text-indigo-800';
+        return 'bg-sky-900/50 text-sky-300';
       case 'scroll':
-        return 'bg-pink-100 text-pink-800';
+        return 'bg-pink-900/30 text-pink-300';
       case 'hover':
-        return 'bg-cyan-100 text-cyan-800';
+        return 'bg-cyan-900/30 text-cyan-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-800 text-slate-200';
     }
   };
 
@@ -98,7 +98,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
       if (index === currentStepIndex) {
         return <FiPlay className="h-5 w-5 text-blue-500 animate-pulse" />;
       }
-      return <FiClock className="h-5 w-5 text-gray-400" />;
+      return <FiClock className="h-5 w-5 text-slate-500" />;
     }
     return step.success ? (
       <FiCheckCircle className="h-5 w-5 text-green-500" />
@@ -134,16 +134,16 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white border-r border-gray-200">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="font-semibold text-gray-900">Test Steps</h3>
-        <p className="text-sm text-gray-500 mt-1">
+    <div className="h-full overflow-y-auto bg-slate-800 border-r border-slate-700">
+      <div className="p-4 border-b border-slate-700">
+        <h3 className="font-semibold text-white">Test Steps</h3>
+        <p className="text-sm text-slate-400 mt-1">
           {steps.filter(s => s.success === true).length} passed,{' '}
           {steps.filter(s => s.success === false).length} failed
         </p>
       </div>
 
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-slate-700">
         {steps.map((step, index) => {
           const stepUpdate = stepUpdates?.get(index);
           const testStep = testSteps?.[index];
@@ -161,8 +161,8 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
               key={step.step_id}
               onClick={() => onStepClick?.(index)}
               className={`p-4 cursor-pointer transition-colors ${isActive
-                  ? 'bg-blue-50 border-l-4 border-blue-500'
-                  : 'hover:bg-gray-50'
+                  ? 'bg-blue-900/20 border-l-4 border-blue-500'
+                  : 'hover:bg-slate-900'
                 }`}
             >
               <div className="flex items-start space-x-3">
@@ -171,10 +171,10 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-white">
                       Step {index + 1}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-slate-400">
                       {executionTime}ms
                     </span>
                   </div>
@@ -192,7 +192,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
 
                   {/* Description */}
                   {description && (
-                    <p className="text-xs text-gray-600 mt-1 mb-1 line-clamp-2">
+                    <p className="text-xs text-slate-400 mt-1 mb-1 line-clamp-2">
                       {description}
                     </p>
                   )}
@@ -201,12 +201,12 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                   <div className="mt-1">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${status === 'passed'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-green-900/30 text-green-300'
                           : status === 'failed'
-                            ? 'bg-red-100 text-red-800'
+                            ? 'bg-red-900/30 text-red-300'
                             : status === 'running'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-blue-900/30 text-blue-300'
+                              : 'bg-slate-800 text-slate-200'
                         }`}
                     >
                       {status}
@@ -220,15 +220,15 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
 
                   {/* Selector Used */}
                   {(stepUpdate?.stepResult?.selector_used || step.selector_used) && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-slate-400 mt-1">
                       Selector: {(stepUpdate?.stepResult?.selector_used || step.selector_used)?.type}
                     </p>
                   )}
 
                   {/* Selector Attempts */}
                   {stepUpdate?.selectorAttempts && stepUpdate.selectorAttempts.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-gray-200">
-                      <div className="text-xs font-medium text-gray-600 mb-1">Selector Attempts:</div>
+                    <div className="mt-2 pt-2 border-t border-slate-700">
+                      <div className="text-xs font-medium text-slate-400 mb-1">Selector Attempts:</div>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
                         {stepUpdate.selectorAttempts
                           .sort((a, b) => a.attemptNumber - b.attemptNumber)
@@ -252,19 +252,19 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
 
                   {/* Recovery Status */}
                   {stepUpdate?.recoveryStart && (
-                    <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="mt-2 pt-2 border-t border-slate-700">
                       <div className="text-xs font-medium text-blue-600 mb-1">🔄 Recovery Started</div>
-                      <div className="text-xs text-gray-600">{stepUpdate.recoveryStart.reason}</div>
+                      <div className="text-xs text-slate-400">{stepUpdate.recoveryStart.reason}</div>
                     </div>
                   )}
 
                   {stepUpdate?.recoverySuccess && (
-                    <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="mt-2 pt-2 border-t border-slate-700">
                       <div className="text-xs font-medium text-green-600 mb-1">✅ Recovery Successful</div>
-                      <div className="text-xs text-gray-700">
+                      <div className="text-xs text-slate-200">
                         Using: {stepUpdate.recoverySuccess.successfulSelector.type} = "{stepUpdate.recoverySuccess.successfulSelector.value}"
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-slate-400 mt-1">
                         Strategy: {stepUpdate.recoverySuccess.strategyUsed}
                       </div>
                     </div>
@@ -278,7 +278,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                         e.stopPropagation();
                         onStepFix(index, testStep);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
                       title="Fix or modify this step"
                       aria-label="Fix or modify this step"
                     >

@@ -22,7 +22,7 @@ interface InvoiceListProps {
 export const InvoiceList: React.FC<InvoiceListProps> = ({ invoices }) => {
   if (invoices.length === 0) {
     return (
-      <Card className="p-6 text-center text-gray-500">
+      <Card className="p-6 text-center text-slate-400">
         No invoices yet
       </Card>
     );
@@ -30,35 +30,35 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ invoices }) => {
 
   return (
     <Card className="overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-slate-700">
+        <thead className="bg-slate-900">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Date</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Period</th>
+            <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Amount</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
+            <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Actions</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-slate-800 divide-y divide-slate-700">
           {invoices.map((inv) => (
             <tr key={inv.id}>
-              <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+              <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">
                 {new Date(inv.created_at).toLocaleDateString()}
               </td>
-              <td className="px-4 py-3 text-sm text-gray-500">
+              <td className="px-4 py-3 text-sm text-slate-400">
                 {inv.period_start && inv.period_end
                   ? `${new Date(inv.period_start).toLocaleDateString()} - ${new Date(inv.period_end).toLocaleDateString()}`
                   : '-'}
               </td>
-              <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
+              <td className="px-4 py-3 text-sm text-right font-medium text-white">
                 ${(inv.amount_cents / 100).toFixed(2)}
               </td>
               <td className="px-4 py-3 text-sm">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                  inv.status === 'paid' ? 'bg-green-100 text-green-800'
-                  : inv.status === 'open' ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-gray-100 text-gray-800'
+                  inv.status === 'paid' ? 'bg-green-900/30 text-green-300'
+                  : inv.status === 'open' ? 'bg-yellow-900/30 text-yellow-300'
+                  : 'bg-slate-800 text-slate-200'
                 }`}>
                   {inv.status}
                 </span>

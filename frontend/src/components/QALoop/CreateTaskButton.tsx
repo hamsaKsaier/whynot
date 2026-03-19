@@ -90,10 +90,10 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'jira': return 'bg-blue-100 text-blue-700';
-      case 'clickup': return 'bg-sky-100 text-sky-700';
-      case 'linear': return 'bg-indigo-100 text-indigo-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'jira': return 'bg-blue-900/30 text-blue-700';
+      case 'clickup': return 'bg-sky-900/30 text-sky-700';
+      case 'linear': return 'bg-sky-900/50 text-sky-300';
+      default: return 'bg-slate-800 text-slate-200';
     }
   };
 
@@ -101,7 +101,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
     <>
       <button
         onClick={handleOpen}
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors ${className}`}
+        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-900/20 text-blue-600 hover:bg-blue-900/30 transition-colors ${className}`}
         title="Create task in Jira/ClickUp/Linear"
       >
         <FiSend className="h-3 w-3" />
@@ -111,21 +111,21 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Create Task</h3>
-              <p className="text-sm text-gray-500 mt-1 truncate">Bug: {bugTitle}</p>
+          <div className="bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Create Task</h3>
+              <p className="text-sm text-slate-400 mt-1 truncate">Bug: {bugTitle}</p>
             </div>
 
             <div className="p-5">
               {loading ? (
-                <div className="text-center py-4 text-gray-500">Loading...</div>
+                <div className="text-center py-4 text-slate-400">Loading...</div>
               ) : integrations.length === 0 ? (
                 <div className="text-center py-6">
-                  <p className="text-gray-500 mb-3">No integrations configured</p>
+                  <p className="text-slate-400 mb-3">No integrations configured</p>
                   <a
                     href="/integrations"
-                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                    className="text-primary-600 hover:text-primary-300 text-sm font-medium"
                   >
                     Go to Integrations to connect Jira, ClickUp, or Linear
                   </a>
@@ -135,22 +135,22 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
                   {/* Existing tasks */}
                   {existingTasks.length > 0 && (
                     <div className="mb-4">
-                      <div className="text-xs font-medium text-gray-500 uppercase mb-2">Existing Tasks</div>
+                      <div className="text-xs font-medium text-slate-400 uppercase mb-2">Existing Tasks</div>
                       <div className="space-y-2">
                         {existingTasks.map((task) => (
-                          <div key={task.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                          <div key={task.id} className="flex items-center justify-between p-2 bg-slate-900 rounded-lg">
                             <div className="flex items-center gap-2">
                               <span className={`text-xs px-1.5 py-0.5 rounded ${getTypeColor((task as any).integration_type || 'unknown')}`}>
                                 {getTypeLabel((task as any).integration_type || 'unknown')}
                               </span>
-                              <span className="text-sm font-medium text-gray-700">{task.external_id}</span>
+                              <span className="text-sm font-medium text-slate-200">{task.external_id}</span>
                             </div>
                             {task.external_url && (
                               <a
                                 href={task.external_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-primary-600 hover:text-primary-700"
+                                className="text-primary-600 hover:text-primary-300"
                               >
                                 <FiExternalLink className="h-4 w-4" />
                               </a>
@@ -163,11 +163,11 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
                   {/* Select integration */}
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Integration</label>
+                    <label className="block text-sm font-medium text-slate-200 mb-1">Select Integration</label>
                     <select
                       value={selectedIntegration}
                       onChange={e => setSelectedIntegration(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     >
                       {integrations.map((int) => (
                         <option key={int.id} value={int.id}>
@@ -179,7 +179,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
                   {/* Result message */}
                   {result && (
-                    <div className={`p-3 rounded-lg mb-4 ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className={`p-3 rounded-lg mb-4 ${result.success ? 'bg-green-900/20 text-green-700' : 'bg-red-900/20 text-red-700'}`}>
                       {result.success ? (
                         <div className="flex items-center gap-2">
                           <FiCheck className="h-4 w-4" />
@@ -202,10 +202,10 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
               )}
             </div>
 
-            <div className="p-5 border-t border-gray-200 flex justify-end gap-3">
+            <div className="p-5 border-t border-slate-700 flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 Close
               </button>

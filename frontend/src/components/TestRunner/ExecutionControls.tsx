@@ -31,7 +31,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
   const speeds = [0.5, 1, 2, 5];
 
   return (
-    <div className="bg-white border-b border-gray-200 p-4">
+    <div className="bg-slate-800 border-b border-slate-700 p-4">
       <div className="flex items-center justify-between">
         {/* Main Controls */}
         <div className="flex items-center space-x-2">
@@ -56,7 +56,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
               ) : (
                 <button
                   onClick={onPause}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
                 >
                   <FiPause className="h-4 w-4" />
                   <span>Pause</span>
@@ -75,20 +75,20 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
           {/* Step Navigation */}
           {isRunning && (
             <>
-              <div className="w-px h-6 bg-gray-300 mx-2"></div>
+              <div className="w-px h-6 bg-slate-600 mx-2"></div>
               <button
                 onClick={onPreviousStep}
-                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                className="p-2 rounded hover:bg-slate-800 transition-colors"
                 title="Previous step"
               >
-                <FiSkipBack className="h-4 w-4 text-gray-600" />
+                <FiSkipBack className="h-4 w-4 text-slate-400" />
               </button>
               <button
                 onClick={onNextStep}
-                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                className="p-2 rounded hover:bg-slate-800 transition-colors"
                 title="Next step"
               >
-                <FiSkipForward className="h-4 w-4 text-gray-600" />
+                <FiSkipForward className="h-4 w-4 text-slate-400" />
               </button>
             </>
           )}
@@ -99,11 +99,11 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
           {/* Speed Control */}
           {isRunning && (
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-600">Speed:</label>
+              <label className="text-sm text-slate-400">Speed:</label>
               <select
                 value={currentSpeed}
                 onChange={(e) => onSpeedChange?.(Number(e.target.value))}
-                className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+                className="text-sm border border-slate-600 rounded px-2 py-1 bg-slate-800"
               >
                 {speeds.map((speed) => (
                   <option key={speed} value={speed}>
@@ -116,7 +116,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
 
           {/* Headless Mode Toggle */}
           <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-600">Headless:</label>
+            <label className="text-sm text-slate-400">Headless:</label>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -124,16 +124,16 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
                 onChange={(e) => onHeadlessChange?.(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
             </label>
           </div>
 
           {/* Settings */}
           <button
-            className="p-2 rounded hover:bg-gray-100 transition-colors"
+            className="p-2 rounded hover:bg-slate-800 transition-colors"
             title="Settings"
           >
-            <FiSettings className="h-5 w-5 text-gray-600" />
+            <FiSettings className="h-5 w-5 text-slate-400" />
           </button>
         </div>
       </div>

@@ -293,7 +293,7 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-slate-400">
             We found a saved draft of your test form. Would you like to restore it?
           </p>
           <div className="flex gap-3">
@@ -377,7 +377,7 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 mt-6">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-700 mt-6">
           <Button
             variant="secondary"
             onClick={handlePrevious}

@@ -2,6 +2,7 @@ import { createLogger } from '../../../shared/logger/logger';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { ToolResult } from '../tool-executor';
 import { emitToSession } from '../api/websocket';
+import { notifyGateway } from '../notifications/email-notifier';
 
 const logger = createLogger('report-tools');
 
@@ -19,6 +20,7 @@ export interface TestCaseInput {
   risk_level?: string;
   source_page_url?: string;
   observed_result?: 'pass' | 'fail';
+  playwright_code?: string;
 }
 
 export interface BugInput {
@@ -61,7 +63,8 @@ export class ReportTools {
         riskLevel: input.risk_level || 'medium',
         sourcePageUrl: input.source_page_url,
         source: 'exploration',
-        observedResult: input.observed_result
+        observedResult: input.observed_result,
+        playwrightCode: input.playwright_code
       });
 
       // Emit event for UI update
@@ -160,6 +163,24 @@ export class ReportTools {
         title: input.title,
         severity: input.severity
       });
+
+      // Send critical bug email notification
+      if (input.severity === 'critical' || input.severity === 'high') {
+        const sessionInfo = await this.repository.getSession(this.sessionId);
+        if (sessionInfo?.workspace_id) {
+          notifyGateway({
+            type: 'critical_bug',
+            workspaceId: sessionInfo.workspace_id,
+            data: {
+              sessionId: this.sessionId,
+              targetUrl: sessionInfo.target_url,
+              projectName: sessionInfo.target_url,
+              bugTitle: input.title,
+              severity: input.severity,
+            },
+          }).catch(() => {});
+        }
+      }
 
       return {
         data: {

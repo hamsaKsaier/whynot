@@ -8,11 +8,11 @@ export const NotFoundPage: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-      <div className="p-4 bg-gray-100 rounded-full mb-6">
-        <FiAlertTriangle className="h-12 w-12 text-gray-400" />
+      <div className="p-4 bg-slate-800 rounded-full mb-6">
+        <FiAlertTriangle className="h-12 w-12 text-slate-500" />
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Page Not Found</h1>
-      <p className="text-gray-600 mb-8 max-w-md">
+      <h1 className="text-3xl font-bold text-white mb-2">Page Not Found</h1>
+      <p className="text-slate-400 mb-8 max-w-md">
         The page you're looking for doesn't exist or has been moved.
       </p>
       <div className="flex gap-3">

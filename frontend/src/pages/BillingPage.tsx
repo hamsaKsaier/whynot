@@ -121,9 +121,9 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-48" />
+          <div className="h-8 bg-slate-700 rounded w-48" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 rounded" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-700 rounded" />)}
           </div>
         </div>
       </div>
@@ -144,8 +144,8 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
       {!embedded && (
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Billing & Usage</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage your subscription, credits, and invoices</p>
+            <h1 className="text-2xl font-bold text-white">Billing & Usage</h1>
+            <p className="text-sm text-slate-400 mt-1">Manage your subscription, credits, and invoices</p>
           </div>
           {subscription?.stripe_subscription_id && (
             <Button onClick={handleManageBilling} disabled={actionLoading} variant="secondary">
@@ -185,12 +185,12 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-primary-50 rounded-lg">
+            <div className="p-2 bg-primary-900/20 rounded-lg">
               <FiZap className="h-5 w-5 text-primary-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Current Plan</p>
-              <p className="text-lg font-semibold text-gray-900">{plan?.name || 'No Plan'}</p>
+              <p className="text-sm text-slate-400">Current Plan</p>
+              <p className="text-lg font-semibold text-white">{plan?.name || 'No Plan'}</p>
             </div>
           </div>
           {subscription && (
@@ -203,12 +203,12 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
 
         <Card className="p-5">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
+            <div className="p-2 bg-blue-900/20 rounded-lg">
               <FiCalendar className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Billing Period</p>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm text-slate-400">Billing Period</p>
+              <p className="text-sm font-medium text-white">
                 {subscription?.current_period_end
                   ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`
                   : 'No active period'
@@ -228,7 +228,7 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
 
       {/* Plan Comparison */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Plans</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Available Plans</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {plans.map((p: any) => (
             <PlanCard
@@ -244,14 +244,14 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
 
       {/* Transaction History */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Credit History</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Credit History</h2>
         <TransactionHistory transactions={transactions} />
       </div>
 
       {/* Invoices */}
       {invoices.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Invoices</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Invoices</h2>
           <InvoiceList invoices={invoices} />
         </div>
       )}

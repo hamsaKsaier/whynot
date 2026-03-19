@@ -145,7 +145,7 @@ export const MonitorsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <FiLoader className="h-6 w-6 animate-spin text-gray-400" />
+        <FiLoader className="h-6 w-6 animate-spin text-slate-500" />
       </div>
     );
   }
@@ -155,11 +155,11 @@ export const MonitorsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <FiClock className="h-6 w-6 text-sky-600" />
             QA Monitors
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-slate-400 mt-1">
             Schedule recurring QA scans to monitor your apps continuously
           </p>
         </div>
@@ -174,40 +174,40 @@ export const MonitorsPage: React.FC = () => {
 
       {/* Create form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Create Monitor</h2>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Create Monitor</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-slate-200 mb-1">Name</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Production Health Check"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target URL</label>
+                <label className="block text-sm font-medium text-slate-200 mb-1">Target URL</label>
                 <input
                   type="text"
                   value={form.target_url}
                   onChange={e => setForm(f => ({ ...f, target_url: e.target.value }))}
                   placeholder="https://your-app.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500"
                   required
                 />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
+                <label className="block text-sm font-medium text-slate-200 mb-1">Schedule</label>
                 <select
                   value={form.cron_expression}
                   onChange={e => setForm(f => ({ ...f, cron_expression: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500"
                 >
                   {CRON_PRESETS.map(p => (
                     <option key={p.value} value={p.value}>{p.label}</option>
@@ -215,11 +215,11 @@ export const MonitorsPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quality Threshold</label>
+                <label className="block text-sm font-medium text-slate-200 mb-1">Quality Threshold</label>
                 <select
                   value={form.quality_threshold}
                   onChange={e => setForm(f => ({ ...f, quality_threshold: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500"
                 >
                   {[60, 70, 80, 90].map(v => (
                     <option key={v} value={v}>{v}%</option>
@@ -227,11 +227,11 @@ export const MonitorsPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Iterations</label>
+                <label className="block text-sm font-medium text-slate-200 mb-1">Max Iterations</label>
                 <select
                   value={form.max_iterations}
                   onChange={e => setForm(f => ({ ...f, max_iterations: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500"
                 >
                   {[3, 5, 10, 20].map(v => (
                     <option key={v} value={v}>{v}</option>
@@ -243,7 +243,7 @@ export const MonitorsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="px-4 py-2 text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700"
               >
                 Cancel
               </button>
@@ -262,10 +262,10 @@ export const MonitorsPage: React.FC = () => {
 
       {/* Monitor list */}
       {monitors.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <FiClock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No monitors yet</h3>
-          <p className="text-gray-500 mb-4">
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
+          <FiClock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">No monitors yet</h3>
+          <p className="text-slate-400 mb-4">
             Create a monitor to run scheduled QA scans on your apps
           </p>
           <button
@@ -281,8 +281,8 @@ export const MonitorsPage: React.FC = () => {
           {monitors.map((monitor) => (
             <div
               key={monitor.id}
-              className={`bg-white rounded-xl border p-5 transition-colors ${
-                monitor.is_enabled ? 'border-gray-200' : 'border-gray-100 opacity-60'
+              className={`bg-slate-800 rounded-xl border p-5 transition-colors ${
+                monitor.is_enabled ? 'border-slate-700' : 'border-slate-700 opacity-60'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -293,21 +293,21 @@ export const MonitorsPage: React.FC = () => {
                     monitor.last_status === 'fail' ? 'bg-red-400' :
                     monitor.last_status === 'running' ? 'bg-blue-400 animate-pulse' :
                     monitor.last_status === 'error' ? 'bg-yellow-400' :
-                    'bg-gray-300'
+                    'bg-slate-600'
                   }`} />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900 truncate">{monitor.name}</h3>
+                      <h3 className="font-semibold text-white truncate">{monitor.name}</h3>
                       {!monitor.is_enabled && (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Paused</span>
+                        <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Paused</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
                       <span className="truncate max-w-xs">{monitor.target_url}</span>
-                      <span className="text-gray-300">|</span>
+                      <span className="text-slate-400">|</span>
                       <span>{getCronLabel(monitor.cron_expression)}</span>
-                      <span className="text-gray-300">|</span>
+                      <span className="text-slate-400">|</span>
                       <span>Threshold: {monitor.quality_threshold}%</span>
                     </div>
                   </div>
@@ -318,16 +318,16 @@ export const MonitorsPage: React.FC = () => {
                   {monitor.last_status && (
                     <div className="flex items-center gap-1.5 text-sm">
                       {statusIcons[monitor.last_status]}
-                      <span className="text-gray-600">{statusLabels[monitor.last_status]}</span>
+                      <span className="text-slate-400">{statusLabels[monitor.last_status]}</span>
                       {monitor.last_quality_score !== null && (
-                        <span className="text-gray-400 ml-1">({monitor.last_quality_score})</span>
+                        <span className="text-slate-500 ml-1">({monitor.last_quality_score})</span>
                       )}
                     </div>
                   )}
 
                   {/* Next run */}
                   {monitor.is_enabled && monitor.next_run_at && (
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-slate-500">
                       Next: {formatNextRun(monitor.next_run_at)}
                     </div>
                   )}
@@ -337,7 +337,7 @@ export const MonitorsPage: React.FC = () => {
                     <button
                       onClick={() => handleTrigger(monitor.id)}
                       disabled={triggering === monitor.id || monitor.last_status === 'running'}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                      className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
                       title="Run now"
                     >
                       {triggering === monitor.id ? (
@@ -350,8 +350,8 @@ export const MonitorsPage: React.FC = () => {
                       onClick={() => handleToggle(monitor.id, monitor.is_enabled)}
                       className={`p-2 rounded-lg transition-colors ${
                         monitor.is_enabled
-                          ? 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50'
-                          : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                          ? 'text-slate-500 hover:text-yellow-600 hover:bg-yellow-900/20'
+                          : 'text-slate-500 hover:text-green-600 hover:bg-green-900/20'
                       }`}
                       title={monitor.is_enabled ? 'Pause' : 'Resume'}
                     >
@@ -360,7 +360,7 @@ export const MonitorsPage: React.FC = () => {
                     {monitor.last_session_id && (
                       <a
                         href={`/qa-loop?session=${monitor.last_session_id}`}
-                        className="p-2 text-gray-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-500 hover:text-sky-600 hover:bg-sky-900/20 rounded-lg transition-colors"
                         title="View last session"
                       >
                         <FiExternalLink className="h-4 w-4" />
@@ -368,7 +368,7 @@ export const MonitorsPage: React.FC = () => {
                     )}
                     <button
                       onClick={() => handleDelete(monitor.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Delete"
                     >
                       <FiTrash2 className="h-4 w-4" />
@@ -379,7 +379,7 @@ export const MonitorsPage: React.FC = () => {
 
               {/* Consecutive failures warning */}
               {monitor.consecutive_failures > 2 && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-yellow-600 bg-yellow-50 px-3 py-2 rounded-lg">
+                <div className="mt-3 flex items-center gap-2 text-xs text-yellow-600 bg-yellow-900/20 px-3 py-2 rounded-lg">
                   <FiAlertTriangle className="h-3 w-3" />
                   {monitor.consecutive_failures} consecutive failures
                 </div>

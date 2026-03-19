@@ -66,29 +66,29 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
+          <div className="max-w-md w-full bg-slate-800 rounded-lg shadow-lg p-6">
             <div className="flex items-center justify-center mb-4">
-              <div className="p-3 bg-red-100 rounded-full">
+              <div className="p-3 bg-red-900/30 rounded-full">
                 <FiAlertTriangle className="h-8 w-8 text-red-600" />
               </div>
             </div>
 
-            <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+            <h1 className="text-2xl font-bold text-white text-center mb-2">
               Something went wrong
             </h1>
 
-            <p className="text-gray-600 text-center mb-6">
+            <p className="text-slate-400 text-center mb-6">
               We encountered an unexpected error. Don't worry, your data is safe.
             </p>
 
             {(import.meta.env.DEV ?? import.meta.env.MODE === 'development') && this.state.error && (
-              <div className="mb-6 p-4 bg-gray-100 rounded-lg">
+              <div className="mb-6 p-4 bg-slate-800 rounded-lg">
                 <p className="text-sm font-mono text-red-600 mb-2">
                   {this.state.error.toString()}
                 </p>
                 {this.state.errorInfo && (
-                  <details className="text-xs text-gray-600">
+                  <details className="text-xs text-slate-400">
                     <summary className="cursor-pointer font-semibold mb-2">
                       Stack Trace
                     </summary>
@@ -116,7 +116,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            <p className="mt-6 text-xs text-gray-500 text-center">
+            <p className="mt-6 text-xs text-slate-400 text-center">
               If this problem persists, please contact support.
             </p>
           </div>

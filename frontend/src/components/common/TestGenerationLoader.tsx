@@ -64,28 +64,28 @@ export const TestGenerationLoader: React.FC<TestGenerationLoaderProps> = ({
         {/* Animated Icon */}
         <div className="flex justify-center mb-6">
           <div className="relative">
-            <div className="absolute inset-0 bg-primary-100 rounded-full animate-ping opacity-75"></div>
-            <div className="relative bg-primary-50 rounded-full p-6">
+            <div className="absolute inset-0 bg-primary-900/30 rounded-full animate-ping opacity-75"></div>
+            <div className="relative bg-primary-900/20 rounded-full p-6">
               <CurrentIcon className="h-12 w-12 text-primary-600 animate-pulse" />
             </div>
           </div>
         </div>
 
         {/* Main Message */}
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">{message}</h3>
-        <p className="text-sm text-gray-600 mb-6">
+        <h3 className="text-xl font-semibold text-white mb-2">{message}</h3>
+        <p className="text-sm text-slate-400 mb-6">
           This usually takes 10-20 seconds. Please wait...
         </p>
 
         {/* Progress Bar */}
         <div className="max-w-md mx-auto mb-6">
-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
             <div
               className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-2">{Math.round(progress)}% complete</p>
+          <p className="text-xs text-slate-400 mt-2">{Math.round(progress)}% complete</p>
         </div>
 
         {/* Step Indicators */}
@@ -105,10 +105,10 @@ export const TestGenerationLoader: React.FC<TestGenerationLoaderProps> = ({
                 <div
                   className={`p-2 rounded-lg transition-all duration-300 ${
                     isCompleted
-                      ? 'bg-green-100 text-green-600'
+                      ? 'bg-green-900/30 text-green-600'
                       : isActive
-                      ? 'bg-primary-100 text-primary-600'
-                      : 'bg-gray-100 text-gray-400'
+                      ? 'bg-primary-900/30 text-primary-600'
+                      : 'bg-slate-800 text-slate-500'
                   }`}
                 >
                   <StepIcon className="h-5 w-5" />
@@ -119,7 +119,7 @@ export const TestGenerationLoader: React.FC<TestGenerationLoaderProps> = ({
                       ? 'text-primary-600'
                       : isCompleted
                       ? 'text-green-600'
-                      : 'text-gray-400'
+                      : 'text-slate-500'
                   }`}
                 >
                   {step.label}

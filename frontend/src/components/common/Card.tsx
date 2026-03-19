@@ -19,7 +19,7 @@ export const Card: React.FC<CardProps> = ({
   clickable = false,
   onClick,
 }) => {
-  const baseClasses = 'bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-all duration-200';
+  const baseClasses = 'bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6 transition-all duration-200';
   const hoverClasses = hoverable || clickable
     ? 'hover:shadow-md hover:border-primary-200 hover:scale-[1.01]'
     : '';
@@ -39,9 +39,9 @@ export const Card: React.FC<CardProps> = ({
       } : undefined}
     >
       {(title || headerActions) && (
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-700">
           {title && (
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
           )}
           {headerActions && (
             <div>{headerActions}</div>

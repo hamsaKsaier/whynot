@@ -187,21 +187,21 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
       {!embedded && (
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Test Runs</h1>
-            <p className="text-gray-600 mt-1">View execution history and results</p>
+            <h1 className="text-3xl font-bold text-white">Test Runs</h1>
+            <p className="text-slate-400 mt-1">View execution history and results</p>
           </div>
           {executions.length > 0 && (
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => handleExport('csv')}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-slate-200 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 <FiDownload className="h-4 w-4" />
                 <span>Export CSV</span>
               </button>
               <button
                 onClick={() => handleExport('json')}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-slate-200 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 <FiDownload className="h-4 w-4" />
                 <span>Export JSON</span>
@@ -215,11 +215,11 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
       {executions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4">
-            <div className="text-sm text-gray-600 mb-1">Total Executions</div>
-            <div className="text-2xl font-bold text-gray-900">{total}</div>
+            <div className="text-sm text-slate-400 mb-1">Total Executions</div>
+            <div className="text-2xl font-bold text-white">{total}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600 mb-1">Success Rate</div>
+            <div className="text-sm text-slate-400 mb-1">Success Rate</div>
             <div className="text-2xl font-bold text-green-600">
               {total > 0 && executions.length > 0
                 ? `${Math.round((executions.filter(e => e && e.status === 'completed').length / total) * 100)}%`
@@ -227,8 +227,8 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             </div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600 mb-1">Average Duration</div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-sm text-slate-400 mb-1">Average Duration</div>
+            <div className="text-2xl font-bold text-white">
               {(() => {
                 const completed = executions.filter(e => e && e.status !== 'running' && e.total_duration_ms);
                 return completed.length > 0
@@ -238,7 +238,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             </div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600 mb-1">Running Now</div>
+            <div className="text-sm text-slate-400 mb-1">Running Now</div>
             <div className="text-2xl font-bold text-blue-600">
               {executions.filter(e => e && e.status === 'running').length}
             </div>
@@ -267,7 +267,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === 'all'
                 ? 'bg-primary-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
             }`}
           >
             All
@@ -277,7 +277,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === 'completed'
                 ? 'bg-green-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
             }`}
           >
             Completed
@@ -287,7 +287,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === 'failed'
                 ? 'bg-red-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
             }`}
           >
             Failed
@@ -335,21 +335,21 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                     <div className="flex items-center space-x-4">
                       {getStatusBadge(execution.status)}
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-white">
                           Execution {execution.execution_id?.substring(0, 8) || 'N/A'}
                         </div>
-                        <div className="text-sm text-gray-500" title={execution.started_at ? formatAbsoluteTime(execution.started_at) : ''}>
+                        <div className="text-sm text-slate-400" title={execution.started_at ? formatAbsoluteTime(execution.started_at) : ''}>
                           {execution.started_at ? formatRelativeTime(execution.started_at) : 'Unknown'}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-6">
                       <div className="text-sm">
-                        <span className="text-gray-600">Duration:</span>
+                        <span className="text-slate-400">Duration:</span>
                         <span className="ml-2 font-medium">{formatDuration(execution.total_duration_ms || 0)}</span>
                       </div>
                       <div className="text-sm">
-                        <span className="text-gray-600">Steps:</span>
+                        <span className="text-slate-400">Steps:</span>
                         <span className="ml-2 font-medium">
                           {execution.steps?.filter((s) => s.success).length || 0}/{execution.steps?.length || 0} passed
                         </span>
@@ -366,7 +366,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                         )}
                         <Link
                           to={`/test-runs/${execution.execution_id}`}
-                          className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                          className="text-primary-600 hover:text-primary-300 text-sm font-medium"
                         >
                           View Details
                         </Link>
@@ -380,7 +380,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
           {/* Pagination */}
           {total > limit && (
             <div className="mt-6 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-slate-400">
                 Showing {offset + 1}-{Math.min(offset + limit, total)} of {total} executions
               </div>
               <div className="flex items-center space-x-2">
@@ -389,8 +389,8 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                   disabled={offset === 0}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     offset === 0
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                      : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
                   }`}
                 >
                   Previous
@@ -400,8 +400,8 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                   disabled={offset + limit >= total}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     offset + limit >= total
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                      : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
                   }`}
                 >
                   Next

@@ -15,7 +15,7 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className={`bg-white rounded-lg shadow-sm p-6 border border-gray-200 ${className}`}
+          className={`bg-slate-800 rounded-lg shadow-sm p-6 border border-slate-700 ${className}`}
         >
           <SkeletonLoader width="w-3/4" height="h-6" className="mb-4" />
           <SkeletonLoader width="w-full" height="h-4" className="mb-2" />

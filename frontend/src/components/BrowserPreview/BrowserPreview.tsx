@@ -72,7 +72,7 @@ export const BrowserPreview: React.FC<BrowserPreviewProps> = ({
     onGoToLastFrame;
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-slate-800">
       {/* Browser Controls */}
       <BrowserControls
         url={url}

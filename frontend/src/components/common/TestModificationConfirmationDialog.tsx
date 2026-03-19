@@ -32,9 +32,9 @@ export const TestModificationConfirmationDialog: React.FC<TestModificationConfir
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full border-2 border-gray-200">
+      <div className="bg-slate-800 rounded-lg shadow-xl max-w-lg w-full border-2 border-slate-700">
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <h3 className="text-lg font-semibold text-white mb-4">
             {isSuccess ? '✅ Test Passed!' : '❌ Test Failed'}
           </h3>
           
@@ -51,14 +51,14 @@ export const TestModificationConfirmationDialog: React.FC<TestModificationConfir
                 </span>
               </div>
               
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-slate-400 mb-2">
                 Steps: <span className="font-medium">{passedSteps} / {totalSteps}</span> passed
               </p>
               
               {/* Show failed steps if any */}
               {!isSuccess && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
-                  <p className="text-sm font-medium text-red-800 mb-2">Failed Steps:</p>
+                <div className="mt-3 p-3 bg-red-900/20 border border-red-800 rounded">
+                  <p className="text-sm font-medium text-red-300 mb-2">Failed Steps:</p>
                   {testResult.steps
                     .map((step, idx) => ({ step, idx }))
                     .filter(({ step }) => step.success === false)
@@ -73,7 +73,7 @@ export const TestModificationConfirmationDialog: React.FC<TestModificationConfir
             </div>
           )}
           
-          <div className="flex gap-2 justify-end pt-4 border-t border-gray-200">
+          <div className="flex gap-2 justify-end pt-4 border-t border-slate-700">
             {isSuccess ? (
               <>
                 <Button variant="secondary" onClick={onReject}>

@@ -118,16 +118,16 @@ export const Modal: React.FC<ModalProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
-          className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} transform transition-all`}
+          className={`relative bg-slate-800 rounded-lg shadow-xl w-full ${sizeClasses[size]} transform transition-all`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h3 id="modal-title" className="text-lg font-semibold text-gray-900">{title}</h3>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+            <h3 id="modal-title" className="text-lg font-semibold text-white">{title}</h3>
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-slate-500 hover:text-slate-400 transition-colors"
                 aria-label="Close dialog"
               >
                 <FiX className="h-5 w-5" />
@@ -149,7 +149,7 @@ interface ModalFooterProps {
 
 export const ModalFooter: React.FC<ModalFooterProps> = ({ children }) => {
   return (
-    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
+    <div className="flex justify-end gap-3 pt-4 border-t border-slate-700 mt-4">
       {children}
     </div>
   );

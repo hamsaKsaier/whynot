@@ -109,9 +109,16 @@ export class ParallelTestExecutor {
 
   /**
    * Execute a single test case against the test-executor service.
+   * If the test case has playwright_code, run it directly via the Playwright runner.
+   * Otherwise, fall back to the step-based execution.
    * Compares the result with Claude's observedResult to detect mismatches.
    */
   private async executeOne(testCase: any, observedResult: 'pass' | 'fail'): Promise<void> {
+    // If playwright_code is available, use the direct Playwright runner
+    if (testCase.playwright_code) {
+      return this.executeViaPlaywright(testCase, observedResult);
+    }
+
     // ── 1. Normalize steps ──────────────────────────────────────────────
     const rawSteps = testCase.steps;
     const rawStepsArr: any[] = Array.isArray(rawSteps)
@@ -334,6 +341,146 @@ export class ParallelTestExecutor {
           failureReason: error.message,
           observedResult,
           isMismatch
+        }
+      });
+    }
+  }
+
+  /**
+   * Execute a test case using its playwright_code via the test-executor's
+   * /api/run-playwright endpoint.
+   */
+  private async executeViaPlaywright(testCase: any, observedResult: 'pass' | 'fail'): Promise<void> {
+    emitToSession(this.sessionId, {
+      type: 'test_run_start',
+      data: { testCaseId: testCase.id, testCaseName: testCase.name, runner: 'playwright' }
+    });
+
+    try {
+      const response = await axios.post(
+        `${this.testExecutorUrl}/api/run-playwright`,
+        {
+          playwrightCode: testCase.playwright_code,
+          timeoutMs: 30_000,
+        },
+        { timeout: 60_000 }
+      );
+
+      const res = response.data;
+      const status: 'passed' | 'failed' = res.passed ? 'passed' : 'failed';
+
+      if (res.passed) this.results.testsPassed++; else this.results.testsFailed++;
+      this.results.testsExecuted++;
+
+      // Mismatch detection
+      const isMismatch =
+        (observedResult === 'pass' && status === 'failed') ||
+        (observedResult === 'fail' && status === 'passed');
+
+      // For Playwright runner: map result to confirmed/mismatch
+      const finalStatus = isMismatch ? 'mismatch' : (status === 'passed' ? 'confirmed' : status);
+
+      if (isMismatch) {
+        this.mismatches.push({
+          testCaseId: testCase.id,
+          testCaseName: testCase.name,
+          observedResult,
+          executionResult: status,
+          failureReason: res.error,
+          steps: testCase.steps || []
+        });
+        logger.warn('Mismatch detected (Playwright runner)', {
+          sessionId: this.sessionId,
+          testCaseId: testCase.id,
+          observedResult,
+          executionResult: status,
+        });
+      }
+
+      // Persist test run (also updates confidence score via updateTestCaseLastRun)
+      try {
+        await this.repository.addTestRun(this.sessionId, testCase.id, {
+          status,
+          durationMs: res.duration,
+          stepsTotal: 1,
+          stepsCompleted: res.passed ? 1 : 0,
+          failureReason: res.error,
+          screenshots: res.screenshots,
+          observedResult,
+          isMismatch,
+        });
+      } catch (saveErr: any) {
+        logger.warn('Failed to persist Playwright test run', { testCaseId: testCase.id, error: saveErr.message });
+      }
+
+      emitToSession(this.sessionId, {
+        type: 'test_run_result',
+        data: {
+          testCaseId: testCase.id,
+          testCaseName: testCase.name,
+          status: finalStatus,
+          durationMs: res.duration,
+          failureReason: res.error,
+          humanError: res.humanError,
+          observedResult,
+          isMismatch,
+          runner: 'playwright',
+          screenshots: res.screenshots,
+        }
+      });
+
+      logger.info('Playwright test execution completed', {
+        sessionId: this.sessionId,
+        testCaseId: testCase.id,
+        status: finalStatus,
+        observedResult,
+        isMismatch,
+        duration: res.duration,
+      });
+
+    } catch (error: any) {
+      this.results.testsFailed++;
+      this.results.testsExecuted++;
+
+      const isMismatch = observedResult === 'pass';
+      if (isMismatch) {
+        this.mismatches.push({
+          testCaseId: testCase.id,
+          testCaseName: testCase.name,
+          observedResult,
+          executionResult: 'error',
+          failureReason: error.message,
+          steps: testCase.steps || []
+        });
+      }
+
+      logger.warn('Playwright test execution failed', {
+        sessionId: this.sessionId,
+        testCaseId: testCase.id,
+        error: error.message,
+      });
+
+      try {
+        await this.repository.addTestRun(this.sessionId, testCase.id, {
+          status: 'error',
+          failureReason: error.message,
+          observedResult,
+          isMismatch,
+        });
+      } catch (saveErr: any) {
+        logger.warn('Failed to persist Playwright test run error', { testCaseId: testCase.id, error: saveErr.message });
+      }
+
+      emitToSession(this.sessionId, {
+        type: 'test_run_result',
+        data: {
+          testCaseId: testCase.id,
+          testCaseName: testCase.name,
+          status: 'error',
+          failureReason: error.message,
+          observedResult,
+          isMismatch,
+          runner: 'playwright',
         }
       });
     }

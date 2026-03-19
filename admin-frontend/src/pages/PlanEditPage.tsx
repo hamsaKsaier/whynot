@@ -95,30 +95,30 @@ export const PlanEditPage: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="animate-pulse h-64 bg-gray-200 rounded-lg" />;
+  if (loading) return <div className="animate-pulse h-64 bg-slate-700 rounded-lg" />;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{isNew ? 'Create Plan' : 'Edit Plan'}</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">{isNew ? 'Create Plan' : 'Edit Plan'}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Name</label>
               <input
                 value={form.name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Slug</label>
               <input
                 value={form.slug}
                 onChange={(e) => setForm(prev => ({ ...prev, slug: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
                 required
                 pattern="[a-z0-9-]+"
               />
@@ -126,31 +126,31 @@ export const PlanEditPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Description</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
               rows={2}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price (cents)</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Price (cents)</label>
               <input
                 type="number"
                 value={form.price_cents}
                 onChange={(e) => setForm(prev => ({ ...prev, price_cents: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Billing Interval</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Billing Interval</label>
               <select
                 value={form.billing_interval}
                 onChange={(e) => setForm(prev => ({ ...prev, billing_interval: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
               >
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
@@ -158,33 +158,33 @@ export const PlanEditPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Credits / Period</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Credits / Period</label>
               <input
                 type="number"
                 value={form.credits_per_period}
                 onChange={(e) => setForm(prev => ({ ...prev, credits_per_period: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Trial Days</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Trial Days</label>
               <input
                 type="number"
                 value={form.trial_days}
                 onChange={(e) => setForm(prev => ({ ...prev, trial_days: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
+              <label className="block text-sm font-medium text-slate-200 mb-1">Sort Order</label>
               <input
                 type="number"
                 value={form.sort_order}
                 onChange={(e) => setForm(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
               />
             </div>
             <div className="flex flex-col justify-end gap-2">
@@ -201,15 +201,15 @@ export const PlanEditPage: React.FC = () => {
         </div>
 
         {/* Features */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Feature Flags</h2>
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Feature Flags</h2>
 
           <div className="space-y-2 mb-4">
             {features.map((f, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="flex-1 text-sm font-mono bg-gray-50 px-3 py-1.5 rounded">{f.key}</span>
-                <span className="text-sm font-mono bg-gray-50 px-3 py-1.5 rounded w-32">{f.value}</span>
-                <button type="button" onClick={() => removeFeature(i)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                <span className="flex-1 text-sm font-mono bg-slate-900 px-3 py-1.5 rounded">{f.key}</span>
+                <span className="text-sm font-mono bg-slate-900 px-3 py-1.5 rounded w-32">{f.value}</span>
+                <button type="button" onClick={() => removeFeature(i)} className="p-1 text-red-500 hover:bg-red-900/20 rounded">
                   <FiX className="h-4 w-4" />
                 </button>
               </div>
@@ -218,31 +218,31 @@ export const PlanEditPage: React.FC = () => {
 
           <div className="flex items-end gap-2">
             <div className="flex-1">
-              <label className="text-xs text-gray-500">Key</label>
+              <label className="text-xs text-slate-400">Key</label>
               <input
                 value={newFeatureKey}
                 onChange={(e) => setNewFeatureKey(e.target.value)}
                 placeholder="max_projects"
-                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-1.5 border border-slate-600 rounded-lg text-sm"
               />
             </div>
             <div className="w-32">
-              <label className="text-xs text-gray-500">Value</label>
+              <label className="text-xs text-slate-400">Value</label>
               <input
                 value={newFeatureValue}
                 onChange={(e) => setNewFeatureValue(e.target.value)}
                 placeholder="true"
-                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-1.5 border border-slate-600 rounded-lg text-sm"
               />
             </div>
-            <button type="button" onClick={addFeature} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+            <button type="button" onClick={addFeature} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700">
               <FiPlus className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => navigate('/plans')} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+          <button type="button" onClick={() => navigate('/plans')} className="px-4 py-2 border border-slate-600 rounded-lg text-sm hover:bg-slate-900">
             Cancel
           </button>
           <button type="submit" disabled={saving} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50">

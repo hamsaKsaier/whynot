@@ -401,12 +401,55 @@ app.use('/api/public', publicEndpointRateLimiter, publicRouter);
 import { ciRouter } from './ci-router';
 app.use('/api/ci', ciRouter);
 
+// ─── Internal notification endpoint (no auth — called by qa-loop-executor) ──
+import { sendScanCompleteEmail, sendCriticalBugEmail } from '../services/email-service';
+app.post('/api/internal/notifications', asyncHandler(async (req, res) => {
+  const { type, workspaceId, data } = req.body;
+  if (!type || !workspaceId) return res.json({ ok: true }); // silently skip
+  try {
+    const members = await query<{ user_id: string }>(
+      'SELECT user_id FROM workspace_members WHERE workspace_id = $1',
+      [workspaceId],
+    );
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    for (const m of members) {
+      if (type === 'scan_complete') {
+        sendScanCompleteEmail(m.user_id, {
+          projectName: data.projectName || data.targetUrl || 'QA Session',
+          bugCount: data.bugCount || 0,
+          criticalCount: data.criticalCount || 0,
+          scanUrl: `${frontendUrl}/qa-loop?session=${data.sessionId || ''}`,
+        }).catch(() => {});
+      } else if (type === 'critical_bug') {
+        sendCriticalBugEmail(m.user_id, {
+          projectName: data.projectName || data.targetUrl || 'QA Session',
+          bugTitle: data.bugTitle || 'Critical bug',
+          severity: data.severity || 'critical',
+          bugUrl: `${frontendUrl}/qa-loop?session=${data.sessionId || ''}`,
+        }).catch(() => {});
+      }
+    }
+  } catch (err: any) {
+    // Non-critical — log and move on
+  }
+  res.json({ ok: true });
+}));
+
 // ─── All routes below this line require a valid JWT ───────────────────────────
 app.use('/api', requireAuth);
 
 // ─── Monitor routes (requires auth) ──────────────────────────────────────────
 import { monitorRouter } from './monitor-router';
 app.use('/api/monitors', monitorRouter);
+
+// ─── Bug Reporting + ClickUp/GitHub integration routes ──────────────────────
+import { integrationsRouter, bugReportRouter } from './integrations-router';
+app.use('/api/integrations', integrationsRouter);
+app.use('/api', bugReportRouter);
+
+// ─── Project credentials + notification preferences ─────────────────────────
+import { credentialsRouter } from './credentials-router';
+app.use('/api', credentialsRouter);
 
 // Main workflow endpoint (with stricter rate limiting)
 app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), asyncHandler(async (req, res) => {

@@ -27,7 +27,7 @@ export const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-navy-900 text-gray-100">
+    <div className="min-h-screen bg-navy-900 text-slate-200">
       {/* Nav */}
       <nav className="border-b border-navy-700">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -35,8 +35,8 @@ export const LandingPage: React.FC = () => {
             <img src="/logo.svg" alt="WhyNot" className="h-8" />
           </div>
           <div className="flex items-center gap-4">
-            <a href="#features" className="text-sm text-gray-400 hover:text-white">Features</a>
-            <a href="#pricing" className="text-sm text-gray-400 hover:text-white">Pricing</a>
+            <a href="#features" className="text-sm text-slate-500 hover:text-white">Features</a>
+            <a href="#pricing" className="text-sm text-slate-500 hover:text-white">Pricing</a>
             {isLoggedIn ? (
               <button
                 onClick={() => navigate('/qa-loop')}
@@ -77,7 +77,7 @@ export const LandingPage: React.FC = () => {
               Get a QA team.
             </span>
           </h1>
-          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+          <p className="text-xl text-slate-500 mb-10 max-w-2xl mx-auto">
             WhyNot crawls your app, generates tests, finds bugs, fixes your code, and opens a PR —
             all autonomously. Just paste a URL.
           </p>
@@ -91,7 +91,7 @@ export const LandingPage: React.FC = () => {
               <FiArrowRight className="h-5 w-5" />
               {isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}
             </button>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-400">
               No credit card required. Start testing in minutes.
             </p>
           </div>
@@ -129,11 +129,11 @@ export const LandingPage: React.FC = () => {
                 <div className="w-10 h-10 bg-primary-500/10 rounded-full flex items-center justify-center mb-4">
                   <item.icon className="h-5 w-5 text-primary-400" />
                 </div>
-                <div className="absolute top-4 right-4 w-8 h-8 bg-navy-900 rounded-full flex items-center justify-center text-sm font-bold text-gray-500">
+                <div className="absolute top-4 right-4 w-8 h-8 bg-navy-900 rounded-full flex items-center justify-center text-sm font-bold text-slate-400">
                   {item.step}
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
-                <p className="text-gray-400 text-sm">{item.desc}</p>
+                <p className="text-slate-500 text-sm">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -146,7 +146,7 @@ export const LandingPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-center text-white mb-4">
             Everything you need for autonomous QA
           </h2>
-          <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">
+          <p className="text-center text-slate-500 mb-12 max-w-2xl mx-auto">
             Replace manual testing with an AI that never sleeps.
           </p>
           <div className="grid md:grid-cols-2 gap-6">
@@ -196,7 +196,7 @@ export const LandingPage: React.FC = () => {
                     <feature.icon className="h-5 w-5" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-400 text-sm">{feature.desc}</p>
+                  <p className="text-slate-500 text-sm">{feature.desc}</p>
                 </div>
               );
             })}
@@ -210,7 +210,7 @@ export const LandingPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-center text-white mb-4">
             Simple, transparent pricing
           </h2>
-          <p className="text-center text-gray-400 mb-12">
+          <p className="text-center text-slate-500 mb-12">
             Start free. Scale as you grow.
           </p>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
@@ -231,14 +231,14 @@ export const LandingPage: React.FC = () => {
                     <span className="text-3xl font-bold text-white">
                       {plan.price_monthly === 0 ? 'Free' : `$${plan.price_monthly}`}
                     </span>
-                    {plan.price_monthly > 0 && <span className="text-gray-400 text-sm">/mo</span>}
+                    {plan.price_monthly > 0 && <span className="text-slate-500 text-sm">/mo</span>}
                   </div>
-                  <p className="text-sm text-gray-400 mb-4">
+                  <p className="text-sm text-slate-500 mb-4">
                     {plan.monthly_credits.toLocaleString()} credits/month
                   </p>
                   <ul className="space-y-2 mb-6">
                     {Object.entries(plan.features || {}).slice(0, 5).map(([key, val]) => (
-                      <li key={key} className="flex items-center gap-2 text-sm text-gray-300">
+                      <li key={key} className="flex items-center gap-2 text-sm text-slate-400">
                         <FiCheckCircle className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                         {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         {typeof val === 'number' && val > 0 ? `: ${val}` : ''}
@@ -250,7 +250,7 @@ export const LandingPage: React.FC = () => {
                     className={`w-full py-2 rounded-lg font-medium text-sm transition-colors ${
                       isPopular
                         ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                        : 'bg-navy-700 text-gray-300 hover:bg-navy-700/80'
+                        : 'bg-navy-700 text-slate-400 hover:bg-navy-700/80'
                     }`}
                   >
                     Get Started
@@ -276,12 +276,12 @@ export const LandingPage: React.FC = () => {
                   <h3 className="text-lg font-semibold text-white mb-1">{plan.name}</h3>
                   <div className="mb-4">
                     <span className="text-3xl font-bold text-white">{plan.price}</span>
-                    {plan.price !== 'Free' && <span className="text-gray-400 text-sm">/mo</span>}
+                    {plan.price !== 'Free' && <span className="text-slate-500 text-sm">/mo</span>}
                   </div>
-                  <p className="text-sm text-gray-400 mb-4">{plan.credits} credits/month</p>
+                  <p className="text-sm text-slate-500 mb-4">{plan.credits} credits/month</p>
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
+                      <li key={f} className="flex items-center gap-2 text-sm text-slate-400">
                         <FiCheckCircle className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                         {f}
                       </li>
@@ -292,7 +292,7 @@ export const LandingPage: React.FC = () => {
                     className={`w-full py-2 rounded-lg font-medium text-sm transition-colors ${
                       i === 1
                         ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                        : 'bg-navy-700 text-gray-300 hover:bg-navy-700/80'
+                        : 'bg-navy-700 text-slate-400 hover:bg-navy-700/80'
                     }`}
                   >
                     Get Started
@@ -310,7 +310,7 @@ export const LandingPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-white mb-4">
             Stop writing tests. Start shipping quality.
           </h2>
-          <p className="text-lg text-gray-400 mb-8">
+          <p className="text-lg text-slate-500 mb-8">
             WhyNot is the QA team you always wanted but never had the budget for.
           </p>
           <button
@@ -329,7 +329,7 @@ export const LandingPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <img src="/logo.svg" alt="WhyNot" className="h-6" />
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-400">
             Autonomous QA Platform
           </p>
         </div>

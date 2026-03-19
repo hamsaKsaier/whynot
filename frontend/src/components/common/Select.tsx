@@ -34,7 +34,7 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div className={className}>
       {label && (
-        <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={selectId} className="block text-sm font-medium text-slate-200 mb-1">
           {label}
           {required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
         </label>
@@ -50,8 +50,8 @@ export const Select: React.FC<SelectProps> = ({
         className={`
           w-full px-3 py-2 border rounded-lg shadow-sm
           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-          disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors
-          ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}
+          disabled:bg-slate-800 disabled:cursor-not-allowed transition-colors
+          ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-slate-600'}
           ${!error && value ? 'border-green-500' : ''}
         `}
       >

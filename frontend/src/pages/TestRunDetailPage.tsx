@@ -100,7 +100,7 @@ export const TestRunDetailPage: React.FC = () => {
         <div className="mb-6">
           <Link
             to="/test-runs"
-            className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-4"
+            className="inline-flex items-center text-primary-600 hover:text-primary-300 mb-4"
           >
             <FiArrowLeft className="mr-2" />
             Back to Test Runs
@@ -151,15 +151,15 @@ export const TestRunDetailPage: React.FC = () => {
       <div className="mb-6">
         <Link
           to="/test-runs"
-          className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-4"
+          className="inline-flex items-center text-primary-600 hover:text-primary-300 mb-4"
         >
           <FiArrowLeft className="mr-2" />
           Back to Test Runs
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Execution Details</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-3xl font-bold text-white">Execution Details</h1>
+            <p className="text-slate-400 mt-1">
               {testCase ? testCase.name : `Execution ${execution.execution_id.substring(0, 8)}`}
             </p>
           </div>
@@ -178,35 +178,35 @@ export const TestRunDetailPage: React.FC = () => {
       {/* Execution Metadata */}
       <Card className="p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-sm text-gray-600 mb-1">Status</div>
+          <div className="bg-slate-900 rounded-lg p-4">
+            <div className="text-sm text-slate-400 mb-1">Status</div>
             <div className="flex items-center gap-2">
               {getStatusBadge(execution.status)}
-              <span className="text-lg font-semibold text-gray-900 capitalize">{execution.status}</span>
+              <span className="text-lg font-semibold text-white capitalize">{execution.status}</span>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-sm text-gray-600 mb-1">Duration</div>
-            <div className="text-lg font-semibold text-gray-900">
+          <div className="bg-slate-900 rounded-lg p-4">
+            <div className="text-sm text-slate-400 mb-1">Duration</div>
+            <div className="text-lg font-semibold text-white">
               {formatDuration(execution.total_duration_ms)}
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-sm text-gray-600 mb-1">Started</div>
-            <div className="text-sm font-medium text-gray-900" title={formatAbsoluteTime(execution.started_at)}>
+          <div className="bg-slate-900 rounded-lg p-4">
+            <div className="text-sm text-slate-400 mb-1">Started</div>
+            <div className="text-sm font-medium text-white" title={formatAbsoluteTime(execution.started_at)}>
               {formatRelativeTime(execution.started_at)}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-slate-400 mt-1">
               {formatAbsoluteTime(execution.started_at)}
             </div>
           </div>
           {execution.completed_at && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm text-gray-600 mb-1">Completed</div>
-              <div className="text-sm font-medium text-gray-900" title={formatAbsoluteTime(execution.completed_at)}>
+            <div className="bg-slate-900 rounded-lg p-4">
+              <div className="text-sm text-slate-400 mb-1">Completed</div>
+              <div className="text-sm font-medium text-white" title={formatAbsoluteTime(execution.completed_at)}>
                 {formatRelativeTime(execution.completed_at)}
               </div>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-slate-400 mt-1">
                 {formatAbsoluteTime(execution.completed_at)}
               </div>
             </div>
@@ -215,7 +215,7 @@ export const TestRunDetailPage: React.FC = () => {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+          <div className="bg-green-900/20 rounded-lg p-4 border border-green-800">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-green-700 font-medium">Steps Passed</div>
@@ -224,7 +224,7 @@ export const TestRunDetailPage: React.FC = () => {
               <FiCheckCircle className="h-8 w-8 text-green-600 opacity-50" />
             </div>
           </div>
-          <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+          <div className="bg-red-900/20 rounded-lg p-4 border border-red-800">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-red-700 font-medium">Steps Failed</div>
@@ -233,7 +233,7 @@ export const TestRunDetailPage: React.FC = () => {
               <FiXCircle className="h-8 w-8 text-red-600 opacity-50" />
             </div>
           </div>
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-800">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-blue-700 font-medium">Total Steps</div>
@@ -258,14 +258,14 @@ export const TestRunDetailPage: React.FC = () => {
       {/* Test Case Info */}
       {testCase && (
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Test Case</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Test Case</h2>
           <div>
-            <div className="font-medium text-gray-900 mb-1">{testCase.name}</div>
+            <div className="font-medium text-white mb-1">{testCase.name}</div>
             {testCase.description && (
-              <div className="text-sm text-gray-600">{testCase.description}</div>
+              <div className="text-sm text-slate-400">{testCase.description}</div>
             )}
             {testCase.website_url && (
-              <div className="text-sm text-gray-500 mt-2">
+              <div className="text-sm text-slate-400 mt-2">
                 <span className="font-medium">URL:</span> {testCase.website_url}
               </div>
             )}
@@ -275,9 +275,9 @@ export const TestRunDetailPage: React.FC = () => {
 
       {/* Step Results */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Step-by-Step Results</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">Step-by-Step Results</h2>
         {execution.steps.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-slate-400">
             No steps recorded for this execution
           </div>
         ) : (

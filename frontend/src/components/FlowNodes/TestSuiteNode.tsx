@@ -10,7 +10,7 @@ interface TestSuiteNodeData {
 
 export const TestSuiteNode: React.FC<NodeProps<TestSuiteNodeData>> = ({ data }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-orange-500 min-w-[220px] max-w-[260px] transition-all duration-200 hover:shadow-md">
+    <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 border-l-4 border-l-orange-500 min-w-[220px] max-w-[260px] transition-all duration-200 hover:shadow-md">
       <Handle
         type="target"
         position={Position.Top}
@@ -18,18 +18,18 @@ export const TestSuiteNode: React.FC<NodeProps<TestSuiteNodeData>> = ({ data }) 
       />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-1.5">
-          <div className="p-1.5 bg-orange-50 rounded-lg flex-shrink-0">
+          <div className="p-1.5 bg-orange-900/20 rounded-lg flex-shrink-0">
             <FiPackage className="h-3.5 w-3.5 text-orange-600" />
           </div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-orange-600">
             Test Suite
           </span>
         </div>
-        <div className="font-bold text-gray-900 text-sm leading-snug truncate">
+        <div className="font-bold text-white text-sm leading-snug truncate">
           {data.label}
         </div>
         {data.description && (
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
             {data.description}
           </p>
         )}

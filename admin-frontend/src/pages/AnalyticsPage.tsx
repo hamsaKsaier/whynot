@@ -29,11 +29,11 @@ export const AnalyticsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Revenue & Analytics</h1>
+        <h1 className="text-2xl font-bold text-white">Revenue & Analytics</h1>
         <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-gray-200 rounded-lg animate-pulse" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-700 rounded-lg animate-pulse" />)}
         </div>
-        <div className="h-64 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="h-64 bg-slate-700 rounded-lg animate-pulse" />
       </div>
     );
   }
@@ -47,21 +47,21 @@ export const AnalyticsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Revenue & Analytics</h1>
+      <h1 className="text-2xl font-bold text-white">Revenue & Analytics</h1>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
-          <div key={kpi.label} className="bg-white rounded-lg border border-gray-200 p-5">
-            <p className="text-sm text-gray-500">{kpi.label}</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{kpi.value}</p>
+          <div key={kpi.label} className="bg-slate-800 rounded-lg border border-slate-700 p-5">
+            <p className="text-sm text-slate-400">{kpi.label}</p>
+            <p className="text-2xl font-bold text-white mt-1">{kpi.value}</p>
           </div>
         ))}
       </div>
 
       {/* Signups Chart */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Signups (Last 30 days)</h2>
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Signups (Last 30 days)</h2>
         <ResponsiveContainer width="100%" height={250}>
           <AreaChart data={signups}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -75,8 +75,8 @@ export const AnalyticsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue by Plan */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Revenue by Plan</h2>
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Revenue by Plan</h2>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={revenue}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -89,8 +89,8 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Credit Usage */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Credit Usage (Last 30 days)</h2>
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Credit Usage (Last 30 days)</h2>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={usage}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -104,10 +104,10 @@ export const AnalyticsPage: React.FC = () => {
       </div>
 
       {/* Churn */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Cancellations (Last 90 days)</h2>
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Cancellations (Last 90 days)</h2>
         {churn.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-8">No cancellations in this period</p>
+          <p className="text-sm text-slate-500 text-center py-8">No cancellations in this period</p>
         ) : (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={churn}>

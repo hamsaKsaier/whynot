@@ -107,8 +107,8 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       {!embedded && (
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Environments</h1>
-            <p className="text-gray-600 mt-1">Manage test environments and URLs</p>
+            <h1 className="text-3xl font-bold text-white">Environments</h1>
+            <p className="text-slate-400 mt-1">Manage test environments and URLs</p>
           </div>
           <Button onClick={openCreateModal} className="flex items-center space-x-2">
             <FiPlus className="h-4 w-4" />
@@ -147,11 +147,11 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
           {environments.map((env) => (
             <Card key={env.id} className="p-4 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-gray-900">{env.name}</h3>
+                <h3 className="font-semibold text-white">{env.name}</h3>
                 <div className="flex items-center space-x-1">
                   <button
                     onClick={() => handleUseInQALoop(env)}
-                    className="p-1.5 rounded hover:bg-green-50 transition-colors"
+                    className="p-1.5 rounded hover:bg-green-900/20 transition-colors"
                     title="Use in QA Loop"
                   >
                     <FiZap className="h-4 w-4 text-green-600" />
@@ -160,21 +160,21 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                     href={env.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                    className="p-1.5 rounded hover:bg-slate-800 transition-colors"
                     title="Open URL"
                   >
-                    <FiExternalLink className="h-4 w-4 text-gray-500" />
+                    <FiExternalLink className="h-4 w-4 text-slate-400" />
                   </a>
                   <button
                     onClick={() => openEditModal(env)}
-                    className="p-1.5 rounded hover:bg-gray-100 transition-colors"
+                    className="p-1.5 rounded hover:bg-slate-800 transition-colors"
                     title="Edit"
                   >
-                    <FiEdit className="h-4 w-4 text-gray-600" />
+                    <FiEdit className="h-4 w-4 text-slate-400" />
                   </button>
                   <button
                     onClick={() => setDeleteTarget(env)}
-                    className="p-1.5 rounded hover:bg-red-50 transition-colors"
+                    className="p-1.5 rounded hover:bg-red-900/20 transition-colors"
                     title="Delete"
                   >
                     <FiTrash2 className="h-4 w-4 text-red-600" />
@@ -183,7 +183,7 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
               </div>
               <p className="text-sm text-primary-600 mb-2 break-all truncate">{env.url}</p>
               {env.description && (
-                <p className="text-xs text-gray-500">{env.description}</p>
+                <p className="text-xs text-slate-400">{env.description}</p>
               )}
             </Card>
           ))}
@@ -199,7 +199,7 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       >
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-200 mb-1">
               Environment Name
             </label>
             <Input
@@ -211,7 +211,7 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-200 mb-1">
               Base URL
             </label>
             <Input
@@ -223,7 +223,7 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-200 mb-1">
               Description
             </label>
             <Input

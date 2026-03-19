@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { TestCase, ExecutionResult } from '../domain/models';
 import { TestRunner } from '../application/test-runner';
+import { runPlaywrightCode } from '../application/playwright-runner';
 import { DOMAnalyzer } from '../infrastructure/selectors/dom-analyzer';
 import { PlaywrightController } from '../infrastructure/browser/playwright-controller';
 import { browserSessionManager } from '../infrastructure/browser/browser-session-manager';
@@ -783,6 +784,41 @@ router.post('/api/capture-page-session', async (req: Request, res: Response) => 
     }
   } catch (error: any) {
     logger.error('Failed to capture page with session', { error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Run raw Playwright code ──────────────────────────────────────────────────
+router.post('/api/run-playwright', async (req: Request, res: Response) => {
+  try {
+    const { playwrightCode, timeoutMs, timeout, env } = req.body;
+
+    if (!playwrightCode || typeof playwrightCode !== 'string') {
+      return res.status(400).json({ error: 'playwrightCode (string) is required' });
+    }
+
+    // Accept both `timeoutMs` and `timeout` from request body
+    const effectiveTimeout = timeoutMs ?? timeout ?? 30_000;
+
+    const result = await runPlaywrightCode(playwrightCode, {
+      timeoutMs: effectiveTimeout,
+      env: env ?? {},
+    });
+
+    res.json({
+      status: result.passed ? 'passed' : 'failed',
+      passed: result.passed,
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      screenshots: result.screenshots,
+      duration: result.duration,
+      error: result.error,
+      humanError: result.humanError,
+      retryCount: result.retryCount,
+    });
+  } catch (error: any) {
+    logger.error('Failed to run Playwright code', { error: error.message });
     res.status(500).json({ error: error.message });
   }
 });
