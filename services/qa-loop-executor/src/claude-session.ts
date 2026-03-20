@@ -508,41 +508,47 @@ compare the result with your observation. If they don't match, we know the test 
 ALWAYS provide observed_result — never leave it out.
 
 ═══ PLAYWRIGHT CODE GENERATION (MANDATORY) ═══
-For EVERY test case you save, you MUST also generate a complete, runnable Playwright test
-in the playwright_code field. This code will be used to directly execute the test.
+For EVERY test case you save, you MUST also generate Playwright commands
+in the playwright_code field. This code will be executed directly as raw commands.
 
-Rules for Playwright code generation:
-1. Write a complete .spec.ts file using test() and expect() from @playwright/test
-2. Use the EXACT CSS selectors you discovered during exploration
-3. Add selector quality comments where appropriate: // Note: fragile selector — consider adding data-testid
-4. If login credentials were provided, use process.env.TEST_USERNAME and process.env.TEST_PASSWORD — NEVER hardcode credentials
-5. Include proper assertions that match your observed behavior
-6. Include await page.screenshot() at key verification points
-7. Set reasonable timeouts for navigation and element waits
+CRITICAL RULES for playwright_code:
+1. Do NOT include any import statements (no "import { test, expect } from '@playwright/test'")
+2. Do NOT wrap code in test() or describe() blocks
+3. Do NOT use expect() from @playwright/test — use page.locator().isVisible(), page.textContent(), etc. for checks
+4. Assume "page" is already available as a variable — just write raw page commands
+5. Use the EXACT CSS selectors you discovered during exploration
+6. Add selector quality comments where appropriate: // Note: fragile selector — consider adding data-testid
+7. If login credentials were provided, use process.env.TEST_USERNAME and process.env.TEST_PASSWORD — NEVER hardcode credentials
+8. Include await page.screenshot() at key verification points
+9. Set reasonable timeouts for navigation and element waits
+10. For assertions, use plain JavaScript with throw:
+    - const el = page.locator('.error-message');
+    - if (!(await el.isVisible())) throw new Error('Error message not visible');
+    - const text = await el.textContent();
+    - if (!text?.includes('valid email')) throw new Error('Expected error text not found');
 
 SELECTOR QUALITY RULES (CRITICAL):
 - ALWAYS prefer selectors in this order: data-testid > aria-label > id > name > role > CSS class > CSS path
 - NEVER use auto-generated class names (e.g., css-1a2b3c, sc-abc123, MuiButton-root)
 - NEVER use nth-child or positional selectors unless absolutely necessary
 - If you must use a fragile selector, add a comment: // FRAGILE: Consider adding data-testid="submit-btn" to this element
-- Use getByRole(), getByLabel(), getByText() when possible — they're more resilient
-- For forms: use getByLabel('Email') instead of page.locator('input[type="email"]')
+- Use page.getByRole(), page.getByLabel(), page.getByText() when possible — they're more resilient
+- For forms: use page.getByLabel('Email') instead of page.locator('input[type="email"]')
 - Always add a brief comment explaining what each selector targets
 
 Example playwright_code format:
 \`\`\`
-import { test, expect } from '@playwright/test';
-
-test('Login form validates email', async ({ page }) => {
-  await page.goto('https://example.com/login');
-  // Note: fragile selector — consider adding data-testid
-  await page.fill('input[type="email"]', 'invalid-email');
-  await page.fill('input[type="password"]', 'password123');
-  await page.click('button[type="submit"]');
-  await page.screenshot({ path: 'login-validation.png' });
-  await expect(page.locator('.error-message')).toBeVisible();
-  await expect(page.locator('.error-message')).toContainText('valid email');
-});
+await page.goto('https://example.com/login');
+// Note: fragile selector — consider adding data-testid
+await page.fill('input[type="email"]', 'invalid-email');
+await page.fill('input[type="password"]', 'password123');
+await page.click('button[type="submit"]');
+await page.screenshot({ path: 'login-validation.png' });
+// Verify error message is visible
+const errorMsg = page.locator('.error-message');
+if (!(await errorMsg.isVisible())) throw new Error('Error message not visible');
+const errorText = await errorMsg.textContent();
+if (!errorText?.includes('valid email')) throw new Error('Expected "valid email" error text not found');
 \`\`\`
 
 REMEMBER:

@@ -841,8 +841,11 @@ router.get('/api/test-cases/:testCaseId/export-playwright', async (req: Request,
     let code = testCase.playwright_code;
     code = maskCredentials(code);
 
+    // Wrap raw commands with test() for valid .spec.ts export
+    const wrappedCode = wrapWithTestRunner(code, testCase.name);
+
     const header = generateExportHeader(targetUrl);
-    const fullCode = `${header}\n${code}\n`;
+    const fullCode = `${header}\n${wrappedCode}\n`;
     const filename = sanitizeFilename(testCase.name) + '.spec.ts';
 
     res.setHeader('Content-Type', 'text/typescript');
@@ -892,7 +895,7 @@ router.get('/api/test-suites/:suiteId/export-playwright', async (req: Request, r
     );
     const targetUrl = sessionResult.rows[0]?.target_url || 'unknown';
 
-    // Build combined file: extract test() blocks from each test case's code
+    // Build combined file: wrap each test case's raw commands in a test() block
     const header = generateExportHeader(targetUrl);
     let combinedTests = '';
 
@@ -900,22 +903,13 @@ router.get('/api/test-suites/:suiteId/export-playwright', async (req: Request, r
       let code = tc.playwright_code as string;
       code = maskCredentials(code);
 
-      // Extract the test body (remove import statements since we'll add them once)
-      const withoutImports = code
-        .replace(/^import\s+.*?;\s*$/gm, '')
-        .trim();
+      // Strip any legacy import statements and test() wrappers
+      const rawCode = stripImportsAndTestWrapper(code);
 
       combinedTests += `\n  // --- ${tc.name} ---\n`;
-      // If the code contains test(...), extract just the inner function
-      // Otherwise, wrap it in a test() call
-      if (/test\s*\(/.test(withoutImports)) {
-        // Indent inner content for the describe block
-        combinedTests += withoutImports.split('\n').map((l: string) => `  ${l}`).join('\n') + '\n';
-      } else {
-        combinedTests += `  test('${tc.name.replace(/'/g, "\\'")}', async ({ page }) => {\n`;
-        combinedTests += withoutImports.split('\n').map((l: string) => `    ${l}`).join('\n') + '\n';
-        combinedTests += `  });\n`;
-      }
+      combinedTests += `  test('${tc.name.replace(/'/g, "\\'")}', async ({ page }) => {\n`;
+      combinedTests += rawCode.split('\n').map((l: string) => `    ${l}`).join('\n') + '\n';
+      combinedTests += `  });\n`;
     }
 
     const fullCode = `${header}
@@ -936,6 +930,48 @@ ${combinedTests}
     res.status(500).json({ error: 'Failed to export Playwright suite' });
   }
 });
+
+/**
+ * Strip any legacy import statements and test()/describe() wrappers from
+ * Playwright code, returning only the raw page commands.
+ */
+function stripImportsAndTestWrapper(code: string): string {
+  // Remove import statements
+  let stripped = code.replace(/^import\s+.*?;\s*$/gm, '').trim();
+
+  // Remove test('...', async ({ page }) => { ... }) wrapper
+  const testWrapperRegex = /test\s*\([^,]+,\s*async\s*\(\s*\{\s*page[^}]*\}\s*\)\s*=>\s*\{/;
+  const match = stripped.match(testWrapperRegex);
+  if (match) {
+    const startIdx = stripped.indexOf(match[0]);
+    stripped = stripped.slice(0, startIdx) + stripped.slice(startIdx + match[0].length);
+
+    // Remove the final closing `});`
+    const lastClosing = stripped.lastIndexOf('});');
+    if (lastClosing !== -1) {
+      stripped = stripped.slice(0, lastClosing) + stripped.slice(lastClosing + 3);
+    }
+    stripped = stripped.trim();
+  }
+
+  return stripped;
+}
+
+/**
+ * Wrap raw Playwright commands with import + test() for .spec.ts export.
+ */
+function wrapWithTestRunner(rawCode: string, testName: string): string {
+  // Strip any legacy wrappers first to avoid double-wrapping
+  const cleanCode = stripImportsAndTestWrapper(rawCode);
+  const escapedName = testName.replace(/'/g, "\\'");
+
+  return `import { test, expect } from '@playwright/test';
+
+test('${escapedName}', async ({ page }) => {
+${cleanCode.split('\n').map((l: string) => `  ${l}`).join('\n')}
+});
+`;
+}
 
 // Helper: generate export header
 function generateExportHeader(targetUrl: string): string {

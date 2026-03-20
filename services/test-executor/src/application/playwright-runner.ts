@@ -1,8 +1,8 @@
-import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
+import { chromium } from 'playwright';
 import { createLogger } from '../../shared/logger/logger';
 
 const logger = createLogger('playwright-runner');
@@ -30,7 +30,12 @@ export function parsePlaywrightError(rawError: string): string {
     return 'Could not find the element to click. The page may have changed since the test was created.';
   }
 
-  // expect().toBeVisible()
+  // Element not visible
+  if (/not visible/i.test(rawError) || /Error:.*not.*visible/i.test(rawError)) {
+    return 'Expected element was not visible on the page.';
+  }
+
+  // expect().toBeVisible() (legacy code may still have this)
   if (/Error:.*expect\(received\)\.toBeVisible/i.test(rawError)) {
     return 'Expected element was not visible on the page.';
   }
@@ -65,7 +70,12 @@ export function parsePlaywrightError(rawError: string): string {
     return 'Test timed out. The page may be loading slowly or the element was not found.';
   }
 
-  // General assertion failures
+  // General assertion failures (throw new Error patterns)
+  if (/Error:.*expected/i.test(rawError) || /Error:.*not found/i.test(rawError)) {
+    return 'An assertion failed — the page did not match the expected state.';
+  }
+
+  // Legacy expect() assertions
   if (/expect\(received\)/i.test(rawError)) {
     return 'An assertion failed — the page did not match the expected state.';
   }
@@ -82,27 +92,76 @@ export function parsePlaywrightError(rawError: string): string {
  * Determines if a Playwright failure is an assertion failure (legitimate test result)
  * vs a process/infrastructure crash that should be retried.
  */
-function isAssertionFailure(stderr: string, stdout: string): boolean {
-  const combined = `${stderr} ${stdout}`;
+function isAssertionFailure(errorMessage: string): boolean {
   return (
-    /expect\(received\)/i.test(combined) ||
-    /Error:.*expect\(/i.test(combined) ||
-    /AssertionError/i.test(combined) ||
-    // Playwright reports assertion failures with specific exit code patterns
-    /\d+ failed/i.test(combined)
+    /Error:.*expected/i.test(errorMessage) ||
+    /Error:.*not found/i.test(errorMessage) ||
+    /Error:.*not visible/i.test(errorMessage) ||
+    /Error:.*not.*match/i.test(errorMessage) ||
+    /AssertionError/i.test(errorMessage) ||
+    /expect\(received\)/i.test(errorMessage)
   );
 }
 
 /**
- * Runs a Playwright code string as a standalone .spec.ts file.
+ * Strips any import statements and test()/describe() wrappers from legacy
+ * Playwright code, returning only the raw page commands.
  *
- * - Writes the code to a temp directory
- * - Wraps the test with automatic screenshot capture (before/after/failure)
- * - Executes it via `npx playwright test`
+ * This handles code that was generated before the prompt change, which
+ * includes `import { test, expect } from '@playwright/test'` and wraps
+ * commands in `test('...', async ({ page }) => { ... })`.
+ */
+function stripTestWrapper(code: string): string {
+  // Remove import statements
+  let stripped = code.replace(/^import\s+.*?;\s*$/gm, '').trim();
+
+  // Remove test('...', async ({ page }) => { ... }) wrapper
+  // Match: test('name', async ({ page }) => {
+  const testWrapperRegex = /test\s*\([^,]+,\s*async\s*\(\s*\{\s*page[^}]*\}\s*\)\s*=>\s*\{/;
+  const match = stripped.match(testWrapperRegex);
+  if (match) {
+    // Remove the test wrapper opening
+    const startIdx = stripped.indexOf(match[0]);
+    stripped = stripped.slice(0, startIdx) + stripped.slice(startIdx + match[0].length);
+
+    // Remove the final closing `});`
+    const lastClosing = stripped.lastIndexOf('});');
+    if (lastClosing !== -1) {
+      stripped = stripped.slice(0, lastClosing) + stripped.slice(lastClosing + 3);
+    }
+
+    stripped = stripped.trim();
+  }
+
+  // Replace expect() calls with throw-based assertions for backward compatibility
+  // e.g. await expect(page.locator('.x')).toBeVisible()
+  //   -> if (!(await page.locator('.x').isVisible())) throw new Error('Expected element to be visible');
+  stripped = stripped.replace(
+    /await\s+expect\(([^)]+)\)\.toBeVisible\(\)/g,
+    'if (!(await $1.isVisible())) throw new Error(\'Expected element to be visible\')'
+  );
+  stripped = stripped.replace(
+    /await\s+expect\(([^)]+)\)\.toContainText\(['"]([^'"]+)['"]\)/g,
+    '{ const __txt = await $1.textContent(); if (!__txt?.includes(\'$2\')) throw new Error(\'Expected text not found: $2\'); }'
+  );
+  stripped = stripped.replace(
+    /await\s+expect\(([^)]+)\)\.toHaveText\(['"]([^'"]+)['"]\)/g,
+    '{ const __txt = await $1.textContent(); if (__txt?.trim() !== \'$2\') throw new Error(\'Text mismatch, expected: $2\'); }'
+  );
+
+  return stripped;
+}
+
+/**
+ * Runs raw Playwright commands by launching a browser directly.
+ *
+ * - Launches a headless Chromium browser via playwright
+ * - Creates a new page
+ * - Captures before/after/failure screenshots
+ * - Executes the raw page commands using AsyncFunction
  * - Retries on process-level crashes (up to 2 retries, NOT on assertion failures)
  * - Parses errors into human-readable messages
- * - Captures pass/fail, screenshots, and output
- * - Cleans up temp files after execution
+ * - Cleans up browser after execution
  */
 export async function runPlaywrightCode(
   playwrightCode: string,
@@ -134,7 +193,7 @@ export async function runPlaywrightCode(
     }
 
     // If this is an assertion failure, don't retry — it's a legitimate test result
-    if (isAssertionFailure(result.stderr, result.stdout)) {
+    if (result.error && isAssertionFailure(result.error)) {
       logger.info('Assertion failure detected, not retrying', {
         attempt,
         exitCode: result.exitCode,
@@ -158,7 +217,7 @@ export async function runPlaywrightCode(
 }
 
 /**
- * Execute a single Playwright run (used internally by runPlaywrightCode for retry logic).
+ * Execute a single Playwright run by launching chromium directly.
  */
 async function executePlaywrightRun(
   playwrightCode: string,
@@ -171,190 +230,151 @@ async function executePlaywrightRun(
 ): Promise<PlaywrightRunResult> {
   const { timeoutMs, screenshotsDir, attempt } = options;
   const runId = uuidv4().slice(0, 8);
-  const tmpDir = path.join(os.tmpdir(), `pw-run-${runId}`);
-  const specFile = path.join(tmpDir, `test-${runId}.spec.ts`);
   const startTime = Date.now();
 
-  // Screenshot paths for evidence wrapper
+  // Screenshot paths for evidence
   const beforeScreenshot = path.join(screenshotsDir, `${runId}-before.png`);
   const afterScreenshot = path.join(screenshotsDir, `${runId}-after.png`);
   const failureScreenshot = path.join(screenshotsDir, `${runId}-failure.png`);
 
-  try {
-    // Create temp directory and screenshots directory
-    fs.mkdirSync(tmpDir, { recursive: true });
-    fs.mkdirSync(screenshotsDir, { recursive: true });
+  // Ensure screenshots directory exists
+  fs.mkdirSync(screenshotsDir, { recursive: true });
 
-    // Rewrite screenshot paths in the code to use our screenshots directory
-    const rewrittenCode = playwrightCode.replace(
-      /path:\s*['"]([^'"]+)['"]/g,
-      (_match, originalPath) => {
-        const filename = path.basename(originalPath);
-        return `path: '${path.join(screenshotsDir, `${runId}-${filename}`)}'`;
-      }
-    );
+  // Strip any legacy test() wrapper and imports from the code
+  const rawCode = stripTestWrapper(playwrightCode);
 
-    // Wrap the user's code with screenshot evidence capture
-    const wrappedCode = wrapWithScreenshotEvidence(
-      rewrittenCode,
-      beforeScreenshot,
-      afterScreenshot,
-      failureScreenshot
-    );
-
-    // Write the spec file
-    fs.writeFileSync(specFile, wrappedCode, 'utf-8');
-
-    // Write a minimal Playwright config for the temp run
-    const configContent = `
-import { defineConfig } from '@playwright/test';
-export default defineConfig({
-  timeout: ${timeoutMs},
-  use: {
-    headless: true,
-    screenshot: 'only-on-failure',
-    actionTimeout: ${timeoutMs},
-    navigationTimeout: ${timeoutMs},
-  },
-  reporter: [['list']],
-});
-`;
-    fs.writeFileSync(path.join(tmpDir, 'playwright.config.ts'), configContent, 'utf-8');
-
-    logger.info('Running Playwright test', { runId, specFile, attempt });
-
-    // Build environment variables
-    const env: Record<string, string> = {
-      ...process.env as Record<string, string>,
-      ...(options?.env ?? {}),
-    };
-
-    // Run Playwright
-    let stdout = '';
-    let stderr = '';
-    let exitCode = 0;
-
-    try {
-      stdout = execSync(
-        `npx playwright test "${specFile}" --config "${path.join(tmpDir, 'playwright.config.ts')}"`,
-        {
-          cwd: tmpDir,
-          timeout: timeoutMs + 5_000, // extra buffer for process startup
-          env,
-          encoding: 'utf-8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
-      );
-    } catch (err: any) {
-      exitCode = err.status ?? 1;
-      stdout = err.stdout ?? '';
-      stderr = err.stderr ?? '';
+  // Rewrite screenshot paths in the code to use our screenshots directory
+  const rewrittenCode = rawCode.replace(
+    /path:\s*['"]([^'"]+)['"]/g,
+    (_match: string, originalPath: string) => {
+      const filename = path.basename(originalPath);
+      return `path: '${path.join(screenshotsDir, `${runId}-${filename}`).replace(/\\/g, '/')}'`;
     }
+  );
+
+  // Set environment variables from options
+  if (options.env) {
+    for (const [key, value] of Object.entries(options.env)) {
+      process.env[key] = value;
+    }
+  }
+
+  let browser = null;
+
+  try {
+    logger.info('Launching browser for Playwright execution', { runId, attempt });
+
+    // Launch browser directly
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 720 },
+    });
+
+    // Set default timeouts
+    context.setDefaultTimeout(timeoutMs);
+    context.setDefaultNavigationTimeout(timeoutMs);
+
+    const page = await context.newPage();
+
+    // Capture before screenshot (after first navigation)
+    let capturedBefore = false;
+    page.on('load', async () => {
+      if (!capturedBefore) {
+        capturedBefore = true;
+        await page.screenshot({ path: beforeScreenshot, fullPage: true }).catch(() => {});
+      }
+    });
+
+    logger.info('Executing raw Playwright commands', { runId, codeLength: rewrittenCode.length, attempt });
+
+    // Build and execute the async function with page in scope
+    // Use AsyncFunction constructor to create an async function body
+    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+    const testFn = new AsyncFunction('page', 'browser', 'context', rewrittenCode);
+
+    await testFn(page, browser, context);
+
+    // Capture after screenshot on success
+    await page.screenshot({ path: afterScreenshot, fullPage: true }).catch(() => {});
 
     // Collect screenshots
-    const screenshots: string[] = [];
-    if (fs.existsSync(screenshotsDir)) {
-      const files = fs.readdirSync(screenshotsDir);
-      for (const file of files) {
-        if (file.startsWith(runId) && (file.endsWith('.png') || file.endsWith('.jpg'))) {
-          screenshots.push(path.join(screenshotsDir, file));
-        }
-      }
-    }
-
+    const screenshots = collectScreenshots(screenshotsDir, runId);
     const duration = Date.now() - startTime;
-    const passed = exitCode === 0;
-    const rawError = passed ? undefined : (stderr || stdout).slice(0, 2000);
-    const humanError = rawError ? parsePlaywrightError(rawError) : undefined;
 
-    logger.info('Playwright test completed', {
+    logger.info('Playwright execution completed successfully', {
       runId,
-      passed,
-      exitCode,
       duration,
       screenshots: screenshots.length,
       attempt,
     });
 
     return {
-      passed,
-      exitCode,
-      stdout,
-      stderr,
+      passed: true,
+      exitCode: 0,
+      stdout: 'Test passed',
+      stderr: '',
       screenshots,
       duration,
-      error: rawError,
-      humanError,
     };
   } catch (err: any) {
     const duration = Date.now() - startTime;
-    logger.error('Playwright runner error', { runId, error: err.message, attempt });
+    const rawError = (err.message || String(err)).slice(0, 2000);
 
-    const rawError = err.message;
+    logger.info('Playwright execution failed', {
+      runId,
+      duration,
+      error: rawError.slice(0, 200),
+      attempt,
+    });
+
+    // Try to capture failure screenshot if browser is still alive
+    if (browser) {
+      try {
+        const pages = browser.contexts()?.[0]?.pages();
+        if (pages && pages.length > 0) {
+          await pages[0].screenshot({ path: failureScreenshot, fullPage: true }).catch(() => {});
+        }
+      } catch {
+        // Browser may already be closed
+      }
+    }
+
+    const screenshots = collectScreenshots(screenshotsDir, runId);
+
     return {
       passed: false,
       exitCode: 1,
       stdout: '',
       stderr: rawError,
-      screenshots: [],
+      screenshots,
       duration,
       error: rawError,
       humanError: parsePlaywrightError(rawError),
     };
   } finally {
-    // Clean up temp files
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch {
-      // Ignore cleanup errors
+    // Always close browser
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   }
 }
 
 /**
- * Wraps user Playwright code with automatic screenshot evidence capture.
- *
- * Detects the test body and injects:
- *   - A "before" screenshot at test start
- *   - An "after" screenshot at test end
- *   - A "failure" screenshot on any error
+ * Collect screenshot files matching the runId from the screenshots directory.
  */
-function wrapWithScreenshotEvidence(
-  code: string,
-  beforePath: string,
-  afterPath: string,
-  failurePath: string
-): string {
-  // Find the pattern: test('...', async ({ page ... }) => {
-  // and wrap the body with screenshot logic
-  const testBodyRegex = /(test\s*\([^,]+,\s*async\s*\(\s*\{\s*page[^}]*\}\s*\)\s*=>\s*\{)/;
-  const match = code.match(testBodyRegex);
-
-  if (!match) {
-    // If we can't find the test body pattern, return unchanged
-    // (the code might use a different pattern)
-    return code;
+function collectScreenshots(screenshotsDir: string, runId: string): string[] {
+  const screenshots: string[] = [];
+  if (fs.existsSync(screenshotsDir)) {
+    const files = fs.readdirSync(screenshotsDir);
+    for (const file of files) {
+      if (file.startsWith(runId) && (file.endsWith('.png') || file.endsWith('.jpg'))) {
+        screenshots.push(path.join(screenshotsDir, file));
+      }
+    }
   }
-
-  const escapedBefore = beforePath.replace(/\\/g, '\\\\');
-  const escapedAfter = afterPath.replace(/\\/g, '\\\\');
-  const escapedFailure = failurePath.replace(/\\/g, '\\\\');
-
-  // Insert screenshot wrapper after the test opening brace
-  const wrappedCode = code.replace(
-    testBodyRegex,
-    `$1\n  // --- Screenshot evidence wrapper (auto-injected) ---\n  await page.screenshot({ path: '${escapedBefore}', fullPage: true }).catch(() => {});\n  try {\n`
-  );
-
-  // Find the last closing of the test: the final `});`
-  // We need to insert the after screenshot + catch before the final });
-  const lastClosingIdx = wrappedCode.lastIndexOf('});');
-  if (lastClosingIdx === -1) {
-    return wrappedCode;
-  }
-
-  const beforeClose = wrappedCode.slice(0, lastClosingIdx);
-  const afterClose = wrappedCode.slice(lastClosingIdx);
-
-  return `${beforeClose}\n    await page.screenshot({ path: '${escapedAfter}', fullPage: true }).catch(() => {});\n  } catch (__screenshotWrapErr) {\n    await page.screenshot({ path: '${escapedFailure}', fullPage: true }).catch(() => {});\n    throw __screenshotWrapErr;\n  }\n${afterClose}`;
+  return screenshots;
 }
