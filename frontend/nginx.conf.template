@@ -4,40 +4,53 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Use container's DNS resolver with short TTL for dynamic service discovery
+    # Railway internal DNS changes on redeploys — nginx must re-resolve
+    resolver ${RESOLVER} valid=10s ipv6=off;
+
     # SPA: route all non-file requests to index.html
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # Proxy API calls to gateway (used in Docker Compose; on Railway the
-    # frontend calls the gateway directly via VITE_API_URL so this block
-    # is only hit if the frontend is built with VITE_API_URL=/api).
+    # Proxy API calls to gateway
     location /api/ {
-        proxy_pass http://${GATEWAY_URL};
+        set $gateway_upstream ${GATEWAY_URL};
+        proxy_pass http://$gateway_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Proxy WebSocket connections for test executor
-    location /ws {
-        proxy_pass http://${WS_BACKEND_URL};
+    # Proxy WebSocket connections for QA loop (must be before /ws to match first)
+    location /ws/qa-loop {
+        set $qa_ws_upstream ${QA_WS_BACKEND_URL};
+        proxy_pass http://$qa_ws_upstream/ws/qa-loop$is_args$args;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
     }
 
-    # Proxy WebSocket connections for QA loop
-    location /qa-ws {
-        proxy_pass http://${QA_WS_BACKEND_URL};
+    # Proxy WebSocket connections for test executor (browser stream)
+    location /ws/ {
+        set $ws_upstream ${WS_BACKEND_URL};
+        proxy_pass http://$ws_upstream/ws/$is_args$args;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
     }
 
     # Cache static assets

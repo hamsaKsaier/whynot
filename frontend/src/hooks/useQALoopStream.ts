@@ -90,7 +90,9 @@ export function useQALoopStream({
   const pagesDiscoveredSet = useRef<Set<string>>(new Set());
   const pagesExploredSet = useRef<Set<string>>(new Set());
 
-  const baseWsUrl = wsUrl || import.meta.env.VITE_QA_LOOP_WS_URL || 'ws://localhost:3012';
+  const baseWsUrl = wsUrl || import.meta.env.VITE_QA_LOOP_WS_URL || (window.location.protocol === 'https:'
+    ? `wss://${window.location.host}`
+    : 'ws://localhost:3012');
 
   const clearEvents = useCallback(() => {
     setThinkingText('');

@@ -90,7 +90,7 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
 
     // Get WebSocket URL - use VITE_WS_URL env var, fallback to same-origin detection
     const wsBaseUrl = wsUrl || import.meta.env.VITE_WS_URL || (window.location.protocol === 'https:'
-      ? `wss://${window.location.hostname}:3011`
+      ? `wss://${window.location.host}`
       : `ws://${window.location.hostname}:3011`);
     const wsUrlFull = `${wsBaseUrl}/ws/browser-stream/${executionId}`;
     console.log('Attempting WebSocket connection', { wsUrlFull, executionId });

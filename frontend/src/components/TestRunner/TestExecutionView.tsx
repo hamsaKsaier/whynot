@@ -74,7 +74,9 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
   } = useBrowserStream({
     executionId: memoizedExecutionId,
     enabled: memoizedWsEnabled, // Enable as soon as executionId is available
-    wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:3011',
+    wsUrl: import.meta.env.VITE_WS_URL || (window.location.protocol === 'https:'
+      ? `wss://${window.location.host}`
+      : 'ws://localhost:3011'),
   });
 
   // Update execution result when final result arrives via WebSocket
