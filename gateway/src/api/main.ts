@@ -122,6 +122,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const logger = createLogger('gateway');
 
+// Trust the first proxy (Railway's reverse proxy) so express-rate-limit
+// can read the real client IP from X-Forwarded-For.
+app.set('trust proxy', 1);
+
 // Middleware
 
 // Security headers (Helmet.js)

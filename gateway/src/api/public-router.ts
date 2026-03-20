@@ -126,7 +126,7 @@ router.post('/scan', validate(publicScanSchema), asyncHandler(async (req, res) =
         targetUrl,
         qualityThreshold: 80,
         maxIterations: 2,
-        maxDurationHours: 5 / 60,  // 5 minutes
+        maxDurationHours: 1,  // 1 hour cap for free scans (2 iterations finish well within this)
         workspaceId: null,
         config: { isPublicScan: true },
       },
