@@ -35,5 +35,5 @@ ENV QA_WS_BACKEND_URL=qa-loop-executor:3002
 
 EXPOSE 80
 
-# Substitute only our env vars, leaving nginx variables ($uri, $host, etc.) intact
-CMD ["/bin/sh", "-c", "envsubst '${PORT} ${GATEWAY_URL} ${WS_BACKEND_URL} ${QA_WS_BACKEND_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Substitute env vars at startup, auto-detect DNS resolver from /etc/resolv.conf
+CMD ["/bin/sh", "-c", "export RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf) && envsubst '${PORT} ${GATEWAY_URL} ${WS_BACKEND_URL} ${QA_WS_BACKEND_URL} ${RESOLVER}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
