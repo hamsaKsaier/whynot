@@ -224,9 +224,13 @@ export default defineConfig({
     logger.info('Running Playwright test', { runId, specFile, attempt });
 
     // Build environment variables
+    // Set NODE_PATH so that modules installed in /app/node_modules are resolvable
+    // from the temp directory where Playwright tests run
+    const appNodeModules = path.resolve(__dirname, '..', '..', '..', 'node_modules');
     const env: Record<string, string> = {
       ...process.env as Record<string, string>,
       ...(options?.env ?? {}),
+      NODE_PATH: [appNodeModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
     };
 
     // Run Playwright
