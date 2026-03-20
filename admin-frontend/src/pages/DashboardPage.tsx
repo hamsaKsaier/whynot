@@ -88,7 +88,7 @@ export const DashboardPage: React.FC = () => {
               <th className="pb-3">Joined</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-700">
             {recentUsers.map((u: any) => (
               <tr key={u.id}>
                 <td className="py-3 text-sm font-medium text-white">{u.name}</td>

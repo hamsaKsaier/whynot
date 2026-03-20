@@ -59,7 +59,7 @@ export const SystemSettingsPage: React.FC = () => {
           <div className="px-6 py-3 bg-slate-900 border-b border-slate-700">
             <h2 className="text-sm font-semibold text-slate-200 uppercase">{category}</h2>
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-slate-700">
             {items.map((setting: any) => (
               <div key={setting.key} className="px-6 py-4 flex items-center gap-4">
                 <div className="flex-1">

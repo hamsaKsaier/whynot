@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-slate-900 text-white;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
@@ -19,15 +19,15 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100;
+    @apply bg-slate-900;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+    @apply bg-slate-600 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
+    @apply bg-slate-500;
   }
 
   /* Focus styles for keyboard navigation */
@@ -45,17 +45,17 @@
   .btn-primary {
     @apply bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md;
   }
-  
+
   .btn-secondary {
-    @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 shadow-sm;
+    @apply bg-slate-700 text-slate-200 px-4 py-2 rounded-lg font-medium hover:bg-slate-600 transition-all duration-200 shadow-sm;
   }
-  
+
   .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200;
+    @apply w-full px-4 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-slate-700 text-white;
   }
-  
+
   .card {
-    @apply bg-white rounded-lg shadow-sm p-6 border border-gray-200 transition-shadow duration-200 hover:shadow-md;
+    @apply bg-slate-800 rounded-lg shadow-sm p-6 border border-slate-700 transition-shadow duration-200 hover:shadow-md;
   }
 
   /* Cypress-inspired animations */
@@ -93,49 +93,49 @@
   }
 
   .status-passed {
-    @apply bg-green-100 text-green-800;
+    @apply bg-green-900/50 text-green-300;
   }
 
   .status-failed {
-    @apply bg-red-100 text-red-800;
+    @apply bg-red-900/50 text-red-300;
   }
 
   .status-running {
-    @apply bg-blue-100 text-blue-800;
+    @apply bg-blue-900/50 text-blue-300;
   }
 
   .status-pending {
-    @apply bg-gray-100 text-gray-800;
+    @apply bg-slate-700 text-slate-300;
   }
 
   /* Typography Hierarchy */
   h1 {
-    @apply text-3xl font-bold text-gray-900;
+    @apply text-3xl font-bold text-white;
   }
 
   h2 {
-    @apply text-2xl font-semibold text-gray-900;
+    @apply text-2xl font-semibold text-white;
   }
 
   h3 {
-    @apply text-xl font-semibold text-gray-900;
+    @apply text-xl font-semibold text-white;
   }
 
   h4 {
-    @apply text-lg font-medium text-gray-900;
+    @apply text-lg font-medium text-white;
   }
 
   /* Body text utilities */
   .text-body {
-    @apply text-base text-gray-700;
+    @apply text-base text-slate-300;
   }
 
   .text-small {
-    @apply text-sm text-gray-600;
+    @apply text-sm text-slate-400;
   }
 
   .text-tiny {
-    @apply text-xs text-gray-500;
+    @apply text-xs text-slate-400;
   }
 
   /* Page-level spacing */
@@ -171,20 +171,15 @@
 
   /* Consistent section headers */
   .section-title {
-    @apply text-xl font-semibold mb-4 text-gray-900;
+    @apply text-xl font-semibold mb-4 text-white;
   }
 
   /* Consistent page headers */
   .page-title {
-    @apply text-2xl font-bold mb-2 text-gray-900;
+    @apply text-2xl font-bold mb-2 text-white;
   }
 
   .page-subtitle {
-    @apply text-sm text-gray-600 mb-6;
+    @apply text-sm text-slate-400 mb-6;
   }
 }
-
-
-
-
-

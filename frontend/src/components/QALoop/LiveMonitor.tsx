@@ -560,9 +560,9 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       {testRunActivity.length > 0 && (
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/80 overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-800/90 border-b border-slate-700/50">
-            <span className="text-indigo-400"><Icons.test /></span>
+            <span className="text-sky-400"><Icons.test /></span>
             <span className="text-sm font-semibold text-slate-300">Test Execution</span>
-            <span className="ml-1 text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full">
+            <span className="ml-1 text-xs bg-sky-900/50 text-sky-300 px-2 py-0.5 rounded-full">
               {testRunActivity.filter(a => a.status === 'passed').length}/{testRunActivity.length} passed
             </span>
             {testRunActivity.some(a => a.isMismatch) && (
