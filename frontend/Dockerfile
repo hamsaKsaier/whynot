@@ -36,4 +36,5 @@ ENV QA_WS_BACKEND_URL=qa-loop-executor:3002
 EXPOSE 80
 
 # Substitute env vars at startup, auto-detect DNS resolver from /etc/resolv.conf
-CMD ["/bin/sh", "-c", "export RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf) && envsubst '${PORT} ${GATEWAY_URL} ${WS_BACKEND_URL} ${QA_WS_BACKEND_URL} ${RESOLVER}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Wrap IPv6 addresses in brackets for nginx resolver directive
+CMD ["/bin/sh", "-c", "RAW_NS=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf) && case \"$RAW_NS\" in *:*) export RESOLVER=\"[$RAW_NS]\";; *) export RESOLVER=\"$RAW_NS\";; esac && envsubst '${PORT} ${GATEWAY_URL} ${WS_BACKEND_URL} ${QA_WS_BACKEND_URL} ${RESOLVER}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
