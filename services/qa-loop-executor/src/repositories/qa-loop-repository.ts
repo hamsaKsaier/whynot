@@ -1051,6 +1051,52 @@ export class QALoopRepository {
         [sessionId, testSuiteId]
       );
 
+      // Sync QA Loop test cases into the standard test_cases table
+      // so Architecture Flow (which reads from test_cases) can display them.
+      await this.pool.query(
+        `INSERT INTO test_cases (id, name, description, website_url, user_story, steps, metadata, test_suite_id, user_story_id, workspace_id, playwright_code, created_at, updated_at)
+         SELECT
+           gen_random_uuid(),
+           q.name,
+           COALESCE(q.description, ''),
+           $3,
+           'QA Loop Auto-Generated Tests',
+           q.steps,
+           jsonb_build_object(
+             'source', 'qa_loop',
+             'session_id', q.session_id::text,
+             'category', q.category,
+             'risk_level', q.risk_level,
+             'last_run_status', q.last_run_status,
+             'confidence_score', q.confidence_score
+           ),
+           $2,
+           $4,
+           $5,
+           q.playwright_code,
+           q.created_at,
+           q.updated_at
+         FROM qa_loop_test_cases q
+         WHERE q.session_id = $1
+         RETURNING id, name`,
+        [sessionId, testSuiteId, targetUrl, userStoryId, session.workspace_id || '00000000-0000-0000-0000-000000000000']
+      ).then(async (insertResult) => {
+        // Link each standard test_case back to its qa_loop_test_case via standard_test_case_id
+        // Match by name since we just inserted them
+        if (insertResult.rows.length > 0) {
+          const standardIds = insertResult.rows.map((r: any) => r.id);
+          await this.pool.query(
+            `UPDATE qa_loop_test_cases ql
+             SET standard_test_case_id = tc.id
+             FROM (
+               SELECT id, name FROM test_cases WHERE id = ANY($1::uuid[])
+             ) tc
+             WHERE ql.session_id = $2 AND ql.name = tc.name AND ql.standard_test_case_id IS NULL`,
+            [standardIds, sessionId]
+          );
+        }
+      });
+
       // Count linked items
       const countResult = await this.pool.query(
         `SELECT
