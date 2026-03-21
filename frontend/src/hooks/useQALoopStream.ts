@@ -92,7 +92,7 @@ export function useQALoopStream({
 
   const baseWsUrl = wsUrl || import.meta.env.VITE_QA_LOOP_WS_URL || (
     typeof window !== 'undefined' && window.location.protocol === 'https:'
-      ? `wss://${window.location.hostname}:3012`
+      ? `wss://${window.location.host}`
       : 'ws://localhost:3012'
   );
 
