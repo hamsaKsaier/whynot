@@ -20,9 +20,11 @@ import { requireCredits, deductCredits } from '../middleware/credit-gate';
 import { requireFeature } from '../middleware/feature-gate';
 import { requireActiveSubscription } from '../middleware/subscription-check';
 import { createLogger } from '../../shared/logger/logger';
+import { ProjectRepository } from '../../shared/database/repositories/project-repository';
 
 const router  = express.Router();
 const logger  = createLogger('qa-loop-router');
+const projectRepository = new ProjectRepository();
 
 const qaLoopExecutorUrl =
   process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
@@ -321,6 +323,36 @@ router.post(
   validate(qaLoopSchemas.startSession),
   asyncHandler(async (req, res) => {
     validateTargetUrl(req.body.targetUrl);
+
+    // Auto-create or auto-select a project if none provided
+    if (!req.body.projectId && req.workspaceId) {
+      try {
+        const existingProjects = await projectRepository.list(0, 1, req.workspaceId);
+        if (existingProjects.length > 0) {
+          // Auto-link to the most recently used project
+          req.body.projectId = existingProjects[0].id;
+          logger.info('Auto-linked session to existing project', { projectId: existingProjects[0].id });
+        } else {
+          // Auto-create a project named after the target URL's domain
+          let projectName: string;
+          try {
+            projectName = new URL(req.body.targetUrl).hostname;
+          } catch {
+            projectName = req.body.targetUrl;
+          }
+          const project = await projectRepository.create({
+            name: projectName,
+            website_url: req.body.targetUrl,
+            workspace_id: req.workspaceId,
+          });
+          req.body.projectId = project.id;
+          logger.info('Auto-created project for QA session', { projectId: project.id, name: projectName });
+        }
+      } catch (err: any) {
+        logger.warn('Failed to auto-create/select project, proceeding without', { error: err.message });
+      }
+    }
+
     await withQALoopBreaker(res, 'Failed to start QA Loop session', async () => {
       const response = await axios.post(
         `${qaLoopExecutorUrl}/api/sessions`,
@@ -387,14 +419,6 @@ router.post(
   }),
 );
 
-// ── Bug retest (single bug) ────────────────────────────────────────────────────
-
-createProxy('post', '/bugs/:bugId/retest', 'Failed to retest bug', { status: 201, timeout: 30_000 });
-
-// ── Project hierarchy ─────────────────────────────────────────────────────────
-
-createProxy('get', '/projects/:projectId/test-suite-hierarchy', 'Failed to get test suite hierarchy');
-
 // ── Session sub-resources ──────────────────────────────────────────────────────
 
 createProxy('get', '/sessions/:id/test-cases', 'Failed to get test cases');
@@ -445,56 +469,5 @@ router.patch(
 );
 
 createProxy('delete', '/sessions/:id/documents/:docId', 'Failed to delete document');
-
-// ── Playwright Export Endpoints ───────────────────────────────────────────────
-
-// Export single test case as Playwright .spec.ts
-router.get(
-  '/test-cases/:testCaseId/export-playwright',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    await withQALoopBreaker(res, 'Failed to export Playwright code', async () => {
-      const response = await axios.get(
-        `${qaLoopExecutorUrl}/api/test-cases/${req.params.testCaseId}/export-playwright`,
-        {
-          headers: qaLoopHeaders(req),
-          timeout: 10_000,
-          responseType: 'arraybuffer',
-        },
-      );
-
-      // Forward content-type and disposition headers
-      res.setHeader('Content-Type', response.headers['content-type'] || 'text/typescript');
-      if (response.headers['content-disposition']) {
-        res.setHeader('Content-Disposition', response.headers['content-disposition']);
-      }
-      res.send(Buffer.from(response.data));
-    });
-  }),
-);
-
-// Export entire test suite as combined Playwright .spec.ts
-router.get(
-  '/test-suites/:suiteId/export-playwright',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    await withQALoopBreaker(res, 'Failed to export Playwright suite', async () => {
-      const response = await axios.get(
-        `${qaLoopExecutorUrl}/api/test-suites/${req.params.suiteId}/export-playwright`,
-        {
-          headers: qaLoopHeaders(req),
-          timeout: 10_000,
-          responseType: 'arraybuffer',
-        },
-      );
-
-      res.setHeader('Content-Type', response.headers['content-type'] || 'text/typescript');
-      if (response.headers['content-disposition']) {
-        res.setHeader('Content-Disposition', response.headers['content-disposition']);
-      }
-      res.send(Buffer.from(response.data));
-    });
-  }),
-);
 
 export { router as qaLoopRouter };

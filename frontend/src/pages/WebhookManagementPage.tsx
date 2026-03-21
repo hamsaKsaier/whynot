@@ -216,9 +216,9 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
   };
 
   const getStatusBadgeColor = (status: number) => {
-    if (status >= 200 && status < 300) return 'bg-green-900/30 text-green-300';
-    if (status >= 400 && status < 500) return 'bg-yellow-900/30 text-yellow-300';
-    return 'bg-red-900/30 text-red-300';
+    if (status >= 200 && status < 300) return 'bg-green-900/30 text-green-400';
+    if (status >= 400 && status < 500) return 'bg-yellow-900/30 text-yellow-400';
+    return 'bg-red-900/30 text-red-400';
   };
 
   return (
@@ -280,12 +280,12 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                   <FiAlertTriangle />
                   <span className="font-medium">Save this key now!</span>
                 </div>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-yellow-400">
                   This key will only be shown once. Store it securely.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 bg-slate-900 rounded-lg p-3 mb-4">
                 <code className="flex-1 font-mono text-sm text-slate-200 break-all">
                   {createdKey}
                 </code>
@@ -336,7 +336,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       value={newKeyName}
                       onChange={(e) => setNewKeyName(e.target.value)}
                       placeholder="e.g., CI/CD Pipeline"
-                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
+                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
                     />
                   </div>
 
@@ -372,7 +372,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                     <select
                       value={newKeyExpiry || ''}
                       onChange={(e) => setNewKeyExpiry(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
+                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
                     >
                       <option value="">Never</option>
                       <option value="30">30 days</option>
@@ -429,7 +429,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                     className={`
                       bg-slate-800 rounded-xl p-4 shadow-sm border
                       ${key.revoked_at
-                        ? 'border-red-800 opacity-60'
+                        ? 'border-red-700 opacity-60'
                         : 'border-slate-700'
                       }
                     `}
@@ -476,7 +476,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       {key.permissions.map(perm => (
                         <span
                           key={perm}
-                          className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded"
+                          className="text-xs bg-slate-900 text-slate-400 px-2 py-1 rounded"
                         >
                           {perm}
                         </span>
@@ -546,7 +546,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       value={channelName}
                       onChange={(e) => setChannelName(e.target.value)}
                       placeholder="e.g., Team Slack"
-                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
+                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
                     />
                   </div>
 
@@ -557,7 +557,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                     <select
                       value={channelType}
                       onChange={(e) => setChannelType(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
+                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
                     >
                       <option value="email">Email</option>
                       <option value="slack">Slack Webhook URL</option>
@@ -574,7 +574,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                         value={channelConfig.webhookUrl}
                         onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
                         placeholder="https://hooks.slack.com/services/..."
-                        className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
+                        className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
                       />
                     </div>
                   )}
@@ -589,7 +589,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                         value={channelConfig.webhookUrl}
                         onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
                         placeholder="team@example.com"
-                        className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-800 text-white"
+                        className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
                       />
                     </div>
                   )}
@@ -754,14 +754,14 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         )}
 
         {/* Documentation Section */}
-        <div className="mt-8 p-6 bg-slate-800 rounded-xl">
+        <div className="mt-8 p-6 bg-slate-900 rounded-xl">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <FiExternalLink /> API Documentation
           </h3>
           <div className="space-y-4 text-sm">
             <div>
               <h4 className="font-medium text-slate-200 mb-2">Trigger Retest</h4>
-              <pre className="bg-slate-900 text-green-400 p-3 rounded-lg overflow-x-auto">
+              <pre className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto">
                 {`curl -X POST https://your-domain/api/qa-loop/webhook/retest \\
   -H "X-QALoop-Key: qal_your_api_key" \\
   -H "Content-Type: application/json" \\
@@ -770,7 +770,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
             </div>
             <div>
               <h4 className="font-medium text-slate-200 mb-2">Trigger New Session</h4>
-              <pre className="bg-slate-900 text-green-400 p-3 rounded-lg overflow-x-auto">
+              <pre className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto">
                 {`curl -X POST https://your-domain/api/qa-loop/webhook/trigger \\
   -H "X-QALoop-Key: qal_your_api_key" \\
   -H "Content-Type: application/json" \\

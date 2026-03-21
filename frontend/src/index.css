@@ -19,7 +19,7 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-900;
+    @apply bg-slate-800;
   }
 
   ::-webkit-scrollbar-thumb {
@@ -51,7 +51,7 @@
   }
 
   .input-field {
-    @apply w-full px-4 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-slate-700 text-white;
+    @apply w-full px-4 py-2 border border-slate-600 bg-slate-700 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200;
   }
 
   .card {
@@ -93,15 +93,15 @@
   }
 
   .status-passed {
-    @apply bg-green-900/50 text-green-300;
+    @apply bg-green-900/40 text-green-300;
   }
 
   .status-failed {
-    @apply bg-red-900/50 text-red-300;
+    @apply bg-red-900/40 text-red-300;
   }
 
   .status-running {
-    @apply bg-blue-900/50 text-blue-300;
+    @apply bg-blue-900/40 text-blue-300;
   }
 
   .status-pending {
@@ -135,7 +135,7 @@
   }
 
   .text-tiny {
-    @apply text-xs text-slate-400;
+    @apply text-xs text-slate-500;
   }
 
   /* Page-level spacing */
@@ -183,3 +183,8 @@
     @apply text-sm text-slate-400 mb-6;
   }
 }
+
+
+
+
+

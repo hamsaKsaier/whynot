@@ -56,7 +56,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
               ) : (
                 <button
                   onClick={onPause}
-                  className="flex items-center space-x-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   <FiPause className="h-4 w-4" />
                   <span>Pause</span>
@@ -78,14 +78,14 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
               <div className="w-px h-6 bg-slate-600 mx-2"></div>
               <button
                 onClick={onPreviousStep}
-                className="p-2 rounded hover:bg-slate-800 transition-colors"
+                className="p-2 rounded hover:bg-slate-900 transition-colors"
                 title="Previous step"
               >
                 <FiSkipBack className="h-4 w-4 text-slate-400" />
               </button>
               <button
                 onClick={onNextStep}
-                className="p-2 rounded hover:bg-slate-800 transition-colors"
+                className="p-2 rounded hover:bg-slate-900 transition-colors"
                 title="Next step"
               >
                 <FiSkipForward className="h-4 w-4 text-slate-400" />
@@ -103,7 +103,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
               <select
                 value={currentSpeed}
                 onChange={(e) => onSpeedChange?.(Number(e.target.value))}
-                className="text-sm border border-slate-600 rounded px-2 py-1 bg-slate-800"
+                className="text-sm border border-slate-700 rounded px-2 py-1 bg-slate-800"
               >
                 {speeds.map((speed) => (
                   <option key={speed} value={speed}>
@@ -124,13 +124,13 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
                 onChange={(e) => onHeadlessChange?.(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-800 after:border-slate-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
             </label>
           </div>
 
           {/* Settings */}
           <button
-            className="p-2 rounded hover:bg-slate-800 transition-colors"
+            className="p-2 rounded hover:bg-slate-900 transition-colors"
             title="Settings"
           >
             <FiSettings className="h-5 w-5 text-slate-400" />

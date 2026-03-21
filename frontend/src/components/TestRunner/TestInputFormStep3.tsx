@@ -87,7 +87,7 @@ export const TestInputFormStep3: React.FC<TestInputFormStep3Props> = ({
       {/* Create/Edit: steps to open the form */}
       {isCreateOrEditFlow(userStory?.story ?? '') && (
         <div className="space-y-3">
-          <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <p className="text-sm text-amber-800">
               This looks like a Create or Edit flow. Add the steps to open the creation/edit dialog. We&apos;ll run these first, capture the form, then generate tests.
             </p>
@@ -102,7 +102,7 @@ export const TestInputFormStep3: React.FC<TestInputFormStep3Props> = ({
                     onPrerequisiteStepsChange(prerequisiteSteps.map((s, j) => (j === i ? { ...s, action: v } : s)));
                   }}
                   disabled={disabled || isLoading}
-                  className="text-sm border border-slate-600 rounded px-2 py-1.5 w-24"
+                  className="text-sm border border-slate-700 rounded px-2 py-1.5 w-24"
                 >
                   <option value="click">Click</option>
                   <option value="type">Type</option>
@@ -113,7 +113,7 @@ export const TestInputFormStep3: React.FC<TestInputFormStep3Props> = ({
                   onChange={(e) => onPrerequisiteStepsChange(prerequisiteSteps.map((s, j) => (j === i ? { ...s, selector: e.target.value } : s)))}
                   placeholder="e.g. text=Products or button:has-text('Add')"
                   disabled={disabled || isLoading}
-                  className="flex-1 min-w-[160px] text-sm border border-slate-600 rounded px-2 py-1.5"
+                  className="flex-1 min-w-[160px] text-sm border border-slate-700 rounded px-2 py-1.5"
                 />
                 {step.action === 'type' && (
                   <input
@@ -122,14 +122,14 @@ export const TestInputFormStep3: React.FC<TestInputFormStep3Props> = ({
                     onChange={(e) => onPrerequisiteStepsChange(prerequisiteSteps.map((s, j) => (j === i ? { ...s, value: e.target.value } : s)))}
                     placeholder="Value"
                     disabled={disabled || isLoading}
-                    className="text-sm border border-slate-600 rounded px-2 py-1.5 w-32"
+                    className="text-sm border border-slate-700 rounded px-2 py-1.5 w-32"
                   />
                 )}
                 <button
                   type="button"
                   onClick={() => onPrerequisiteStepsChange(prerequisiteSteps.filter((_, j) => j !== i))}
                   disabled={disabled || isLoading}
-                  className="p-1.5 text-red-600 hover:bg-red-900/20 rounded"
+                  className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                   aria-label="Remove step"
                 >
                   <FiTrash2 className="h-4 w-4" />
@@ -170,7 +170,7 @@ export const TestInputFormStep3: React.FC<TestInputFormStep3Props> = ({
             checked={headless}
             onChange={(e) => onHeadlessChange(e.target.checked)}
             disabled={disabled || isLoading}
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-600 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-700 rounded"
           />
           <label htmlFor="headless" className="ml-2 text-sm text-slate-200">
             Run in headless mode (no live preview)

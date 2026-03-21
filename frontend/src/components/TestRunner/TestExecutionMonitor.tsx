@@ -117,8 +117,8 @@ export const TestExecutionMonitor: React.FC<TestExecutionMonitorProps> = ({
 
           {/* Error Message */}
           {executionResult.error && (
-            <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
-              <p className="text-sm text-red-300">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">
                 <strong>Error:</strong> {executionResult.error}
               </p>
             </div>

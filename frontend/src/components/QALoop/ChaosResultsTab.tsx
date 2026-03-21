@@ -74,13 +74,13 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'injection': return 'bg-red-900 text-red-300';
-      case 'xss': return 'bg-orange-900 text-orange-300';
-      case 'boundary': return 'bg-blue-900 text-blue-300';
-      case 'timing': return 'bg-sky-900 text-sky-300';
-      case 'security': return 'bg-yellow-900 text-yellow-300';
-      case 'a11y': return 'bg-green-900 text-green-300';
-      default: return 'bg-slate-800 text-slate-200';
+      case 'injection': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+      case 'xss': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
+      case 'boundary': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+      case 'timing': return 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300';
+      case 'security': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'a11y': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+      default: return 'bg-slate-900 text-slate-200 dark:bg-gray-800 dark:text-slate-500';
     }
   };
 
@@ -98,26 +98,26 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
       {/* Summary Stats */}
       {summary && (
         <div className="grid grid-cols-4 gap-4">
-          <div className="p-4 bg-red-900/20 rounded-lg text-center">
-            <div className="text-2xl font-bold text-red-400">
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
               {summary.vulnerabilitiesFound}
             </div>
             <div className="text-xs text-red-500">Vulnerabilities</div>
           </div>
-          <div className="p-4 bg-green-900/20 rounded-lg text-center">
-            <div className="text-2xl font-bold text-green-400">
+          <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {summary.blockedAttacks}
             </div>
             <div className="text-xs text-green-500">Blocked</div>
           </div>
-          <div className="p-4 bg-blue-900/20 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-400">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {summary.totalAttacks}
             </div>
             <div className="text-xs text-blue-500">Total Attacks</div>
           </div>
-          <div className="p-4 bg-sky-900/20 rounded-lg text-center">
-            <div className="text-2xl font-bold text-sky-400">
+          <div className="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg text-center">
+            <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
               {summary.pagesTested}
             </div>
             <div className="text-xs text-sky-500">Pages Tested</div>
@@ -127,8 +127,8 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
 
       {/* Severity Breakdown */}
       {summary && summary.vulnerabilitiesFound > 0 && (
-        <div className="flex items-center gap-2 p-3 bg-slate-900 rounded-lg">
-          <span className="text-sm text-slate-400 mr-2">By Severity:</span>
+        <div className="flex items-center gap-2 p-3 bg-slate-900 dark:bg-gray-800 rounded-lg">
+          <span className="text-sm text-slate-400 dark:text-slate-500 mr-2">By Severity:</span>
           {summary.criticalFindings > 0 && (
             <span className="px-2 py-1 rounded text-xs bg-red-600 text-white">
               {summary.criticalFindings} Critical
@@ -153,11 +153,11 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
       )}
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 border-b border-slate-700 pb-2">
+      <div className="flex gap-2 border-b border-slate-700 dark:border-gray-700 pb-2">
         <button
           onClick={() => setFilter('all')}
           className={`px-3 py-1 text-sm rounded ${filter === 'all'
-              ? 'bg-slate-700 text-white'
+              ? 'bg-slate-700 dark:bg-gray-700 text-white dark:text-white'
               : 'text-slate-400 hover:text-slate-200'
             }`}
         >
@@ -166,7 +166,7 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
         <button
           onClick={() => setFilter('vulnerable')}
           className={`px-3 py-1 text-sm rounded ${filter === 'vulnerable'
-              ? 'bg-red-900 text-red-300'
+              ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
               : 'text-slate-400 hover:text-slate-200'
             }`}
         >
@@ -175,7 +175,7 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
         <button
           onClick={() => setFilter('blocked')}
           className={`px-3 py-1 text-sm rounded ${filter === 'blocked'
-              ? 'bg-green-900 text-green-300'
+              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
               : 'text-slate-400 hover:text-slate-200'
             }`}
         >
@@ -202,8 +202,8 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
           <div
             key={result.id || idx}
             className={`p-3 rounded-lg border ${result.vulnerabilityConfirmed
-                ? 'border-red-800 bg-red-900/10'
-                : 'border-slate-700 bg-slate-900'
+                ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10'
+                : 'border-slate-700 dark:border-gray-700 bg-slate-900 dark:bg-gray-800'
               }`}
           >
             <div
@@ -213,7 +213,7 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
               <div className="flex items-center gap-3">
                 {getResultIcon(result.result)}
                 <div>
-                  <div className="font-medium text-white">
+                  <div className="font-medium text-white dark:text-white">
                     {result.attackName}
                   </div>
                   <div className="text-xs text-slate-400 truncate max-w-xs">
@@ -235,10 +235,10 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
             </div>
 
             {expandedResult === result.id && (
-              <div className="mt-3 pt-3 border-t border-slate-700 space-y-3">
+              <div className="mt-3 pt-3 border-t border-slate-700 dark:border-gray-700 space-y-3">
                 <div>
                   <div className="text-xs font-medium text-slate-400 mb-1">Payload Used:</div>
-                  <code className="text-xs bg-slate-700 px-2 py-1 rounded block overflow-x-auto">
+                  <code className="text-xs bg-slate-700 dark:bg-gray-700 px-2 py-1 rounded block overflow-x-auto">
                     {result.payloadUsed}
                   </code>
                 </div>
@@ -246,7 +246,7 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
                 {result.elementSelector && (
                   <div>
                     <div className="text-xs font-medium text-slate-400 mb-1">Element:</div>
-                    <code className="text-xs bg-slate-700 px-2 py-1 rounded">
+                    <code className="text-xs bg-slate-700 dark:bg-gray-700 px-2 py-1 rounded">
                       {result.elementSelector}
                     </code>
                   </div>
@@ -255,7 +255,7 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
                 {result.reproductionSteps.length > 0 && (
                   <div>
                     <div className="text-xs font-medium text-slate-400 mb-1">Reproduction Steps:</div>
-                    <ol className="text-xs text-slate-400 list-decimal list-inside space-y-1">
+                    <ol className="text-xs text-slate-400 dark:text-slate-500 list-decimal list-inside space-y-1">
                       {result.reproductionSteps.map((step, i) => (
                         <li key={i}>{step}</li>
                       ))}
@@ -285,7 +285,7 @@ export const ChaosResultsTab: React.FC<ChaosResultsTabProps> = ({
                     <img
                       src={result.evidenceScreenshot}
                       alt="Evidence screenshot"
-                      className="rounded border border-slate-700 max-h-40 object-contain"
+                      className="rounded border border-slate-700 dark:border-gray-700 max-h-40 object-contain"
                     />
                   </div>
                 )}

@@ -19,6 +19,7 @@ import {
 } from 'react-icons/fi';
 
 import { checkExistingSession } from '../services/qa-loop-api';
+import { getProjects, ProjectWithStats } from '../services/api';
 import { useSessionManager, StartSessionParams } from '../hooks/useSessionManager';
 
 import {
@@ -80,6 +81,14 @@ export const QALoopPage: React.FC = () => {
   const [testPriority,  setTestPriority]  = useState<'functional_first' | 'balanced' | 'security_first'>('functional_first');
   const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
   const [useExisting,   setUseExisting]   = useState(false);
+
+  // ── Project state ───────────────────────────────────────────────────────────
+  const [projects, setProjects] = useState<ProjectWithStats[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+
+  useEffect(() => {
+    getProjects().then(res => setProjects(res.projects)).catch(() => {});
+  }, []);
 
   // ── Cinema sidebar toggle (collapsed by default when session is running) ───
   const [showSidebar, setShowSidebar] = useState(false);
@@ -169,6 +178,7 @@ export const QALoopPage: React.FC = () => {
       loginCredentials: loginCreds,
       testPriority,
       sourceSessionId: useExisting && existingSession ? existingSession.id : undefined,
+      projectId: selectedProjectId || undefined,
     });
   }, [
     targetUrl, qualityThreshold, maxIterations, documentContext,
@@ -189,6 +199,8 @@ export const QALoopPage: React.FC = () => {
     showPassword, setShowPassword,
     existingSession,
     useExisting, setUseExisting,
+    projects,
+    selectedProjectId, setSelectedProjectId,
     documents,
     activeSession,
     onUpload: handleUploadDocument,
@@ -228,21 +240,21 @@ export const QALoopPage: React.FC = () => {
 
         {/*
          * Escape the MainLayout's p-4 sm:p-6 padding so we get edge-to-edge.
-         * bg-slate-950 gives a deep dark cinema feel.
+         * bg-gray-950 gives a deep dark cinema feel.
          * overflow-hidden prevents the cinema container itself from adding scroll.
          */}
         <div
-          className="flex flex-col bg-slate-950 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 overflow-hidden"
+          className="flex flex-col bg-gray-950 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 overflow-hidden"
           style={{ height: 'calc(100vh - 64px)' }}
         >
 
           {/* ── Cinema Top Bar ──────────────────────────────────────────────── */}
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-900/95 border-b border-slate-800/80 shrink-0 backdrop-blur-sm">
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-900/95 border-b border-gray-800/80 shrink-0 backdrop-blur-sm">
 
             {/* Sidebar toggle */}
             <button
               onClick={() => setShowSidebar(v => !v)}
-              className="text-slate-500 hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors shrink-0"
+              className="text-slate-500 hover:text-gray-200 p-1.5 rounded-lg hover:bg-gray-700/50 transition-colors shrink-0"
               title={showSidebar ? 'Collapse sidebar' : 'Expand sidebar'}
             >
               <FiMenu size={16} />
@@ -250,7 +262,7 @@ export const QALoopPage: React.FC = () => {
 
             {/* Session URL */}
             <FiGlobe className="text-sky-400 shrink-0" size={14} />
-            <span className="text-sm font-semibold text-slate-300 truncate max-w-xs">
+            <span className="text-sm font-semibold text-gray-200 truncate max-w-xs">
               {activeSession.target_url}
             </span>
 
@@ -262,7 +274,7 @@ export const QALoopPage: React.FC = () => {
                 ? 'border-yellow-700/50 bg-yellow-950/50 text-yellow-300'
                 : activeSession.status === 'completed'
                 ? 'border-green-700/50 bg-green-950/50 text-green-300'
-                : 'border-slate-700/50 bg-slate-800/50 text-slate-500'
+                : 'border-gray-700/50 bg-gray-800/50 text-slate-500'
             }`}>
               <FiActivity
                 size={11}
@@ -273,7 +285,7 @@ export const QALoopPage: React.FC = () => {
 
             {/* Iteration counter */}
             <span className="text-xs text-slate-400 shrink-0">
-              Iter <span className="text-slate-400 font-semibold">{iteration || activeSession.iteration_count}</span>
+              Iter <span className="text-slate-500 font-semibold">{iteration || activeSession.iteration_count}</span>
             </span>
 
             {/* Quality score */}
@@ -341,8 +353,8 @@ export const QALoopPage: React.FC = () => {
 
             {/* Loading overlay while session details fetched */}
             {isLoadingDetails && (
-              <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center z-20 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-slate-400 bg-slate-900 px-4 py-2 rounded-full shadow-xl border border-slate-700">
+              <div className="absolute inset-0 bg-gray-950/70 flex items-center justify-center z-20 backdrop-blur-sm">
+                <div className="flex items-center gap-2 text-slate-500 bg-gray-900 px-4 py-2 rounded-full shadow-xl border border-gray-700">
                   <FiRefreshCw className="animate-spin text-sky-400" size={14} />
                   <span className="text-sm font-medium">Loading session…</span>
                 </div>
@@ -351,7 +363,7 @@ export const QALoopPage: React.FC = () => {
 
             {/* ── Collapsible Sidebar ──────────────────────────────────────── */}
             <div
-              className={`shrink-0 bg-slate-900/40 border-r border-slate-800/60 overflow-hidden transition-all duration-300 ease-in-out`}
+              className={`shrink-0 bg-gray-900/40 border-r border-gray-800/60 overflow-hidden transition-all duration-300 ease-in-out`}
               style={{ width: showSidebar ? '320px' : '0px' }}
             >
               <div className="w-80 h-full overflow-y-auto p-4 space-y-4">
@@ -402,7 +414,7 @@ export const QALoopPage: React.FC = () => {
                 />
 
                 {/* Results tabs — wrapped in a light-bg card for readability */}
-                <div className="rounded-xl overflow-hidden border border-slate-700/40 bg-slate-800 shadow-sm">
+                <div className="rounded-xl overflow-hidden border border-gray-700/40 bg-slate-800 shadow-sm">
                   <div className="p-4">
                     <ResultsTabs
                       testCases={sessionTestCases}
@@ -413,9 +425,6 @@ export const QALoopPage: React.FC = () => {
                       analyses={analyses}
                       correlations={correlations}
                       isRunning={activeSession.status === 'running'}
-                      sessionId={activeSession.id}
-                      costInfo={costInfo}
-                      sessionComplete={activeSession.status === 'completed'}
                     />
                   </div>
                 </div>
@@ -446,7 +455,7 @@ export const QALoopPage: React.FC = () => {
 
       {/* First-run onboarding banner */}
       {showOnboarding && (
-        <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-primary-200 bg-gradient-to-r from-primary-50 to-sky-50 p-5">
+        <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-primary-700 bg-gradient-to-r from-slate-800 to-slate-800/80 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
@@ -459,7 +468,7 @@ export const QALoopPage: React.FC = () => {
                   { n: '3', title: 'See results',            sub: 'Bugs, tests, quality score' },
                 ].map(({ n, title, sub }, i) => (
                   <React.Fragment key={n}>
-                    {i > 0 && <div className="hidden sm:block text-slate-400 self-center">→</div>}
+                    {i > 0 && <div className="hidden sm:block text-slate-500 self-center">→</div>}
                     <div className="flex items-start gap-2">
                       <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center font-bold mt-0.5">{n}</span>
                       <div>

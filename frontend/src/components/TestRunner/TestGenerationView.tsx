@@ -60,12 +60,12 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
     if (!scenarioType) return null;
     
     const colors = {
-      positive: 'bg-green-900/30 text-green-300 border-green-800',
-      negative: 'bg-red-900/30 text-red-300 border-red-800',
-      edge: 'bg-blue-900/30 text-blue-300 border-blue-800',
+      positive: 'bg-green-100 text-green-800 border-green-200',
+      negative: 'bg-red-100 text-red-800 border-red-200',
+      edge: 'bg-blue-100 text-blue-800 border-blue-200',
     };
     
-    const color = colors[scenarioType as keyof typeof colors] || 'bg-slate-800 text-slate-200 border-slate-700';
+    const color = colors[scenarioType as keyof typeof colors] || 'bg-slate-900 text-slate-200 border-slate-700';
     
     return (
       <span className={`px-2 py-0.5 rounded text-xs font-medium border ${color}`}>
@@ -78,12 +78,12 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
     if (!riskLevel) return null;
     
     const colors = {
-      high: 'bg-red-900/30 text-red-300',
-      medium: 'bg-yellow-900/30 text-yellow-300',
-      low: 'bg-slate-800 text-slate-200',
+      high: 'bg-red-100 text-red-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      low: 'bg-slate-900 text-slate-200',
     };
     
-    const color = colors[riskLevel as keyof typeof colors] || 'bg-slate-800 text-slate-200';
+    const color = colors[riskLevel as keyof typeof colors] || 'bg-slate-900 text-slate-200';
     
     return (
       <span className={`px-2 py-0.5 rounded text-xs font-medium ${color}`}>
@@ -174,7 +174,7 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
                 {onDelete && (
                   <button
                     onClick={() => setDeleteConfirm({ isOpen: true, testCase })}
-                    className="p-2 text-red-600 hover:bg-red-900/20 rounded transition-colors"
+                    className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
                     title="Delete test case"
                     aria-label="Delete test case"
                   >
@@ -203,7 +203,7 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
                       key={step.id}
                       className="flex items-start gap-3 p-3 bg-slate-900 rounded-lg"
                     >
-                      <div className="flex-shrink-0 w-8 h-8 bg-primary-900/30 text-primary-300 rounded-full flex items-center justify-center font-semibold text-sm">
+                      <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-semibold text-sm">
                         {index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -239,7 +239,7 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
                               e.stopPropagation();
                               onStepFix(testCase, index, step);
                             }}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="Fix or modify this step"
                             aria-label="Fix or modify this step"
                           >

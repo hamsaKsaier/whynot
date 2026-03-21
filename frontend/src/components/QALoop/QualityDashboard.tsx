@@ -89,10 +89,10 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
   // Get alert color based on level
   const getAlertColor = (level: string) => {
     switch (level) {
-      case 'critical': return 'text-red-500 bg-red-900/30';
-      case 'warning': return 'text-orange-500 bg-orange-900/30';
-      case 'info': return 'text-blue-500 bg-blue-900/30';
-      default: return 'text-green-500 bg-green-900/30';
+      case 'critical': return 'text-red-500 bg-red-100 dark:bg-red-900/30';
+      case 'warning': return 'text-orange-500 bg-orange-100 dark:bg-orange-900/30';
+      case 'info': return 'text-blue-500 bg-blue-100 dark:bg-blue-900/30';
+      default: return 'text-green-500 bg-green-100 dark:bg-green-900/30';
     }
   };
 
@@ -156,7 +156,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
         {/* Gauge */}
         <div className="relative w-48 h-24 overflow-hidden">
           {/* Gauge Background */}
-          <div className="absolute w-48 h-48 rounded-full border-8 border-slate-700"
+          <div className="absolute w-48 h-48 rounded-full border-8 border-slate-700 dark:border-gray-700"
             style={{ top: '0', clipPath: 'inset(50% 0 0 0)' }} />
 
           {/* Colored arc based on score */}
@@ -231,9 +231,9 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
             <div key={key} className="text-center">
               {/* 6.5 — use static map, never interpolate class names at runtime */}
               <Icon className={`mx-auto text-lg ${iconColorClass[color] ?? 'text-slate-400'} mb-1`} />
-              <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-700 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-slate-600'}`}
+                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-gray-300 dark:bg-gray-600'}`}
                   style={{ width: `${score !== null ? score : 0}%` }}
                 />
               </div>
@@ -248,9 +248,9 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       </div>
 
       {/* Risk Summary */}
-      <div className="p-4 bg-slate-900 rounded-lg">
+      <div className="p-4 bg-slate-900 dark:bg-gray-800 rounded-lg">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-slate-200 flex items-center gap-2">
+          <h4 className="text-sm font-medium text-slate-200 dark:text-slate-500 flex items-center gap-2">
             <FiAlertTriangle className="text-yellow-500" />
             Risk Summary
           </h4>
@@ -258,31 +258,31 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
         </div>
         <div className="flex gap-2">
           {risks.critical > 0 && (
-            <div className="flex-1 p-2 bg-red-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-red-100 dark:bg-red-900/30 rounded text-center">
               <div className="text-lg font-bold text-red-600">{risks.critical}</div>
               <div className="text-xs text-red-500">Critical</div>
             </div>
           )}
           {risks.high > 0 && (
-            <div className="flex-1 p-2 bg-orange-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-center">
               <div className="text-lg font-bold text-orange-600">{risks.high}</div>
               <div className="text-xs text-orange-500">High</div>
             </div>
           )}
           {risks.medium > 0 && (
-            <div className="flex-1 p-2 bg-yellow-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-center">
               <div className="text-lg font-bold text-yellow-600">{risks.medium}</div>
               <div className="text-xs text-yellow-500">Medium</div>
             </div>
           )}
           {risks.low > 0 && (
-            <div className="flex-1 p-2 bg-blue-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-blue-100 dark:bg-blue-900/30 rounded text-center">
               <div className="text-lg font-bold text-blue-600">{risks.low}</div>
               <div className="text-xs text-blue-500">Low</div>
             </div>
           )}
           {totalRisks === 0 && (
-            <div className="flex-1 p-2 bg-green-900/30 rounded text-center">
+            <div className="flex-1 p-2 bg-green-100 dark:bg-green-900/30 rounded text-center">
               <FiCheckCircle className="mx-auto text-lg text-green-500" />
               <div className="text-xs text-green-500 mt-1">No issues!</div>
             </div>
@@ -292,9 +292,9 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
       {/* Phase 8: Cost Tracking Section */}
       {costTracking && (
-        <div className="p-4 bg-slate-900 rounded-lg">
+        <div className="p-4 bg-slate-900 dark:bg-gray-800 rounded-lg">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-slate-200 flex items-center gap-2">
+            <h4 className="text-sm font-medium text-slate-200 dark:text-slate-500 flex items-center gap-2">
               <FiDollarSign className="text-green-500" />
               Cost Tracking
             </h4>
@@ -313,7 +313,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                 <span>{formatCost(costTracking.totalCostCents)}</span>
                 <span>Budget: {formatCost(costTracking.maxCostCents)}</span>
               </div>
-              <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-3 bg-slate-700 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${getBudgetBarColor(costTracking.alertPercentage)}`}
                   style={{ width: `${Math.min(costTracking.alertPercentage, 100)}%` }}
@@ -338,7 +338,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                     .filter(([_, cost]) => cost > 0)
                     .map(([phase, cost]) => (
                       <div key={phase} className="flex justify-between text-xs">
-                        <span className="capitalize text-slate-400">{phase}</span>
+                        <span className="capitalize text-slate-400 dark:text-slate-500">{phase}</span>
                         <span className="font-medium">{formatCost(cost)}</span>
                       </div>
                     ))
@@ -361,7 +361,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                     .filter(([_, cost]) => cost > 0)
                     .map(([model, cost]) => (
                       <div key={model} className="flex justify-between text-xs">
-                        <span className="text-slate-400">{model}</span>
+                        <span className="text-slate-400 dark:text-slate-500">{model}</span>
                         <span className="font-medium">{formatCost(cost)}</span>
                       </div>
                     ))
@@ -376,16 +376,16 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
           {/* Total Tokens */}
           {costTracking.totalTokens !== undefined && costTracking.totalTokens > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400 text-center">
+            <div className="mt-3 pt-3 border-t border-slate-700 dark:border-gray-700 text-xs text-slate-400 text-center">
               Total tokens: {costTracking.totalTokens.toLocaleString()}
             </div>
           )}
 
           {/* Budget Warning */}
           {costTracking.budgetExceeded && (
-            <div className="mt-3 p-2 bg-red-900/30 rounded-lg text-center">
+            <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-center">
               <FiAlertTriangle className="inline text-red-500 mr-1" />
-              <span className="text-xs text-red-400 font-medium">
+              <span className="text-xs text-red-600 dark:text-red-400 font-medium">
                 Budget limit reached! Session will stop automatically.
               </span>
             </div>
@@ -395,13 +395,13 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
       {/* Iteration Timeline */}
       <div>
-        <h4 className="text-sm font-medium text-slate-200 mb-3 flex items-center gap-2">
+        <h4 className="text-sm font-medium text-slate-200 dark:text-slate-500 mb-3 flex items-center gap-2">
           <FiClock className="text-blue-500" />
           Iteration Timeline
         </h4>
         <div className="relative">
           {/* Timeline bar */}
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden flex">
+          <div className="h-2 bg-slate-700 dark:bg-gray-700 rounded-full overflow-hidden flex">
             {iterationHistory.map((item, idx) => {
               const width = 100 / Math.max(iterationHistory.length, 1);
               return (
@@ -431,14 +431,14 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       </div>
 
       {/* Current Status */}
-      <div className="flex items-center justify-between p-3 bg-sky-900/20 rounded-lg">
+      <div className="flex items-center justify-between p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg">
         <div className="flex items-center gap-2">
           <FiActivity className="text-sky-500 animate-pulse" />
-          <span className="text-sm text-slate-200">
+          <span className="text-sm text-slate-200 dark:text-slate-500">
             Iteration <span className="font-bold">{currentIteration}</span>
           </span>
         </div>
-        <div className="text-sm text-sky-400">
+        <div className="text-sm text-sky-600 dark:text-sky-400">
           {qualityScore.overall >= targetThreshold ? (
             <span className="flex items-center gap-1">
               <FiCheckCircle /> Quality target reached

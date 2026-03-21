@@ -57,7 +57,7 @@ export class MCPBrowser {
 
     this.transport = new StdioClientTransport({
       command: 'npx',
-      args: ['@playwright/mcp@0.0.68', '--headless', '--browser', 'firefox']
+      args: ['@playwright/mcp@0.0.68', '--headless', '--browser', 'chromium']
     });
 
     this.client = new Client(

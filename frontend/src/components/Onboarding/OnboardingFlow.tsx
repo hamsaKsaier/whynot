@@ -60,7 +60,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       description: 'Projects help you organize test cases by application or feature',
       content: (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-blue-900/20 rounded-lg border border-blue-800">
+          <div className="flex items-center gap-3 p-4 bg-blue-900/20 rounded-lg border border-blue-700">
             <FiFolder className="h-8 w-8 text-blue-600 flex-shrink-0" />
             <div>
               <h3 className="font-semibold text-white">Example: E-commerce Website</h3>
@@ -82,7 +82,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       description: 'User stories describe what users want to accomplish',
       content: (
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-green-900/20 rounded-lg border border-green-800">
+          <div className="flex items-start gap-3 p-4 bg-green-900/20 rounded-lg border border-green-700">
             <FiBook className="h-8 w-8 text-green-600 flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-semibold text-white mb-1">Example User Story</h3>

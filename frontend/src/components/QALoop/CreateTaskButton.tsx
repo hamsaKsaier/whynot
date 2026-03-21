@@ -90,10 +90,10 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'jira': return 'bg-blue-900/30 text-blue-700';
-      case 'clickup': return 'bg-sky-900/30 text-sky-700';
-      case 'linear': return 'bg-sky-900/50 text-sky-300';
-      default: return 'bg-slate-800 text-slate-200';
+      case 'jira': return 'bg-blue-100 text-blue-700';
+      case 'clickup': return 'bg-sky-100 text-sky-700';
+      case 'linear': return 'bg-indigo-100 text-indigo-700';
+      default: return 'bg-slate-900 text-slate-200';
     }
   };
 
@@ -101,7 +101,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
     <>
       <button
         onClick={handleOpen}
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-900/20 text-blue-600 hover:bg-blue-900/30 transition-colors ${className}`}
+        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors ${className}`}
         title="Create task in Jira/ClickUp/Linear"
       >
         <FiSend className="h-3 w-3" />
@@ -125,7 +125,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
                   <p className="text-slate-400 mb-3">No integrations configured</p>
                   <a
                     href="/integrations"
-                    className="text-primary-600 hover:text-primary-300 text-sm font-medium"
+                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                   >
                     Go to Integrations to connect Jira, ClickUp, or Linear
                   </a>
@@ -150,7 +150,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
                                 href={task.external_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-primary-600 hover:text-primary-300"
+                                className="text-primary-600 hover:text-primary-700"
                               >
                                 <FiExternalLink className="h-4 w-4" />
                               </a>
@@ -167,7 +167,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
                     <select
                       value={selectedIntegration}
                       onChange={e => setSelectedIntegration(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     >
                       {integrations.map((int) => (
                         <option key={int.id} value={int.id}>
@@ -179,7 +179,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
                   {/* Result message */}
                   {result && (
-                    <div className={`p-3 rounded-lg mb-4 ${result.success ? 'bg-green-900/20 text-green-700' : 'bg-red-900/20 text-red-700'}`}>
+                    <div className={`p-3 rounded-lg mb-4 ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                       {result.success ? (
                         <div className="flex items-center gap-2">
                           <FiCheck className="h-4 w-4" />
@@ -205,7 +205,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
             <div className="p-5 border-t border-slate-700 flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
+                className="px-4 py-2 text-slate-200 bg-slate-900 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 Close
               </button>

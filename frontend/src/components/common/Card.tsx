@@ -21,9 +21,9 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const baseClasses = 'bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6 transition-all duration-200';
   const hoverClasses = hoverable || clickable
-    ? 'hover:shadow-md hover:border-primary-200 hover:scale-[1.01]'
+    ? 'hover:shadow-md hover:border-primary-700 hover:scale-[1.01]'
     : '';
-  const clickableClasses = clickable ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2' : '';
+  const clickableClasses = clickable ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-900' : '';
 
   return (
     <div

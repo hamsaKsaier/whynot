@@ -228,7 +228,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
           {hasActiveFilters && (
             <button
               onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-900 transition-colors"
             >
               <FiX className="h-3 w-3" /> Clear
             </button>
@@ -291,11 +291,11 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         </Card>
       ) : filteredTestCases.length === 0 ? (
         <Card className="text-center py-12">
-          <FiFilter className="h-8 w-8 text-slate-400 mx-auto mb-3" />
+          <FiFilter className="h-8 w-8 text-slate-500 mx-auto mb-3" />
           <p className="text-slate-400 text-sm mb-2">No test cases match your filters</p>
           <button
             onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-            className="text-sm text-primary-600 hover:text-primary-300 font-medium"
+            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
             Clear filters
           </button>
@@ -314,13 +314,13 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="Test case name"
                     />
                     <textarea
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                       rows={3}
                       placeholder="Description"
                     />
@@ -362,21 +362,21 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                         <button
                           onClick={() => handleRunTest(testCase)}
                           disabled={isRunning}
-                          className="p-2 rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
+                          className="p-2 rounded hover:bg-slate-900 transition-colors disabled:opacity-50"
                           title="Run test"
                         >
                           <FiPlay className={`h-4 w-4 ${isRunning ? 'text-slate-500' : 'text-primary-600'}`} />
                         </button>
                         <button
                           onClick={() => handleEdit(testCase)}
-                          className="p-2 rounded hover:bg-slate-800 transition-colors"
+                          className="p-2 rounded hover:bg-slate-900 transition-colors"
                           title="Edit"
                         >
                           <FiEdit className="h-4 w-4 text-slate-400" />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(testCase)}
-                          className="p-2 rounded hover:bg-slate-800 transition-colors"
+                          className="p-2 rounded hover:bg-slate-900 transition-colors"
                           title="Delete"
                         >
                           <FiTrash2 className="h-4 w-4 text-red-600" />

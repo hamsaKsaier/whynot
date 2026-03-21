@@ -100,7 +100,7 @@ export const TestRunDetailPage: React.FC = () => {
         <div className="mb-6">
           <Link
             to="/test-runs"
-            className="inline-flex items-center text-primary-600 hover:text-primary-300 mb-4"
+            className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-4"
           >
             <FiArrowLeft className="mr-2" />
             Back to Test Runs
@@ -151,7 +151,7 @@ export const TestRunDetailPage: React.FC = () => {
       <div className="mb-6">
         <Link
           to="/test-runs"
-          className="inline-flex items-center text-primary-600 hover:text-primary-300 mb-4"
+          className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-4"
         >
           <FiArrowLeft className="mr-2" />
           Back to Test Runs
@@ -215,29 +215,29 @@ export const TestRunDetailPage: React.FC = () => {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-green-900/20 rounded-lg p-4 border border-green-800">
+          <div className="bg-green-900/20 rounded-lg p-4 border border-green-700">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-green-700 font-medium">Steps Passed</div>
-                <div className="text-2xl font-bold text-green-900 mt-1">{passedSteps}</div>
+                <div className="text-sm text-green-400 font-medium">Steps Passed</div>
+                <div className="text-2xl font-bold text-green-300 mt-1">{passedSteps}</div>
               </div>
               <FiCheckCircle className="h-8 w-8 text-green-600 opacity-50" />
             </div>
           </div>
-          <div className="bg-red-900/20 rounded-lg p-4 border border-red-800">
+          <div className="bg-red-900/20 rounded-lg p-4 border border-red-700">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-red-700 font-medium">Steps Failed</div>
-                <div className="text-2xl font-bold text-red-900 mt-1">{failedSteps}</div>
+                <div className="text-sm text-red-400 font-medium">Steps Failed</div>
+                <div className="text-2xl font-bold text-red-300 mt-1">{failedSteps}</div>
               </div>
               <FiXCircle className="h-8 w-8 text-red-600 opacity-50" />
             </div>
           </div>
-          <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-800">
+          <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-700">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-blue-700 font-medium">Total Steps</div>
-                <div className="text-2xl font-bold text-blue-900 mt-1">{totalSteps}</div>
+                <div className="text-sm text-blue-400 font-medium">Total Steps</div>
+                <div className="text-2xl font-bold text-blue-300 mt-1">{totalSteps}</div>
               </div>
               <FiClock className="h-8 w-8 text-blue-600 opacity-50" />
             </div>

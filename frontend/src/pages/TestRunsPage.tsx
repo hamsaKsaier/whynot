@@ -194,14 +194,14 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => handleExport('csv')}
-                className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-slate-200 rounded-lg hover:bg-slate-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-slate-900 text-slate-200 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 <FiDownload className="h-4 w-4" />
                 <span>Export CSV</span>
               </button>
               <button
                 onClick={() => handleExport('json')}
-                className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-slate-200 rounded-lg hover:bg-slate-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-slate-900 text-slate-200 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 <FiDownload className="h-4 w-4" />
                 <span>Export JSON</span>
@@ -366,7 +366,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                         )}
                         <Link
                           to={`/test-runs/${execution.execution_id}`}
-                          className="text-primary-600 hover:text-primary-300 text-sm font-medium"
+                          className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                         >
                           View Details
                         </Link>

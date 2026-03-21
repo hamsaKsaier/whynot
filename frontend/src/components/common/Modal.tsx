@@ -127,7 +127,7 @@ export const Modal: React.FC<ModalProps> = ({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-slate-500 hover:text-slate-400 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
                 aria-label="Close dialog"
               >
                 <FiX className="h-5 w-5" />
@@ -149,7 +149,7 @@ interface ModalFooterProps {
 
 export const ModalFooter: React.FC<ModalFooterProps> = ({ children }) => {
   return (
-    <div className="flex justify-end gap-3 pt-4 border-t border-slate-700 mt-4">
+    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
       {children}
     </div>
   );

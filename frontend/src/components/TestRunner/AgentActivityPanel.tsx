@@ -51,15 +51,15 @@ export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({
   const getBgColor = (type: AgentMessage['type']) => {
     switch (type) {
       case 'analyzing':
-        return 'bg-blue-900/20 border-blue-800';
+        return 'bg-blue-50 border-blue-200';
       case 'recovery_attempt':
-        return 'bg-yellow-900/20 border-yellow-700';
+        return 'bg-yellow-50 border-yellow-200';
       case 'recovery_success':
-        return 'bg-green-900/20 border-green-800';
+        return 'bg-green-50 border-green-200';
       case 'recovery_failed':
-        return 'bg-red-900/20 border-red-800';
+        return 'bg-red-50 border-red-200';
       case 'needs_help':
-        return 'bg-sky-900/20 border-sky-700';
+        return 'bg-sky-50 border-sky-200';
       default:
         return 'bg-slate-900 border-slate-700';
     }

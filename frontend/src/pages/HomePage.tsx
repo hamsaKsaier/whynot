@@ -112,7 +112,7 @@ export const HomePage: React.FC = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">Recent QA Sessions</h2>
-            <Link to="/qa-loop" className="text-sm text-primary-600 hover:text-primary-300 font-medium">
+            <Link to="/qa-loop" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
               View all
             </Link>
           </div>
@@ -154,7 +154,7 @@ export const HomePage: React.FC = () => {
 
       {/* QA Loop Hero CTA */}
       {!showOnboarding && (
-        <div className="rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50 to-sky-50 p-10 text-center">
+        <div className="rounded-2xl border border-primary-700 bg-gradient-to-br from-slate-800 to-slate-800/80 p-10 text-center">
           <div className="flex justify-center mb-5">
             <div className="h-16 w-16 rounded-2xl bg-primary-600 flex items-center justify-center shadow-lg">
               <FiZap className="h-8 w-8 text-white" />

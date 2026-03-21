@@ -7,7 +7,6 @@ import { IntegrationsContent } from './IntegrationsPage';
 import { GitHubReposContent } from './GitHubReposPage';
 import { WebhookContent } from './WebhookManagementPage';
 import { BillingContent } from './BillingPage';
-import { NotificationPreferences } from '../components/NotificationPreferences';
 
 const TABS = [
   { id: 'environments', label: 'Environments', icon: <FiServer className="h-4 w-4" /> },
@@ -38,12 +37,7 @@ export const SettingsPage: React.FC = () => {
         {activeTab === 'environments' && <EnvironmentsContent />}
         {activeTab === 'integrations' && <IntegrationsContent />}
         {activeTab === 'github' && <GitHubReposContent />}
-        {activeTab === 'webhooks' && (
-          <div className="space-y-6">
-            <NotificationPreferences />
-            <WebhookContent />
-          </div>
-        )}
+        {activeTab === 'webhooks' && <WebhookContent />}
         {activeTab === 'billing' && <BillingContent />}
       </div>
     </div>

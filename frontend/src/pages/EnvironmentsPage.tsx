@@ -160,14 +160,14 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                     href={env.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 rounded hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded hover:bg-slate-900 transition-colors"
                     title="Open URL"
                   >
                     <FiExternalLink className="h-4 w-4 text-slate-400" />
                   </a>
                   <button
                     onClick={() => openEditModal(env)}
-                    className="p-1.5 rounded hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded hover:bg-slate-900 transition-colors"
                     title="Edit"
                   >
                     <FiEdit className="h-4 w-4 text-slate-400" />

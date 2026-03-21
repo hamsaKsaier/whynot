@@ -74,9 +74,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
   } = useBrowserStream({
     executionId: memoizedExecutionId,
     enabled: memoizedWsEnabled, // Enable as soon as executionId is available
-    wsUrl: import.meta.env.VITE_WS_URL || (window.location.protocol === 'https:'
-      ? `wss://${window.location.host}`
-      : 'ws://localhost:3011'),
+    wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:3011',
   });
 
   // Update execution result when final result arrives via WebSocket
@@ -335,7 +333,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
               {steps[selectedStepIndex].selector_used && (
                 <div className="mb-4">
                   <span className="text-xs sm:text-sm font-medium text-slate-400">Selector Used:</span>
-                  <div className="mt-1 text-xs sm:text-sm p-2 rounded bg-green-900/20 border border-green-800">
+                  <div className="mt-1 text-xs sm:text-sm p-2 rounded bg-green-50 border border-green-200">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-green-600 font-bold flex-shrink-0">✅</span>
                       <span className="text-green-700 font-medium break-all">
@@ -388,7 +386,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
                         const isUsed = steps[selectedStepIndex].selector_used?.type === selector.type &&
                           steps[selectedStepIndex].selector_used?.value === selector.value;
                         return (
-                          <div key={`${selector.type}-${selector.value}-${idx}`} className={`text-xs p-2 rounded ${isUsed ? 'bg-green-900/20 border border-green-800' : 'bg-slate-900'}`}>
+                          <div key={`${selector.type}-${selector.value}-${idx}`} className={`text-xs p-2 rounded ${isUsed ? 'bg-green-50 border border-green-200' : 'bg-slate-900'}`}>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="flex-shrink-0">
                                 {isUsed ? (

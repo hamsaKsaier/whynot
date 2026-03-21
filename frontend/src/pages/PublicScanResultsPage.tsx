@@ -39,10 +39,10 @@ interface ScanTestCase {
 }
 
 const severityColor: Record<string, string> = {
-  critical: 'bg-red-900/30 text-red-700',
-  high: 'bg-orange-900/30 text-orange-700',
-  medium: 'bg-yellow-900/30 text-yellow-700',
-  low: 'bg-blue-900/30 text-blue-700',
+  critical: 'bg-red-900/30 text-red-400',
+  high: 'bg-orange-900/30 text-orange-400',
+  medium: 'bg-yellow-900/30 text-yellow-400',
+  low: 'bg-blue-900/30 text-blue-400',
 };
 
 // Animated activity messages while scanning
@@ -149,7 +149,7 @@ export const PublicScanResultsPage: React.FC = () => {
           <p className="text-red-500 mb-4">{error}</p>
           <button
             onClick={() => navigate('/landing')}
-            className="text-sky-600 hover:text-sky-700 font-medium"
+            className="text-sky-600 hover:text-sky-400 font-medium"
           >
             Back to home
           </button>
@@ -199,7 +199,7 @@ export const PublicScanResultsPage: React.FC = () => {
                     href={session?.target_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-sky-600 hover:text-sky-700 flex items-center gap-1 truncate"
+                    className="text-sm text-sky-600 hover:text-sky-400 flex items-center gap-1 truncate"
                   >
                     {session?.target_url}
                     <FiExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -216,19 +216,19 @@ export const PublicScanResultsPage: React.FC = () => {
                     </button>
                   )}
                   {isRunning && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-900/20 text-sky-700 rounded-full text-sm font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-900/20 text-sky-400 rounded-full text-sm font-medium">
                       <FiLoader className="h-3.5 w-3.5 animate-spin" />
                       Scanning
                     </div>
                   )}
                   {isComplete && session?.status === 'completed' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-900/20 text-green-700 rounded-full text-sm font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-900/20 text-green-400 rounded-full text-sm font-medium">
                       <FiCheck className="h-3.5 w-3.5" />
                       Complete
                     </div>
                   )}
                   {isComplete && session?.status === 'failed' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/20 text-red-700 rounded-full text-sm font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/20 text-red-400 rounded-full text-sm font-medium">
                       <FiAlertTriangle className="h-3.5 w-3.5" />
                       Failed
                     </div>
@@ -238,7 +238,7 @@ export const PublicScanResultsPage: React.FC = () => {
 
               {/* Live activity indicator */}
               {isRunning && (
-                <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-sky-900/20 rounded-lg text-sm text-sky-700 transition-all">
+                <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-sky-900/20 rounded-lg text-sm text-sky-400 transition-all">
                   <ActivityMessage.icon className="h-4 w-4 flex-shrink-0 animate-pulse" />
                   <span className="truncate">{ActivityMessage.text}</span>
                 </div>
@@ -274,7 +274,7 @@ export const PublicScanResultsPage: React.FC = () => {
                   onClick={() => setActiveTab('tests')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === 'tests'
-                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-900/20/50'
+                      ? 'text-sky-400 border-b-2 border-sky-600 bg-sky-900/20'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -284,7 +284,7 @@ export const PublicScanResultsPage: React.FC = () => {
                   onClick={() => setActiveTab('bugs')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === 'bugs'
-                      ? 'text-sky-700 border-b-2 border-sky-600 bg-sky-900/20/50'
+                      ? 'text-sky-400 border-b-2 border-sky-600 bg-sky-900/20'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -316,7 +316,7 @@ export const PublicScanResultsPage: React.FC = () => {
                             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                               tc.last_run_status === 'passed' ? 'bg-green-400' :
                               tc.last_run_status === 'failed' ? 'bg-red-400' :
-                              'bg-slate-600'
+                              'bg-gray-300'
                             }`} />
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium text-slate-200 truncate">{tc.name}</div>
@@ -325,9 +325,9 @@ export const PublicScanResultsPage: React.FC = () => {
                               )}
                             </div>
                             <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${
-                              tc.last_run_status === 'passed' ? 'bg-green-900/30 text-green-700' :
-                              tc.last_run_status === 'failed' ? 'bg-red-900/30 text-red-700' :
-                              'bg-slate-800 text-slate-400'
+                              tc.last_run_status === 'passed' ? 'bg-green-900/30 text-green-400' :
+                              tc.last_run_status === 'failed' ? 'bg-red-900/30 text-red-400' :
+                              'bg-slate-900 text-slate-400'
                             }`}>
                               {tc.last_run_status || 'pending'}
                             </span>
@@ -418,7 +418,7 @@ export const PublicScanResultsPage: React.FC = () => {
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="px-6 py-2.5 bg-slate-800 text-sky-700 font-semibold rounded-lg hover:bg-slate-800 transition-colors text-sm"
+                className="px-6 py-2.5 bg-white text-sky-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-sm"
               >
                 Sign up free
               </button>

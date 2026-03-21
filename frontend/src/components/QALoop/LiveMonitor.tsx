@@ -185,7 +185,7 @@ const StatTile: React.FC<{
   icon: React.ReactNode;
   pulse?: boolean;
 }> = ({ value, label, color, icon, pulse }) => (
-  <div className="flex flex-col items-center justify-center bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 min-w-[90px] gap-1">
+  <div className="flex flex-col items-center justify-center bg-gray-800/60 border border-gray-700/50 rounded-xl px-4 py-3 min-w-[90px] gap-1">
     <div className="flex items-center gap-1.5" style={{ color }}>
       {icon}
       <span className={`text-2xl font-bold tabular-nums ${pulse ? 'animate-pulse' : ''}`}>{value}</span>
@@ -223,14 +223,14 @@ const ActionRow: React.FC<{
         {cfg.label}
       </span>
       {hint && (
-        <span className="text-slate-400 truncate flex-1 font-mono text-[11px]" title={hint}>
+        <span className="text-slate-500 truncate flex-1 font-mono text-[11px]" title={hint}>
           {hint}
         </span>
       )}
       <span className="text-slate-400 shrink-0 ml-auto flex items-center gap-1">
         {call.result !== undefined
           ? <span className="text-green-400">✓</span>
-          : <span className="animate-spin w-3 h-3 border border-slate-500 border-t-slate-400 rounded-full inline-block" />
+          : <span className="animate-spin w-3 h-3 border border-gray-500 border-t-gray-300 rounded-full inline-block" />
         }
         {formatTimestamp(call.timestamp)}
       </span>
@@ -288,7 +288,7 @@ const TestResultBadge: React.FC<{ activity: TestRunActivity }> = ({ activity }) 
       }}
     >
       <IconComp />
-      <span className="font-medium text-slate-300 truncate flex-1" title={activity.testCaseName}>
+      <span className="font-medium text-gray-200 truncate flex-1" title={activity.testCaseName}>
         {activity.testCaseName}
       </span>
       {activity.isMismatch && (
@@ -382,6 +382,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   });
 
   const phaseConfig = getPhaseConfig(currentPhase ?? null);
+  const costDollars = costInfo ? (costInfo.totalCostCents / 100).toFixed(3) : null;
 
   // Thinking text — keep last 5000 chars so user has time to read AI reasoning
   const displayThinking = thinkingText.slice(-5000);
@@ -410,7 +411,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             </span>
           )}
           {currentMessage && (
-            <span className="text-sm text-slate-400 truncate flex-1">{currentMessage}</span>
+            <span className="text-sm text-slate-500 truncate flex-1">{currentMessage}</span>
           )}
           {!currentMessage && !phaseConfig && isRunning && (
             <span className="text-sm text-slate-500 animate-pulse">AI is working…</span>
@@ -427,31 +428,31 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       <div className={`grid gap-4 ${expandedPreview ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[3fr_2fr]'}`}>
 
         {/* Browser Preview */}
-        <div className="rounded-xl overflow-hidden border border-slate-700/60 bg-slate-900/80"
+        <div className="rounded-xl overflow-hidden border border-gray-700/60 bg-gray-900/80"
           style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5), 0 0 1px rgba(99,102,241,0.3) inset' }}>
           {/* Browser chrome bar */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/90 border-b border-slate-700/50">
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/90 border-b border-gray-700/50">
             <div className="flex gap-1.5">
               <div className="w-3 h-3 rounded-full bg-red-400/70" />
               <div className="w-3 h-3 rounded-full bg-yellow-400/70" />
               <div className="w-3 h-3 rounded-full bg-green-400/70" />
             </div>
-            <div className="flex-1 flex items-center gap-2 mx-2 bg-slate-700/50 rounded-md px-3 py-1">
+            <div className="flex-1 flex items-center gap-2 mx-2 bg-gray-700/50 rounded-md px-3 py-1">
               <Icons.monitor />
-              <span className="text-xs text-slate-400 truncate font-mono">
+              <span className="text-xs text-slate-500 truncate font-mono">
                 {currentUrl || '—'}
               </span>
             </div>
             <button
               onClick={() => setExpandedPreview(!expandedPreview)}
-              className="text-slate-500 hover:text-slate-300 transition-colors p-1"
+              className="text-slate-500 hover:text-gray-200 transition-colors p-1"
               title={expandedPreview ? 'Minimize' : 'Expand'}
             >
               {expandedPreview ? <Icons.compress /> : <Icons.expand />}
             </button>
           </div>
           {/* Screenshot area */}
-          <div className={`relative ${expandedPreview ? 'h-[520px]' : 'h-64 lg:h-80'} bg-slate-950 flex items-center justify-center`}>
+          <div className={`relative ${expandedPreview ? 'h-[520px]' : 'h-64 lg:h-80'} bg-gray-950 flex items-center justify-center`}>
             {currentScreenshot ? (
               <img
                 src={currentScreenshot}
@@ -462,7 +463,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
               <div className="flex flex-col items-center gap-3 text-slate-400">
                 {isRunning ? (
                   <>
-                    <div className="w-10 h-10 rounded-full border-2 border-sky-500/30 border-t-indigo-400 animate-spin" />
+                    <div className="w-10 h-10 rounded-full border-2 border-indigo-500/30 border-t-indigo-400 animate-spin" />
                     <span className="text-sm text-slate-400">Waiting for first screenshot…</span>
                   </>
                 ) : (
@@ -485,12 +486,12 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
 
         {/* AI Thinking Panel */}
         {!expandedPreview && (
-          <div className="rounded-xl border border-slate-700/60 bg-slate-900/80 overflow-hidden flex flex-col"
+          <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden flex flex-col"
             style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}>
             {/* Header */}
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-800/90 border-b border-slate-700/50">
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-800/90 border-b border-gray-700/50">
               <span className="text-green-400"><Icons.brain /></span>
-              <span className="text-sm font-semibold text-slate-300">AI Thinking</span>
+              <span className="text-sm font-semibold text-gray-200">AI Thinking</span>
               {thinkingText && isRunning && (
                 <span className="ml-1 flex gap-0.5">
                   {[0, 1, 2].map(i => (
@@ -501,7 +502,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
               )}
               <button
                 onClick={() => setShowThinking(!showThinking)}
-                className="ml-auto text-xs text-slate-400 hover:text-slate-400 transition-colors px-2 py-0.5 rounded bg-slate-700/50"
+                className="ml-auto text-xs text-slate-400 hover:text-slate-500 transition-colors px-2 py-0.5 rounded bg-gray-700/50"
               >
                 {showThinking ? 'Hide' : 'Show'}
               </button>
@@ -553,16 +554,19 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             />
           </>
         )}
-        {/* Cost tile removed — shown only in post-scan summary */}
+        {costDollars && Number(costDollars) > 0 && (
+          <StatTile value={`$${costDollars}`} label="Cost" color="#fbbf24"
+            icon={<Icons.dollar />} />
+        )}
       </div>
 
       {/* ── Test Execution Feed ───────────────────────────────────────────────── */}
       {testRunActivity.length > 0 && (
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/80 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-800/90 border-b border-slate-700/50">
-            <span className="text-sky-400"><Icons.test /></span>
-            <span className="text-sm font-semibold text-slate-300">Test Execution</span>
-            <span className="ml-1 text-xs bg-sky-900/50 text-sky-300 px-2 py-0.5 rounded-full">
+        <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 border-b border-gray-700/50">
+            <span className="text-indigo-400"><Icons.test /></span>
+            <span className="text-sm font-semibold text-gray-200">Test Execution</span>
+            <span className="ml-1 text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full">
               {testRunActivity.filter(a => a.status === 'passed').length}/{testRunActivity.length} passed
             </span>
             {testRunActivity.some(a => a.isMismatch) && (
@@ -577,7 +581,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             ))}
           </div>
           {testRunActivity.some(a => a.failureReason) && (
-            <div className="px-4 pb-3 text-xs text-red-400 truncate border-t border-slate-700/30 pt-2">
+            <div className="px-4 pb-3 text-xs text-red-400 truncate border-t border-gray-700/30 pt-2">
               ⚠ {testRunActivity.find(a => a.failureReason)?.failureReason}
             </div>
           )}
@@ -585,10 +589,10 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       )}
 
       {/* ── Action Feed ──────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-slate-700/60 bg-slate-900/80 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-800/90 border-b border-slate-700/50">
+      <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 border-b border-gray-700/50">
           <span className="text-sky-400"><Icons.spark /></span>
-          <span className="text-sm font-semibold text-slate-300">Action Feed</span>
+          <span className="text-sm font-semibold text-gray-200">Action Feed</span>
           {toolCalls.length > 0 && (
             <span className="ml-1 text-xs bg-sky-900/50 text-sky-300 px-2 py-0.5 rounded-full">
               {toolCalls.length}
@@ -596,7 +600,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
           )}
           <button
             onClick={() => setShowToolCalls(!showToolCalls)}
-            className="ml-auto text-xs text-slate-400 hover:text-slate-400 transition-colors px-2 py-0.5 rounded bg-slate-700/50"
+            className="ml-auto text-xs text-slate-400 hover:text-slate-500 transition-colors px-2 py-0.5 rounded bg-gray-700/50"
           >
             {showToolCalls ? 'Hide' : 'Show'}
           </button>

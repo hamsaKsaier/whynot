@@ -56,7 +56,7 @@ export const SessionList: React.FC<SessionListProps> = ({
       <div className="text-center py-4 text-slate-400">Loading...</div>
     ) : sessions.length === 0 ? (
       <div className="text-center py-8">
-        <FiClock className="h-8 w-8 text-slate-300 mx-auto mb-3" />
+        <FiClock className="h-8 w-8 text-gray-200 mx-auto mb-3" />
         <p className="text-sm text-slate-500 mb-3">No sessions yet</p>
         <button
           onClick={() => {
@@ -64,7 +64,7 @@ export const SessionList: React.FC<SessionListProps> = ({
             el?.focus();
             el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }}
-          className="text-sm font-medium text-primary-600 hover:text-primary-300 transition-colors"
+          className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
         >
           Start your first exploration →
         </button>
@@ -77,8 +77,8 @@ export const SessionList: React.FC<SessionListProps> = ({
             onClick={() => onSelect(session)}
             className={`w-full text-left p-3 rounded-lg border transition-all ${
               activeSession?.id === session.id
-                ? 'border-sky-500 bg-sky-900/20 shadow-md ring-1 ring-sky-300'
-                : 'border-slate-700 hover:border-slate-600 hover:shadow-sm'
+                ? 'border-sky-500 bg-sky-50 shadow-md ring-1 ring-sky-300'
+                : 'border-slate-700 hover:border-slate-700 hover:shadow-sm'
             }`}
           >
             <div className="flex items-center justify-between">
@@ -102,7 +102,7 @@ export const SessionList: React.FC<SessionListProps> = ({
           <button
             onClick={onLoadMore}
             disabled={isLoadingMore}
-            className="w-full mt-1 py-2 text-sm text-center text-primary-600 hover:text-primary-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full mt-1 py-2 text-sm text-center text-primary-600 hover:text-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoadingMore ? 'Loading…' : 'Load more'}
           </button>

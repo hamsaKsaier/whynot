@@ -58,7 +58,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ invoices }) => {
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                   inv.status === 'paid' ? 'bg-green-900/30 text-green-300'
                   : inv.status === 'open' ? 'bg-yellow-900/30 text-yellow-300'
-                  : 'bg-slate-800 text-slate-200'
+                  : 'bg-slate-900 text-slate-200'
                 }`}>
                   {inv.status}
                 </span>

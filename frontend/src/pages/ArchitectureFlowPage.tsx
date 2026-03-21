@@ -68,12 +68,12 @@ const MINIMAP_COLORS: Record<string, string> = {
 
 /** Filter panel configuration */
 const FILTER_ITEMS: { type: FlowNodeType; label: string; color: string; borderColor: string }[] = [
-  { type: 'project', label: 'Project', color: 'bg-sky-500', borderColor: 'border-sky-600' },
-  { type: 'folder', label: 'Folder', color: 'bg-sky-500', borderColor: 'border-sky-700' },
-  { type: 'userStory', label: 'User Story', color: 'bg-green-500', borderColor: 'border-green-700' },
-  { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-700' },
-  { type: 'testCase', label: 'Test Case', color: 'bg-sky-500', borderColor: 'border-sky-600' },
-  { type: 'testStep', label: 'Test Step', color: 'bg-slate-500', borderColor: 'border-slate-600' },
+  { type: 'project', label: 'Project', color: 'bg-sky-500', borderColor: 'border-sky-300' },
+  { type: 'folder', label: 'Folder', color: 'bg-indigo-500', borderColor: 'border-indigo-300' },
+  { type: 'userStory', label: 'User Story', color: 'bg-green-500', borderColor: 'border-green-300' },
+  { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-300' },
+  { type: 'testCase', label: 'Test Case', color: 'bg-sky-500', borderColor: 'border-sky-300' },
+  { type: 'testStep', label: 'Test Step', color: 'bg-gray-400', borderColor: 'border-slate-700' },
 ];
 
 // ─── Stat Pill (inline helper component) ────────────────────────────────────
@@ -642,7 +642,7 @@ export const ArchitectureFlowPage: React.FC = () => {
           }}
         >
           <Controls position="bottom-left" />
-          <Background color="#e5e7eb" gap={20} size={1} />
+          <Background color="#334155" gap={20} size={1} />
           <MiniMap
             nodeColor={(node) => MINIMAP_COLORS[node.type || ''] || '#9ca3af'}
             maskColor="rgba(0,0,0,0.08)"
@@ -665,7 +665,7 @@ export const ArchitectureFlowPage: React.FC = () => {
                     type="checkbox"
                     checked={visibleTypes.has(type)}
                     onChange={() => toggleVisibility(type)}
-                    className="rounded border-slate-600 text-slate-400 focus:ring-slate-600"
+                    className="rounded border-slate-700 text-slate-400 focus:ring-slate-700"
                   />
                   <div className={`w-3 h-3 rounded-sm ${color}`} />
                   <span className="text-slate-200">{label}</span>
