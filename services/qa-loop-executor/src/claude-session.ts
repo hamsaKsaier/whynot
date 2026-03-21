@@ -521,7 +521,12 @@ CRITICAL RULES for playwright_code:
 7. If login credentials were provided, use process.env.TEST_USERNAME and process.env.TEST_PASSWORD — NEVER hardcode credentials
 8. Include await page.screenshot() at key verification points
 9. Set reasonable timeouts for navigation and element waits
-10. For assertions, use plain JavaScript with throw:
+10. TIMING — CRITICAL TO AVOID FALSE POSITIVES:
+    - After EVERY page.goto(), add: await page.waitForLoadState('networkidle');
+    - After clicking a navigation link that loads a new page, add: await page.waitForTimeout(1000);
+    - The verification browser starts cold (no cache, no cookies), so pages take longer to render.
+    - NEVER check for elements immediately after navigation — always wait for load state first.
+11. For assertions, use plain JavaScript with throw:
     - const el = page.locator('.error-message');
     - if (!(await el.isVisible())) throw new Error('Error message not visible');
     - const text = await el.textContent();
@@ -539,6 +544,7 @@ SELECTOR QUALITY RULES (CRITICAL):
 Example playwright_code format:
 \`\`\`
 await page.goto('https://example.com/login');
+await page.waitForLoadState('networkidle');
 // Note: fragile selector — consider adding data-testid
 await page.fill('input[type="email"]', 'invalid-email');
 await page.fill('input[type="password"]', 'password123');

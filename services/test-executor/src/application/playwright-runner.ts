@@ -98,6 +98,11 @@ function isAssertionFailure(errorMessage: string): boolean {
     /Error:.*not found/i.test(errorMessage) ||
     /Error:.*not visible/i.test(errorMessage) ||
     /Error:.*not.*match/i.test(errorMessage) ||
+    /not visible/i.test(errorMessage) ||
+    /not shown/i.test(errorMessage) ||
+    /not displayed/i.test(errorMessage) ||
+    /not present/i.test(errorMessage) ||
+    /not found on page/i.test(errorMessage) ||
     /AssertionError/i.test(errorMessage) ||
     /expect\(received\)/i.test(errorMessage)
   );
@@ -275,6 +280,12 @@ async function executePlaywrightRun(
     context.setDefaultNavigationTimeout(timeoutMs);
 
     const page = await context.newPage();
+
+    // Automatically wait for network idle after every navigation to avoid
+    // false-positive assertion failures (cold browser, no cache/cookies).
+    page.on('load', async () => {
+      await page.waitForLoadState('networkidle').catch(() => {});
+    });
 
     // Capture before screenshot (after first navigation)
     let capturedBefore = false;
