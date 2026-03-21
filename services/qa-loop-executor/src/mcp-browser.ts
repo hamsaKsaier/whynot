@@ -151,6 +151,12 @@ export class MCPBrowser {
       // Handle screenshots — emit to WebSocket for frontend preview
       // Check for image content in ANY tool response (some tools return screenshots)
       const imageContent = content?.find(c => c.type === 'image');
+      logger.debug('Tool result content types', {
+        sessionId: this.sessionId,
+        tool: toolName,
+        contentTypes: content?.map(c => c.type) || [],
+        hasImage: !!imageContent
+      });
       if (imageContent && imageContent.data) {
         emitToSession(this.sessionId, {
           type: 'screenshot',
@@ -217,13 +223,26 @@ export class MCPBrowser {
       const content = result.content as Array<{ type: string; data?: string; mimeType?: string }>;
       const img = content?.find(c => c.type === 'image');
       if (img && img.data) {
+        logger.info('Screenshot captured for preview', {
+          sessionId: this.sessionId,
+          dataLength: img.data.length
+        });
         emitToSession(this.sessionId, {
           type: 'screenshot',
           data: { url: 'current_page', screenshot: img.data }
         });
+      } else {
+        logger.warn('Screenshot returned no image data', {
+          sessionId: this.sessionId,
+          contentTypes: content?.map(c => c.type) || [],
+          contentLength: content?.length || 0
+        });
       }
-    } catch {
-      // Silently ignore — preview screenshot is not critical
+    } catch (err: any) {
+      logger.warn('Preview screenshot failed', {
+        sessionId: this.sessionId,
+        error: err.message
+      });
     }
   }
 
