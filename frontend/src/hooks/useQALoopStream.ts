@@ -154,14 +154,23 @@ export function useQALoopStream({
         });
         break;
 
-      case 'screenshot':
-        if (event.data?.screenshot) {
-          setCurrentScreenshot(`data:image/png;base64,${event.data.screenshot}`);
+      case 'screenshot': {
+        // The backend sends { type: 'screenshot', data: { screenshot: '<base64>', url: '...' } }
+        // Ensure we handle both nested and flat data structures
+        const screenshotData = event.data?.screenshot || event.data?.data?.screenshot;
+        const screenshotUrl = event.data?.url || event.data?.data?.url;
+        if (screenshotData && typeof screenshotData === 'string' && screenshotData.length > 100) {
+          // Avoid double-prefixing if the data already has a data URI prefix
+          const dataUri = screenshotData.startsWith('data:')
+            ? screenshotData
+            : `data:image/png;base64,${screenshotData}`;
+          setCurrentScreenshot(dataUri);
         }
-        if (event.data?.url) {
-          setCurrentUrl(event.data.url);
+        if (screenshotUrl) {
+          setCurrentUrl(screenshotUrl);
         }
         break;
+      }
 
       case 'iteration_start':
         setIteration(event.data?.iteration || 0);

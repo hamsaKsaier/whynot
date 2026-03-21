@@ -51,8 +51,56 @@ export class MCPBrowser {
   /** Maximum browser session duration in ms (30 minutes). */
   private static readonly MAX_BROWSER_DURATION_MS = 30 * 60 * 1000;
 
+  /**
+   * Global registry of active MCPBrowser instances, keyed by sessionId.
+   * Used by forceCleanup() to kill any lingering browser from a previous session
+   * before launching a new one — eliminates "browser is not free" race conditions.
+   */
+  private static activeBrowsers = new Map<string, MCPBrowser>();
+
   constructor(sessionId: string) {
     this.sessionId = sessionId;
+  }
+
+  /**
+   * Force-cleanup any existing browser for this sessionId (or all browsers).
+   * Must be called at the start of every new session initialization to prevent
+   * "browser is not free" race conditions when a user stops and immediately
+   * restarts a session.
+   *
+   * @param sessionId — if provided, only kill that session's browser.
+   *                     If omitted, kills ALL active browsers (nuclear option).
+   */
+  static async forceCleanup(sessionId?: string): Promise<void> {
+    if (sessionId) {
+      const existing = MCPBrowser.activeBrowsers.get(sessionId);
+      if (existing) {
+        logger.warn('Force-cleaning up existing browser before new session', { sessionId });
+        try {
+          await existing.forceStop();
+        } catch (err: any) {
+          logger.warn('forceCleanup: forceStop threw, ignoring', { sessionId, error: err.message });
+        }
+        MCPBrowser.activeBrowsers.delete(sessionId);
+        // Wait for OS-level process cleanup
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    } else {
+      // Kill all active browsers
+      const entries = Array.from(MCPBrowser.activeBrowsers.entries());
+      for (const [sid, browser] of entries) {
+        logger.warn('Force-cleaning up browser (global cleanup)', { sessionId: sid });
+        try {
+          await browser.forceStop();
+        } catch {
+          // ignore
+        }
+        MCPBrowser.activeBrowsers.delete(sid);
+      }
+      if (entries.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
   }
 
   /**
@@ -101,22 +149,30 @@ export class MCPBrowser {
       }
     }
 
-    // Reset all state
+    // Reset all state and unregister from the global registry
     this.client = null;
     this.transport = null;
     this.isConnected = false;
     this.tools = [];
     this.loadTimesCache.clear();
     this.startedAt = 0;
+    MCPBrowser.activeBrowsers.delete(this.sessionId);
 
     logger.info('MCP browser force-stopped', { sessionId: this.sessionId });
   }
 
   /**
    * Start the Playwright MCP server as a subprocess and connect.
+   * Automatically force-kills any previous browser for this session first.
    */
   async start(): Promise<void> {
+    // Kill any lingering browser from a previous session to prevent "browser is not free"
+    await MCPBrowser.forceCleanup(this.sessionId);
+
     logger.info('Starting Playwright MCP server', { sessionId: this.sessionId });
+
+    // Register this instance in the global registry
+    MCPBrowser.activeBrowsers.set(this.sessionId, this);
 
     this.transport = new StdioClientTransport({
       command: 'npx',
@@ -399,48 +455,53 @@ export class MCPBrowser {
   /**
    * Stop the MCP server and clean up resources.
    * Uses a timeout to prevent hanging on unresponsive processes.
+   * Cleanup always runs in a finally block to prevent leaked browsers.
    */
   async stop(): Promise<void> {
     logger.info('Stopping Playwright MCP server', { sessionId: this.sessionId });
 
-    // Stop recording first to prevent new frame captures during shutdown
-    if (this.captureInterval) {
-      clearInterval(this.captureInterval);
-      this.captureInterval = null;
-    }
-    this.isRecording = false;
-
     try {
-      if (this.client && this.isConnected) {
-        // Timeout the close operation to prevent hanging
-        const closePromise = this.client.close();
-        const timeoutPromise = new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error('Close timed out after 10s')), 10000)
-        );
-        await Promise.race([closePromise, timeoutPromise]);
+      // Stop recording first to prevent new frame captures during shutdown
+      if (this.captureInterval) {
+        clearInterval(this.captureInterval);
+        this.captureInterval = null;
       }
-    } catch (error: any) {
-      logger.warn('Error closing MCP client, forcing cleanup', {
-        sessionId: this.sessionId,
-        error: error.message
-      });
-      // Force-kill the transport subprocess
+      this.isRecording = false;
+
       try {
-        if (this.transport) {
-          (this.transport as any)?.close?.();
+        if (this.client && this.isConnected) {
+          // Timeout the close operation to prevent hanging
+          const closePromise = this.client.close();
+          const timeoutPromise = new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error('Close timed out after 10s')), 10000)
+          );
+          await Promise.race([closePromise, timeoutPromise]);
         }
-      } catch {
-        // Ignore — we're already in cleanup
+      } catch (error: any) {
+        logger.warn('Error closing MCP client, forcing cleanup', {
+          sessionId: this.sessionId,
+          error: error.message
+        });
+        // Force-kill the transport subprocess
+        try {
+          if (this.transport) {
+            (this.transport as any)?.close?.();
+          }
+        } catch {
+          // Ignore — we're already in cleanup
+        }
       }
+    } finally {
+      // Always reset state and unregister from the global registry
+      this.client = null;
+      this.transport = null;
+      this.isConnected = false;
+      this.tools = [];
+      this.loadTimesCache.clear();
+      this.startedAt = 0;
+      MCPBrowser.activeBrowsers.delete(this.sessionId);
+
+      logger.info('Playwright MCP server stopped', { sessionId: this.sessionId });
     }
-
-    this.client = null;
-    this.transport = null;
-    this.isConnected = false;
-    this.tools = [];
-    this.loadTimesCache.clear();
-    this.startedAt = 0;
-
-    logger.info('Playwright MCP server stopped', { sessionId: this.sessionId });
   }
 }

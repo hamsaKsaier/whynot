@@ -525,7 +525,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                               type="button"
                               onClick={() => setAutoMerge(!autoMerge)}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                autoMerge ? 'bg-sky-500' : 'bg-gray-300'
+                                autoMerge ? 'bg-sky-500' : 'bg-slate-600'
                               }`}
                             >
                               <span

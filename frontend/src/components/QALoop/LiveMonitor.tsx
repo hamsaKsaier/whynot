@@ -259,9 +259,9 @@ const StatusIcons = {
       </svg>
     </span>
   ),
-  error: () => (
-    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-orange-500/20">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fb923c" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+  needsReview: () => (
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-amber-500/20">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 9v4M12 17h.01"/>
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
       </svg>
@@ -269,37 +269,61 @@ const StatusIcons = {
   ),
 };
 
+/**
+ * Map raw backend status to user-facing display status.
+ * - "confirmed" + observedResult="pass" → Passed (green)
+ * - "confirmed" + observedResult="fail" → Failed (red)
+ * - "failed" / "error" → Failed (red)
+ * - "mismatch" → Needs Review (amber)
+ * - "passed" → Passed (green)
+ * - "running" → Running (blue)
+ */
+type DisplayStatus = 'running' | 'passed' | 'failed' | 'needsReview';
+
+function getDisplayStatus(activity: TestRunActivity): DisplayStatus {
+  const s = activity.status;
+  if (s === 'running') return 'running';
+  if (s === 'mismatch' as string || activity.isMismatch) return 'needsReview';
+  if (s === 'confirmed' as string) {
+    return activity.observedResult === 'fail' ? 'failed' : 'passed';
+  }
+  if (s === 'passed') return 'passed';
+  // failed, error, or anything else
+  return 'failed';
+}
+
+const DISPLAY_STATUS_CONFIG: Record<DisplayStatus, {
+  label: string; bg: string; border: string; text: string; badgeBg: string; badgeText: string;
+}> = {
+  running:     { label: 'Running',      bg: 'rgba(96,165,250,0.15)',  border: '#60a5fa40', text: '#60a5fa', badgeBg: 'bg-blue-500/20',   badgeText: 'text-blue-300' },
+  passed:      { label: 'Passed',       bg: 'rgba(74,222,128,0.15)',  border: '#4ade8040', text: '#4ade80', badgeBg: 'bg-green-500/20',  badgeText: 'text-green-300' },
+  failed:      { label: 'Failed',       bg: 'rgba(248,113,113,0.15)', border: '#f8717140', text: '#f87171', badgeBg: 'bg-red-500/20',    badgeText: 'text-red-300' },
+  needsReview: { label: 'Needs Review', bg: 'rgba(245,158,11,0.15)',  border: '#f59e0b40', text: '#f59e0b', badgeBg: 'bg-amber-500/20',  badgeText: 'text-amber-300' },
+};
+
 /** Test result notification */
 const TestResultBadge: React.FC<{ activity: TestRunActivity }> = ({ activity }) => {
-  const colors = {
-    running: { bg: 'rgba(96,165,250,0.15)', border: '#60a5fa40', text: '#60a5fa' },
-    passed:  { bg: 'rgba(74,222,128,0.15)', border: '#4ade8040', text: '#4ade80' },
-    failed:  { bg: 'rgba(248,113,113,0.15)',border: '#f8717140', text: '#f87171' },
-    error:   { bg: 'rgba(251,146,60,0.15)', border: '#fb923c40', text: '#fb923c' },
-  };
-  const c = colors[activity.status] || colors.error;
-  const IconComp = StatusIcons[activity.status] || StatusIcons.error;
+  const displayStatus = getDisplayStatus(activity);
+  const cfg = DISPLAY_STATUS_CONFIG[displayStatus];
+  const IconComp = StatusIcons[displayStatus] || StatusIcons.failed;
+
   return (
     <div
       className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs border"
-      style={{
-        background: activity.isMismatch ? 'rgba(251,191,36,0.15)' : c.bg,
-        borderColor: activity.isMismatch ? '#fbbf2440' : c.border
-      }}
+      style={{ background: cfg.bg, borderColor: cfg.border }}
     >
       <IconComp />
       <span className="font-medium text-gray-200 truncate flex-1" title={activity.testCaseName}>
         {activity.testCaseName}
       </span>
-      {activity.isMismatch && (
-        <span className="shrink-0 text-yellow-400 font-semibold" title="Claude observed a different result — correcting">
-          mismatch
+      <span className={`shrink-0 px-2 py-0.5 rounded-full font-semibold text-[11px] ${cfg.badgeBg} ${cfg.badgeText}`}>
+        {cfg.label}
+      </span>
+      {activity.durationMs && (
+        <span className="shrink-0 text-slate-500 text-[11px]">
+          {(activity.durationMs / 1000).toFixed(1)}s
         </span>
       )}
-      <span style={{ color: c.text }} className="shrink-0 font-semibold">
-        {activity.status === 'running' ? 'running…' : activity.status}
-        {activity.durationMs ? ` (${(activity.durationMs / 1000).toFixed(1)}s)` : ''}
-      </span>
     </div>
   );
 };
@@ -458,13 +482,22 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 src={currentScreenshot}
                 alt="Live browser view"
                 className="w-full h-full object-contain"
+                onError={(e) => {
+                  // If the image fails to load (corrupt data), clear it to show placeholder
+                  console.warn('Screenshot image failed to load, clearing');
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+                onLoad={(e) => {
+                  // Ensure image is visible when it loads successfully
+                  (e.target as HTMLImageElement).style.display = 'block';
+                }}
               />
             ) : (
               <div className="flex flex-col items-center gap-3 text-slate-400">
                 {isRunning ? (
                   <>
                     <div className="w-10 h-10 rounded-full border-2 border-indigo-500/30 border-t-indigo-400 animate-spin" />
-                    <span className="text-sm text-slate-400">Waiting for first screenshot…</span>
+                    <span className="text-sm text-slate-400">Waiting for browser preview...</span>
                   </>
                 ) : (
                   <>
@@ -540,20 +573,24 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
           icon={<Icons.test />} />
         <StatTile value={bugsFound} label="Bugs" color="#f87171"
           icon={<Icons.bug />} />
-        {testRunActivity.length > 0 && (
-          <>
-            <StatTile
-              value={testRunActivity.filter(a => a.status === 'passed').length}
-              label="Passed" color="#22d3ee"
-              icon={<Icons.test />}
-            />
-            <StatTile
-              value={testRunActivity.filter(a => a.status === 'failed' || a.status === 'error').length}
-              label="Failed" color="#fb923c"
-              icon={<Icons.bug />}
-            />
-          </>
-        )}
+        {testRunActivity.length > 0 && (() => {
+          const passedCount = testRunActivity.filter(a => getDisplayStatus(a) === 'passed').length;
+          const failedCount = testRunActivity.filter(a => getDisplayStatus(a) === 'failed').length;
+          const reviewCount = testRunActivity.filter(a => getDisplayStatus(a) === 'needsReview').length;
+          return (
+            <>
+              {passedCount > 0 && (
+                <StatTile value={passedCount} label="Passed" color="#4ade80" icon={<Icons.test />} />
+              )}
+              {failedCount > 0 && (
+                <StatTile value={failedCount} label="Failed" color="#f87171" icon={<Icons.bug />} />
+              )}
+              {reviewCount > 0 && (
+                <StatTile value={reviewCount} label="Review" color="#f59e0b" icon={<Icons.explore />} />
+              )}
+            </>
+          );
+        })()}
         {costDollars && Number(costDollars) > 0 && (
           <StatTile value={`$${costDollars}`} label="Cost" color="#fbbf24"
             icon={<Icons.dollar />} />
@@ -563,17 +600,21 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       {/* ── Test Execution Feed ───────────────────────────────────────────────── */}
       {testRunActivity.length > 0 && (
         <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 border-b border-gray-700/50">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 border-b border-gray-700/50 flex-wrap">
             <span className="text-indigo-400"><Icons.test /></span>
             <span className="text-sm font-semibold text-gray-200">Test Execution</span>
-            <span className="ml-1 text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full">
-              {testRunActivity.filter(a => a.status === 'passed').length}/{testRunActivity.length} passed
-            </span>
-            {testRunActivity.some(a => a.isMismatch) && (
-              <span className="ml-1 text-xs bg-yellow-900/50 text-yellow-300 px-2 py-0.5 rounded-full">
-                {testRunActivity.filter(a => a.isMismatch).length} mismatch
-              </span>
-            )}
+            {(() => {
+              const p = testRunActivity.filter(a => getDisplayStatus(a) === 'passed').length;
+              const f = testRunActivity.filter(a => getDisplayStatus(a) === 'failed').length;
+              const r = testRunActivity.filter(a => getDisplayStatus(a) === 'needsReview').length;
+              return (
+                <>
+                  {p > 0 && <span className="text-xs bg-green-900/50 text-green-300 px-2 py-0.5 rounded-full">{p} passed</span>}
+                  {f > 0 && <span className="text-xs bg-red-900/50 text-red-300 px-2 py-0.5 rounded-full">{f} failed</span>}
+                  {r > 0 && <span className="text-xs bg-amber-900/50 text-amber-300 px-2 py-0.5 rounded-full">{r} needs review</span>}
+                </>
+              );
+            })()}
           </div>
           <div className="p-3 space-y-1.5 max-h-48 overflow-y-auto">
             {[...testRunActivity].reverse().map(activity => (

@@ -233,7 +233,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
               <Icon className={`mx-auto text-lg ${iconColorClass[color] ?? 'text-slate-400'} mb-1`} />
               <div className="w-full h-2 bg-slate-700 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-gray-300 dark:bg-gray-600'}`}
+                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-slate-600'}`}
                   style={{ width: `${score !== null ? score : 0}%` }}
                 />
               </div>

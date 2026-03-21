@@ -293,7 +293,7 @@ export const MonitorsPage: React.FC = () => {
                     monitor.last_status === 'fail' ? 'bg-red-400' :
                     monitor.last_status === 'running' ? 'bg-blue-400 animate-pulse' :
                     monitor.last_status === 'error' ? 'bg-yellow-400' :
-                    'bg-gray-300'
+                    'bg-slate-500'
                   }`} />
 
                   <div className="min-w-0">

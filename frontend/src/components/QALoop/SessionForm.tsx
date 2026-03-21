@@ -128,7 +128,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             ))}
           </select>
           <p className="text-xs text-slate-500 mt-1">
-            Leave empty to auto-link to your most recent project, or create a new one.
+            {projects && projects.length === 0
+              ? 'No projects yet. A project will be auto-created from the target URL domain.'
+              : 'Leave empty to auto-link to your most recent project, or create a new one.'}
           </p>
         </div>
       )}

@@ -45,9 +45,24 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
   };
 
   const statusIcon = (s: string | null) => {
-    if (s === 'passed') return <FiCheckCircle className="text-green-500" />;
-    if (s === 'failed') return <FiAlertTriangle className="text-red-500" />;
+    if (s === 'passed' || s === 'confirmed') return <FiCheckCircle className="text-green-500" />;
+    if (s === 'failed' || s === 'error') return <FiAlertTriangle className="text-red-500" />;
+    if (s === 'mismatch') return <FiAlertTriangle className="text-amber-500" />;
     return <FiClock className="text-slate-500" />;
+  };
+
+  const statusLabel = (s: string | null) => {
+    if (s === 'passed' || s === 'confirmed') return 'Passed';
+    if (s === 'failed' || s === 'error') return 'Failed';
+    if (s === 'mismatch') return 'Needs Review';
+    return s || 'Pending';
+  };
+
+  const statusColor = (s: string | null) => {
+    if (s === 'passed' || s === 'confirmed') return 'text-green-500';
+    if (s === 'failed' || s === 'error') return 'text-red-500';
+    if (s === 'mismatch') return 'text-amber-500';
+    return 'text-slate-500';
   };
 
   const vulns = chaosResults.filter(r => r.vulnerabilityConfirmed).length;
@@ -86,7 +101,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
                     <span className="font-medium text-white">{tc.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">{tc.category}</span>
+                    <span className="text-xs px-2 py-1 rounded bg-blue-900/40 text-blue-300">{tc.category}</span>
                     <span className="text-xs text-slate-500">P{tc.priority}</span>
                   </div>
                 </div>
@@ -94,8 +109,8 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
                 <div className="text-xs text-slate-500 mt-1 ml-6 flex items-center gap-3">
                   <span>{tc.steps?.length || 0} steps</span>
                   {tc.last_run_status && (
-                    <span className={tc.last_run_status === 'passed' ? 'text-green-500' : 'text-red-500'}>
-                      Last: {tc.last_run_status}
+                    <span className={statusColor(tc.last_run_status)}>
+                      Last: {statusLabel(tc.last_run_status)}
                     </span>
                   )}
                 </div>

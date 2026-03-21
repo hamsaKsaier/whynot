@@ -316,7 +316,7 @@ export const PublicScanResultsPage: React.FC = () => {
                             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                               tc.last_run_status === 'passed' ? 'bg-green-400' :
                               tc.last_run_status === 'failed' ? 'bg-red-400' :
-                              'bg-gray-300'
+                              'bg-slate-500'
                             }`} />
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium text-slate-200 truncate">{tc.name}</div>
