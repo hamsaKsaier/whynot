@@ -17,8 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -r
 # Chromium is used instead of Firefox because Firefox crashes in Railway's container environment.
 RUN npx playwright install --with-deps chromium
 
-# Copy shared directory (already copied into service dir for Railway builds)
-COPY shared/ ./shared/
+# Copy shared directory to /shared/ (root level) because source files use
+# relative imports like ../../../shared/ which resolve above /app/
+COPY shared/ /shared/
+
+# Create symlink so shared folder can find node_modules
+RUN ln -s /app/node_modules /shared/node_modules
 
 # Copy source code
 COPY src/ ./src/
