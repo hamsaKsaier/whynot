@@ -45,8 +45,71 @@ export class MCPBrowser {
   private frameCount = 0;
   private isRecording = false;
 
+  // Track when the browser was started for max-duration safety net
+  private startedAt: number = 0;
+
+  /** Maximum browser session duration in ms (30 minutes). */
+  private static readonly MAX_BROWSER_DURATION_MS = 30 * 60 * 1000;
+
   constructor(sessionId: string) {
     this.sessionId = sessionId;
+  }
+
+  /**
+   * Check if this browser has exceeded the maximum allowed duration.
+   */
+  isExpired(): boolean {
+    if (this.startedAt === 0) return false;
+    return Date.now() - this.startedAt > MCPBrowser.MAX_BROWSER_DURATION_MS;
+  }
+
+  /**
+   * Force-stop the browser, killing the subprocess if normal close fails.
+   * Used as a safety net when the browser is stuck or leaked.
+   */
+  async forceStop(): Promise<void> {
+    logger.warn('Force-stopping MCP browser', { sessionId: this.sessionId });
+
+    // Stop recording immediately
+    if (this.captureInterval) {
+      clearInterval(this.captureInterval);
+      this.captureInterval = null;
+    }
+    this.isRecording = false;
+
+    // Try graceful close with a timeout
+    try {
+      if (this.client && this.isConnected) {
+        const closePromise = this.client.close();
+        const timeoutPromise = new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('Close timed out')), 5000)
+        );
+        await Promise.race([closePromise, timeoutPromise]);
+      }
+    } catch (error: any) {
+      logger.warn('Graceful close failed during force-stop, killing process', {
+        sessionId: this.sessionId,
+        error: error.message
+      });
+      // Force-kill the transport subprocess if graceful close failed
+      try {
+        if (this.transport) {
+          (this.transport as any)?.close?.();
+        }
+      } catch {
+        // Last resort — ignore
+      }
+    }
+
+    // Reset all state
+    this.client = null;
+    this.transport = null;
+    this.isConnected = false;
+    this.tools = [];
+    this.loadTimesCache.clear();
+    this.startedAt = 0;
+
+    logger.info('MCP browser force-stopped', { sessionId: this.sessionId });
   }
 
   /**
@@ -67,6 +130,7 @@ export class MCPBrowser {
 
     await this.client.connect(this.transport);
     this.isConnected = true;
+    this.startedAt = Date.now();
 
     // Pre-install browser so Claude never needs to call browser_install
     try {
@@ -149,14 +213,21 @@ export class MCPBrowser {
       }
 
       // Handle screenshots — emit to WebSocket for frontend preview
-      // Check for image content in ANY tool response (some tools return screenshots)
-      const imageContent = content?.find(c => c.type === 'image');
-      logger.debug('Tool result content types', {
-        sessionId: this.sessionId,
-        tool: toolName,
-        contentTypes: content?.map(c => c.type) || [],
-        hasImage: !!imageContent
-      });
+      // Check for image content in ANY tool response (some tools return screenshots).
+      // Some MCP versions return type:'image', others return type:'resource' with an image mimeType.
+      const imageContent = content?.find(c =>
+        c.type === 'image' ||
+        (c.type === 'resource' && c.mimeType?.startsWith('image/'))
+      );
+      if (toolName === 'browser_take_screenshot' || imageContent) {
+        logger.debug('Screenshot content analysis', {
+          sessionId: this.sessionId,
+          tool: toolName,
+          contentTypes: content?.map(c => ({ type: c.type, mimeType: c.mimeType, hasData: !!c.data })) || [],
+          hasImage: !!imageContent,
+          imageDataLength: imageContent?.data?.length || 0
+        });
+      }
       if (imageContent && imageContent.data) {
         emitToSession(this.sessionId, {
           type: 'screenshot',
@@ -221,11 +292,17 @@ export class MCPBrowser {
         arguments: {}
       });
       const content = result.content as Array<{ type: string; data?: string; mimeType?: string }>;
-      const img = content?.find(c => c.type === 'image');
+      // Match both type:'image' and type:'resource' with image mimeType
+      const img = content?.find(c =>
+        c.type === 'image' ||
+        (c.type === 'resource' && c.mimeType?.startsWith('image/'))
+      );
       if (img && img.data) {
         logger.info('Screenshot captured for preview', {
           sessionId: this.sessionId,
-          dataLength: img.data.length
+          dataLength: img.data.length,
+          contentType: img.type,
+          mimeType: img.mimeType
         });
         emitToSession(this.sessionId, {
           type: 'screenshot',
@@ -234,14 +311,16 @@ export class MCPBrowser {
       } else {
         logger.warn('Screenshot returned no image data', {
           sessionId: this.sessionId,
-          contentTypes: content?.map(c => c.type) || [],
-          contentLength: content?.length || 0
+          contentTypes: content?.map(c => ({ type: c.type, mimeType: c.mimeType })) || [],
+          contentLength: content?.length || 0,
+          resultPreview: JSON.stringify(result).substring(0, 300)
         });
       }
     } catch (err: any) {
-      logger.warn('Preview screenshot failed', {
+      logger.error('Preview screenshot failed', {
         sessionId: this.sessionId,
-        error: err.message
+        error: err.message,
+        stack: err.stack?.split('\n').slice(0, 3).join(' | ')
       });
     }
   }
@@ -284,7 +363,10 @@ export class MCPBrowser {
         arguments: {}
       });
       const content = result.content as Array<{ type: string; data?: string; mimeType?: string }>;
-      const img = content?.find(c => c.type === 'image');
+      const img = content?.find(c =>
+        c.type === 'image' ||
+        (c.type === 'resource' && c.mimeType?.startsWith('image/'))
+      );
       if (img?.data) {
         this.frameCount++;
         const framePath = path.join(this.frameDir, `frame_${String(this.frameCount).padStart(4, '0')}.png`);
@@ -316,30 +398,48 @@ export class MCPBrowser {
 
   /**
    * Stop the MCP server and clean up resources.
+   * Uses a timeout to prevent hanging on unresponsive processes.
    */
   async stop(): Promise<void> {
     logger.info('Stopping Playwright MCP server', { sessionId: this.sessionId });
 
-    try {
-      if (this.client && this.isConnected) {
-        await this.client.close();
-      }
-    } catch (error: any) {
-      logger.warn('Error closing MCP client', { error: error.message });
-    }
-
-    // Stop recording if still active
+    // Stop recording first to prevent new frame captures during shutdown
     if (this.captureInterval) {
       clearInterval(this.captureInterval);
       this.captureInterval = null;
     }
     this.isRecording = false;
 
+    try {
+      if (this.client && this.isConnected) {
+        // Timeout the close operation to prevent hanging
+        const closePromise = this.client.close();
+        const timeoutPromise = new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('Close timed out after 10s')), 10000)
+        );
+        await Promise.race([closePromise, timeoutPromise]);
+      }
+    } catch (error: any) {
+      logger.warn('Error closing MCP client, forcing cleanup', {
+        sessionId: this.sessionId,
+        error: error.message
+      });
+      // Force-kill the transport subprocess
+      try {
+        if (this.transport) {
+          (this.transport as any)?.close?.();
+        }
+      } catch {
+        // Ignore — we're already in cleanup
+      }
+    }
+
     this.client = null;
     this.transport = null;
     this.isConnected = false;
     this.tools = [];
     this.loadTimesCache.clear();
+    this.startedAt = 0;
 
     logger.info('Playwright MCP server stopped', { sessionId: this.sessionId });
   }

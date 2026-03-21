@@ -167,6 +167,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           onChange={e => setTargetUrl(e.target.value)}
           className="w-full"
         />
+        <p className="text-slate-500 text-xs mt-1">
+          💡 If your site uses Cloudflare or bot protection, test against your staging/dev environment instead of production. You can also whitelist our testing IP in your Cloudflare settings.
+        </p>
       </div>
 
       {/* Existing session prompt (Phase 3) */}

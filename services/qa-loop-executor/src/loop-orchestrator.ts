@@ -226,9 +226,21 @@ export class LoopOrchestrator {
         }
       }
 
-      // Stop MCP browser subprocess
+      // Stop MCP browser subprocess — always release, even if stop() throws
       if (this.mcpBrowser) {
-        await this.mcpBrowser.stop();
+        try {
+          await this.mcpBrowser.stop();
+        } catch (stopErr: any) {
+          logger.warn('Graceful browser stop failed in finally block, force-stopping', {
+            sessionId: this.sessionId,
+            error: stopErr.message
+          });
+          try {
+            await this.mcpBrowser.forceStop();
+          } catch {
+            // Already logged inside forceStop
+          }
+        }
         this.mcpBrowser = null;
       }
       cleanupSession(this.sessionId);
@@ -553,6 +565,35 @@ Start now with get_session_state(), then navigate and explore.
             }
           });
           return;
+        }
+      }
+
+      // Safety net: if the browser has been running for more than 30 minutes,
+      // force-restart it to prevent stale browser state from blocking sessions
+      if (this.mcpBrowser && this.mcpBrowser.isExpired()) {
+        logger.warn('Browser exceeded max duration (30min), recycling', {
+          sessionId: this.sessionId
+        });
+        try {
+          await this.mcpBrowser.forceStop();
+        } catch {
+          // Ignore — forceStop logs internally
+        }
+        // Launch a fresh browser for the remaining iterations
+        this.mcpBrowser = new MCPBrowser(this.sessionId);
+        await this.mcpBrowser.start();
+        await this.mcpBrowser.startRecording();
+        this.chaosAgent.setBrowser(this.mcpBrowser);
+        // Re-establish login if credentials are available
+        if (this.config.loginCredentials && this.loginEstablished) {
+          try {
+            await this.performLogin();
+          } catch (loginErr: any) {
+            logger.warn('Re-login after browser recycle failed', {
+              sessionId: this.sessionId,
+              error: loginErr.message
+            });
+          }
         }
       }
 
@@ -1317,11 +1358,30 @@ Rules:
     logger.info('Stopping QA Loop', { sessionId: this.sessionId });
     this.isStopped = true;
     if (this.claudeSession) {
-      await this.claudeSession.abort();
+      try {
+        await this.claudeSession.abort();
+      } catch (error: any) {
+        logger.warn('Error aborting Claude session during stop', {
+          sessionId: this.sessionId,
+          error: error.message
+        });
+      }
     }
-    // Stop MCP browser subprocess
+    // Stop MCP browser subprocess — force-stop if graceful close fails
     if (this.mcpBrowser) {
-      await this.mcpBrowser.stop();
+      try {
+        await this.mcpBrowser.stop();
+      } catch (error: any) {
+        logger.warn('Graceful browser stop failed, force-stopping', {
+          sessionId: this.sessionId,
+          error: error.message
+        });
+        try {
+          await this.mcpBrowser.forceStop();
+        } catch {
+          // Already logged inside forceStop
+        }
+      }
       this.mcpBrowser = null;
     }
     await this.repository.updateSessionStatus(this.sessionId, 'cancelled');

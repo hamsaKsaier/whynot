@@ -307,7 +307,14 @@ router.post('/api/sessions/:id/stop', async (req: Request, res: Response) => {
     const orchestrator = activeSessions.get(id);
 
     if (orchestrator) {
-      await orchestrator.stop();
+      try {
+        await orchestrator.stop();
+      } catch (stopErr: any) {
+        logger.warn('Orchestrator stop threw, cleaning up anyway', {
+          sessionId: id,
+          error: stopErr.message
+        });
+      }
       activeSessions.delete(id);
     }
 
