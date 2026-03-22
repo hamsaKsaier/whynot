@@ -764,6 +764,20 @@ export class QALoopRepository {
     // Update test case with last run info
     await this.updateTestCaseLastRun(testCaseId, result.status, result.durationMs);
 
+    // When a test case fails, mark linked bugs as 'confirmed' (verified by test execution)
+    if (result.status === 'failed' || result.status === 'error') {
+      try {
+        await this.pool.query(
+          `UPDATE qa_loop_bugs SET status = 'confirmed', verified_at = CURRENT_TIMESTAMP
+           WHERE (discovered_by_test_case_id = $1 OR regression_test_id = $1)
+             AND status = 'open'`,
+          [testCaseId]
+        );
+      } catch (err: any) {
+        logger.warn('Failed to confirm bugs from test failure', { testCaseId, error: err.message });
+      }
+    }
+
     return dbResult.rows[0];
   }
 
@@ -1115,9 +1129,19 @@ export class QALoopRepository {
       });
 
       return testSuiteId;
-    } catch (err) {
-      logger.error('Failed to create test suite from session', { sessionId, error: err });
-      return null;
+    } catch (err: any) {
+      // Log the full error with stack trace so failures are visible in logs
+      logger.error('Failed to create test suite from session', {
+        sessionId,
+        error: err.message || err,
+        stack: err.stack,
+        code: err.code,
+        detail: err.detail,    // PostgreSQL error detail
+        constraint: err.constraint,
+        table: err.table,
+      });
+      // Re-throw so callers can handle or log the failure instead of silently losing data
+      throw err;
     }
   }
 }

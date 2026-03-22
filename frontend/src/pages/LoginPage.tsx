@@ -162,7 +162,7 @@ export const LoginPage: React.FC = () => {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
+              <div className="flex items-start gap-2 p-3 bg-red-900/200/10 border border-red-500/20 rounded-lg text-sm text-red-400">
                 <FiAlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>{error}</span>
               </div>

@@ -201,7 +201,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
             to="/settings?tab=billing"
             className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
               creditBalance <= 10
-                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                ? 'bg-red-900/200/10 text-red-400 hover:bg-red-900/200/20'
                 : creditBalance <= 50
                 ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
                 : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'

@@ -68,12 +68,12 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'bug': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-      case 'flaky': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-      case 'environment': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-      case 'test_issue': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
-      case 'data_issue': return 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300';
-      default: return 'bg-slate-900 text-slate-200 dark:bg-gray-800 dark:text-slate-500';
+      case 'bug': return 'bg-red-900 text-red-300';
+      case 'flaky': return 'bg-yellow-900 text-yellow-300';
+      case 'environment': return 'bg-blue-900 text-blue-300';
+      case 'test_issue': return 'bg-orange-900 text-orange-300';
+      case 'data_issue': return 'bg-sky-900 text-sky-300';
+      default: return 'bg-slate-900 text-slate-200';
     }
   };
 
@@ -97,34 +97,34 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
     <div className="space-y-4">
       {/* Summary Cards */}
       <div className="grid grid-cols-5 gap-3">
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+        <div className="p-3 bg-red-900/20 rounded-lg text-center">
           <div className="text-xl font-bold text-red-600">{byCategory.bug || 0}</div>
           <div className="text-xs text-red-500">Bugs</div>
         </div>
-        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
+        <div className="p-3 bg-yellow-900/20 rounded-lg text-center">
           <div className="text-xl font-bold text-yellow-600">{byCategory.flaky || 0}</div>
           <div className="text-xs text-yellow-500">Flaky</div>
         </div>
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+        <div className="p-3 bg-blue-900/20 rounded-lg text-center">
           <div className="text-xl font-bold text-blue-600">{byCategory.environment || 0}</div>
           <div className="text-xs text-blue-500">Environment</div>
         </div>
-        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+        <div className="p-3 bg-orange-900/20 rounded-lg text-center">
           <div className="text-xl font-bold text-orange-600">{byCategory.test_issue || 0}</div>
           <div className="text-xs text-orange-500">Test Issues</div>
         </div>
-        <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg text-center">
+        <div className="p-3 bg-sky-900/20 rounded-lg text-center">
           <div className="text-xl font-bold text-sky-600">{correlations.length}</div>
           <div className="text-xs text-sky-500">Correlations</div>
         </div>
       </div>
 
       {/* View Tabs */}
-      <div className="flex gap-2 border-b border-slate-700 dark:border-gray-700 pb-2">
+      <div className="flex gap-2 border-b border-slate-700 pb-2">
         <button
           onClick={() => setActiveView('analyses')}
           className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${activeView === 'analyses'
-              ? 'bg-slate-700 dark:bg-gray-700 text-white dark:text-white'
+              ? 'bg-slate-700 text-white'
               : 'text-slate-400 hover:text-slate-200'
             }`}
         >
@@ -134,7 +134,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
         <button
           onClick={() => setActiveView('correlations')}
           className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${activeView === 'correlations'
-              ? 'bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300'
+              ? 'bg-sky-900 text-sky-300'
               : 'text-slate-400 hover:text-slate-200'
             }`}
         >
@@ -144,7 +144,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
         <button
           onClick={() => setActiveView('flaky')}
           className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${activeView === 'flaky'
-              ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
+              ? 'bg-yellow-900 text-yellow-300'
               : 'text-slate-400 hover:text-slate-200'
             }`}
         >
@@ -167,7 +167,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
               analyses.map((analysis) => (
                 <div
                   key={analysis.id}
-                  className="p-3 rounded-lg border border-slate-700 dark:border-gray-700 bg-slate-900 dark:bg-gray-800"
+                  className="p-3 rounded-lg border border-slate-700 bg-slate-900"
                 >
                   <div
                     className="flex items-center justify-between cursor-pointer"
@@ -176,7 +176,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                     <div className="flex items-center gap-3">
                       {getCategoryIcon(analysis.category)}
                       <div>
-                        <div className="font-medium text-white dark:text-white">
+                        <div className="font-medium text-white">
                           {analysis.testCaseName}
                         </div>
                         <div className="text-xs text-slate-400 truncate max-w-sm">
@@ -201,23 +201,23 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                   </div>
 
                   {expandedAnalysis === analysis.id && (
-                    <div className="mt-3 pt-3 border-t border-slate-700 dark:border-gray-700 space-y-3">
+                    <div className="mt-3 pt-3 border-t border-slate-700 space-y-3">
                       <div>
                         <div className="text-xs font-medium text-slate-400 mb-1">Root Cause:</div>
-                        <p className="text-sm text-slate-200 dark:text-slate-500">{analysis.rootCause}</p>
+                        <p className="text-sm text-slate-200">{analysis.rootCause}</p>
                       </div>
 
                       {analysis.hypothesis && (
                         <div>
                           <div className="text-xs font-medium text-slate-400 mb-1">Hypothesis:</div>
-                          <p className="text-sm text-slate-400 dark:text-slate-500">{analysis.hypothesis}</p>
+                          <p className="text-sm text-slate-400">{analysis.hypothesis}</p>
                         </div>
                       )}
 
                       {analysis.minimalSteps.length > 0 && (
                         <div>
                           <div className="text-xs font-medium text-slate-400 mb-1">Minimal Reproduction:</div>
-                          <ol className="text-xs text-slate-400 dark:text-slate-500 list-decimal list-inside space-y-1">
+                          <ol className="text-xs text-slate-400 list-decimal list-inside space-y-1">
                             {analysis.minimalSteps.map((step, i) => (
                               <li key={i}>{step}</li>
                             ))}
@@ -230,7 +230,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                           <div className="text-xs font-medium text-slate-400 mb-1">Environment Factors:</div>
                           <div className="flex flex-wrap gap-1">
                             {analysis.environmentFactors.map((factor, i) => (
-                              <span key={i} className="text-xs px-2 py-1 bg-slate-700 dark:bg-gray-700 rounded">
+                              <span key={i} className="text-xs px-2 py-1 bg-slate-700 rounded">
                                 {factor}
                               </span>
                             ))}
@@ -239,20 +239,20 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                       )}
 
                       {analysis.fixSuggestion && (
-                        <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
-                          <div className="text-xs font-medium text-green-700 dark:text-green-400 mb-1">
+                        <div className="p-2 bg-green-900/20 rounded">
+                          <div className="text-xs font-medium text-green-400 mb-1">
                             Suggested Fix:
                           </div>
-                          <p className="text-xs text-green-600 dark:text-green-300">{analysis.fixSuggestion}</p>
+                          <p className="text-xs text-green-300">{analysis.fixSuggestion}</p>
                         </div>
                       )}
 
                       {analysis.testImprovement && (
-                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                          <div className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">
+                        <div className="p-2 bg-blue-900/20 rounded">
+                          <div className="text-xs font-medium text-blue-400 mb-1">
                             Test Improvement:
                           </div>
-                          <p className="text-xs text-blue-600 dark:text-blue-300">{analysis.testImprovement}</p>
+                          <p className="text-xs text-blue-300">{analysis.testImprovement}</p>
                         </div>
                       )}
                     </div>
@@ -275,17 +275,17 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
               correlations.map((correlation) => (
                 <div
                   key={correlation.id}
-                  className="p-3 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/10"
+                  className="p-3 rounded-lg border border-sky-800 bg-sky-900/10"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FiLink className="text-sky-500" />
-                      <span className="font-medium text-white dark:text-white">
+                      <span className="font-medium text-white">
                         {getCorrelationTypeLabel(correlation.correlationType)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-sky-600 dark:text-sky-400">
+                      <span className="text-sm text-sky-400">
                         {correlation.failureCount} failures linked
                       </span>
                       <span className="text-xs text-slate-500">
@@ -293,7 +293,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-400 dark:text-slate-500 mt-2">
+                  <p className="text-sm text-slate-400 mt-2">
                     {correlation.patternDescription}
                   </p>
                   {correlation.sharedRootCause && (
@@ -324,19 +324,19 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
               flakyTests.map((test, idx) => (
                 <div
                   key={test.testCaseId || idx}
-                  className="p-3 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/10"
+                  className="p-3 rounded-lg border border-yellow-800 bg-yellow-900/10"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FiRefreshCw className="text-yellow-500" />
-                      <span className="font-medium text-white dark:text-white">
+                      <span className="font-medium text-white">
                         {test.testCaseName}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 bg-slate-700 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-yellow-500"
+                          className="h-full bg-yellow-900/200"
                           style={{ width: `${test.passRate}%` }}
                         />
                       </div>

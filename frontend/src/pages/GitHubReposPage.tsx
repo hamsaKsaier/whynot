@@ -113,7 +113,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
           >
             <FiPlus className="h-4 w-4" />
             Connect Repo
@@ -130,7 +130,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
           <p className="text-sm text-slate-400 mb-4">Connect a GitHub repository to enable automatic bug fixes via pull requests</p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
           >
             <FiGithub className="h-4 w-4" />
             Connect Repository
@@ -249,7 +249,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
           <button
             onClick={handleAdd}
             disabled={saving || !owner.trim() || !repo.trim() || !token.trim()}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50"
           >
             {saving ? 'Connecting...' : 'Connect'}
           </button>

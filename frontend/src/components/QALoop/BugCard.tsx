@@ -35,6 +35,16 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
             <AutoFixButton bugId={bug.id} bugTitle={bug.title} />
             <CreateTaskButton bugId={bug.id} bugTitle={bug.title} />
+            {bug.status === 'confirmed' ? (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                Verified
+              </span>
+            ) : (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-400">
+                Potential
+              </span>
+            )}
             <span className={`text-xs px-2 py-1 rounded ${severityColor(bug.severity)}`}>{bug.severity}</span>
           </div>
         </div>

@@ -44,7 +44,7 @@ export const SuccessAnimation: React.FC<SuccessAnimationProps> = ({
       >
         <div className="relative">
           <div className="absolute inset-0 bg-green-900/30 rounded-full animate-ping opacity-75" />
-          <div className="relative bg-green-500 rounded-full p-3">
+          <div className="relative bg-green-900/200 rounded-full p-3">
             <FiCheck className="h-8 w-8 text-white" />
           </div>
         </div>

@@ -60,14 +60,14 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
   const getActionBadgeColor = (action: string) => {
     switch (action.toLowerCase()) {
       case 'click':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-900/30 text-blue-400';
       case 'type':
       case 'fill':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-900/30 text-green-400';
       case 'navigate':
-        return 'bg-sky-100 text-sky-800';
+        return 'bg-sky-900/30 text-sky-400';
       case 'wait':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-900/30 text-yellow-400';
       case 'assert':
         return 'bg-indigo-100 text-indigo-800';
       case 'scroll':
@@ -161,7 +161,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
               key={step.step_id}
               onClick={() => onStepClick?.(index)}
               className={`p-4 cursor-pointer transition-colors ${isActive
-                  ? 'bg-blue-50 border-l-4 border-blue-500'
+                  ? 'bg-blue-900/20 border-l-4 border-blue-500'
                   : 'hover:bg-slate-900'
                 }`}
             >
@@ -201,11 +201,11 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                   <div className="mt-1">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${status === 'passed'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-green-900/30 text-green-400'
                           : status === 'failed'
-                            ? 'bg-red-100 text-red-800'
+                            ? 'bg-red-900/30 text-red-400'
                             : status === 'running'
-                              ? 'bg-blue-100 text-blue-800'
+                              ? 'bg-blue-900/30 text-blue-400'
                               : 'bg-slate-900 text-slate-200'
                         }`}
                     >
@@ -241,7 +241,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                               ) : (
                                 <span className="text-blue-600 animate-pulse">🔄</span>
                               )}
-                              <span className={attempt.status === 'succeeded' ? 'text-green-700 font-medium' : attempt.status === 'failed' ? 'text-red-700' : 'text-blue-700'}>
+                              <span className={attempt.status === 'succeeded' ? 'text-green-400 font-medium' : attempt.status === 'failed' ? 'text-red-400' : 'text-blue-400'}>
                                 {attempt.attemptNumber}/{attempt.totalAttempts}: {attempt.selector.type} = "{attempt.selector.value}"
                               </span>
                             </div>
@@ -278,7 +278,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                         e.stopPropagation();
                         onStepFix(index, testStep);
                       }}
-                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
                       title="Fix or modify this step"
                       aria-label="Fix or modify this step"
                     >

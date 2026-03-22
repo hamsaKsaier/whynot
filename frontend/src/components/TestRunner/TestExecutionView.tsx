@@ -333,10 +333,10 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
               {steps[selectedStepIndex].selector_used && (
                 <div className="mb-4">
                   <span className="text-xs sm:text-sm font-medium text-slate-400">Selector Used:</span>
-                  <div className="mt-1 text-xs sm:text-sm p-2 rounded bg-green-50 border border-green-200">
+                  <div className="mt-1 text-xs sm:text-sm p-2 rounded bg-green-900/20 border border-green-800">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-green-600 font-bold flex-shrink-0">✅</span>
-                      <span className="text-green-700 font-medium break-all">
+                      <span className="text-green-400 font-medium break-all">
                         {steps[selectedStepIndex].selector_used.type} = "{steps[selectedStepIndex].selector_used.value}"
                       </span>
                     </div>
@@ -386,7 +386,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
                         const isUsed = steps[selectedStepIndex].selector_used?.type === selector.type &&
                           steps[selectedStepIndex].selector_used?.value === selector.value;
                         return (
-                          <div key={`${selector.type}-${selector.value}-${idx}`} className={`text-xs p-2 rounded ${isUsed ? 'bg-green-50 border border-green-200' : 'bg-slate-900'}`}>
+                          <div key={`${selector.type}-${selector.value}-${idx}`} className={`text-xs p-2 rounded ${isUsed ? 'bg-green-900/20 border border-green-800' : 'bg-slate-900'}`}>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="flex-shrink-0">
                                 {isUsed ? (
@@ -395,7 +395,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
                                   <span className="text-slate-500">○</span>
                                 )}
                               </span>
-                              <span className={`flex-1 min-w-0 ${isUsed ? 'text-green-700 font-medium' : 'text-slate-200'}`}>
+                              <span className={`flex-1 min-w-0 ${isUsed ? 'text-green-400 font-medium' : 'text-slate-200'}`}>
                                 {idx + 1}. {selector.type} = "<span className="break-all">{selector.value}</span>"
                               </span>
                               {selector.stability_score && (

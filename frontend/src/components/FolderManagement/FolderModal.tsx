@@ -75,7 +75,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
     >
       <form onSubmit={handleSubmit}>
         {error && (
-          <div className="mb-4 p-3 bg-red-900/20 border border-red-800 rounded text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-900/20 border border-red-800 rounded text-red-400 text-sm">
             {error}
           </div>
         )}

@@ -299,7 +299,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
               <button
                 onClick={() => setCreatedKey(null)}
-                className="w-full py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="w-full py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
               >
                 Done
               </button>
@@ -316,7 +316,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               </h2>
               <button
                 onClick={() => setShowCreateKey(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
               >
                 <FiPlus /> Create Key
               </button>
@@ -391,7 +391,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                     <button
                       onClick={createAPIKey}
                       disabled={!newKeyName}
-                      className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Create
                     </button>
@@ -416,7 +416,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 </p>
                 <button
                   onClick={() => setShowCreateKey(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
                 >
                   <FiPlus className="h-3.5 w-3.5" /> Create Key
                 </button>
@@ -506,7 +506,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               </h2>
               <button
                 onClick={() => setShowCreateChannel(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
               >
                 <FiPlus /> Add Channel
               </button>
@@ -604,7 +604,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                     <button
                       onClick={createNotificationChannel}
                       disabled={!channelName || !channelConfig.webhookUrl}
-                      className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add Channel
                     </button>
@@ -629,7 +629,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 </p>
                 <button
                   onClick={() => setShowCreateChannel(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-900/200 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   <FiPlus className="h-3.5 w-3.5" /> Add Channel
                 </button>

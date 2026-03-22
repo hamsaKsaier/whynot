@@ -418,7 +418,7 @@ export const PublicScanResultsPage: React.FC = () => {
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="px-6 py-2.5 bg-white text-sky-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                className="px-6 py-2.5 bg-sky-900/200 text-white font-semibold rounded-lg hover:bg-sky-600 transition-colors text-sm"
               >
                 Sign up free
               </button>
@@ -436,7 +436,7 @@ export const PublicScanResultsPage: React.FC = () => {
                     <span className="text-xs font-medium text-slate-400">Live Preview</span>
                     {isRunning && (
                       <span className="flex items-center gap-1 text-[10px] text-sky-600 bg-sky-900/20 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse" />
+                        <span className="w-1.5 h-1.5 bg-sky-900/200 rounded-full animate-pulse" />
                         AI is testing this site
                       </span>
                     )}

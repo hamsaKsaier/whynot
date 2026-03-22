@@ -90,8 +90,8 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'jira': return 'bg-blue-100 text-blue-700';
-      case 'clickup': return 'bg-sky-100 text-sky-700';
+      case 'jira': return 'bg-blue-900/30 text-blue-400';
+      case 'clickup': return 'bg-sky-900/30 text-sky-400';
       case 'linear': return 'bg-indigo-100 text-indigo-700';
       default: return 'bg-slate-900 text-slate-200';
     }
@@ -101,7 +101,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
     <>
       <button
         onClick={handleOpen}
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors ${className}`}
+        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-900/20 text-blue-600 hover:bg-blue-900/40 transition-colors ${className}`}
         title="Create task in Jira/ClickUp/Linear"
       >
         <FiSend className="h-3 w-3" />
@@ -179,7 +179,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
                   {/* Result message */}
                   {result && (
-                    <div className={`p-3 rounded-lg mb-4 ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className={`p-3 rounded-lg mb-4 ${result.success ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>
                       {result.success ? (
                         <div className="flex items-center gap-2">
                           <FiCheck className="h-4 w-4" />

@@ -35,7 +35,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-sky-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-sky-900/200"
       />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-1.5">
@@ -87,7 +87,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
         )}
         {data.stepCount != null && (
           <div className="mt-2 pt-2 border-t border-slate-700">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-sky-900/20 text-[10px] font-medium text-sky-700">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-sky-900/20 text-[10px] font-medium text-sky-400">
               {data.stepCount} {data.stepCount === 1 ? 'step' : 'steps'}
             </span>
           </div>
@@ -96,7 +96,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-sky-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-sky-900/200"
       />
     </div>
   );

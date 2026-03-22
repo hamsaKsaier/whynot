@@ -68,12 +68,12 @@ const MINIMAP_COLORS: Record<string, string> = {
 
 /** Filter panel configuration */
 const FILTER_ITEMS: { type: FlowNodeType; label: string; color: string; borderColor: string }[] = [
-  { type: 'project', label: 'Project', color: 'bg-sky-500', borderColor: 'border-sky-300' },
+  { type: 'project', label: 'Project', color: 'bg-sky-900/200', borderColor: 'border-sky-300' },
   { type: 'folder', label: 'Folder', color: 'bg-indigo-500', borderColor: 'border-indigo-300' },
-  { type: 'userStory', label: 'User Story', color: 'bg-green-500', borderColor: 'border-green-300' },
-  { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-300' },
-  { type: 'testCase', label: 'Test Case', color: 'bg-sky-500', borderColor: 'border-sky-300' },
-  { type: 'testStep', label: 'Test Step', color: 'bg-gray-400', borderColor: 'border-slate-700' },
+  { type: 'userStory', label: 'User Story', color: 'bg-green-900/200', borderColor: 'border-green-800' },
+  { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-800' },
+  { type: 'testCase', label: 'Test Case', color: 'bg-sky-900/200', borderColor: 'border-sky-300' },
+  { type: 'testStep', label: 'Test Step', color: 'bg-slate-500', borderColor: 'border-slate-700' },
 ];
 
 // ─── Stat Pill (inline helper component) ────────────────────────────────────

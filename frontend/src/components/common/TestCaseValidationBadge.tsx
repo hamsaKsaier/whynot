@@ -66,7 +66,7 @@ export const TestCaseValidationBadge: React.FC<TestCaseValidationBadgeProps> = (
                   <FiXCircle className="h-4 w-4" />
                   Errors ({errors.length})
                 </h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                <ul className="list-disc list-inside space-y-1 text-sm text-red-400">
                   {errors.map((error, idx) => (
                     <li key={idx}>{error}</li>
                   ))}
@@ -80,7 +80,7 @@ export const TestCaseValidationBadge: React.FC<TestCaseValidationBadgeProps> = (
                   <FiAlertCircle className="h-4 w-4" />
                   Warnings ({warnings.length})
                 </h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
+                <ul className="list-disc list-inside space-y-1 text-sm text-yellow-400">
                   {warnings.map((warning, idx) => (
                     <li key={idx}>{warning}</li>
                   ))}

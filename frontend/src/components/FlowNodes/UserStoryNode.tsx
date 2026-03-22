@@ -19,7 +19,7 @@ export const UserStoryNode: React.FC<NodeProps<UserStoryNodeData>> = ({ data }) 
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-green-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-green-900/200"
       />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-1.5">
@@ -45,7 +45,7 @@ export const UserStoryNode: React.FC<NodeProps<UserStoryNodeData>> = ({ data }) 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-green-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-green-900/200"
       />
     </div>
   );

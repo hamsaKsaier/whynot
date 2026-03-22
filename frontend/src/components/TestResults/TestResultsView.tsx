@@ -164,8 +164,8 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                 <div
                   key={step.step_id}
                   className={`p-4 rounded-lg border-2 ${step.success
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-red-50 border-red-200'
+                      ? 'bg-green-900/20 border-green-800'
+                      : 'bg-red-900/20 border-red-800'
                     }`}
                 >
                   <div className="flex items-start gap-3">
@@ -178,20 +178,20 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-white">
                           Step {index + 1}: {correspondingStep?.description || step.step_id}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-slate-400">
                           {step.execution_time_ms}ms
                         </span>
                       </div>
                       {correspondingStep && (
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-sm text-slate-400 mb-2">
                           Action: <span className="font-medium capitalize">{correspondingStep.action}</span>
                         </p>
                       )}
                       {step.error && (
-                        <div className="mt-2 p-2 bg-red-100 rounded text-sm text-red-800">
+                        <div className="mt-2 p-2 bg-red-900/30 rounded text-sm text-red-400">
                           <strong>Error:</strong> {step.error}
                         </div>
                       )}
@@ -205,10 +205,10 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                         const comparison = step.visual_comparison || visualComparisons[step.step_id];
                         const severity = comparison?.severity || comparison?.regression_severity || 'medium';
                         const severityColors = {
-                          low: 'bg-green-100 text-green-800 border-green-300',
-                          medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-                          high: 'bg-orange-100 text-orange-800 border-orange-300',
-                          critical: 'bg-red-100 text-red-800 border-red-300',
+                          low: 'bg-green-900/30 text-green-400 border-green-800',
+                          medium: 'bg-yellow-900/30 text-yellow-400 border-yellow-800',
+                          high: 'bg-orange-900/30 text-orange-400 border-orange-800',
+                          critical: 'bg-red-900/30 text-red-400 border-red-800',
                         };
                         const severityMap: Record<string, string> = severityColors;
                         const isRegression = comparison?.isRegression || comparison?.is_regression;
@@ -249,7 +249,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                             e.stopPropagation();
                             onStepFix(testCase, index, correspondingStep);
                           }}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
                           title="Fix or modify this step"
                           aria-label="Fix or modify this step"
                         >
@@ -282,9 +282,9 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
 
         {/* Error Summary */}
         {executionResult.error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg">
             <h4 className="font-semibold text-red-900 mb-2">Execution Error</h4>
-            <p className="text-sm text-red-800">{executionResult.error}</p>
+            <p className="text-sm text-red-400">{executionResult.error}</p>
           </div>
         )}
       </div>

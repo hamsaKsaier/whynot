@@ -102,10 +102,10 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
 
         {/* Selected User Story Preview */}
         {selectedUserStoryId && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="p-3 bg-green-900/20 border border-green-800 rounded-lg">
             <div className="flex items-start gap-2">
               <FiBook className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-green-800">{getSelectedUserStoryText()}</p>
+              <p className="text-sm text-green-400">{getSelectedUserStoryText()}</p>
             </div>
           </div>
         )}

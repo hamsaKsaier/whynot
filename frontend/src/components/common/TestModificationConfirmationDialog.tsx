@@ -46,7 +46,7 @@ export const TestModificationConfirmationDialog: React.FC<TestModificationConfir
                 ) : (
                   <FiXCircle className="h-5 w-5 text-red-600" />
                 )}
-                <span className={`text-sm font-medium ${isSuccess ? 'text-green-700' : 'text-red-700'}`}>
+                <span className={`text-sm font-medium ${isSuccess ? 'text-green-400' : 'text-red-400'}`}>
                   Status: {testResult.status}
                 </span>
               </div>
@@ -64,7 +64,7 @@ export const TestModificationConfirmationDialog: React.FC<TestModificationConfir
                     .filter(({ step }) => step.success === false)
                     .map(({ step, idx }) => (
                       <div key={idx} className="mb-2">
-                        <p className="text-xs font-medium text-red-700">Step {idx + 1}:</p>
+                        <p className="text-xs font-medium text-red-400">Step {idx + 1}:</p>
                         <p className="text-xs text-red-600 ml-2">{step.error || 'Step failed'}</p>
                       </div>
                     ))}

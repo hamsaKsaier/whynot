@@ -86,7 +86,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
               {url || 'about:blank'}
             </div>
             <div className="ml-2 flex items-center space-x-1">
-              <div className="h-3 w-3 rounded-full bg-green-500" title="Secure connection"></div>
+              <div className="h-3 w-3 rounded-full bg-green-900/200" title="Secure connection"></div>
             </div>
           </div>
         </div>

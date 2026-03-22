@@ -23,7 +23,7 @@ const INTEGRATION_TYPES = [
     label: 'Jira',
     description: 'Create bug tickets in Jira from discovered bugs',
     icon: '/jira-icon.svg',
-    color: 'bg-blue-500',
+    color: 'bg-blue-900/200',
     fields: [
       { key: 'apiUrl', label: 'Jira URL', placeholder: 'https://yourteam.atlassian.net', type: 'text' },
       { key: 'email', label: 'Email', placeholder: 'you@example.com', type: 'email' },
@@ -36,7 +36,7 @@ const INTEGRATION_TYPES = [
     label: 'ClickUp',
     description: 'Create tasks in ClickUp from discovered bugs',
     icon: '/clickup-icon.svg',
-    color: 'bg-sky-500',
+    color: 'bg-sky-900/200',
     fields: [
       { key: 'apiToken', label: 'API Token', placeholder: 'Your ClickUp API token', type: 'password' },
       { key: 'listId', label: 'List ID', placeholder: 'Target list ID for tasks', type: 'text' },

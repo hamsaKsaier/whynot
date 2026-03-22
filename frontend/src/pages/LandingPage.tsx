@@ -145,7 +145,7 @@ export const LandingPage: React.FC = () => {
                 <div className="absolute top-4 right-4 w-8 h-8 bg-[#0F172A] rounded-full flex items-center justify-center text-sm font-bold text-slate-500">
                   {item.step}
                 </div>
-                <div className="w-12 h-12 bg-sky-500/10 rounded-xl flex items-center justify-center mb-5">
+                <div className="w-12 h-12 bg-sky-900/200/10 rounded-xl flex items-center justify-center mb-5">
                   <item.icon className="h-6 w-6 text-sky-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
@@ -193,7 +193,7 @@ export const LandingPage: React.FC = () => {
               },
             ].map((feature) => {
               const iconColors: Record<string, string> = {
-                sky: 'bg-sky-500/10 text-sky-400',
+                sky: 'bg-sky-900/200/10 text-sky-400',
                 emerald: 'bg-emerald-500/10 text-emerald-400',
                 violet: 'bg-violet-500/10 text-violet-400',
                 amber: 'bg-amber-500/10 text-amber-400',
@@ -255,7 +255,7 @@ export const LandingPage: React.FC = () => {
                   className={`relative bg-slate-800 rounded-xl p-6 border ${isPopular ? 'border-sky-500 ring-2 ring-sky-500/20' : 'border-slate-700'}`}
                 >
                   {isPopular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-sky-500 text-white text-xs font-semibold rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-sky-900/200 text-white text-xs font-semibold rounded-full">
                       Most Popular
                     </div>
                   )}
@@ -302,7 +302,7 @@ export const LandingPage: React.FC = () => {
                   className={`relative bg-slate-800 rounded-xl p-6 border ${plan.popular ? 'border-sky-500 ring-2 ring-sky-500/20' : 'border-slate-700'}`}
                 >
                   {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-sky-500 text-white text-xs font-semibold rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-sky-900/200 text-white text-xs font-semibold rounded-full">
                       Most Popular
                     </div>
                   )}

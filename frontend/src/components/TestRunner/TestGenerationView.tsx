@@ -60,9 +60,9 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
     if (!scenarioType) return null;
     
     const colors = {
-      positive: 'bg-green-100 text-green-800 border-green-200',
-      negative: 'bg-red-100 text-red-800 border-red-200',
-      edge: 'bg-blue-100 text-blue-800 border-blue-200',
+      positive: 'bg-green-900/30 text-green-400 border-green-800',
+      negative: 'bg-red-900/30 text-red-400 border-red-800',
+      edge: 'bg-blue-900/30 text-blue-400 border-blue-800',
     };
     
     const color = colors[scenarioType as keyof typeof colors] || 'bg-slate-900 text-slate-200 border-slate-700';
@@ -78,8 +78,8 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
     if (!riskLevel) return null;
     
     const colors = {
-      high: 'bg-red-100 text-red-800',
-      medium: 'bg-yellow-100 text-yellow-800',
+      high: 'bg-red-900/30 text-red-400',
+      medium: 'bg-yellow-900/30 text-yellow-400',
       low: 'bg-slate-900 text-slate-200',
     };
     
@@ -174,7 +174,7 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
                 {onDelete && (
                   <button
                     onClick={() => setDeleteConfirm({ isOpen: true, testCase })}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="p-2 text-red-600 hover:bg-red-900/20 rounded transition-colors"
                     title="Delete test case"
                     aria-label="Delete test case"
                   >
@@ -239,7 +239,7 @@ export const TestGenerationView: React.FC<TestGenerationViewProps> = ({
                               e.stopPropagation();
                               onStepFix(testCase, index, step);
                             }}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
                             title="Fix or modify this step"
                             aria-label="Fix or modify this step"
                           >

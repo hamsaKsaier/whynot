@@ -8,7 +8,7 @@ interface CreditUsageBarProps {
 
 export const CreditUsageBar: React.FC<CreditUsageBarProps> = ({ used, total, remaining }) => {
   const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
-  const color = percentage > 80 ? 'bg-red-500' : percentage > 60 ? 'bg-yellow-500' : 'bg-green-500';
+  const color = percentage > 80 ? 'bg-red-900/200' : percentage > 60 ? 'bg-yellow-900/200' : 'bg-green-900/200';
 
   return (
     <div>

@@ -227,7 +227,9 @@ router.post('/webhook/retest', async (req: Request, res: Response) => {
 
     retestExecutor.run().then(async (results) => {
       await qaLoopRepository.updateSessionStatus(retestSession.id, 'completed');
-      await qaLoopRepository.createTestSuiteFromSession(retestSession.id);
+      await qaLoopRepository.createTestSuiteFromSession(retestSession.id).catch((err: any) => {
+        logger.error('Failed to create test suite from webhook retest', { sessionId: retestSession.id, error: err.message });
+      });
 
       // Send callback if configured
       const callbackInfo = pendingCallbacks.get(runId);
@@ -444,7 +446,9 @@ router.post('/webhook/github-actions', async (req: Request, res: Response) => {
     // For GitHub Actions, we want synchronous results
     const results = await retestExecutor.run();
     await qaLoopRepository.updateSessionStatus(retestSession.id, 'completed');
-    await qaLoopRepository.createTestSuiteFromSession(retestSession.id);
+    await qaLoopRepository.createTestSuiteFromSession(retestSession.id).catch((err: any) => {
+      logger.error('Failed to create test suite from GitHub Actions retest', { sessionId: retestSession.id, error: err.message });
+    });
 
     // Update GitHub commit status if token provided
     if (github_token && repository && sha) {

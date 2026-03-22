@@ -36,10 +36,10 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
 
   const severityColor = (s: string) => {
     switch (s) {
-      case 'critical': return 'text-red-600 bg-red-100';
-      case 'high':     return 'text-orange-600 bg-orange-100';
-      case 'medium':   return 'text-yellow-600 bg-yellow-100';
-      case 'low':      return 'text-blue-600 bg-blue-100';
+      case 'critical': return 'text-red-300 bg-red-900/40';
+      case 'high':     return 'text-orange-300 bg-orange-900/40';
+      case 'medium':   return 'text-yellow-300 bg-yellow-900/40';
+      case 'low':      return 'text-blue-300 bg-blue-900/40';
       default:         return 'text-slate-400 bg-slate-900';
     }
   };
@@ -67,6 +67,16 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
 
   const vulns = chaosResults.filter(r => r.vulnerabilityConfirmed).length;
 
+  // Summary stats
+  const passed = testCases.filter(tc => tc.last_run_status === 'passed' || tc.last_run_status === 'confirmed').length;
+  const failed = testCases.filter(tc => tc.last_run_status === 'failed' || tc.last_run_status === 'error').length;
+  const review = testCases.filter(tc => tc.last_run_status === 'mismatch').length;
+  const pending = testCases.length - passed - failed - review;
+  const verifiedBugs = bugs.filter(b => b.status === 'confirmed').length;
+  const potentialBugs = bugs.length - verifiedBugs;
+  const critical = bugs.filter(b => b.severity === 'critical').length;
+  const high = bugs.filter(b => b.severity === 'high').length;
+
   const tab = (id: typeof activeTab, label: string, count: number, icon: React.ReactNode, activeClass: string) => (
     <button
       onClick={() => setActiveTab(id)}
@@ -79,6 +89,52 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
 
   return (
     <>
+      {/* Summary card */}
+      {(testCases.length > 0 || bugs.length > 0 || pages.length > 0) && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Pages Scanned</div>
+              <div className="text-xl font-bold text-white">{pages.length}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Test Cases</div>
+              <div className="text-xl font-bold text-white">{testCases.length}</div>
+              {testCases.length > 0 && (
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {passed > 0 && <span className="text-green-400">{passed} passed</span>}
+                  {failed > 0 && <span className="text-red-400">{passed > 0 ? ' / ' : ''}{failed} failed</span>}
+                  {review > 0 && <span className="text-amber-400">{(passed > 0 || failed > 0) ? ' / ' : ''}{review} review</span>}
+                  {pending > 0 && <span className="text-slate-400">{(passed > 0 || failed > 0 || review > 0) ? ' / ' : ''}{pending} pending</span>}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Bugs Found</div>
+              <div className="text-xl font-bold text-white">{bugs.length}</div>
+              {bugs.length > 0 && (
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {verifiedBugs > 0 && <span className="text-green-400">{verifiedBugs} verified</span>}
+                  {potentialBugs > 0 && <span className="text-amber-400">{verifiedBugs > 0 ? ', ' : ''}{potentialBugs} potential</span>}
+                  {(critical > 0 || high > 0) && (
+                    <span className="text-red-400 ml-1">
+                      ({critical > 0 ? `${critical} critical` : ''}{critical > 0 && high > 0 ? ', ' : ''}{high > 0 ? `${high} high` : ''})
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Security</div>
+              <div className="text-xl font-bold text-white">{chaosResults.length}</div>
+              {vulns > 0 && (
+                <div className="text-xs text-red-400 mt-0.5">{vulns} confirmed vulnerabilities</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-slate-700 mb-4">
         <nav className="flex gap-4 flex-wrap">
           {tab('tests',    'Tests',    testCases.length, <FiFileText className="text-sm" />,     'border-sky-500 text-sky-600')}

@@ -230,7 +230,7 @@ const ActionRow: React.FC<{
       <span className="text-slate-400 shrink-0 ml-auto flex items-center gap-1">
         {call.result !== undefined
           ? <span className="text-green-400">✓</span>
-          : <span className="animate-spin w-3 h-3 border border-gray-500 border-t-gray-300 rounded-full inline-block" />
+          : <span className="animate-spin w-3 h-3 border border-slate-500 border-t-slate-300 rounded-full inline-block" />
         }
         {formatTimestamp(call.timestamp)}
       </span>
@@ -246,14 +246,14 @@ const StatusIcons = {
     </span>
   ),
   passed: () => (
-    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-green-500/20">
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-green-900/200/20">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 13l4 4L19 7"/>
       </svg>
     </span>
   ),
   failed: () => (
-    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-500/20">
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-900/200/20">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>
@@ -295,9 +295,9 @@ function getDisplayStatus(activity: TestRunActivity): DisplayStatus {
 const DISPLAY_STATUS_CONFIG: Record<DisplayStatus, {
   label: string; bg: string; border: string; text: string; badgeBg: string; badgeText: string;
 }> = {
-  running:     { label: 'Running',      bg: 'rgba(96,165,250,0.15)',  border: '#60a5fa40', text: '#60a5fa', badgeBg: 'bg-blue-500/20',   badgeText: 'text-blue-300' },
-  passed:      { label: 'Passed',       bg: 'rgba(74,222,128,0.15)',  border: '#4ade8040', text: '#4ade80', badgeBg: 'bg-green-500/20',  badgeText: 'text-green-300' },
-  failed:      { label: 'Failed',       bg: 'rgba(248,113,113,0.15)', border: '#f8717140', text: '#f87171', badgeBg: 'bg-red-500/20',    badgeText: 'text-red-300' },
+  running:     { label: 'Running',      bg: 'rgba(96,165,250,0.15)',  border: '#60a5fa40', text: '#60a5fa', badgeBg: 'bg-blue-900/200/20',   badgeText: 'text-blue-300' },
+  passed:      { label: 'Passed',       bg: 'rgba(74,222,128,0.15)',  border: '#4ade8040', text: '#4ade80', badgeBg: 'bg-green-900/200/20',  badgeText: 'text-green-300' },
+  failed:      { label: 'Failed',       bg: 'rgba(248,113,113,0.15)', border: '#f8717140', text: '#f87171', badgeBg: 'bg-red-900/200/20',    badgeText: 'text-red-300' },
   needsReview: { label: 'Needs Review', bg: 'rgba(245,158,11,0.15)',  border: '#f59e0b40', text: '#f59e0b', badgeBg: 'bg-amber-500/20',  badgeText: 'text-amber-300' },
 };
 

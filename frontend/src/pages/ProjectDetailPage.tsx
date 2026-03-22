@@ -564,7 +564,7 @@ export const ProjectDetailPage: React.FC = () => {
                         }`}>{session.quality_score}%</span>
                       )}
                       <span className={`text-xs px-2 py-1 rounded-full ${
-                        session.status === 'running' ? 'bg-sky-500/10 text-sky-400' :
+                        session.status === 'running' ? 'bg-sky-900/200/10 text-sky-400' :
                         session.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' :
                         session.status === 'paused' ? 'bg-amber-500/10 text-amber-400' :
                         'bg-slate-9000/10 text-slate-500'
