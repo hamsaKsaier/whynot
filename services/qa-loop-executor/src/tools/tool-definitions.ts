@@ -192,7 +192,7 @@ export function getToolDefinitions(): Anthropic.Tool[] {
           },
           playwright_code: {
             type: 'string',
-            description: 'Complete, runnable Playwright .spec.ts code for this test case. Must use test() and expect() from @playwright/test. Use exact CSS selectors discovered during exploration. Include await page.screenshot() at key verification points. Use process.env.TEST_USERNAME / process.env.TEST_PASSWORD for credentials — never hardcode them.'
+            description: 'Raw Playwright page commands for this test case. Do NOT include import statements. Do NOT wrap in test() or describe(). Do NOT use expect() from @playwright/test. Assume "page" is already available as a variable. Use exact CSS selectors discovered during exploration. Include await page.screenshot() at key verification points. Use process.env.TEST_USERNAME / process.env.TEST_PASSWORD for credentials — never hardcode them. For assertions, use plain JavaScript with throw: if (!(await el.isVisible())) throw new Error("not visible").'
           }
         },
         required: ['name', 'steps', 'observed_result']
