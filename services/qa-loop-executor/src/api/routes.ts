@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../../../shared/logger/logger';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { LoopOrchestrator } from '../loop-orchestrator';
+import { MCPBrowser } from '../mcp-browser';
 import { RetestExecutor } from '../retest-executor';
 import webhookRoutes from './webhook';
 import { generateWsToken } from './websocket';
@@ -317,6 +318,10 @@ router.post('/api/sessions/:id/stop', async (req: Request, res: Response) => {
       }
       activeSessions.delete(id);
     }
+
+    // Force-cleanup any lingering browser processes for this session
+    // (belt-and-suspenders — orchestrator.stop() should have done this already)
+    await MCPBrowser.forceCleanup(id).catch(() => {});
 
     await qaLoopRepository.updateSessionStatus(id, 'cancelled');
     // Auto-create test suite from whatever was discovered before the stop

@@ -114,6 +114,10 @@ export class LoopOrchestrator {
     this.startTime = new Date();
 
     try {
+      // Force-cleanup any lingering browser processes from previous sessions
+      // to prevent "Browser is already in use" errors
+      await MCPBrowser.forceCleanup();
+
       // Start MCP browser — one instance for the entire session
       this.mcpBrowser = new MCPBrowser(this.sessionId);
       await this.mcpBrowser.start();
@@ -1343,6 +1347,21 @@ Rules:
   async pause(): Promise<void> {
     logger.info('Pausing QA Loop', { sessionId: this.sessionId });
     this.isPaused = true;
+
+    // Kill the browser immediately on pause to free the browser lock.
+    // On resume, a new browser will be started.
+    if (this.mcpBrowser) {
+      try {
+        await this.mcpBrowser.forceStop();
+      } catch (err: any) {
+        logger.warn('Failed to stop browser on pause', {
+          sessionId: this.sessionId,
+          error: err.message
+        });
+      }
+      this.mcpBrowser = null;
+    }
+
     emitToSession(this.sessionId, {
       type: 'status_update',
       data: { status: 'paused' }

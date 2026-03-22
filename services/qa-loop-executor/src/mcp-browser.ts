@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import Anthropic from '@anthropic-ai/sdk';
+import { ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -31,6 +32,7 @@ const EXCLUDED_MCP_TOOLS = new Set([
 export class MCPBrowser {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
+  private mcpProcess: ChildProcess | null = null;
   private tools: Anthropic.Tool[] = [];
   private sessionId: string;
   private isConnected = false;
@@ -112,6 +114,34 @@ export class MCPBrowser {
   }
 
   /**
+   * Kill the MCP child process immediately using SIGKILL.
+   * This is the most reliable way to release the browser lock file.
+   */
+  private killMcpProcess(): void {
+    if (this.mcpProcess) {
+      try {
+        const pid = this.mcpProcess.pid;
+        this.mcpProcess.kill('SIGKILL');
+        logger.info('Killed MCP child process', { sessionId: this.sessionId, pid });
+      } catch (err: any) {
+        logger.warn('Failed to kill MCP child process', {
+          sessionId: this.sessionId,
+          error: err.message
+        });
+      }
+      this.mcpProcess = null;
+    }
+    // Also try closing the transport as a belt-and-suspenders measure
+    try {
+      if (this.transport) {
+        (this.transport as any)?.close?.();
+      }
+    } catch {
+      // Ignore — transport may already be dead
+    }
+  }
+
+  /**
    * Force-stop the browser, killing the subprocess if normal close fails.
    * Used as a safety net when the browser is stuck or leaked.
    */
@@ -139,19 +169,15 @@ export class MCPBrowser {
         sessionId: this.sessionId,
         error: error.message
       });
-      // Force-kill the transport subprocess if graceful close failed
-      try {
-        if (this.transport) {
-          (this.transport as any)?.close?.();
-        }
-      } catch {
-        // Last resort — ignore
-      }
     }
+
+    // Always kill the MCP subprocess to release the browser lock
+    this.killMcpProcess();
 
     // Reset all state and unregister from the global registry
     this.client = null;
     this.transport = null;
+    this.mcpProcess = null;
     this.isConnected = false;
     this.tools = [];
     this.loadTimesCache.clear();
@@ -166,8 +192,11 @@ export class MCPBrowser {
    * Automatically force-kills any previous browser for this session first.
    */
   async start(): Promise<void> {
-    // Kill any lingering browser from a previous session to prevent "browser is not free"
-    await MCPBrowser.forceCleanup(this.sessionId);
+    // Kill any lingering browser from ANY previous session to prevent "browser is already in use"
+    // First clean up all active browsers (nuclear option — only one session at a time per executor)
+    await MCPBrowser.forceCleanup();
+    // Brief wait for OS-level process cleanup after killing all browsers
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     logger.info('Starting Playwright MCP server', { sessionId: this.sessionId });
 
@@ -176,7 +205,7 @@ export class MCPBrowser {
 
     this.transport = new StdioClientTransport({
       command: 'npx',
-      args: ['@playwright/mcp@0.0.68', '--headless', '--browser', 'chromium']
+      args: ['@playwright/mcp@0.0.68', '--headless', '--browser', 'chromium', '--isolated']
     });
 
     this.client = new Client(
@@ -187,6 +216,16 @@ export class MCPBrowser {
     await this.client.connect(this.transport);
     this.isConnected = true;
     this.startedAt = Date.now();
+
+    // Capture the child process reference for reliable cleanup (SIGKILL on stop/forceStop).
+    // StdioClientTransport stores the spawned process internally — extract it for direct kill access.
+    const transportAny = this.transport as any;
+    this.mcpProcess = (transportAny._process || transportAny.process || transportAny._subprocess || null) as ChildProcess | null;
+    if (this.mcpProcess) {
+      logger.info('Captured MCP child process', { sessionId: this.sessionId, pid: this.mcpProcess.pid });
+    } else {
+      logger.warn('Could not capture MCP child process reference — fallback to transport.close()', { sessionId: this.sessionId });
+    }
 
     // Pre-install browser so Claude never needs to call browser_install
     try {
@@ -482,19 +521,15 @@ export class MCPBrowser {
           sessionId: this.sessionId,
           error: error.message
         });
-        // Force-kill the transport subprocess
-        try {
-          if (this.transport) {
-            (this.transport as any)?.close?.();
-          }
-        } catch {
-          // Ignore — we're already in cleanup
-        }
       }
+
+      // Always kill the MCP subprocess to release the browser lock
+      this.killMcpProcess();
     } finally {
       // Always reset state and unregister from the global registry
       this.client = null;
       this.transport = null;
+      this.mcpProcess = null;
       this.isConnected = false;
       this.tools = [];
       this.loadTimesCache.clear();
