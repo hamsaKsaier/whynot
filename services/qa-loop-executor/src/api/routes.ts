@@ -90,6 +90,16 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
         if (ctx.userPrd) {
           userPrd = ctx.userPrd;
         }
+        const hasContext = !!projectContext;
+        const knownPages = projectContext?.known_pages?.length || 0;
+        logger.info('Project context loaded', {
+          projectId,
+          hasContext,
+          knownPages,
+          hasUserPrd: !!userPrd,
+          knownBugs: projectContext?.known_bugs?.length || 0,
+          totalScans: projectContext?.total_scans || 0,
+        });
       } catch (err: any) {
         logger.warn('Failed to load project context', { projectId, error: err.message });
       }

@@ -791,7 +791,7 @@ router.post('/api/capture-page-session', async (req: Request, res: Response) => 
 // ── Run raw Playwright code ──────────────────────────────────────────────────
 router.post('/api/run-playwright', async (req: Request, res: Response) => {
   try {
-    const { playwrightCode, timeoutMs, timeout, env } = req.body;
+    const { playwrightCode, timeoutMs, timeout, env, credentials } = req.body;
 
     if (!playwrightCode || typeof playwrightCode !== 'string') {
       return res.status(400).json({ error: 'playwrightCode (string) is required' });
@@ -803,6 +803,7 @@ router.post('/api/run-playwright', async (req: Request, res: Response) => {
     const result = await runPlaywrightCode(playwrightCode, {
       timeoutMs: effectiveTimeout,
       env: env ?? {},
+      credentials: credentials ?? undefined,
     });
 
     res.json({

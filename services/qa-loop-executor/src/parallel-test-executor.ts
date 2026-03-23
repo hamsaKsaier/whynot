@@ -351,6 +351,41 @@ export class ParallelTestExecutor {
    * /api/run-playwright endpoint.
    */
   private async executeViaPlaywright(testCase: any, observedResult: 'pass' | 'fail'): Promise<void> {
+    // Short-term workaround: skip tests that reference authenticated pages when no credentials
+    // are available. The verification browser launches fresh with no cookies/session.
+    const codeRefsLogin = testCase.playwright_code &&
+      (/process\.env\.TEST_USERNAME|process\.env\.TEST_PASSWORD/i.test(testCase.playwright_code) ||
+       /login|sign.?in|auth/i.test(testCase.source_page_url || ''));
+    if (codeRefsLogin && !this.config.loginCredentials) {
+      logger.info('Skipping test — references authenticated page but no credentials available', {
+        sessionId: this.sessionId,
+        testCaseId: testCase.id,
+      });
+      try {
+        await this.repository.addTestRun(this.sessionId, testCase.id, {
+          status: 'skipped',
+          failureReason: 'Skipped: test references authenticated page but no credentials available for verification browser',
+          observedResult,
+          isMismatch: false,
+        });
+      } catch (saveErr: any) {
+        logger.warn('Failed to persist skipped test run', { testCaseId: testCase.id, error: saveErr.message });
+      }
+      emitToSession(this.sessionId, {
+        type: 'test_run_result',
+        data: {
+          testCaseId: testCase.id,
+          testCaseName: testCase.name,
+          status: 'skipped',
+          failureReason: 'No credentials for verification browser',
+          observedResult,
+          isMismatch: false,
+          runner: 'playwright',
+        }
+      });
+      return;
+    }
+
     emitToSession(this.sessionId, {
       type: 'test_run_start',
       data: { testCaseId: testCase.id, testCaseName: testCase.name, runner: 'playwright' }
@@ -362,6 +397,7 @@ export class ParallelTestExecutor {
         {
           playwrightCode: testCase.playwright_code,
           timeoutMs: 30_000,
+          credentials: this.config.loginCredentials ?? undefined,
         },
         { timeout: 60_000 }
       );

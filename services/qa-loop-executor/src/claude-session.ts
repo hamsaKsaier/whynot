@@ -562,6 +562,12 @@ SELECTOR QUALITY RULES (CRITICAL):
 - For forms: use page.getByLabel('Email') instead of page.locator('input[type="email"]')
 - Always add a brief comment explaining what each selector targets
 
+When generating Playwright code, use SPECIFIC selectors that match exactly ONE element:
+- Prefer: page.locator('[data-testid="login-btn"]') or page.locator('#username')
+- Prefer: page.getByRole('button', { name: 'Login' }) or page.getByText('Submit')
+- Avoid: page.locator('.menu') or page.locator('div.container') — these often match multiple elements
+- Use .first() if you know there are multiple matches: page.locator('.item').first()
+
 Example playwright_code format:
 \`\`\`
 await page.goto('https://example.com/login');

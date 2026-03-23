@@ -597,7 +597,7 @@ export const ArchitectureFlowPage: React.FC = () => {
   const firstProjectId = flowData.length > 0 ? flowData[0].project.id : null;
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="w-full flex flex-col -mx-4 sm:-mx-6 -mt-4 sm:-mt-6" style={{ height: 'calc(100vh - 64px)' }}>
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-700 bg-slate-800 flex items-center justify-between">
         <div>

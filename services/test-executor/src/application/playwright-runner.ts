@@ -25,6 +25,11 @@ export interface PlaywrightRunResult {
 export function parsePlaywrightError(rawError: string): string {
   if (!rawError) return 'Test execution failed unexpectedly. Try re-scanning to generate fresh test code.';
 
+  // Strict mode violation — selector matched multiple elements
+  if (/strict mode violation/i.test(rawError)) {
+    return 'Multiple matching elements found. The selector is too broad — the page has changed or has duplicate elements.';
+  }
+
   // TimeoutError on locator click
   if (/TimeoutError.*locator\.click/i.test(rawError)) {
     return 'Could not find the element to click. The page may have changed since the test was created.';
@@ -104,7 +109,9 @@ function isAssertionFailure(errorMessage: string): boolean {
     /not present/i.test(errorMessage) ||
     /not found on page/i.test(errorMessage) ||
     /AssertionError/i.test(errorMessage) ||
-    /expect\(received\)/i.test(errorMessage)
+    /expect\(received\)/i.test(errorMessage) ||
+    /strict mode violation/i.test(errorMessage) ||
+    /resolved to \d+ elements/i.test(errorMessage)
   );
 }
 
@@ -168,12 +175,22 @@ function stripTestWrapper(code: string): string {
  * - Parses errors into human-readable messages
  * - Cleans up browser after execution
  */
+export interface LoginCredentials {
+  loginUrl?: string;
+  emailSelector?: string;
+  passwordSelector?: string;
+  submitSelector?: string;
+  email: string;
+  password: string;
+}
+
 export async function runPlaywrightCode(
   playwrightCode: string,
   options?: {
     timeoutMs?: number;
     screenshotsDir?: string;
     env?: Record<string, string>;
+    credentials?: LoginCredentials;
   }
 ): Promise<PlaywrightRunResult> {
   const timeoutMs = options?.timeoutMs ?? 30_000;
@@ -187,6 +204,7 @@ export async function runPlaywrightCode(
       screenshotsDir,
       env: options?.env,
       attempt,
+      credentials: options?.credentials,
     });
 
     result.retryCount = attempt;
@@ -231,6 +249,7 @@ async function executePlaywrightRun(
     screenshotsDir: string;
     env?: Record<string, string>;
     attempt: number;
+    credentials?: LoginCredentials;
   }
 ): Promise<PlaywrightRunResult> {
   const { timeoutMs, screenshotsDir, attempt } = options;
@@ -298,6 +317,29 @@ async function executePlaywrightRun(
         await page.screenshot({ path: beforeScreenshot, fullPage: true }).catch(() => {});
       }
     });
+
+    // Perform login if credentials are provided (establish auth state for cold browser)
+    if (options.credentials) {
+      const creds = options.credentials;
+      const loginUrl = creds.loginUrl || '';
+      if (loginUrl) {
+        logger.info('Performing login before test execution', { runId, loginUrl });
+        await page.goto(loginUrl);
+        await page.waitForLoadState('networkidle').catch(() => {});
+
+        const emailSel = creds.emailSelector ||
+          'input[type="email"], input[name="email"], input[name="username"], input[type="text"][name*="user"], input[type="text"][name*="email"]';
+        const passwordSel = creds.passwordSelector || 'input[type="password"]';
+        const submitSel = creds.submitSelector || 'button[type="submit"], input[type="submit"]';
+
+        await page.locator(emailSel).first().fill(creds.email).catch(() => {});
+        await page.locator(passwordSel).first().fill(creds.password).catch(() => {});
+        await page.locator(submitSel).first().click().catch(() => {});
+        await page.waitForLoadState('networkidle').catch(() => {});
+        await page.waitForTimeout(2000);
+        logger.info('Login completed before test execution', { runId });
+      }
+    }
 
     logger.info('Executing raw Playwright commands', { runId, codeLength: rewrittenCode.length, attempt });
 
