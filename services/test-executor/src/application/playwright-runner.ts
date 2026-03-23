@@ -26,8 +26,8 @@ export function parsePlaywrightError(rawError: string): string {
   if (!rawError) return 'Test execution failed unexpectedly. Try re-scanning to generate fresh test code.';
 
   // Strict mode violation — selector matched multiple elements
-  if (/strict mode violation/i.test(rawError)) {
-    return 'Multiple matching elements found. The selector is too broad — the page has changed or has duplicate elements.';
+  if (/strict mode violation/i.test(rawError) || /resolved to \d+ elements/i.test(rawError)) {
+    return 'Multiple matching elements found. The selector is too broad — use a more specific selector like page.getByRole() or page.locator("[data-testid=...]").';
   }
 
   // TimeoutError on locator click

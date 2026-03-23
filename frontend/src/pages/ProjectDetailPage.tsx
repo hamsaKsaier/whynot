@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   FiEdit2,
-  FiTrash2,
-  FiPlus,
-  FiBook,
-  FiZap,
   FiGlobe,
   FiFolder,
+  FiPlay,
+  FiZap,
+  FiChevronDown,
+  FiChevronRight,
   FiCopy,
-  FiGitBranch,
+  FiCheck,
+  FiX,
+  FiAlertTriangle,
+  FiClock,
+  FiSkipForward,
+  FiShield,
+  FiFileText,
+  FiAlertCircle,
 } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -17,62 +24,92 @@ import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { Alert } from '../components/common/Alert';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
-import { Modal, ModalFooter } from '../components/common/Modal';
-import { ConfirmDialog } from '../components/common/ConfirmDialog';
-import { EmptyState } from '../components/common/EmptyState';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
-import { QuickActions } from '../components/common/QuickActions';
-import { useClipboard } from '../hooks/useClipboard';
-import { useFormAutoSave } from '../hooks/useFormAutoSave';
 import {
   getProject,
   updateProject,
-  getUserStories,
-  createUserStory,
-  updateUserStory,
-  deleteUserStory,
-  getFolders,
-  assignUserStoryToFolder,
   getProjectContext,
   updateProjectPrd,
   resetProjectContext,
+  getProjectTestCasesByCategory,
   ProjectWithStats,
-  UserStoryWithStats,
-  FolderWithStats,
+  CategoryGroup,
 } from '../services/api';
-import { Select } from '../components/common/Select';
-import { listQALoopSessions, QALoopSession } from '../services/qa-loop-api';
 
-interface UserStoryFormData {
-  story: string;
-  website_url: string;
-  additional_context: string;
+// Status helpers
+function statusIcon(status: string) {
+  switch (status) {
+    case 'completed':
+    case 'pass':
+    case 'passed':
+      return <FiCheck className="h-4 w-4 text-emerald-400" />;
+    case 'failed':
+    case 'fail':
+      return <FiX className="h-4 w-4 text-red-400" />;
+    case 'skipped':
+      return <FiSkipForward className="h-4 w-4 text-slate-400" />;
+    default:
+      return <FiAlertTriangle className="h-4 w-4 text-amber-400" />;
+  }
 }
 
-const initialUserStoryFormData: UserStoryFormData = {
-  story: '',
-  website_url: '',
-  additional_context: '',
-};
+function statusBadge(status: string) {
+  const map: Record<string, string> = {
+    completed: 'bg-emerald-500/10 text-emerald-400',
+    pass: 'bg-emerald-500/10 text-emerald-400',
+    passed: 'bg-emerald-500/10 text-emerald-400',
+    failed: 'bg-red-500/10 text-red-400',
+    fail: 'bg-red-500/10 text-red-400',
+    skipped: 'bg-slate-500/10 text-slate-400',
+  };
+  return map[status] || 'bg-amber-500/10 text-amber-400';
+}
+
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    completed: 'Passed', pass: 'Passed', passed: 'Passed',
+    failed: 'Failed', fail: 'Failed',
+    skipped: 'Skipped',
+  };
+  return map[status] || 'Needs Review';
+}
+
+function categoryIcon(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes('auth')) return <FiShield className="h-4 w-4" />;
+  if (n.includes('nav')) return <FiGlobe className="h-4 w-4" />;
+  if (n.includes('setting')) return <FiEdit2 className="h-4 w-4" />;
+  if (n.includes('search')) return <FiFileText className="h-4 w-4" />;
+  return <FiFolder className="h-4 w-4" />;
+}
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { copyToClipboard } = useClipboard();
 
   const [project, setProject] = useState<ProjectWithStats | null>(null);
-  const [userStories, setUserStories] = useState<UserStoryWithStats[]>([]);
-  const [folders, setFolders] = useState<FolderWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qaLoopSessions, setQALoopSessions] = useState<QALoopSession[]>([]);
 
-  // Project Context state (Feature 9)
+  // Category data
+  const [categories, setCategories] = useState<CategoryGroup[]>([]);
+  const [bugs, setBugs] = useState<any[]>([]);
+  const [scanHistory, setScanHistory] = useState<any[]>([]);
+
+  // Expanded categories
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  // Expanded test case detail rows
+  const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
+
+  // Project Context state
   const [projectContext, setProjectContext] = useState<any>({});
   const [userPrd, setUserPrd] = useState('');
   const [prdDraft, setPrdDraft] = useState('');
   const [savingPrd, setSavingPrd] = useState(false);
-  const [showContextTab, setShowContextTab] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showScanHistory, setShowScanHistory] = useState(false);
+  const [showBugs, setShowBugs] = useState(false);
+  const [expandedBugs, setExpandedBugs] = useState<Set<string>>(new Set());
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Project edit state
@@ -82,70 +119,43 @@ export const ProjectDetailPage: React.FC = () => {
   const [projectWebsiteUrl, setProjectWebsiteUrl] = useState('');
   const [savingProject, setSavingProject] = useState(false);
 
-  // User story modal state
-  const [isUserStoryModalOpen, setIsUserStoryModalOpen] = useState(false);
-  const [editingUserStory, setEditingUserStory] = useState<UserStoryWithStats | null>(null);
-  const [userStoryFormData, setUserStoryFormData] = useState<UserStoryFormData>(
-    initialUserStoryFormData
-  );
-  const [userStoryFormErrors, setUserStoryFormErrors] = useState<Partial<UserStoryFormData>>({});
-  const [submittingUserStory, setSubmittingUserStory] = useState(false);
-  // Auto-save user story form data
-  const { loadDraft, clearDraft, hasDraft } = useFormAutoSave(
-    editingUserStory ? `user-story-edit-${editingUserStory.id}` : `user-story-create-${id}`,
-    userStoryFormData,
-    {
-      enabled: isUserStoryModalOpen,
-      onRestore: (data: UserStoryFormData) => {
-        setUserStoryFormData(data);
-      },
-    }
-  );
+  // Clipboard
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyCode = useCallback((code: string, testId: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedId(testId);
+    setTimeout(() => setCopiedId(null), 2000);
+  }, []);
 
-  // Check for draft when modal opens
-  useEffect(() => {
-    if (isUserStoryModalOpen && hasDraft() && !editingUserStory) {
-    }
-  }, [isUserStoryModalOpen, hasDraft, editingUserStory]);
-
-  // Delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<{
-    isOpen: boolean;
-    userStory: UserStoryWithStats | null;
-  }>({ isOpen: false, userStory: null });
-
-  useEffect(() => {
-    if (id) {
-      fetchProjectData();
-    }
-  }, [id]);
-
-  const fetchProjectData = async () => {
+  const fetchProjectData = useCallback(async () => {
     if (!id) return;
-
     setLoading(true);
     setError(null);
     try {
-      const [projectResponse, userStoriesResponse, foldersResponse, qaSessionsResponse] = await Promise.all([
+      const [projectResponse, categoryResponse] = await Promise.all([
         getProject(id),
-        getUserStories(id),
-        getFolders(id).catch(() => ({ folders: [] })), // Folders may not exist yet
-        listQALoopSessions({ projectId: id, limit: 5 }).catch(() => ({ sessions: [], total: 0 })),
+        getProjectTestCasesByCategory(id).catch(() => ({ categories: [], bugs: [], scanHistory: [] })),
       ]);
       setProject(projectResponse.project);
-      setUserStories(userStoriesResponse.user_stories);
-      setFolders(foldersResponse.folders || []);
-      setQALoopSessions(qaSessionsResponse.sessions || []);
+      setCategories(categoryResponse.categories || []);
+      setBugs(categoryResponse.bugs || []);
+      setScanHistory(categoryResponse.scanHistory || []);
 
-      // Load project context (Feature 9)
+      // Auto-expand categories with failures
+      const failed = new Set<string>();
+      for (const cat of (categoryResponse.categories || [])) {
+        if (cat.stats.failed > 0 || cat.stats.review > 0) failed.add(cat.name);
+      }
+      setExpandedCategories(failed);
+
+      // Load project context
       try {
-        const ctxResponse = await getProjectContext(id!);
+        const ctxResponse = await getProjectContext(id);
         setProjectContext(ctxResponse.context || {});
         setUserPrd(ctxResponse.user_prd || '');
         setPrdDraft(ctxResponse.user_prd || '');
       } catch { /* context column may not exist yet */ }
 
-      // Initialize edit form
       setProjectName(projectResponse.project.name);
       setProjectDescription(projectResponse.project.description || '');
       setProjectWebsiteUrl(projectResponse.project.website_url || '');
@@ -154,24 +164,14 @@ export const ProjectDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const handleAssignFolder = async (userStoryId: string, folderId: string | null) => {
-    try {
-      await assignUserStoryToFolder(userStoryId, folderId);
-      // Refresh user stories to get updated folder_id
-      if (id) {
-        const userStoriesResponse = await getUserStories(id);
-        setUserStories(userStoriesResponse.user_stories);
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to assign folder');
-    }
-  };
+  useEffect(() => {
+    fetchProjectData();
+  }, [fetchProjectData]);
 
   const handleSaveProject = async () => {
     if (!id || !projectName.trim()) return;
-
     setSavingProject(true);
     try {
       const response = await updateProject(id, {
@@ -195,117 +195,6 @@ export const ProjectDetailPage: React.FC = () => {
       setProjectWebsiteUrl(project.website_url || '');
     }
     setIsEditingProject(false);
-  };
-
-  const openCreateUserStoryModal = () => {
-    setEditingUserStory(null);
-    // Try to load draft first
-    const draft = loadDraft();
-    if (draft) {
-      setUserStoryFormData(draft);
-    } else {
-      setUserStoryFormData({
-        ...initialUserStoryFormData,
-        website_url: project?.website_url || '',
-      });
-    }
-    setUserStoryFormErrors({});
-    setIsUserStoryModalOpen(true);
-  };
-
-  const openEditUserStoryModal = (userStory: UserStoryWithStats) => {
-    setEditingUserStory(userStory);
-    setUserStoryFormData({
-      story: userStory.story,
-      website_url: userStory.website_url || '',
-      additional_context: userStory.additional_context || '',
-    });
-    setUserStoryFormErrors({});
-    setIsUserStoryModalOpen(true);
-  };
-
-  const closeUserStoryModal = () => {
-    setIsUserStoryModalOpen(false);
-    setEditingUserStory(null);
-    setUserStoryFormData(initialUserStoryFormData);
-    setUserStoryFormErrors({});
-  };
-
-  const validateUserStoryForm = (): boolean => {
-    const errors: Partial<UserStoryFormData> = {};
-
-    if (!userStoryFormData.story.trim()) {
-      errors.story = 'User story is required';
-    } else if (userStoryFormData.story.trim().length < 10) {
-      errors.story = 'User story must be at least 10 characters';
-    }
-
-    if (userStoryFormData.website_url && !isValidUrl(userStoryFormData.website_url)) {
-      errors.website_url = 'Please enter a valid URL';
-    }
-
-    setUserStoryFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const handleSubmitUserStory = async () => {
-    if (!id || !validateUserStoryForm()) return;
-
-    setSubmittingUserStory(true);
-    try {
-      if (editingUserStory) {
-        await updateUserStory(editingUserStory.id, {
-          story: userStoryFormData.story.trim(),
-          website_url: userStoryFormData.website_url.trim() || undefined,
-          additional_context: userStoryFormData.additional_context.trim() || undefined,
-        });
-      } else {
-        await createUserStory(id, {
-          story: userStoryFormData.story.trim(),
-          website_url: userStoryFormData.website_url.trim() || undefined,
-          additional_context: userStoryFormData.additional_context.trim() || undefined,
-        });
-      }
-      clearDraft(); // Clear draft on successful submission
-      closeUserStoryModal();
-      fetchProjectData();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to save user story');
-    } finally {
-      setSubmittingUserStory(false);
-    }
-  };
-
-  const handleDeleteUserStory = async () => {
-    if (!deleteConfirm.userStory) return;
-
-    try {
-      await deleteUserStory(deleteConfirm.userStory.id);
-      setDeleteConfirm({ isOpen: false, userStory: null });
-      fetchProjectData();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to delete user story');
-      setDeleteConfirm({ isOpen: false, userStory: null });
-    }
-  };
-
-  const handleStartQASession = (userStory?: UserStoryWithStats) => {
-    navigate('/qa-loop', {
-      state: {
-        projectId: id,
-        websiteUrl: userStory?.website_url || project?.website_url,
-        userStoryContext: userStory?.story,
-      },
-    });
   };
 
   const handleSavePrd = async () => {
@@ -332,6 +221,35 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  const toggleCategory = (name: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
+  const toggleTestExpand = (testId: string) => {
+    setExpandedTests(prev => {
+      const next = new Set(prev);
+      if (next.has(testId)) next.delete(testId); else next.add(testId);
+      return next;
+    });
+  };
+
+  const toggleBugExpand = (bugId: string) => {
+    setExpandedBugs(prev => {
+      const next = new Set(prev);
+      if (next.has(bugId)) next.delete(bugId); else next.add(bugId);
+      return next;
+    });
+  };
+
+  // Totals
+  const totalTests = categories.reduce((sum, c) => sum + c.testCases.length, 0);
+  const totalPassed = categories.reduce((sum, c) => sum + c.stats.passed, 0);
+  const totalFailed = categories.reduce((sum, c) => sum + c.stats.failed, 0);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -346,12 +264,9 @@ export const ProjectDetailPage: React.FC = () => {
             </div>
           </div>
         </Card>
-        <div className="page-section">
-          <SkeletonLoader width="w-40" height="h-6" className="mb-4" />
-          <div className="space-y-3">
-            <SkeletonLoader width="w-full" height="h-20" />
-            <SkeletonLoader width="w-full" height="h-20" />
-          </div>
+        <div className="space-y-3">
+          <SkeletonLoader width="w-full" height="h-20" />
+          <SkeletonLoader width="w-full" height="h-20" />
         </div>
       </div>
     );
@@ -380,7 +295,7 @@ export const ProjectDetailPage: React.FC = () => {
 
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
 
-      {/* Project Header */}
+      {/* ===== SECTION 1: Header ===== */}
       <Card>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
@@ -410,289 +325,321 @@ export const ProjectDetailPage: React.FC = () => {
                   className="max-w-md"
                 />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveProject} isLoading={savingProject}>
-                    Save
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={cancelEditProject}>
-                    Cancel
-                  </Button>
+                  <Button size="sm" onClick={handleSaveProject} isLoading={savingProject}>Save</Button>
+                  <Button size="sm" variant="secondary" onClick={cancelEditProject}>Cancel</Button>
                 </div>
               </div>
             ) : (
               <div>
                 <h1 className="text-2xl font-bold text-white">{project.name}</h1>
-                {project.description && (
-                  <p className="mt-1 text-slate-400">{project.description}</p>
-                )}
+                {project.description && <p className="mt-1 text-slate-400">{project.description}</p>}
                 {project.website_url && (
                   <div className="flex items-center gap-1 mt-2 text-sm text-slate-400">
                     <FiGlobe className="h-4 w-4" />
-                    <a
-                      href={project.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-primary-600"
-                    >
+                    <a href={project.website_url} target="_blank" rel="noopener noreferrer" className="hover:text-primary-600">
                       {project.website_url}
                     </a>
                   </div>
                 )}
+                <div className="flex items-center gap-4 mt-3 text-sm text-slate-500">
+                  <span>{totalTests} tests</span>
+                  <span className="text-emerald-400">{totalPassed} passed</span>
+                  {totalFailed > 0 && <span className="text-red-400">{totalFailed} failed</span>}
+                  <span>{bugs.length} bugs</span>
+                  {scanHistory.length > 0 && (
+                    <span>Last scan: {new Date(scanHistory[0].created_at).toLocaleDateString()}</span>
+                  )}
+                </div>
               </div>
             )}
           </div>
           {!isEditingProject && (
             <div className="flex gap-2">
-              <Button onClick={() => handleStartQASession()}>
-                <FiZap className="mr-1" />
-                Start QA Session
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => navigate('/architecture-flow')}>
-                <FiGitBranch className="mr-1" />
-                Architecture
+              <Button onClick={() => navigate('/qa-loop', { state: { projectId: id, websiteUrl: project.website_url } })}>
+                <FiZap className="mr-1" /> New Scan
               </Button>
               <Button variant="secondary" size="sm" onClick={() => setIsEditingProject(true)}>
-                <FiEdit2 className="mr-1" />
-                Edit
+                <FiEdit2 className="mr-1" /> Edit
               </Button>
             </div>
           )}
         </div>
       </Card>
 
-      {/* User Stories Section */}
+      {/* ===== SECTION 2: Test Results by Category ===== */}
       <div className="page-section">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="section-title">
-            User Stories ({userStories.length})
-          </h2>
-          <Button size="sm" onClick={openCreateUserStoryModal}>
-            <FiPlus className="mr-1" />
-            Add User Story
-          </Button>
-        </div>
+        <h2 className="section-title mb-4">Test Results ({totalTests})</h2>
 
-        {userStories.length === 0 ? (
+        {categories.length === 0 ? (
           <Card>
-            <EmptyState
-              icon={<FiBook />}
-              title="No user stories yet"
-              description="Add user stories to generate test cases for this project"
-              action={
-                <Button size="sm" onClick={openCreateUserStoryModal}>
-                  <FiPlus className="mr-1" />
-                  Add User Story
-                </Button>
-              }
-              tip="Tip: User stories describe what users want to accomplish, and WhyNot will generate test cases from them"
-            />
+            <div className="text-center py-8">
+              <FiZap className="h-8 w-8 text-slate-500 mx-auto mb-3" />
+              <p className="text-slate-400">No test cases yet. Run a scan to generate tests.</p>
+              <Button size="sm" className="mt-4" onClick={() => navigate('/qa-loop', { state: { projectId: id, websiteUrl: project.website_url } })}>
+                <FiZap className="mr-1" /> Start Scan
+              </Button>
+            </div>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {userStories.map((userStory) => (
-              <Card key={userStory.id} hoverable>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-green-900/30 rounded-lg mt-0.5">
-                        <FiBook className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white">{userStory.story}</p>
-                        {userStory.website_url && (
-                          <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
-                            <FiGlobe className="h-3 w-3" />
-                            <span>{userStory.website_url}</span>
-                          </div>
-                        )}
-                        {userStory.additional_context && (
-                          <p className="mt-2 text-sm text-slate-400 italic">
-                            {userStory.additional_context}
-                          </p>
-                        )}
-                        <div className="mt-2 text-xs text-slate-500">
-                          {userStory.test_case_count} test cases
-                        </div>
-                        {folders.length > 0 && (
-                          <div className="mt-3">
-                            <Select
-                              label="Folder"
-                              value={(userStory as any).folder_id || ''}
-                              onChange={(value) => handleAssignFolder(userStory.id, value || null)}
-                              options={[
-                                { value: '', label: 'No folder' },
-                                ...folders.map(f => ({ value: f.id, label: f.name }))
-                              ]}
-                              className="max-w-xs"
-                            />
-                          </div>
-                        )}
-                      </div>
+          <div className="space-y-2">
+            {categories.map(cat => {
+              const isExpanded = expandedCategories.has(cat.name);
+              const total = cat.testCases.length;
+              return (
+                <div key={cat.name} className="bg-navy-800 rounded-lg border border-navy-700 overflow-hidden">
+                  {/* Category header */}
+                  <button
+                    onClick={() => toggleCategory(cat.name)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-navy-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {isExpanded ? <FiChevronDown className="h-4 w-4 text-slate-400" /> : <FiChevronRight className="h-4 w-4 text-slate-400" />}
+                      {categoryIcon(cat.name)}
+                      <span className="font-medium text-white">{cat.name}</span>
+                      <span className="text-xs text-slate-500">({total})</span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={() => handleStartQASession(userStory)}>
-                      <FiZap className="mr-1" />
-                      Start QA Session
-                    </Button>
-                    <QuickActions
-                      actions={[
-                        {
-                          label: 'Copy User Story ID',
-                          icon: <FiCopy className="h-4 w-4" />,
-                          onClick: () => {
-                            copyToClipboard(userStory.id, {
-                              successMessage: 'User story ID copied to clipboard',
-                            });
-                          },
-                        },
-                        {
-                          label: 'Edit',
-                          icon: <FiEdit2 className="h-4 w-4" />,
-                          onClick: () => openEditUserStoryModal(userStory),
-                        },
-                        {
-                          label: 'Delete',
-                          icon: <FiTrash2 className="h-4 w-4" />,
-                          onClick: () => setDeleteConfirm({ isOpen: true, userStory }),
-                          variant: 'danger',
-                        },
-                      ]}
-                      position="bottom-right"
-                    />
-                  </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      {cat.stats.passed > 0 && <span className="text-emerald-400">{cat.stats.passed} passed</span>}
+                      {cat.stats.failed > 0 && <span className="text-red-400">{cat.stats.failed} failed</span>}
+                      {cat.stats.review > 0 && <span className="text-amber-400">{cat.stats.review} review</span>}
+                      {cat.stats.skipped > 0 && <span className="text-slate-400">{cat.stats.skipped} skipped</span>}
+                    </div>
+                  </button>
+
+                  {/* Category test cases */}
+                  {isExpanded && (
+                    <div className="border-t border-navy-700">
+                      {cat.testCases.map((tc: any) => {
+                        const testStatus = tc.last_run_status || tc.observed_result || 'review';
+                        const isTestExpanded = expandedTests.has(tc.id);
+                        const steps = tc.steps || [];
+                        const duration = tc.last_run_duration;
+                        return (
+                          <div key={tc.id} className="border-b border-navy-700/50 last:border-b-0">
+                            <button
+                              onClick={() => toggleTestExpand(tc.id)}
+                              className="w-full flex items-center justify-between px-6 py-2.5 hover:bg-navy-700/30 transition-colors text-left"
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                {statusIcon(testStatus)}
+                                <span className="text-sm text-slate-200 truncate">{tc.name}</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${statusBadge(testStatus)}`}>
+                                  {statusLabel(testStatus)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 ml-3 flex-shrink-0">
+                                {duration && (
+                                  <span className="text-xs text-slate-500 flex items-center gap-1">
+                                    <FiClock className="h-3 w-3" />
+                                    {(duration / 1000).toFixed(1)}s
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+
+                            {/* Expanded test details */}
+                            {isTestExpanded && (
+                              <div className="px-6 pb-4 pt-1 bg-navy-900/50 space-y-3">
+                                {tc.description && (
+                                  <p className="text-sm text-slate-400">{tc.description}</p>
+                                )}
+
+                                {/* Steps */}
+                                {steps.length > 0 && (
+                                  <div>
+                                    <h4 className="text-xs text-slate-500 uppercase tracking-wide mb-2">Steps ({steps.length})</h4>
+                                    <div className="space-y-1">
+                                      {steps.map((step: any, i: number) => (
+                                        <div key={i} className="text-xs text-slate-400 flex gap-2">
+                                          <span className="text-slate-600 w-5 flex-shrink-0">{i + 1}.</span>
+                                          <span><span className="text-sky-400">{step.action}</span> {step.description}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Error */}
+                                {tc.last_run_error && (
+                                  <div className="bg-red-950/30 border border-red-800/30 rounded p-2">
+                                    <span className="text-xs text-red-400">{tc.last_run_error}</span>
+                                  </div>
+                                )}
+
+                                {/* Playwright code */}
+                                {tc.playwright_code && (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <h4 className="text-xs text-slate-500 uppercase tracking-wide">Playwright Code</h4>
+                                      <button
+                                        onClick={() => copyCode(tc.playwright_code, tc.id)}
+                                        className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                                      >
+                                        {copiedId === tc.id ? <FiCheck className="h-3 w-3 text-emerald-400" /> : <FiCopy className="h-3 w-3" />}
+                                        {copiedId === tc.id ? 'Copied' : 'Copy'}
+                                      </button>
+                                    </div>
+                                    <pre className="text-xs text-slate-300 bg-navy-950 rounded p-3 overflow-x-auto max-h-48">
+                                      {tc.playwright_code}
+                                    </pre>
+                                  </div>
+                                )}
+
+                                {/* Last run date */}
+                                {tc.last_run_at && (
+                                  <div className="text-xs text-slate-500">
+                                    Last run: {new Date(tc.last_run_at).toLocaleString()}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* QA Scan Suites — auto-generated from QA Loop sessions */}
-      {qaLoopSessions.length > 0 && (
+      {/* ===== SECTION 3: Bugs ===== */}
+      {bugs.length > 0 && (
         <div className="page-section">
-          <h2 className="section-title mb-4">
-            <FiZap className="inline h-5 w-5 mr-2 text-primary-400" />
-            QA Scan Suites ({qaLoopSessions.length})
-          </h2>
-          <div className="space-y-3">
-            {qaLoopSessions.map((session) => {
-              const date = session.created_at ? new Date(session.created_at).toLocaleDateString() : '';
-              return (
-                <Card key={session.id} hoverable clickable onClick={() => navigate('/qa-loop')}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FiZap className={`h-5 w-5 ${
-                        session.status === 'running' ? 'text-sky-400' :
-                        session.status === 'completed' ? 'text-emerald-400' :
-                        session.status === 'paused' ? 'text-amber-400' :
-                        'text-slate-400'
-                      }`} />
-                      <div>
-                        <div className="font-medium text-gray-100 truncate max-w-md">
-                          QA Scan — {date} — {session.target_url}
+          <button
+            onClick={() => setShowBugs(!showBugs)}
+            className="flex items-center gap-2 w-full text-left mb-4"
+          >
+            <h2 className="section-title flex items-center gap-2">
+              <FiAlertCircle className="inline h-5 w-5 text-red-400" />
+              Bugs ({bugs.length})
+            </h2>
+            <span className="text-slate-500 text-sm ml-auto">
+              {showBugs ? '[ collapse ]' : '[ expand ]'}
+            </span>
+          </button>
+
+          {showBugs && (
+            <div className="space-y-2">
+              {bugs.map((bug: any) => {
+                const isBugExpanded = expandedBugs.has(bug.id);
+                return (
+                  <Card key={bug.id}>
+                    <button
+                      onClick={() => toggleBugExpand(bug.id)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FiAlertCircle className={`h-4 w-4 ${bug.severity === 'critical' ? 'text-red-400' : bug.severity === 'high' ? 'text-orange-400' : 'text-amber-400'}`} />
+                          <span className="text-sm text-white">{bug.title}</span>
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3">
-                          <span>{session.pages_explored} pages explored</span>
-                          <span className="text-emerald-400">{session.tests_generated} tests</span>
-                          <span className={session.bugs_found > 0 ? 'text-red-400' : 'text-slate-400'}>{session.bugs_found} bugs</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            bug.verification_status === 'verified' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'
+                          }`}>
+                            {bug.verification_status === 'verified' ? 'Verified' : 'AI Observed'}
+                          </span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            bug.severity === 'critical' ? 'bg-red-500/10 text-red-400' :
+                            bug.severity === 'high' ? 'bg-orange-500/10 text-orange-400' :
+                            'bg-amber-500/10 text-amber-400'
+                          }`}>{bug.severity}</span>
+                          <span className="text-xs text-slate-500">{new Date(bug.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {session.quality_score > 0 && (
-                        <span className={`text-sm font-semibold ${
-                          session.quality_score >= 80 ? 'text-emerald-400' :
-                          session.quality_score >= 50 ? 'text-amber-400' :
-                          'text-red-400'
-                        }`}>{session.quality_score}%</span>
-                      )}
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        session.status === 'running' ? 'bg-sky-900/200/10 text-sky-400' :
-                        session.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' :
-                        session.status === 'paused' ? 'bg-amber-500/10 text-amber-400' :
-                        'bg-slate-9000/10 text-slate-500'
-                      }`}>{session.status}</span>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                    </button>
+                    {isBugExpanded && (
+                      <div className="mt-3 pt-3 border-t border-navy-700 space-y-2">
+                        {bug.description && <p className="text-sm text-slate-400">{bug.description}</p>}
+                        {bug.page_url && <p className="text-xs text-slate-500">Page: {bug.page_url}</p>}
+                        {bug.screenshot_url && (
+                          <img src={bug.screenshot_url} alt="Bug screenshot" className="rounded max-h-48 mt-2" />
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Project Context / Knowledge Base (Feature 9) */}
+      {/* ===== SECTION 4: Scan History (collapsed) ===== */}
+      {scanHistory.length > 0 && (
+        <div className="page-section">
+          <button
+            onClick={() => setShowScanHistory(!showScanHistory)}
+            className="flex items-center gap-2 w-full text-left mb-4"
+          >
+            <h2 className="section-title flex items-center gap-2">
+              <FiPlay className="inline h-5 w-5 text-sky-400" />
+              Scan History ({scanHistory.length})
+            </h2>
+            <span className="text-slate-500 text-sm ml-auto">
+              {showScanHistory ? '[ collapse ]' : '[ expand ]'}
+            </span>
+          </button>
+
+          {showScanHistory && (
+            <div className="space-y-2">
+              {scanHistory.map((scan: any) => (
+                <Card key={scan.id}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className={`w-2 h-2 rounded-full ${
+                        scan.status === 'completed' ? 'bg-emerald-400' :
+                        scan.status === 'running' ? 'bg-sky-400' :
+                        'bg-slate-400'
+                      }`} />
+                      <span className="text-slate-300">{new Date(scan.created_at).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span>{scan.pages_explored} pages</span>
+                      <span className="text-emerald-400">{scan.tests_generated} tests</span>
+                      <span className={scan.bugs_found > 0 ? 'text-red-400' : ''}>{scan.bugs_found} bugs</span>
+                      {scan.quality_score > 0 && (
+                        <span className={scan.quality_score >= 80 ? 'text-emerald-400' : scan.quality_score >= 50 ? 'text-amber-400' : 'text-red-400'}>
+                          {scan.quality_score}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== SECTION 5: Project Notes (collapsed) ===== */}
       <div className="page-section">
         <button
-          onClick={() => setShowContextTab(!showContextTab)}
+          onClick={() => setShowNotes(!showNotes)}
           className="flex items-center gap-2 w-full text-left mb-4"
         >
           <h2 className="section-title flex items-center gap-2">
-            <FiFolder className="inline h-5 w-5 text-sky-400" />
-            Project Context / Knowledge Base
+            <FiFileText className="inline h-5 w-5 text-sky-400" />
+            Project Notes
           </h2>
           <span className="text-slate-500 text-sm ml-auto">
-            {showContextTab ? '[ collapse ]' : '[ expand ]'}
+            {showNotes ? '[ collapse ]' : '[ expand ]'}
           </span>
         </button>
 
-        {showContextTab && (
+        {showNotes && (
           <div className="space-y-4">
-            {/* Knowledge section (read-only) */}
             <Card>
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Knowledge from Previous Scans</h3>
-              {projectContext.known_pages && projectContext.known_pages.length > 0 ? (
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-xs text-slate-500 uppercase tracking-wide">Known Pages ({projectContext.known_pages.length})</span>
-                    <div className="mt-1 max-h-32 overflow-y-auto space-y-1">
-                      {projectContext.known_pages.slice(0, 20).map((p: any, i: number) => (
-                        <div key={i} className="text-xs text-slate-400 flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${p.explored ? 'bg-green-500' : 'bg-amber-500'}`} />
-                          <span className="truncate">{p.url}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {projectContext.known_bugs && projectContext.known_bugs.length > 0 && (
-                    <div>
-                      <span className="text-xs text-slate-500 uppercase tracking-wide">Known Bugs ({projectContext.known_bugs.length})</span>
-                      <div className="mt-1 max-h-24 overflow-y-auto space-y-1">
-                        {projectContext.known_bugs.slice(0, 10).map((b: any, i: number) => (
-                          <div key={i} className="text-xs text-slate-400 flex items-center gap-2">
-                            <span className={`text-xs px-1 py-0.5 rounded ${b.severity === 'critical' ? 'bg-red-900/40 text-red-400' : 'bg-amber-900/40 text-amber-400'}`}>
-                              {b.severity}
-                            </span>
-                            <span className="truncate">{b.title}</span>
-                            <span className={`text-xs ${b.status === 'open' ? 'text-red-400' : 'text-green-400'}`}>{b.status}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {projectContext.total_scans && (
-                    <div className="text-xs text-slate-500">
-                      Total scans: {projectContext.total_scans} | Last scan: {projectContext.last_scan_at ? new Date(projectContext.last_scan_at).toLocaleDateString() : 'N/A'}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">No scan data yet. Run a QA session to build context.</p>
-              )}
-            </Card>
-
-            {/* PRD / Project Notes (editable) */}
-            <Card>
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Project Notes / PRD</h3>
               <p className="text-xs text-slate-500 mb-2">
                 Add notes about your application, features, or expected behavior. The AI will use this to prioritize testing.
               </p>
               <Textarea
                 value={prdDraft}
                 onChange={e => setPrdDraft(e.target.value)}
-                placeholder="Describe your application, key features, business rules, or areas of concern..."
+                placeholder={'Example:\n- Our app has a checkout flow at /checkout\n- Login requires email + password\n- Admin panel is at /admin (test with admin@example.com)\n- Known issue: image upload fails on Safari'}
                 rows={6}
               />
               <div className="flex items-center gap-2 mt-3">
@@ -705,17 +652,27 @@ export const ProjectDetailPage: React.FC = () => {
               </div>
             </Card>
 
+            {/* Context info */}
+            {projectContext.known_pages && projectContext.known_pages.length > 0 && (
+              <Card>
+                <h3 className="text-sm font-semibold text-slate-300 mb-3">Knowledge from Previous Scans</h3>
+                <div className="space-y-2">
+                  <div className="text-xs text-slate-500">
+                    {projectContext.known_pages.length} pages known |
+                    {projectContext.known_bugs?.length || 0} bugs tracked |
+                    {projectContext.total_scans || 0} total scans
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Reset Context */}
             <div className="flex items-center gap-3">
               {showResetConfirm ? (
                 <div className="flex items-center gap-2 bg-red-950/30 border border-red-800/40 rounded-lg px-3 py-2">
                   <span className="text-xs text-red-400">Clear all scan knowledge? This cannot be undone.</span>
-                  <Button size="sm" variant="danger" onClick={handleResetContext}>
-                    Yes, Reset
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setShowResetConfirm(false)}>
-                    Cancel
-                  </Button>
+                  <Button size="sm" variant="danger" onClick={handleResetContext}>Yes, Reset</Button>
+                  <Button size="sm" variant="secondary" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
                 </div>
               ) : (
                 <Button size="sm" variant="secondary" onClick={() => setShowResetConfirm(true)}>
@@ -726,74 +683,6 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* User Story Modal */}
-      <Modal
-        isOpen={isUserStoryModalOpen}
-        onClose={closeUserStoryModal}
-        title={editingUserStory ? 'Edit User Story' : 'Add User Story'}
-        size="lg"
-      >
-        <div className="space-y-4">
-          <Textarea
-            label="User Story"
-            placeholder="As a user, I want to..."
-            value={userStoryFormData.story}
-            onChange={(e) =>
-              setUserStoryFormData({ ...userStoryFormData, story: e.target.value })
-            }
-            error={userStoryFormErrors.story}
-            rows={4}
-            required
-          />
-          <Input
-            label="Website URL"
-            type="url"
-            placeholder={project?.website_url || 'https://example.com'}
-            value={userStoryFormData.website_url}
-            onChange={(e) =>
-              setUserStoryFormData({ ...userStoryFormData, website_url: e.target.value })
-            }
-            error={userStoryFormErrors.website_url}
-          />
-          <Textarea
-            label="Additional Context"
-            placeholder="Any additional context or requirements (optional)"
-            value={userStoryFormData.additional_context}
-            onChange={(e) =>
-              setUserStoryFormData({
-                ...userStoryFormData,
-                additional_context: e.target.value,
-              })
-            }
-            rows={2}
-          />
-        </div>
-        <ModalFooter>
-          <Button variant="secondary" onClick={closeUserStoryModal} disabled={submittingUserStory}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmitUserStory} isLoading={submittingUserStory}>
-            {editingUserStory ? 'Save Changes' : 'Add User Story'}
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Delete Confirmation */}
-      <ConfirmDialog
-        isOpen={deleteConfirm.isOpen}
-        title="Delete User Story"
-        message="Are you sure you want to delete this user story? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={handleDeleteUserStory}
-        onCancel={() => setDeleteConfirm({ isOpen: false, userStory: null })}
-      />
     </div>
   );
 };
-
-
-
-

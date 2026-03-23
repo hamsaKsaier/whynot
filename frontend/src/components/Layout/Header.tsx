@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
       'qa-loop': 'QA Loop',
       'test-results': 'Test Results',
       'settings': 'Settings',
-      'architecture-flow': 'Architecture',
+      'architecture-flow': 'All Tests',
     };
 
     const pathMap: { [key: string]: string } = {

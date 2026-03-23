@@ -131,12 +131,27 @@ export class RetestExecutor {
       // Run test cases in parallel batches using maxConcurrentTests (4.8)
       const maxConcurrent = DEFAULT_CONFIG.parallel.maxConcurrentTests || 2;
 
+      // Check if credentials are available for auth-required tests
+      const hasCredentials = !!(process.env.TEST_USERNAME && process.env.TEST_PASSWORD);
+
       /** Execute one test case: run → emit result → persist to DB */
       const runOne = async (testCase: QALoopTestCase, index: number): Promise<TestRunResult> => {
         emitToSession(this.sessionId, {
           type: 'progress',
           data: { phase: 'testing', current: index + 1, total: testCases.length, testCase: testCase.name }
         });
+
+        // Skip auth-required tests when no credentials are provided
+        if ((testCase as any).requires_auth && !hasCredentials) {
+          return {
+            testCaseId: testCase.id,
+            testCaseName: testCase.name,
+            status: 'skipped' as any,
+            duration: 0,
+            failureReason: 'Requires authentication credentials (not provided)',
+            failureType: 'skipped',
+          };
+        }
 
         const result = await this.executeTestCase(testCase);
 

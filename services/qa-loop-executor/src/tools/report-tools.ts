@@ -21,6 +21,25 @@ export interface TestCaseInput {
   source_page_url?: string;
   observed_result?: 'pass' | 'fail';
   playwright_code?: string;
+  feature_category?: string;
+  requires_auth?: boolean;
+}
+
+/**
+ * Auto-categorize a test case name into a feature area.
+ */
+export function categorizeTestCase(name: string): string {
+  const n = name.toLowerCase();
+  if (/login|password|credentials|auth|forgot|register|sign[\s_-]?(up|in|out)|logout/i.test(n)) return 'Authentication';
+  if (/dashboard/i.test(n)) return 'Dashboard';
+  if (/menu|nav|sidebar|header|footer|breadcrumb/i.test(n)) return 'Navigation';
+  if (/profile|account|user/i.test(n)) return 'Profile';
+  if (/settings|config|preference/i.test(n)) return 'Settings';
+  if (/search|filter|sort/i.test(n)) return 'Search';
+  if (/checkout|cart|payment|order/i.test(n)) return 'Checkout';
+  if (/admin|manage|moderator/i.test(n)) return 'Admin';
+  if (/form|input|submit|validation/i.test(n)) return 'Forms';
+  return 'General';
 }
 
 export interface BugInput {
@@ -54,6 +73,9 @@ export class ReportTools {
         return { error: 'Test case must have at least one step' };
       }
 
+      // Determine feature category: use Claude's suggestion, fall back to auto-categorize from name
+      const featureCategory = input.feature_category || categorizeTestCase(input.name);
+
       const testCase = await this.repository.addTestCase(this.sessionId, {
         name: input.name,
         description: input.description,
@@ -64,7 +86,9 @@ export class ReportTools {
         sourcePageUrl: input.source_page_url,
         source: 'exploration',
         observedResult: input.observed_result,
-        playwrightCode: input.playwright_code
+        playwrightCode: input.playwright_code,
+        featureCategory,
+        requiresAuth: input.requires_auth || false
       });
 
       // Emit event for UI update

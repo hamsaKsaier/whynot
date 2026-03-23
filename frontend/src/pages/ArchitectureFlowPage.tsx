@@ -601,7 +601,7 @@ export const ArchitectureFlowPage: React.FC = () => {
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-700 bg-slate-800 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Architecture Flow</h1>
+          <h1 className="text-2xl font-bold text-white">All Tests</h1>
           <p className="text-sm text-slate-400 mt-0.5">
             Visual map of your testing hierarchy
           </p>

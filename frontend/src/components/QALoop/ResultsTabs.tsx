@@ -136,14 +136,14 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
             </div>
           </div>
 
-          {/* View Architecture Flow button */}
+          {/* View All Tests button */}
           {projectId && testCases.length > 0 && (
             <div className="mt-4 pt-3 border-t border-slate-700/50">
               <button
                 onClick={() => navigate(`/projects/${projectId}`)}
                 className="flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 transition-colors"
               >
-                View Architecture Flow <FiArrowRight size={14} />
+                View All Tests <FiArrowRight size={14} />
               </button>
             </div>
           )}

@@ -200,18 +200,18 @@ export const QALoopPage: React.FC = () => {
       sourceSessionId: useExisting && existingSession ? existingSession.id : undefined,
       projectId: selectedProjectId || undefined,
     });
-    // Auto-scroll to the live monitor (cinema mode) after session starts.
-    // Cinema mode replaces the page, so we retry until the element exists.
+    // Auto-scroll to the live monitor / cinema mode after session starts.
+    // Retry until the element exists since cinema mode replaces the page.
     const scrollToLiveMonitor = (retries = 0) => {
-      const el = document.getElementById('session-detail');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else if (retries < 10) {
-        setTimeout(() => scrollToLiveMonitor(retries + 1), 200);
+      const target = document.getElementById('session-detail')
+        || document.querySelector('[class*="cinema"], [class*="live-monitor"], [class*="session-detail"]');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (retries < 15) {
+        setTimeout(() => scrollToLiveMonitor(retries + 1), 300);
       }
     };
-    setTimeout(() => scrollToLiveMonitor(), 100);
+    setTimeout(() => scrollToLiveMonitor(), 500);
   }, [
     targetUrl, qualityThreshold, maxIterations, documentContext,
     useLogin, loginCredentials, testPriority, useExisting, existingSession,

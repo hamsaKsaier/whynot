@@ -710,18 +710,24 @@ app.post('/api/projects', requireFeatureLimit('max_projects', async (req) => {
   res.status(201).json({ success: true, project });
 }));
 
-// Get project by ID
+// Get project by ID (scoped to workspace)
 app.get('/api/projects/:id', asyncHandler(async (req, res) => {
-  const project = await projectRepository.findByIdWithStats(req.params.id);
+  const project = await projectRepository.findByIdWithStats(req.params.id, req.workspaceId);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
   res.json({ project });
 }));
 
-// Update project
+// Update project (verify ownership)
 app.put('/api/projects/:id', asyncHandler(async (req, res) => {
   const { name, description, website_url } = req.body;
+
+  // Verify ownership
+  const existing = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
+  if (!existing) {
+    throw createError('Project not found', 404, 'NOT_FOUND');
+  }
 
   logger.info('Updating project', { projectId: req.params.id });
   const updated = await projectRepository.update(req.params.id, {
@@ -737,11 +743,11 @@ app.put('/api/projects/:id', asyncHandler(async (req, res) => {
   res.json({ success: true, project: updated });
 }));
 
-// Delete project
+// Delete project (verify ownership)
 app.delete('/api/projects/:id', asyncHandler(async (req, res) => {
   logger.info('Deleting project', { projectId: req.params.id });
 
-  const project = await projectRepository.findById(req.params.id);
+  const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -752,9 +758,9 @@ app.delete('/api/projects/:id', asyncHandler(async (req, res) => {
 
 // ==================== PROJECT CONTEXT ENDPOINTS (Feature 9) ====================
 
-// Get project context
+// Get project context (verify ownership)
 app.get('/api/projects/:id/context', asyncHandler(async (req, res) => {
-  const project = await projectRepository.findById(req.params.id);
+  const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -764,9 +770,9 @@ app.get('/api/projects/:id/context', asyncHandler(async (req, res) => {
   });
 }));
 
-// Update project PRD
+// Update project PRD (verify ownership)
 app.put('/api/projects/:id/prd', asyncHandler(async (req, res) => {
-  const project = await projectRepository.findById(req.params.id);
+  const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -775,9 +781,9 @@ app.put('/api/projects/:id/prd', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
-// Reset project context
+// Reset project context (verify ownership)
 app.delete('/api/projects/:id/context', asyncHandler(async (req, res) => {
-  const project = await projectRepository.findById(req.params.id);
+  const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -787,14 +793,14 @@ app.delete('/api/projects/:id/context', asyncHandler(async (req, res) => {
 
 // ==================== USER STORY ENDPOINTS ====================
 
-// List user stories for a project
+// List user stories for a project (verify ownership)
 app.get('/api/projects/:id/user-stories', asyncHandler(async (req, res) => {
   const projectId = req.params.id;
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
 
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
+  // Verify project ownership
+  const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -804,13 +810,13 @@ app.get('/api/projects/:id/user-stories', asyncHandler(async (req, res) => {
   res.json({ user_stories: userStories, offset, limit, total });
 }));
 
-// Create user story in a project
+// Create user story in a project (verify ownership)
 app.post('/api/projects/:id/user-stories', validate(schemas.createUserStory), asyncHandler(async (req, res) => {
   const projectId = req.params.id;
   const { story, website_url, additional_context } = req.body;
 
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
+  // Verify project ownership
+  const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -1040,8 +1046,8 @@ app.get('/api/projects/:projectId/folders', asyncHandler(async (req, res) => {
 
   logger.info('Fetching folders for project', { projectId });
 
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
+  // Verify project ownership
+  const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -1061,8 +1067,8 @@ app.post('/api/projects/:projectId/folders', asyncHandler(async (req, res) => {
 
   logger.info('Creating folder', { projectId, name });
 
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
+  // Verify project ownership
+  const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
     throw createError('Project not found', 404, 'NOT_FOUND');
   }
@@ -1212,12 +1218,13 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
   try {
     // ── Batch fetch everything in 5 queries instead of N*M queries (4.5) ──────
 
-    // 1. All projects
+    // 1. All projects (scoped to workspace)
     const projects = await query<any>(`
       SELECT id, name, description, website_url, created_at, updated_at
       FROM projects
+      WHERE workspace_id = $1
       ORDER BY created_at DESC
-    `);
+    `, [req.workspaceId]);
 
     const flowData: any[] = [];
 
@@ -1453,6 +1460,215 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
   }
 }));
 
+// ==================== PROJECT TEST CASES BY CATEGORY ====================
+
+// Get test cases grouped by feature category for a project
+app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (req, res) => {
+  const projectId = req.params.projectId;
+
+  // Verify project ownership
+  const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
+  if (!project) {
+    throw createError('Project not found', 404, 'NOT_FOUND');
+  }
+
+  // Get all test cases for this project (from test_cases table linked via test_suite → user_story → project)
+  const testCases = await query<any>(`
+    SELECT tc.id, tc.name, tc.description, tc.steps, tc.metadata, tc.playwright_code,
+           COALESCE(tc.feature_category, 'General') as feature_category,
+           COALESCE(tc.requires_auth, false) as requires_auth,
+           tc.created_at, tc.updated_at,
+           e.status as last_run_status,
+           e.total_duration_ms as last_run_duration,
+           e.completed_at as last_run_at,
+           e.error as last_run_error
+    FROM test_cases tc
+    LEFT JOIN LATERAL (
+      SELECT status, total_duration_ms, completed_at, error
+      FROM executions
+      WHERE test_case_id = tc.id
+      ORDER BY started_at DESC
+      LIMIT 1
+    ) e ON true
+    WHERE tc.user_story_id IN (
+      SELECT us.id FROM user_stories us WHERE us.project_id = $1
+    )
+    ORDER BY tc.feature_category, tc.name
+  `, [projectId]);
+
+  // Also get QA loop test cases directly linked to this project's sessions
+  const qaTestCases = await query<any>(`
+    SELECT q.id, q.name, q.description, q.steps, q.playwright_code,
+           COALESCE(q.feature_category, 'General') as feature_category,
+           COALESCE(q.requires_auth, false) as requires_auth,
+           q.last_run_status, q.observed_result,
+           q.created_at, q.updated_at,
+           q.standard_test_case_id
+    FROM qa_loop_test_cases q
+    JOIN qa_loop_sessions s ON q.session_id = s.id
+    WHERE s.project_id = $1
+    AND q.standard_test_case_id IS NULL
+    ORDER BY q.feature_category, q.name
+  `, [projectId]);
+
+  // Get bugs linked to this project
+  const bugs = await query<any>(`
+    SELECT b.id, b.title, b.description, b.severity, b.category, b.page_url,
+           b.verification_status, b.regression_test_id, b.discovered_by_test_case_id,
+           b.created_at, b.screenshot_url
+    FROM qa_loop_bugs b
+    JOIN qa_loop_sessions s ON b.session_id = s.id
+    WHERE s.project_id = $1
+    ORDER BY b.created_at DESC
+  `, [projectId]);
+
+  // Get scan history
+  const scanHistory = await query<any>(`
+    SELECT id, target_url, status, pages_explored, tests_generated, bugs_found,
+           quality_score, created_at, completed_at
+    FROM qa_loop_sessions
+    WHERE project_id = $1
+    ORDER BY created_at DESC
+    LIMIT 20
+  `, [projectId]);
+
+  // Combine test cases and group by category
+  const allTests = [
+    ...testCases.map((tc: any) => ({
+      ...tc,
+      source: 'test_cases',
+      steps: typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps,
+      metadata: typeof tc.metadata === 'string' ? JSON.parse(tc.metadata) : (tc.metadata || {}),
+    })),
+    ...qaTestCases.map((tc: any) => ({
+      ...tc,
+      source: 'qa_loop',
+      steps: typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps,
+    })),
+  ];
+
+  // Group by feature_category
+  const categoryMap: Record<string, { testCases: any[]; stats: { passed: number; failed: number; review: number; skipped: number } }> = {};
+  for (const tc of allTests) {
+    const cat = tc.feature_category || 'General';
+    if (!categoryMap[cat]) {
+      categoryMap[cat] = { testCases: [], stats: { passed: 0, failed: 0, review: 0, skipped: 0 } };
+    }
+    categoryMap[cat].testCases.push(tc);
+
+    const status = tc.last_run_status || tc.observed_result || 'review';
+    if (status === 'completed' || status === 'pass' || status === 'passed') categoryMap[cat].stats.passed++;
+    else if (status === 'failed' || status === 'fail') categoryMap[cat].stats.failed++;
+    else if (status === 'skipped') categoryMap[cat].stats.skipped++;
+    else categoryMap[cat].stats.review++;
+  }
+
+  const categories = Object.entries(categoryMap)
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  res.json({ categories, bugs, scanHistory });
+}));
+
+// Run all tests for a project
+app.post('/api/projects/:projectId/run-all-tests', asyncHandler(async (req, res) => {
+  const projectId = req.params.projectId;
+  const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
+  if (!project) throw createError('Project not found', 404, 'NOT_FOUND');
+
+  // Fetch all test cases for this project
+  const testCases = await query<any>(`
+    SELECT tc.id, tc.name, tc.playwright_code, tc.steps, tc.requires_auth
+    FROM test_cases tc
+    WHERE tc.user_story_id IN (SELECT us.id FROM user_stories us WHERE us.project_id = $1)
+    ORDER BY tc.name
+  `, [projectId]);
+
+  if (testCases.length === 0) {
+    return res.json({ success: true, results: [], message: 'No test cases to run' });
+  }
+
+  // Queue execution through the test executor service
+  const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3002';
+  const results: any[] = [];
+
+  for (const tc of testCases) {
+    try {
+      if (tc.playwright_code) {
+        const response = await fetch(`${testExecutorUrl}/api/run-playwright`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playwrightCode: tc.playwright_code, timeoutMs: 30000 }),
+        });
+        const data = await response.json();
+        results.push({ testCaseId: tc.id, name: tc.name, status: data.passed ? 'passed' : 'failed', error: data.error });
+      } else {
+        const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
+        const response = await fetch(`${testExecutorUrl}/api/execute-test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ testCase: { id: tc.id, name: tc.name, steps }, headless: true }),
+        });
+        const data = await response.json();
+        results.push({ testCaseId: tc.id, name: tc.name, status: data.status === 'completed' && data.allStepsPassed ? 'passed' : 'failed', error: data.error });
+      }
+    } catch (err: any) {
+      results.push({ testCaseId: tc.id, name: tc.name, status: 'error', error: err.message });
+    }
+  }
+
+  res.json({ success: true, results });
+}));
+
+// Run tests for a specific category in a project
+app.post('/api/projects/:projectId/run-category/:category', asyncHandler(async (req, res) => {
+  const { projectId, category } = req.params;
+  const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
+  if (!project) throw createError('Project not found', 404, 'NOT_FOUND');
+
+  const testCases = await query<any>(`
+    SELECT tc.id, tc.name, tc.playwright_code, tc.steps, tc.requires_auth
+    FROM test_cases tc
+    WHERE tc.user_story_id IN (SELECT us.id FROM user_stories us WHERE us.project_id = $1)
+    AND COALESCE(tc.feature_category, 'General') = $2
+    ORDER BY tc.name
+  `, [projectId, category]);
+
+  if (testCases.length === 0) {
+    return res.json({ success: true, results: [], message: 'No test cases in this category' });
+  }
+
+  const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3002';
+  const results: any[] = [];
+
+  for (const tc of testCases) {
+    try {
+      if (tc.playwright_code) {
+        const response = await fetch(`${testExecutorUrl}/api/run-playwright`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playwrightCode: tc.playwright_code, timeoutMs: 30000 }),
+        });
+        const data = await response.json();
+        results.push({ testCaseId: tc.id, name: tc.name, status: data.passed ? 'passed' : 'failed', error: data.error });
+      } else {
+        const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
+        const response = await fetch(`${testExecutorUrl}/api/execute-test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ testCase: { id: tc.id, name: tc.name, steps }, headless: true }),
+        });
+        const data = await response.json();
+        results.push({ testCaseId: tc.id, name: tc.name, status: data.status === 'completed' && data.allStepsPassed ? 'passed' : 'failed', error: data.error });
+      }
+    } catch (err: any) {
+      results.push({ testCaseId: tc.id, name: tc.name, status: 'error', error: err.message });
+    }
+  }
+
+  res.json({ success: true, results });
+}));
+
 // ==================== VISUAL REGRESSION ENDPOINTS ====================
 
 // Get baselines for a test case
@@ -1508,18 +1724,22 @@ app.post('/api/test-cases/:testCaseId/baselines', asyncHandler(async (req, res) 
   const screenshotBuffer = fs.readFileSync(screenshot_path);
   const screenshotHash = crypto.createHash('sha256').update(screenshotBuffer).digest('hex');
 
-  // Create baseline
-  const baseline = await visualRegressionRepository.createBaseline({
-    test_case_id: testCaseId,
-    step_id,
-    screenshot_path,
-    screenshot_hash: screenshotHash,
-    execution_id: execution_id || null,
-    is_locked: false,
-    created_by: 'system'
-  });
-
-  res.status(201).json({ success: true, baseline });
+  // Create baseline (non-critical — wrap in try/catch)
+  try {
+    const baseline = await visualRegressionRepository.createBaseline({
+      test_case_id: testCaseId,
+      step_id,
+      screenshot_path,
+      screenshot_hash: screenshotHash,
+      execution_id: execution_id || null,
+      is_locked: false,
+      created_by: 'system'
+    });
+    res.status(201).json({ success: true, baseline });
+  } catch (baselineErr: any) {
+    logger.warn('Failed to create visual baseline (non-critical)', { error: baselineErr.message });
+    res.status(201).json({ success: true, baseline: null, warning: 'Baseline creation failed but is non-critical' });
+  }
 }));
 
 // Lock/unlock baseline

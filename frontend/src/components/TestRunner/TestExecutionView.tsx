@@ -173,10 +173,8 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
       // Notify parent component of update
       if (onTestCaseUpdated) {
         onTestCaseUpdated(updated);
-      } else {
-        // Fallback: reload page if no callback provided
-        window.location.reload();
       }
+      // No fallback page reload — UI updates via state
     } catch (error: any) {
       console.error('Failed to update test case:', error);
       alert(`Failed to update test case: ${error.message}`);

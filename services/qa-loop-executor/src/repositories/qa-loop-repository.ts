@@ -417,14 +417,16 @@ export class QALoopRepository {
     sourcePageUrl?: string;
     observedResult?: 'pass' | 'fail';
     playwrightCode?: string;
+    featureCategory?: string;
+    requiresAuth?: boolean;
   }): Promise<QALoopTestCase> {
     const id = uuidv4();
     const query = `
       INSERT INTO qa_loop_test_cases (
         id, session_id, project_id, name, description, category,
         priority, risk_level, steps, selectors, source, source_page_url,
-        observed_result, playwright_code
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        observed_result, playwright_code, feature_category, requires_auth
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
 
@@ -442,7 +444,9 @@ export class QALoopRepository {
       testCase.source || 'exploration',
       testCase.sourcePageUrl || null,
       testCase.observedResult || null,
-      testCase.playwrightCode || null
+      testCase.playwrightCode || null,
+      testCase.featureCategory || 'General',
+      testCase.requiresAuth || false
     ]);
 
     logger.info('Added test case', { sessionId, testCaseId: id, name: testCase.name, observedResult: testCase.observedResult });
@@ -1068,7 +1072,7 @@ export class QALoopRepository {
       // Sync QA Loop test cases into the standard test_cases table
       // so Architecture Flow (which reads from test_cases) can display them.
       const insertResult = await this.pool.query(
-        `INSERT INTO test_cases (id, name, description, website_url, user_story, steps, metadata, test_suite_id, user_story_id, workspace_id, playwright_code, created_at, updated_at)
+        `INSERT INTO test_cases (id, name, description, website_url, user_story, steps, metadata, test_suite_id, user_story_id, workspace_id, playwright_code, feature_category, requires_auth, created_at, updated_at)
          SELECT
            gen_random_uuid(),
            q.name,
@@ -1088,6 +1092,8 @@ export class QALoopRepository {
            $4,
            $5,
            q.playwright_code,
+           COALESCE(q.feature_category, 'General'),
+           COALESCE(q.requires_auth, false),
            q.created_at,
            q.updated_at
          FROM qa_loop_test_cases q

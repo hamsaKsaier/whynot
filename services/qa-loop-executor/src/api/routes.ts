@@ -272,6 +272,11 @@ router.post('/api/sessions/:id/pause', async (req: Request, res: Response) => {
       logger.info(`Test suite created with ${testCases.length} test cases`, { sessionId: id, testSuiteId });
     }
 
+    // Update project context with discoveries from this session
+    await qaLoopRepository.updateProjectContextFromSession(id).catch((err) => {
+      logger.warn('Failed to update project context on pause', { sessionId: id, error: err.message });
+    });
+
     logger.info('QA Loop session paused', { sessionId: id });
     res.json({ success: true, status: 'paused' });
   } catch (error: any) {
@@ -366,6 +371,11 @@ router.post('/api/sessions/:id/stop', async (req: Request, res: Response) => {
     // Auto-create test suite from whatever was discovered before the stop
     await qaLoopRepository.createTestSuiteFromSession(id).catch((err) => {
       logger.warn('Failed to create test suite on stop', { sessionId: id, error: err.message });
+    });
+
+    // Update project context with discoveries from this session
+    await qaLoopRepository.updateProjectContextFromSession(id).catch((err) => {
+      logger.warn('Failed to update project context on stop', { sessionId: id, error: err.message });
     });
 
     logger.info('QA Loop session stopped', { sessionId: id });

@@ -517,6 +517,13 @@ Step types for test cases: navigate, click, type, select_option, assert_text_vis
 Every test case MUST include at least one assertion that verifies actual UI feedback.
 Use the EXACT text/selectors you observed in browser_snapshot() — never guess or assume.
 
+═══ FEATURE CATEGORY (MANDATORY) ═══
+For each test case you generate, assign a feature_category field — the feature area it belongs to.
+Common categories: Authentication, Dashboard, Navigation, Profile, Settings, Forms, Search, Checkout, Admin.
+Use the page context to determine the appropriate category. Include the category in the test case data you save.
+
+Also set requires_auth to true if the test requires authentication (logged-in functionality).
+
 ═══ OBSERVED RESULT TRACKING (MANDATORY) ═══
 When saving test cases with save_test_case(), ALWAYS include the observed_result field:
 - "pass" — you performed the steps and the assertions matched what you saw on the page
@@ -567,6 +574,9 @@ When generating Playwright code, use SPECIFIC selectors that match exactly ONE e
 - Prefer: page.getByRole('button', { name: 'Login' }) or page.getByText('Submit')
 - Avoid: page.locator('.menu') or page.locator('div.container') — these often match multiple elements
 - Use .first() if you know there are multiple matches: page.locator('.item').first()
+- CRITICAL: If a selector might match multiple elements, ALWAYS append .first() or use a more specific selector.
+  Strict mode violations (multiple matches) cause test failures. Use page.getByRole() with exact name matching
+  to avoid ambiguity. Example: page.getByRole('link', { name: 'Login', exact: true })
 
 Example playwright_code format:
 \`\`\`
@@ -603,6 +613,12 @@ REMEMBER:
     }
 
     // Add project context / knowledge base (Feature 9)
+    logger.info('Building system prompt — project context check', {
+      sessionId: this.sessionId,
+      hasProjectContext: !!(this.config.projectContext && Object.keys(this.config.projectContext).length > 0),
+      hasUserPrd: !!this.config.userPrd,
+      contextKeys: this.config.projectContext ? Object.keys(this.config.projectContext) : [],
+    });
     if (this.config.projectContext && Object.keys(this.config.projectContext).length > 0) {
       const ctx = this.config.projectContext;
       let projectContextBlock = '\n\n═══ PROJECT KNOWLEDGE BASE ═══\n';

@@ -279,6 +279,24 @@ export const resetProjectContext = async (projectId: string): Promise<void> => {
   await apiClient.delete(`/projects/${projectId}/context`);
 };
 
+// Get test cases grouped by category for a project
+export interface CategoryGroup {
+  name: string;
+  testCases: any[];
+  stats: { passed: number; failed: number; review: number; skipped: number };
+}
+
+export interface ProjectTestCasesByCategory {
+  categories: CategoryGroup[];
+  bugs: any[];
+  scanHistory: any[];
+}
+
+export const getProjectTestCasesByCategory = async (projectId: string): Promise<ProjectTestCasesByCategory> => {
+  const response = await apiClient.get<ProjectTestCasesByCategory>(`/projects/${projectId}/test-cases-by-category`);
+  return response.data;
+};
+
 // ==================== USER STORY API ====================
 
 export interface UserStoryWithStats extends UserStory {
