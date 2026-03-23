@@ -114,8 +114,8 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
               <div className="text-xl font-bold text-white">{bugs.length}</div>
               {bugs.length > 0 && (
                 <div className="text-xs text-slate-500 mt-0.5">
-                  {verifiedBugs > 0 && <span className="text-green-400">{verifiedBugs} verified</span>}
-                  {potentialBugs > 0 && <span className="text-amber-400">{verifiedBugs > 0 ? ', ' : ''}{potentialBugs} potential</span>}
+                  {verifiedBugs > 0 && <span className="text-green-400">{verifiedBugs} Verified</span>}
+                  {potentialBugs > 0 && <span className="text-amber-400">{verifiedBugs > 0 ? ', ' : ''}{potentialBugs} AI-Observed</span>}
                   {(critical > 0 || high > 0) && (
                     <span className="text-red-400 ml-1">
                       ({critical > 0 ? `${critical} critical` : ''}{critical > 0 && high > 0 ? ', ' : ''}{high > 0 ? `${high} high` : ''})

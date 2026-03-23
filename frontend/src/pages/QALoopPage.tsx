@@ -19,7 +19,7 @@ import {
 } from 'react-icons/fi';
 
 import { checkExistingSession } from '../services/qa-loop-api';
-import { getProjects, ProjectWithStats } from '../services/api';
+import { getProjects, getProjectContext, ProjectWithStats } from '../services/api';
 import { useSessionManager, StartSessionParams } from '../hooks/useSessionManager';
 
 import {
@@ -81,6 +81,8 @@ export const QALoopPage: React.FC = () => {
   const [testPriority,  setTestPriority]  = useState<'functional_first' | 'balanced' | 'security_first'>('functional_first');
   const [existingSession, setExistingSession] = useState<ExistingSessionInfo | null>(null);
   const [useExisting,   setUseExisting]   = useState(false);
+  const [useProjectContext, setUseProjectContext] = useState(true);
+  const [projectContextInfo, setProjectContextInfo] = useState<string | null>(null);
 
   // ── Project state ───────────────────────────────────────────────────────────
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
@@ -89,6 +91,24 @@ export const QALoopPage: React.FC = () => {
   useEffect(() => {
     getProjects().then(res => setProjects(res.projects)).catch(() => {});
   }, []);
+
+  // Load project context info when project changes (Feature 9)
+  useEffect(() => {
+    if (!selectedProjectId) { setProjectContextInfo(null); return; }
+    getProjectContext(selectedProjectId)
+      .then(res => {
+        const ctx = res.context || {};
+        const pages = ctx.known_pages?.length || 0;
+        const bugs = ctx.known_bugs?.length || 0;
+        const scans = ctx.total_scans || 0;
+        if (pages > 0 || bugs > 0) {
+          setProjectContextInfo(`AI knows ${pages} pages, ${bugs} bugs from ${scans} previous scans`);
+        } else {
+          setProjectContextInfo(null);
+        }
+      })
+      .catch(() => setProjectContextInfo(null));
+  }, [selectedProjectId]);
 
   // ── Cinema sidebar toggle (collapsed by default when session is running) ───
   const [showSidebar, setShowSidebar] = useState(false);
@@ -105,7 +125,7 @@ export const QALoopPage: React.FC = () => {
   const [wsErrorDismissed, setWsErrorDismissed] = useState(false);
 
   // ── UI-toggle state ────────────────────────────────────────────────────────
-  const [showAdvanced,          setShowAdvanced]          = useState(true);
+  const [showAdvanced,          setShowAdvanced]          = useState(false);
   const [showOnboarding,        setShowOnboarding]        = useState(
     () => !localStorage.getItem('qa-loop-onboarding-seen')
   );
@@ -208,6 +228,9 @@ export const QALoopPage: React.FC = () => {
     onToggle: handleToggleDocument,
     isStarting,
     onStart: onStartClick,
+    useProjectContext,
+    setUseProjectContext,
+    projectContextInfo,
   };
 
   const sessionListProps = {

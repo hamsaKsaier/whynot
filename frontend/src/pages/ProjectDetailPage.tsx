@@ -33,6 +33,9 @@ import {
   deleteUserStory,
   getFolders,
   assignUserStoryToFolder,
+  getProjectContext,
+  updateProjectPrd,
+  resetProjectContext,
   ProjectWithStats,
   UserStoryWithStats,
   FolderWithStats,
@@ -63,6 +66,14 @@ export const ProjectDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [qaLoopSessions, setQALoopSessions] = useState<QALoopSession[]>([]);
+
+  // Project Context state (Feature 9)
+  const [projectContext, setProjectContext] = useState<any>({});
+  const [userPrd, setUserPrd] = useState('');
+  const [prdDraft, setPrdDraft] = useState('');
+  const [savingPrd, setSavingPrd] = useState(false);
+  const [showContextTab, setShowContextTab] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Project edit state
   const [isEditingProject, setIsEditingProject] = useState(false);
@@ -125,6 +136,14 @@ export const ProjectDetailPage: React.FC = () => {
       setUserStories(userStoriesResponse.user_stories);
       setFolders(foldersResponse.folders || []);
       setQALoopSessions(qaSessionsResponse.sessions || []);
+
+      // Load project context (Feature 9)
+      try {
+        const ctxResponse = await getProjectContext(id!);
+        setProjectContext(ctxResponse.context || {});
+        setUserPrd(ctxResponse.user_prd || '');
+        setPrdDraft(ctxResponse.user_prd || '');
+      } catch { /* context column may not exist yet */ }
 
       // Initialize edit form
       setProjectName(projectResponse.project.name);
@@ -287,6 +306,30 @@ export const ProjectDetailPage: React.FC = () => {
         userStoryContext: userStory?.story,
       },
     });
+  };
+
+  const handleSavePrd = async () => {
+    if (!id) return;
+    setSavingPrd(true);
+    try {
+      await updateProjectPrd(id, prdDraft);
+      setUserPrd(prdDraft);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save PRD');
+    } finally {
+      setSavingPrd(false);
+    }
+  };
+
+  const handleResetContext = async () => {
+    if (!id) return;
+    try {
+      await resetProjectContext(id);
+      setProjectContext({});
+      setShowResetConfirm(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to reset context');
+    }
   };
 
   if (loading) {
@@ -577,6 +620,112 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Project Context / Knowledge Base (Feature 9) */}
+      <div className="page-section">
+        <button
+          onClick={() => setShowContextTab(!showContextTab)}
+          className="flex items-center gap-2 w-full text-left mb-4"
+        >
+          <h2 className="section-title flex items-center gap-2">
+            <FiFolder className="inline h-5 w-5 text-sky-400" />
+            Project Context / Knowledge Base
+          </h2>
+          <span className="text-slate-500 text-sm ml-auto">
+            {showContextTab ? '[ collapse ]' : '[ expand ]'}
+          </span>
+        </button>
+
+        {showContextTab && (
+          <div className="space-y-4">
+            {/* Knowledge section (read-only) */}
+            <Card>
+              <h3 className="text-sm font-semibold text-slate-300 mb-3">Knowledge from Previous Scans</h3>
+              {projectContext.known_pages && projectContext.known_pages.length > 0 ? (
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-xs text-slate-500 uppercase tracking-wide">Known Pages ({projectContext.known_pages.length})</span>
+                    <div className="mt-1 max-h-32 overflow-y-auto space-y-1">
+                      {projectContext.known_pages.slice(0, 20).map((p: any, i: number) => (
+                        <div key={i} className="text-xs text-slate-400 flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${p.explored ? 'bg-green-500' : 'bg-amber-500'}`} />
+                          <span className="truncate">{p.url}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {projectContext.known_bugs && projectContext.known_bugs.length > 0 && (
+                    <div>
+                      <span className="text-xs text-slate-500 uppercase tracking-wide">Known Bugs ({projectContext.known_bugs.length})</span>
+                      <div className="mt-1 max-h-24 overflow-y-auto space-y-1">
+                        {projectContext.known_bugs.slice(0, 10).map((b: any, i: number) => (
+                          <div key={i} className="text-xs text-slate-400 flex items-center gap-2">
+                            <span className={`text-xs px-1 py-0.5 rounded ${b.severity === 'critical' ? 'bg-red-900/40 text-red-400' : 'bg-amber-900/40 text-amber-400'}`}>
+                              {b.severity}
+                            </span>
+                            <span className="truncate">{b.title}</span>
+                            <span className={`text-xs ${b.status === 'open' ? 'text-red-400' : 'text-green-400'}`}>{b.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {projectContext.total_scans && (
+                    <div className="text-xs text-slate-500">
+                      Total scans: {projectContext.total_scans} | Last scan: {projectContext.last_scan_at ? new Date(projectContext.last_scan_at).toLocaleDateString() : 'N/A'}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No scan data yet. Run a QA session to build context.</p>
+              )}
+            </Card>
+
+            {/* PRD / Project Notes (editable) */}
+            <Card>
+              <h3 className="text-sm font-semibold text-slate-300 mb-3">Project Notes / PRD</h3>
+              <p className="text-xs text-slate-500 mb-2">
+                Add notes about your application, features, or expected behavior. The AI will use this to prioritize testing.
+              </p>
+              <Textarea
+                value={prdDraft}
+                onChange={e => setPrdDraft(e.target.value)}
+                placeholder="Describe your application, key features, business rules, or areas of concern..."
+                rows={6}
+              />
+              <div className="flex items-center gap-2 mt-3">
+                <Button size="sm" onClick={handleSavePrd} isLoading={savingPrd} disabled={prdDraft === userPrd}>
+                  Save Notes
+                </Button>
+                {prdDraft !== userPrd && (
+                  <span className="text-xs text-amber-400">Unsaved changes</span>
+                )}
+              </div>
+            </Card>
+
+            {/* Reset Context */}
+            <div className="flex items-center gap-3">
+              {showResetConfirm ? (
+                <div className="flex items-center gap-2 bg-red-950/30 border border-red-800/40 rounded-lg px-3 py-2">
+                  <span className="text-xs text-red-400">Clear all scan knowledge? This cannot be undone.</span>
+                  <Button size="sm" variant="danger" onClick={handleResetContext}>
+                    Yes, Reset
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setShowResetConfirm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={() => setShowResetConfirm(true)}>
+                  Reset Context
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* User Story Modal */}
       <Modal

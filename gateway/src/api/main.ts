@@ -750,6 +750,41 @@ app.delete('/api/projects/:id', asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Project deleted successfully' });
 }));
 
+// ==================== PROJECT CONTEXT ENDPOINTS (Feature 9) ====================
+
+// Get project context
+app.get('/api/projects/:id/context', asyncHandler(async (req, res) => {
+  const project = await projectRepository.findById(req.params.id);
+  if (!project) {
+    throw createError('Project not found', 404, 'NOT_FOUND');
+  }
+  res.json({
+    context: (project as any).context || {},
+    user_prd: (project as any).user_prd || '',
+  });
+}));
+
+// Update project PRD
+app.put('/api/projects/:id/prd', asyncHandler(async (req, res) => {
+  const project = await projectRepository.findById(req.params.id);
+  if (!project) {
+    throw createError('Project not found', 404, 'NOT_FOUND');
+  }
+  const { user_prd } = req.body;
+  await projectRepository.update(req.params.id, { user_prd: user_prd || '' } as any);
+  res.json({ success: true });
+}));
+
+// Reset project context
+app.delete('/api/projects/:id/context', asyncHandler(async (req, res) => {
+  const project = await projectRepository.findById(req.params.id);
+  if (!project) {
+    throw createError('Project not found', 404, 'NOT_FOUND');
+  }
+  await projectRepository.update(req.params.id, { context: {} } as any);
+  res.json({ success: true });
+}));
+
 // ==================== USER STORY ENDPOINTS ====================
 
 // List user stories for a project

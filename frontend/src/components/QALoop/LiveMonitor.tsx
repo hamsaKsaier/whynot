@@ -145,6 +145,111 @@ const PHASE_CONFIG: Record<string, { label: string; color: string; pulse: boolea
 const getPhaseConfig = (phase: string | null) =>
   phase ? (PHASE_CONFIG[phase] ?? { label: `⚡ ${phase}`, color: '#94a3b8', pulse: false }) : null;
 
+// ── AI Thinking line parser ───────────────────────────────────────────────────
+interface ThinkingLine {
+  type: 'navigate' | 'screenshot' | 'form' | 'click' | 'bug' | 'test' | 'page' | 'error' | 'text';
+  text: string;
+  timestamp: string;
+}
+
+const NOISE_PATTERNS = [
+  /^browser_snapshot$/i,
+  /^browser_evaluate$/i,
+  /^browser_wait_for$/i,
+  /^browser_console_messages$/i,
+  /^browser_tabs$/i,
+  /^get_session_state$/i,
+  /^get_page_elements$/i,
+  /^mark_page_explored$/i,
+  /^\s*$/,
+];
+
+function parseThinkingLines(raw: string): ThinkingLine[] {
+  if (!raw) return [];
+  const now = new Date();
+  const lines = raw.split('\n').filter(l => l.trim());
+  const result: ThinkingLine[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Filter noise
+    if (NOISE_PATTERNS.some(p => p.test(trimmed))) continue;
+
+    const ts = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // Navigation
+    if (/navigat(e|ing|ion)\b/i.test(trimmed) || /browser_navigate/i.test(trimmed) || /going to|visit(ing)?|open(ing)?\s+(the\s+)?page/i.test(trimmed)) {
+      const urlMatch = trimmed.match(/(https?:\/\/[^\s"')]+)/);
+      const url = urlMatch ? urlMatch[1] : trimmed.replace(/.*navigat(e|ing)\s*(to)?\s*/i, '').slice(0, 80);
+      result.push({ type: 'navigate', text: `Navigating to ${url}`, timestamp: ts });
+      continue;
+    }
+    // Screenshot
+    if (/screenshot|browser_take_screenshot|capturing/i.test(trimmed)) {
+      result.push({ type: 'screenshot', text: 'Capturing screenshot', timestamp: ts });
+      continue;
+    }
+    // Form interactions
+    if (/fill(ing)?|type|typing|enter(ing)?.*input|form|browser_fill/i.test(trimmed)) {
+      const fieldMatch = trimmed.match(/(?:fill(?:ing)?|type|typing|enter(?:ing)?)\s+(?:in(?:to)?|the)?\s*["']?([^"'\n]+)/i);
+      const field = fieldMatch ? fieldMatch[1].slice(0, 60) : trimmed.slice(0, 60);
+      result.push({ type: 'form', text: `Filling ${field}`, timestamp: ts });
+      continue;
+    }
+    // Click
+    if (/click(ing|ed)?|browser_click|press(ing|ed)?.*button/i.test(trimmed)) {
+      const elMatch = trimmed.match(/click(?:ing|ed)?\s+(?:on\s+)?(?:the\s+)?["']?([^"'\n]{3,60})/i);
+      const el = elMatch ? elMatch[1] : trimmed.slice(0, 60);
+      result.push({ type: 'click', text: `Clicking ${el}`, timestamp: ts });
+      continue;
+    }
+    // Bug
+    if (/bug\s*(found|report|detected|discovered)|save_bug|found\s+a?\s*bug|issue\s*(found|detected)/i.test(trimmed)) {
+      const titleMatch = trimmed.match(/["']([^"']+)["']/);
+      const title = titleMatch ? titleMatch[1] : trimmed.slice(0, 80);
+      result.push({ type: 'bug', text: `Bug found: ${title}`, timestamp: ts });
+      continue;
+    }
+    // Test case
+    if (/test\s*case|save_test_case|generat(e|ing)\s+test|creat(e|ing)\s+test/i.test(trimmed)) {
+      const nameMatch = trimmed.match(/["']([^"']+)["']/);
+      const name = nameMatch ? nameMatch[1] : trimmed.slice(0, 80);
+      result.push({ type: 'test', text: `Test case: ${name}`, timestamp: ts });
+      continue;
+    }
+    // Page discovery
+    if (/discover(ed|ing)?\s*(a\s+)?(new\s+)?page|add_discovered_page|found\s+(a\s+)?(new\s+)?page|add_page/i.test(trimmed)) {
+      const urlMatch = trimmed.match(/(https?:\/\/[^\s"')]+)/);
+      const url = urlMatch ? urlMatch[1] : trimmed.slice(0, 80);
+      result.push({ type: 'page', text: `Discovered page: ${url}`, timestamp: ts });
+      continue;
+    }
+    // Error/warning
+    if (/error|warning|fail(ed)?|exception|broken|crash/i.test(trimmed)) {
+      result.push({ type: 'error', text: trimmed.slice(0, 120), timestamp: ts });
+      continue;
+    }
+    // Default text
+    if (trimmed.length > 3) {
+      result.push({ type: 'text', text: trimmed.slice(0, 120), timestamp: ts });
+    }
+  }
+
+  return result;
+}
+
+const THINKING_LINE_STYLES: Record<ThinkingLine['type'], { color: string; borderColor?: string; icon: string }> = {
+  navigate:   { color: 'text-sky-400',     icon: '\u25CF' },
+  screenshot: { color: 'text-slate-500',   icon: '\uD83D\uDCF8' },
+  form:       { color: 'text-sky-400',     icon: '\u25CF' },
+  click:      { color: 'text-sky-400',     icon: '\u25CF' },
+  bug:        { color: 'text-red-400',     borderColor: 'border-l-4 border-red-500', icon: '\uD83D\uDC1B' },
+  test:       { color: 'text-emerald-400', borderColor: 'border-l-4 border-emerald-500', icon: '\uD83E\uDDEA' },
+  page:       { color: 'text-blue-400',    icon: '\uD83D\uDD0D' },
+  error:      { color: 'text-amber-400',   icon: '\u26A0\uFE0F' },
+  text:       { color: 'text-slate-300',   icon: '\u25CF' },
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatTime(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -408,8 +513,8 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   const phaseConfig = getPhaseConfig(currentPhase ?? null);
   const costDollars = costInfo ? (costInfo.totalCostCents / 100).toFixed(3) : null;
 
-  // Thinking text — keep last 5000 chars so user has time to read AI reasoning
-  const displayThinking = thinkingText.slice(-5000);
+  // Parse thinking text into structured lines
+  const thinkingLines = useMemo(() => parseThinkingLines(thinkingText.slice(-5000)), [thinkingText]);
 
   // Last 30 tool calls reversed (newest first in reverse, but we show oldest→newest)
   const displayCalls = useMemo(() => toolCalls.slice(-40), [toolCalls]);
@@ -475,7 +580,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
               {expandedPreview ? <Icons.compress /> : <Icons.expand />}
             </button>
           </div>
-          {/* Screenshot area */}
+          {/* Screenshot area with loading states */}
           <div className={`relative ${expandedPreview ? 'h-[520px]' : 'h-64 lg:h-80'} bg-gray-950 flex items-center justify-center`}>
             {currentScreenshot ? (
               <img
@@ -483,22 +588,45 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 alt="Live browser view"
                 className="w-full h-full object-contain"
                 onError={(e) => {
-                  // If the image fails to load (corrupt data), clear it to show placeholder
                   console.warn('Screenshot image failed to load, clearing');
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
                 onLoad={(e) => {
-                  // Ensure image is visible when it loads successfully
                   (e.target as HTMLImageElement).style.display = 'block';
                 }}
               />
             ) : (
-              <div className="flex flex-col items-center gap-3 text-slate-400">
+              <div className="flex flex-col items-center gap-4 text-slate-400">
                 {isRunning ? (
-                  <>
-                    <div className="w-10 h-10 rounded-full border-2 border-indigo-500/30 border-t-indigo-400 animate-spin" />
-                    <span className="text-sm text-slate-400">Waiting for browser preview...</span>
-                  </>
+                  thinkingText ? (
+                    /* Phase 2: AI is working but no screenshot yet */
+                    <>
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full border-2 border-sky-500/30 border-t-sky-400 animate-spin" />
+                        <span className="absolute inset-0 flex items-center justify-center text-lg">&#129504;</span>
+                      </div>
+                      <span className="text-sm text-sky-300 animate-pulse">AI is exploring your website...</span>
+                      <div className="flex gap-1">
+                        {[0, 1, 2, 3, 4].map(i => (
+                          <div key={i} className="w-8 h-1 rounded-full bg-sky-900 overflow-hidden">
+                            <div className="h-full bg-sky-500 rounded-full animate-pulse" style={{ animationDelay: `${i * 0.2}s`, width: '60%' }} />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    /* Phase 1: Just started, connecting */
+                    <>
+                      <div className="w-12 h-12 rounded-full border-2 border-indigo-500/30 border-t-indigo-400 animate-spin" />
+                      <span className="text-sm text-slate-400">&#128260; Connecting to AI agent...</span>
+                      {/* Loading skeleton */}
+                      <div className="w-48 space-y-2 mt-2">
+                        <div className="h-2 bg-slate-800 rounded animate-pulse" />
+                        <div className="h-2 bg-slate-800 rounded animate-pulse w-3/4" style={{ animationDelay: '0.2s' }} />
+                        <div className="h-2 bg-slate-800 rounded animate-pulse w-1/2" style={{ animationDelay: '0.4s' }} />
+                      </div>
+                    </>
+                  )
                 ) : (
                   <>
                     <Icons.monitor />
@@ -517,12 +645,12 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
           </div>
         </div>
 
-        {/* AI Thinking Panel */}
+        {/* AI Thinking Panel — Structured Action View */}
         {!expandedPreview && (
-          <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden flex flex-col"
+          <div className="rounded-xl border border-[#334155] bg-[#0f172a] overflow-hidden flex flex-col"
             style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}>
             {/* Header */}
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-800/90 border-b border-gray-700/50">
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-800/90 border-b border-[#334155]">
               <span className="text-green-400"><Icons.brain /></span>
               <span className="text-sm font-semibold text-gray-200">AI Thinking</span>
               {thinkingText && isRunning && (
@@ -540,18 +668,48 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 {showThinking ? 'Hide' : 'Show'}
               </button>
             </div>
-            {/* Content */}
+            {/* Structured Content */}
             {showThinking ? (
-              <div ref={thinkingContainerRef} className="flex-1 overflow-y-auto p-3 font-mono text-xs text-green-300/90 leading-relaxed"
-                style={{ minHeight: '200px', maxHeight: '320px', background: 'rgba(0,20,0,0.4)' }}>
-                {displayThinking || (
-                  <span className="text-slate-400 italic">
-                    {isRunning ? 'Waiting for AI response…' : 'Session is paused or stopped.'}
-                  </span>
+              <div ref={thinkingContainerRef} className="flex-1 overflow-y-auto font-mono text-sm"
+                style={{ minHeight: '200px', maxHeight: '400px' }}>
+                {thinkingLines.length === 0 ? (
+                  <div className="p-4">
+                    {isRunning ? (
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <span className="flex gap-0.5">
+                          {[0, 1, 2].map(i => (
+                            <span key={i} className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce"
+                              style={{ animationDelay: `${i * 0.15}s` }} />
+                          ))}
+                        </span>
+                        <span className="text-[13px] italic">Waiting for AI response...</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-500 italic text-[13px]">Session is paused or stopped.</span>
+                    )}
+                  </div>
+                ) : (
+                  thinkingLines.slice(-60).map((line, idx) => {
+                    const style = THINKING_LINE_STYLES[line.type];
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-2 py-2 px-4 text-[13px] ${style.color} ${style.borderColor || ''} ${
+                          idx < thinkingLines.length - 1 ? 'border-b border-[#1e293b]' : ''
+                        }`}
+                      >
+                        <span className="shrink-0 w-5 text-center">{style.icon}</span>
+                        <span className="flex-1 break-words">{line.text}</span>
+                        <span className="shrink-0 text-[11px] text-slate-600 ml-auto tabular-nums">{line.timestamp}</span>
+                      </div>
+                    );
+                  })
                 )}
                 {/* Blinking cursor while streaming */}
                 {isRunning && thinkingText && (
-                  <span className="inline-block w-2 h-3 bg-green-400 animate-pulse ml-0.5 align-bottom" />
+                  <div className="px-4 py-1">
+                    <span className="inline-block w-2 h-3 bg-green-400 animate-pulse" />
+                  </div>
                 )}
               </div>
             ) : (
@@ -591,10 +749,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             </>
           );
         })()}
-        {costDollars && Number(costDollars) > 0 && (
-          <StatTile value={`$${costDollars}`} label="Cost" color="#fbbf24"
-            icon={<Icons.dollar />} />
-        )}
+        {/* Credits/cost removed from QA Loop — shown only on Billing page */}
       </div>
 
       {/* ── Test Execution Feed ───────────────────────────────────────────────── */}

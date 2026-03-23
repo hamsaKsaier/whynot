@@ -264,6 +264,21 @@ export const deleteProject = async (id: string): Promise<void> => {
   await apiClient.delete(`/projects/${id}`);
 };
 
+// ==================== PROJECT CONTEXT API ====================
+
+export const getProjectContext = async (projectId: string): Promise<{ context: any; user_prd: string }> => {
+  const response = await apiClient.get<{ context: any; user_prd: string }>(`/projects/${projectId}/context`);
+  return response.data;
+};
+
+export const updateProjectPrd = async (projectId: string, prd: string): Promise<void> => {
+  await apiClient.put(`/projects/${projectId}/prd`, { user_prd: prd });
+};
+
+export const resetProjectContext = async (projectId: string): Promise<void> => {
+  await apiClient.delete(`/projects/${projectId}/context`);
+};
+
 // ==================== USER STORY API ====================
 
 export interface UserStoryWithStats extends UserStory {

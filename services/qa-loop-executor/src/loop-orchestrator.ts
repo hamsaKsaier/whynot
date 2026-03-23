@@ -43,6 +43,10 @@ export interface LoopConfig {
   resumeFromIteration?: number;
   /** Workspace ID for notification routing */
   workspaceId?: string;
+  /** Project context from knowledge base */
+  projectContext?: any;
+  /** User PRD text */
+  userPrd?: string;
 }
 
 export type FocusArea = 'explore' | 'chaos' | 'retest' | 'investigate';
@@ -562,6 +566,9 @@ Start now with get_session_state(), then navigate and explore.
           await this.repository.createTestSuiteFromSession(this.sessionId).catch((err: any) => {
             logger.error('Failed to create test suite on session complete (max_duration)', { sessionId: this.sessionId, error: err.message });
           });
+          await this.repository.updateProjectContextFromSession(this.sessionId).catch((err: any) => {
+            logger.error('Failed to update project context (max_duration)', { sessionId: this.sessionId, error: err.message });
+          });
           emitToSession(this.sessionId, {
             type: 'session_complete',
             data: {
@@ -622,6 +629,9 @@ Start now with get_session_state(), then navigate and explore.
         await this.repository.updateSessionStatus(this.sessionId, 'completed');
         await this.repository.createTestSuiteFromSession(this.sessionId).catch((err: any) => {
           logger.error('Failed to create test suite on session complete', { sessionId: this.sessionId, error: err.message });
+        });
+        await this.repository.updateProjectContextFromSession(this.sessionId).catch((err: any) => {
+          logger.error('Failed to update project context on session complete', { sessionId: this.sessionId, error: err.message });
         });
         emitToSession(this.sessionId, {
           type: 'session_complete',

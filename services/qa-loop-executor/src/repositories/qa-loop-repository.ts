@@ -1144,6 +1144,135 @@ export class QALoopRepository {
       throw err;
     }
   }
+
+  /**
+   * Update the project's persistent context after a QA session completes.
+   * Merges new data: discovered pages, found bugs, test coverage, scan history.
+   */
+  async updateProjectContextFromSession(sessionId: string): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (!session || !session.project_id) {
+      logger.warn('Cannot update project context: no project linked', { sessionId });
+      return;
+    }
+
+    const projectId = session.project_id;
+
+    try {
+      // Gather session data
+      const [pagesResult, bugsResult, testsResult] = await Promise.all([
+        this.pool.query(`SELECT url, is_explored FROM qa_loop_pages WHERE session_id = $1`, [sessionId]),
+        this.pool.query(`SELECT id, title, severity, status, page_url, category FROM qa_loop_bugs WHERE session_id = $1`, [sessionId]),
+        this.pool.query(`SELECT id, name, category, last_run_status, source_page_url FROM qa_loop_test_cases WHERE session_id = $1`, [sessionId]),
+      ]);
+
+      const discoveredPages = pagesResult.rows.map((r: any) => ({
+        url: r.url,
+        explored: r.is_explored,
+      }));
+      const bugs = bugsResult.rows.map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        severity: r.severity,
+        status: r.status,
+        page_url: r.page_url,
+        category: r.category,
+      }));
+      const testCoverage = testsResult.rows.map((r: any) => ({
+        name: r.name,
+        category: r.category,
+        status: r.last_run_status,
+        page_url: r.source_page_url,
+      }));
+
+      // Read current context
+      const contextResult = await this.pool.query(
+        `SELECT context FROM projects WHERE id = $1`,
+        [projectId]
+      );
+      const currentContext = contextResult.rows[0]?.context || {};
+
+      // Merge known pages (dedupe by URL)
+      const existingPages: Record<string, any> = {};
+      for (const p of (currentContext.known_pages || [])) {
+        existingPages[p.url] = p;
+      }
+      for (const p of discoveredPages) {
+        existingPages[p.url] = { ...existingPages[p.url], ...p };
+      }
+
+      // Merge known bugs (dedupe by title)
+      const existingBugs: Record<string, any> = {};
+      for (const b of (currentContext.known_bugs || [])) {
+        existingBugs[b.title] = b;
+      }
+      for (const b of bugs) {
+        existingBugs[b.title] = b;
+      }
+
+      // Add scan to history
+      const scanHistory = currentContext.scan_history || [];
+      scanHistory.push({
+        session_id: sessionId,
+        target_url: session.target_url,
+        completed_at: new Date().toISOString(),
+        pages_found: discoveredPages.length,
+        bugs_found: bugs.length,
+        tests_generated: testCoverage.length,
+        status: session.status,
+      });
+
+      // Build merged context
+      const mergedContext = {
+        known_pages: Object.values(existingPages),
+        known_bugs: Object.values(existingBugs),
+        test_coverage: testCoverage,
+        scan_history: scanHistory.slice(-20), // Keep last 20 scans
+        last_scan_at: new Date().toISOString(),
+        total_scans: (currentContext.total_scans || 0) + 1,
+        app_info: currentContext.app_info || {},
+      };
+
+      // Write merged context back
+      await this.pool.query(
+        `UPDATE projects SET context = $2, updated_at = NOW() WHERE id = $1`,
+        [projectId, JSON.stringify(mergedContext)]
+      );
+
+      logger.info('Updated project context from session', {
+        sessionId,
+        projectId,
+        pagesCount: Object.keys(existingPages).length,
+        bugsCount: Object.keys(existingBugs).length,
+        testsCount: testCoverage.length,
+      });
+    } catch (err: any) {
+      logger.error('Failed to update project context', {
+        sessionId,
+        projectId,
+        error: err.message,
+        stack: err.stack,
+      });
+      // Non-fatal — don't throw, let session completion proceed
+    }
+  }
+
+  /**
+   * Get project context for injection into Claude's prompt.
+   */
+  async getProjectContext(projectId: string): Promise<{ context: any; userPrd: string }> {
+    const result = await this.pool.query(
+      `SELECT context, user_prd FROM projects WHERE id = $1`,
+      [projectId]
+    );
+    if (result.rows.length === 0) {
+      return { context: {}, userPrd: '' };
+    }
+    return {
+      context: result.rows[0].context || {},
+      userPrd: result.rows[0].user_prd || '',
+    };
+  }
 }
 
 // Document interface

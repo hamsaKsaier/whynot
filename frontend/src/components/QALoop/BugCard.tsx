@@ -41,8 +41,9 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
                 Verified
               </span>
             ) : (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-400">
-                Potential
+              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-400 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                AI Observed
               </span>
             )}
             <span className={`text-xs px-2 py-1 rounded ${severityColor(bug.severity)}`}>{bug.severity}</span>

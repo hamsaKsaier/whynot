@@ -20,6 +20,8 @@ export interface UpdateProjectInput {
   name?: string;
   description?: string;
   website_url?: string;
+  context?: any;
+  user_prd?: string;
 }
 
 export class ProjectRepository {
@@ -106,6 +108,14 @@ export class ProjectRepository {
     if (updates.website_url !== undefined) {
       updatesList.push(`website_url = $${paramIndex++}`);
       values.push(updates.website_url);
+    }
+    if (updates.context !== undefined) {
+      updatesList.push(`context = $${paramIndex++}`);
+      values.push(JSON.stringify(updates.context));
+    }
+    if (updates.user_prd !== undefined) {
+      updatesList.push(`user_prd = $${paramIndex++}`);
+      values.push(updates.user_prd);
     }
 
     if (updatesList.length === 0) {

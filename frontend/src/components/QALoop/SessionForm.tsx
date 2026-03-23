@@ -81,6 +81,10 @@ export interface SessionFormProps {
   setSelectedProjectId?: (v: string) => void;
   // Environments (optional)
   environments?: SavedEnvironment[];
+  // Project context
+  useProjectContext?: boolean;
+  setUseProjectContext?: (v: boolean) => void;
+  projectContextInfo?: string | null;
   // Submit
   isStarting: boolean;
   onStart: () => void;
@@ -100,6 +104,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   projects, selectedProjectId, setSelectedProjectId,
   environments,
   documents, activeSession, onUpload, onDelete, onToggle,
+  useProjectContext, setUseProjectContext, projectContextInfo,
   isStarting, onStart,
 }) => (
   <Card className="p-6 bg-slate-800 border-slate-700">
@@ -114,7 +119,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         <Input
           id="target-url-input"
           type="url"
-          placeholder="Enter your website URL"
+          placeholder="Enter your website URL — e.g. https://myapp.com"
           value={targetUrl}
           onChange={e => setTargetUrl(e.target.value)}
           className="w-full text-lg py-3 px-4"
@@ -160,6 +165,28 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {/* Use project context checkbox */}
+      {setUseProjectContext && (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="use-project-context"
+            checked={useProjectContext ?? true}
+            onChange={e => setUseProjectContext(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+          />
+          <label htmlFor="use-project-context" className="text-sm text-slate-300 cursor-pointer">
+            Use project context (recommended)
+          </label>
+          {projectContextInfo && (
+            <span className="text-xs text-sky-400 flex items-center gap-1 ml-auto">
+              <FiInfo size={12} />
+              {projectContextInfo}
+            </span>
+          )}
         </div>
       )}
 

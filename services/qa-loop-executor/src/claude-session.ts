@@ -479,6 +479,27 @@ RULES:
 - NEVER save_test_case without having called browser_snapshot() on that page FIRST
 - ONLY ONE PAGE AT A TIME: Fully explore and test one page before moving to the next
 
+═══ TEST CASE GENERATION TARGETS (MANDATORY) ═══
+
+For EVERY page you visit, generate at least 2-3 test cases:
+- One for the happy path (main functionality works as expected)
+- One for edge cases (empty inputs, long text, special characters)
+- One for error handling (what happens when things go wrong)
+
+For forms, generate test cases for:
+- Valid submission
+- Empty required fields
+- Invalid input formats (wrong email, short password)
+- Boundary values
+
+For navigation, generate test cases for:
+- All links work and go to correct pages
+- Back button behavior
+- Direct URL access
+
+Generate test cases EARLY and OFTEN. Don't wait until you've explored everything.
+Each test case must include clear steps and expected results.
+
 WHEN TO COMPLETE:
 Output "EXPLORATION_COMPLETE" ONLY when ALL of these conditions are met:
 - You have called add_discovered_page() for at least 3 different URLs
@@ -573,6 +594,49 @@ REMEMBER:
     // Add uploaded documents from database (Phase 7)
     if (this.documentContext) {
       contextSection += `\n\n${this.documentContext}`;
+    }
+
+    // Add project context / knowledge base (Feature 9)
+    if (this.config.projectContext && Object.keys(this.config.projectContext).length > 0) {
+      const ctx = this.config.projectContext;
+      let projectContextBlock = '\n\n═══ PROJECT KNOWLEDGE BASE ═══\n';
+      projectContextBlock += 'This project has been scanned before. Use this knowledge to be more efficient.\n\n';
+
+      if (ctx.known_pages && ctx.known_pages.length > 0) {
+        const explored = ctx.known_pages.filter((p: any) => p.explored);
+        const unexplored = ctx.known_pages.filter((p: any) => !p.explored);
+        projectContextBlock += `KNOWN PAGES (${ctx.known_pages.length} total, ${explored.length} explored, ${unexplored.length} unexplored):\n`;
+        if (unexplored.length > 0) {
+          projectContextBlock += `Unexplored pages (PRIORITIZE THESE):\n`;
+          unexplored.slice(0, 20).forEach((p: any) => { projectContextBlock += `  - ${p.url}\n`; });
+        }
+        if (explored.length > 0) {
+          projectContextBlock += `Previously explored pages (skip unless re-verifying):\n`;
+          explored.slice(0, 10).forEach((p: any) => { projectContextBlock += `  - ${p.url}\n`; });
+        }
+        projectContextBlock += '\n';
+      }
+
+      if (ctx.known_bugs && ctx.known_bugs.length > 0) {
+        projectContextBlock += `KNOWN BUGS (${ctx.known_bugs.length}):\n`;
+        ctx.known_bugs.slice(0, 15).forEach((b: any) => {
+          projectContextBlock += `  - [${b.severity}] ${b.title} (status: ${b.status})${b.page_url ? ` on ${b.page_url}` : ''}\n`;
+        });
+        projectContextBlock += 'Strategy: Re-verify bugs marked as "open" — they may have been fixed.\n\n';
+      }
+
+      if (ctx.total_scans) {
+        projectContextBlock += `SCAN HISTORY: ${ctx.total_scans} previous scans. Last scan: ${ctx.last_scan_at || 'unknown'}\n`;
+      }
+
+      projectContextBlock += `\nSTRATEGY:\n- Focus on UNEXPLORED pages first\n- Re-verify previously found bugs to check if fixed\n- Skip pages that were thoroughly tested and had no issues\n- Generate NEW test cases for areas not yet covered\n`;
+
+      contextSection += projectContextBlock;
+    }
+
+    // Add user PRD
+    if (this.config.userPrd) {
+      contextSection += `\n\n═══ USER PROJECT NOTES / PRD ═══\n${this.config.userPrd}\n\nUse these notes to understand the application's intended behavior and prioritize testing accordingly.\n`;
     }
 
     if (contextSection) {

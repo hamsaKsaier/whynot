@@ -78,6 +78,23 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
 
     logger.info('QA Loop session created', { sessionId: session.id, targetUrl, mode, testPriority });
 
+    // Load project context for knowledge base injection (Feature 9)
+    let projectContext: any = undefined;
+    let userPrd: string | undefined = undefined;
+    if (projectId) {
+      try {
+        const ctx = await qaLoopRepository.getProjectContext(projectId);
+        if (ctx.context && Object.keys(ctx.context).length > 0) {
+          projectContext = ctx.context;
+        }
+        if (ctx.userPrd) {
+          userPrd = ctx.userPrd;
+        }
+      } catch (err: any) {
+        logger.warn('Failed to load project context', { projectId, error: err.message });
+      }
+    }
+
     // Start the loop orchestrator
     const orchestrator = new LoopOrchestrator(session.id, {
       targetUrl,
@@ -90,6 +107,8 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
       loginCredentials,
       testPriority,
       workspaceId: resolvedWorkspaceId,
+      projectContext,
+      userPrd,
     });
 
     activeSessions.set(session.id, orchestrator);
