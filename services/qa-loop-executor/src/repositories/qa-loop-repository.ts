@@ -430,27 +430,57 @@ export class QALoopRepository {
       RETURNING *
     `;
 
-    const result = await this.pool.query(query, [
-      id,
-      sessionId,
-      testCase.projectId || null,
-      testCase.name,
-      testCase.description || null,
-      testCase.category || 'functional',
-      testCase.priority || 50,
-      testCase.riskLevel || 'medium',
-      JSON.stringify(testCase.steps),
-      JSON.stringify(testCase.selectors || {}),
-      testCase.source || 'exploration',
-      testCase.sourcePageUrl || null,
-      testCase.observedResult || null,
-      testCase.playwrightCode || null,
-      testCase.featureCategory || 'General',
-      testCase.requiresAuth || false
-    ]);
-
-    logger.info('Added test case', { sessionId, testCaseId: id, name: testCase.name, observedResult: testCase.observedResult });
-    return result.rows[0];
+    try {
+      const result = await this.pool.query(query, [
+        id,
+        sessionId,
+        testCase.projectId || null,
+        testCase.name,
+        testCase.description || null,
+        testCase.category || 'functional',
+        testCase.priority || 50,
+        testCase.riskLevel || 'medium',
+        JSON.stringify(testCase.steps),
+        JSON.stringify(testCase.selectors || {}),
+        testCase.source || 'exploration',
+        testCase.sourcePageUrl || null,
+        testCase.observedResult || null,
+        testCase.playwrightCode || null,
+        testCase.featureCategory || 'General',
+        testCase.requiresAuth || false
+      ]);
+      logger.info('Added test case', { sessionId, testCaseId: id, name: testCase.name, observedResult: testCase.observedResult });
+      return result.rows[0];
+    } catch (err: any) {
+      // Fallback: try without feature_category and requires_auth (migration 035 may not have run)
+      logger.warn('addTestCase failed, retrying without new columns', { error: err.message });
+      const fallbackQuery = `
+        INSERT INTO qa_loop_test_cases (
+          id, session_id, project_id, name, description, category,
+          priority, risk_level, steps, selectors, source, source_page_url,
+          observed_result, playwright_code
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      `;
+      const fallbackResult = await this.pool.query(fallbackQuery, [
+        id,
+        sessionId,
+        testCase.projectId || null,
+        testCase.name,
+        testCase.description || null,
+        testCase.category || 'functional',
+        testCase.priority || 50,
+        testCase.riskLevel || 'medium',
+        JSON.stringify(testCase.steps),
+        JSON.stringify(testCase.selectors || {}),
+        testCase.source || 'exploration',
+        testCase.sourcePageUrl || null,
+        testCase.observedResult || null,
+        testCase.playwrightCode || null
+      ]);
+      logger.info('Added test case (fallback)', { sessionId, testCaseId: id, name: testCase.name });
+      return fallbackResult.rows[0];
+    }
   }
 
   async getTestCases(sessionId: string, options?: { active?: boolean; category?: string }): Promise<QALoopTestCase[]> {
@@ -1100,18 +1130,51 @@ export class QALoopRepository {
          WHERE q.session_id = $1
          RETURNING id, name`,
         [sessionId, testSuiteId, targetUrl, userStoryId, session.workspace_id || '00000000-0000-0000-0000-000000000000']
-      ).catch((insertErr: any) => {
-        logger.error('Failed to INSERT into test_cases table', {
+      ).catch(async (insertErr: any) => {
+        logger.error('Failed to INSERT into test_cases table (attempting fallback without new columns)', {
           sessionId,
           testSuiteId,
           error: insertErr.message || insertErr,
           code: insertErr.code,
           detail: insertErr.detail,
-          constraint: insertErr.constraint,
-          table: insertErr.table,
-          stack: insertErr.stack,
         });
-        return { rows: [] };
+        // Fallback: try without feature_category and requires_auth columns
+        // (in case migration 035 hasn't been run on production yet)
+        try {
+          const fallbackResult = await this.pool.query(
+            `INSERT INTO test_cases (id, name, description, website_url, user_story, steps, metadata, test_suite_id, user_story_id, workspace_id, playwright_code, created_at, updated_at)
+             SELECT
+               gen_random_uuid(),
+               q.name,
+               COALESCE(q.description, ''),
+               $3,
+               'QA Loop Auto-Generated Tests',
+               q.steps,
+               jsonb_build_object(
+                 'source', 'qa_loop',
+                 'session_id', q.session_id::text,
+                 'category', q.category,
+                 'risk_level', q.risk_level,
+                 'last_run_status', q.last_run_status,
+                 'confidence_score', q.confidence_score
+               ),
+               $2,
+               $4,
+               $5,
+               q.playwright_code,
+               q.created_at,
+               q.updated_at
+             FROM qa_loop_test_cases q
+             WHERE q.session_id = $1
+             RETURNING id, name`,
+            [sessionId, testSuiteId, targetUrl, userStoryId, session.workspace_id || '00000000-0000-0000-0000-000000000000']
+          );
+          logger.info('Fallback INSERT into test_cases succeeded', { count: fallbackResult.rows.length });
+          return fallbackResult;
+        } catch (fallbackErr: any) {
+          logger.error('Fallback INSERT also failed', { error: fallbackErr.message, detail: fallbackErr.detail });
+          return { rows: [] };
+        }
       });
 
       // Link each standard test_case back to its qa_loop_test_case via standard_test_case_id
