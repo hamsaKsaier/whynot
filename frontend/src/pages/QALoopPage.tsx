@@ -178,7 +178,7 @@ export const QALoopPage: React.FC = () => {
   }, [targetUrl]);
 
   // Build start params and delegate to session manager
-  const onStartClick = useCallback(() => {
+  const onStartClick = useCallback(async () => {
     if (!targetUrl) { showError('Please enter a target URL'); return; }
     const loginCreds = useLogin && loginCredentials.email && loginCredentials.password
       ? {
@@ -190,7 +190,7 @@ export const QALoopPage: React.FC = () => {
           submitSelector:    loginCredentials.submitSelector     || undefined,
         }
       : undefined;
-    handleStartSession({
+    await handleStartSession({
       targetUrl,
       qualityThreshold,
       maxIterations,
@@ -200,6 +200,12 @@ export const QALoopPage: React.FC = () => {
       sourceSessionId: useExisting && existingSession ? existingSession.id : undefined,
       projectId: selectedProjectId || undefined,
     });
+    // Auto-scroll to the session detail (cinema mode) after session starts
+    setTimeout(() => {
+      document.getElementById('session-detail')?.scrollIntoView({ behavior: 'smooth' });
+      // Also scroll to top in case cinema mode replaces the page
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   }, [
     targetUrl, qualityThreshold, maxIterations, documentContext,
     useLogin, loginCredentials, testPriority, useExisting, existingSession,
@@ -267,6 +273,7 @@ export const QALoopPage: React.FC = () => {
          * overflow-hidden prevents the cinema container itself from adding scroll.
          */}
         <div
+          id="session-detail"
           className="flex flex-col bg-gray-950 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 overflow-hidden"
           style={{ height: 'calc(100vh - 64px)' }}
         >
@@ -448,6 +455,7 @@ export const QALoopPage: React.FC = () => {
                       analyses={analyses}
                       correlations={correlations}
                       isRunning={activeSession.status === 'running'}
+                      projectId={activeSession.project_id}
                     />
                   </div>
                 </div>

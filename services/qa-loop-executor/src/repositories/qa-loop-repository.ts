@@ -1067,7 +1067,7 @@ export class QALoopRepository {
 
       // Sync QA Loop test cases into the standard test_cases table
       // so Architecture Flow (which reads from test_cases) can display them.
-      await this.pool.query(
+      const insertResult = await this.pool.query(
         `INSERT INTO test_cases (id, name, description, website_url, user_story, steps, metadata, test_suite_id, user_story_id, workspace_id, playwright_code, created_at, updated_at)
          SELECT
            gen_random_uuid(),
@@ -1094,22 +1094,34 @@ export class QALoopRepository {
          WHERE q.session_id = $1
          RETURNING id, name`,
         [sessionId, testSuiteId, targetUrl, userStoryId, session.workspace_id || '00000000-0000-0000-0000-000000000000']
-      ).then(async (insertResult) => {
-        // Link each standard test_case back to its qa_loop_test_case via standard_test_case_id
-        // Match by name since we just inserted them
-        if (insertResult.rows.length > 0) {
-          const standardIds = insertResult.rows.map((r: any) => r.id);
-          await this.pool.query(
-            `UPDATE qa_loop_test_cases ql
-             SET standard_test_case_id = tc.id
-             FROM (
-               SELECT id, name FROM test_cases WHERE id = ANY($1::uuid[])
-             ) tc
-             WHERE ql.session_id = $2 AND ql.name = tc.name AND ql.standard_test_case_id IS NULL`,
-            [standardIds, sessionId]
-          );
-        }
+      ).catch((insertErr: any) => {
+        logger.error('Failed to INSERT into test_cases table', {
+          sessionId,
+          testSuiteId,
+          error: insertErr.message || insertErr,
+          code: insertErr.code,
+          detail: insertErr.detail,
+          constraint: insertErr.constraint,
+          table: insertErr.table,
+          stack: insertErr.stack,
+        });
+        return { rows: [] };
       });
+
+      // Link each standard test_case back to its qa_loop_test_case via standard_test_case_id
+      // Match by name since we just inserted them
+      if (insertResult.rows.length > 0) {
+        const standardIds = insertResult.rows.map((r: any) => r.id);
+        await this.pool.query(
+          `UPDATE qa_loop_test_cases ql
+           SET standard_test_case_id = tc.id
+           FROM (
+             SELECT id, name FROM test_cases WHERE id = ANY($1::uuid[])
+           ) tc
+           WHERE ql.session_id = $2 AND ql.name = tc.name AND ql.standard_test_case_id IS NULL`,
+          [standardIds, sessionId]
+        );
+      }
 
       // Count linked items
       const countResult = await this.pool.query(

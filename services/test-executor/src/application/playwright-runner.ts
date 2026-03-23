@@ -270,7 +270,10 @@ async function executePlaywrightRun(
     logger.info('Launching browser for Playwright execution', { runId, attempt });
 
     // Launch browser directly
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    });
     const context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
     });

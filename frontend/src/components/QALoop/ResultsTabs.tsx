@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  FiFileText, FiAlertTriangle, FiGlobe, FiShield, FiSearch, FiCheckCircle, FiClock,
+  FiFileText, FiAlertTriangle, FiGlobe, FiShield, FiSearch, FiCheckCircle, FiClock, FiArrowRight,
 } from 'react-icons/fi';
 
 import { QALoopTestCase, QALoopBug, QALoopPage as QAPage } from '../../services/qa-loop-api';
@@ -27,11 +28,13 @@ export interface ResultsTabsProps {
   analyses: RootCauseAnalysis[];
   correlations: FailureCorrelation[];
   isRunning?: boolean;
+  projectId?: string | null;
 }
 
 export const ResultsTabs: React.FC<ResultsTabsProps> = ({
-  testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning
+  testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning, projectId
 }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'analysis'>('tests');
 
   const severityColor = (s: string) => {
@@ -132,6 +135,18 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
               )}
             </div>
           </div>
+
+          {/* View Architecture Flow button */}
+          {projectId && testCases.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-700/50">
+              <button
+                onClick={() => navigate(`/projects/${projectId}`)}
+                className="flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 transition-colors"
+              >
+                View Architecture Flow <FiArrowRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 

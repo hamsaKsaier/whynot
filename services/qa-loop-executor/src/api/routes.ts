@@ -252,6 +252,16 @@ router.post('/api/sessions/:id/pause', async (req: Request, res: Response) => {
     await orchestrator.pause();
     await qaLoopRepository.updateSessionStatus(id, 'paused');
 
+    // Auto-create test suite from whatever was discovered before the pause
+    const testSuiteId = await qaLoopRepository.createTestSuiteFromSession(id).catch((err) => {
+      logger.error('Failed to create test suite on pause', { sessionId: id, error: err.message });
+      return null;
+    });
+    if (testSuiteId) {
+      const testCases = await qaLoopRepository.getTestCases(id).catch(() => []);
+      logger.info(`Test suite created with ${testCases.length} test cases`, { sessionId: id, testSuiteId });
+    }
+
     logger.info('QA Loop session paused', { sessionId: id });
     res.json({ success: true, status: 'paused' });
   } catch (error: any) {
