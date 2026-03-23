@@ -351,37 +351,7 @@ export class ParallelTestExecutor {
    * /api/run-playwright endpoint.
    */
   private async executeViaPlaywright(testCase: any, observedResult: 'pass' | 'fail'): Promise<void> {
-    // Only skip tests explicitly tagged as requiring auth when no credentials are available.
-    // Do NOT skip based on heuristic pattern matching — only skip when requires_auth === true.
-    if (testCase.requires_auth === true && !this.config.loginCredentials) {
-      logger.info('Skipping test — references authenticated page but no credentials available', {
-        sessionId: this.sessionId,
-        testCaseId: testCase.id,
-      });
-      try {
-        await this.repository.addTestRun(this.sessionId, testCase.id, {
-          status: 'skipped',
-          failureReason: 'Skipped: test references authenticated page but no credentials available for verification browser',
-          observedResult,
-          isMismatch: false,
-        });
-      } catch (saveErr: any) {
-        logger.warn('Failed to persist skipped test run', { testCaseId: testCase.id, error: saveErr.message });
-      }
-      emitToSession(this.sessionId, {
-        type: 'test_run_result',
-        data: {
-          testCaseId: testCase.id,
-          testCaseName: testCase.name,
-          status: 'skipped',
-          failureReason: 'No credentials for verification browser',
-          observedResult,
-          isMismatch: false,
-          runner: 'playwright',
-        }
-      });
-      return;
-    }
+    // requires_auth skip removed — a "failed" result is more useful than "skipped"
 
     emitToSession(this.sessionId, {
       type: 'test_run_start',

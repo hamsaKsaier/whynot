@@ -1547,10 +1547,24 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
     })),
   ];
 
+  // Infer category from test name when feature_category is null or 'General'
+  function inferCategory(name: string, featureCategory: string | null): string {
+    if (featureCategory && featureCategory !== 'General') return featureCategory;
+    const n = name.toLowerCase();
+    if (n.startsWith('login') || n.includes('auth') || n.includes('credentials') || n.includes('password') || n.includes('forgot password') || n.includes('reset password')) return 'Authentication';
+    if (n.startsWith('dashboard') || n.includes('dashboard')) return 'Dashboard';
+    if (n.startsWith('nav') || n.includes('navigation') || n.includes('menu')) return 'Navigation';
+    if (n.startsWith('search') || n.includes('search')) return 'Search';
+    if (n.startsWith('setting') || n.includes('settings') || n.includes('profile')) return 'Settings';
+    if (n.startsWith('checkout') || n.includes('cart') || n.includes('payment')) return 'Checkout';
+    if (n.startsWith('form') || n.includes('form') || n.includes('input') || n.includes('validation')) return 'Forms';
+    return featureCategory || 'General';
+  }
+
   // Group by feature_category
   const categoryMap: Record<string, { testCases: any[]; stats: { passed: number; failed: number; review: number; skipped: number } }> = {};
   for (const tc of allTests) {
-    const cat = tc.feature_category || 'General';
+    const cat = inferCategory(tc.name, tc.feature_category);
     if (!categoryMap[cat]) {
       categoryMap[cat] = { testCases: [], stats: { passed: 0, failed: 0, review: 0, skipped: 0 } };
     }

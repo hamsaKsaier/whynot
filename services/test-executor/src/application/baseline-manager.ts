@@ -81,24 +81,29 @@ export class BaselineManager {
     }
 
     // Create new baseline
-    const baseline = await this.repository.createBaseline({
-      test_case_id: testCaseId,
-      step_id: stepId,
-      screenshot_path: screenshotPath,
-      screenshot_hash: screenshotHash,
-      execution_id: executionId,
-      is_locked: false,
-      created_by: 'system'
-    });
+    try {
+      const baseline = await this.repository.createBaseline({
+        test_case_id: testCaseId,
+        step_id: stepId,
+        screenshot_path: screenshotPath,
+        screenshot_hash: screenshotHash,
+        execution_id: executionId,
+        is_locked: false,
+        created_by: 'system'
+      });
 
-    logger.info('Baseline created', { 
-      baselineId: baseline.id, 
-      testCaseId, 
-      stepId, 
-      version: baseline.baseline_version 
-    });
+      logger.info('Baseline created', {
+        baselineId: baseline.id,
+        testCaseId,
+        stepId,
+        version: baseline.baseline_version
+      });
 
-    return this.mapEntityToBaseline(baseline);
+      return this.mapEntityToBaseline(baseline);
+    } catch (err: any) {
+      logger.warn('Visual baseline save failed (non-critical)', { error: err.message, testCaseId, stepId });
+      throw err; // re-throw so caller's catch handles it
+    }
   }
 
   /**
@@ -193,19 +198,24 @@ export class BaselineManager {
       return [];
     }
 
-    const createdBaselines = await this.repository.promoteExecutionAsBaseline(
-      testCaseId,
-      executionId,
-      stepScreenshotsWithHash
-    );
+    try {
+      const createdBaselines = await this.repository.promoteExecutionAsBaseline(
+        testCaseId,
+        executionId,
+        stepScreenshotsWithHash
+      );
 
-    logger.info('Execution promoted as baseline', {
-      testCaseId,
-      executionId,
-      baselineCount: createdBaselines.length
-    });
+      logger.info('Execution promoted as baseline', {
+        testCaseId,
+        executionId,
+        baselineCount: createdBaselines.length
+      });
 
-    return createdBaselines.map((b: VisualBaselineEntity) => this.mapEntityToBaseline(b));
+      return createdBaselines.map((b: VisualBaselineEntity) => this.mapEntityToBaseline(b));
+    } catch (err: any) {
+      logger.warn('Visual baseline save failed (non-critical)', { error: err.message, testCaseId, executionId });
+      return [];
+    }
   }
 
   /**

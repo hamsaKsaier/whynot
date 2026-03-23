@@ -283,6 +283,14 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
       setActiveSession(session);
       onSuccess('QA Loop session started!');
       loadSessions();
+
+      // Auto-scroll to the live monitor after session starts
+      setTimeout(() => {
+        const target = document.querySelector(
+          '.cinema-mode, .live-monitor-container, [class*="cinema"], [class*="live-monitor"]'
+        );
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 800);
     } catch (err: any) {
       onError(err.message || 'Failed to start session');
     } finally {

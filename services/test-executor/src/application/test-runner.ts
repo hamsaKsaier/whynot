@@ -60,13 +60,45 @@ export class TestRunner {
   }
 
   async runTest(
-    testCase: TestCase, 
-    headless: boolean = true, 
+    testCase: TestCase,
+    headless: boolean = true,
     providedExecutionId?: string,
     isolate: boolean = true // Default to isolated (fresh context per test)
   ): Promise<ExecutionResult> {
     const executionId = providedExecutionId || uuidv4();
     const startedAt = new Date().toISOString();
+
+    // Fast path: if test case has playwright_code, run it directly
+    if ((testCase as any).playwright_code) {
+      const { runPlaywrightCode } = require('./playwright-runner');
+      try {
+        const result = await runPlaywrightCode((testCase as any).playwright_code, { timeoutMs: 30000 });
+        return {
+          execution_id: executionId,
+          test_case_id: testCase.id,
+          status: result.passed ? 'completed' : 'failed',
+          steps: [],
+          total_duration_ms: result.duration,
+          screenshots: result.screenshots || [],
+          error: result.error,
+          started_at: startedAt,
+          completed_at: new Date().toISOString(),
+        };
+      } catch (pwError: any) {
+        return {
+          execution_id: executionId,
+          test_case_id: testCase.id,
+          status: 'failed',
+          steps: [],
+          total_duration_ms: 0,
+          screenshots: [],
+          error: pwError.message,
+          started_at: startedAt,
+          completed_at: new Date().toISOString(),
+        };
+      }
+    }
+
     const stepResults: StepResult[] = [];
     const screenshots: string[] = [];
 
