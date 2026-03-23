@@ -177,12 +177,12 @@ export class ClaudeSession {
 
     try {
       // Run conversation loop until Claude stops calling tools.
-      // 25 loops gives enough budget to navigate several pages AND generate
-      // test cases / bugs — 12 was too few and led to max_loops before any
-      // save_test_case calls were made.
+      // 60 loops gives enough budget to navigate many pages AND generate
+      // test cases / bugs — 25 was still too few and led to max_loops before
+      // enough save_test_case calls were made.
       let continueLoop = true;
       let loopCount = 0;
-      const maxLoops = 25;
+      const maxLoops = 60;
 
       while (continueLoop && loopCount < maxLoops) {
         loopCount++;
@@ -396,6 +396,24 @@ QUALITY THRESHOLD: ${this.config.qualityThreshold}%
 
 YOUR MISSION:
 Systematically explore every page and feature of the application, generating test cases for each behavior you discover. Be thorough, methodical, and adversarial - think like both a user and a hacker.
+
+⚠️ CRITICAL — SAVE TEST CASES EARLY AND OFTEN ⚠️
+You have a LIMITED number of actions per iteration. Do NOT waste actions on excessive
+browser_evaluate() calls. Follow this strict workflow per page:
+
+1. browser_navigate() → go to the page
+2. browser_snapshot() → see what's on the page
+3. add_discovered_page() → register any new links you see
+4. Interact (click, fill) → test 1-2 behaviors
+5. browser_snapshot() → see the result
+6. save_test_case() → IMMEDIATELY save what you tested
+7. Move to the next page
+
+MAXIMUM 5-6 tool calls per page, then save_test_case() and move on.
+Do NOT call browser_evaluate() more than once per page unless absolutely necessary.
+Do NOT call browser_network_requests() unless you suspect a specific network issue.
+PRIORITIZE saving test cases over thorough investigation. A saved test case with
+basic steps is 100x more valuable than a deep investigation with no saved tests.
 
 EXPLORATION STRATEGY:
 1. FIRST: Always call get_session_state() to understand your current progress
