@@ -1600,7 +1600,7 @@ app.post('/api/projects/:projectId/run-all-tests', asyncHandler(async (req, res)
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ playwrightCode: tc.playwright_code, timeoutMs: 30000 }),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         results.push({ testCaseId: tc.id, name: tc.name, status: data.passed ? 'passed' : 'failed', error: data.error });
       } else {
         const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
@@ -1609,7 +1609,7 @@ app.post('/api/projects/:projectId/run-all-tests', asyncHandler(async (req, res)
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ testCase: { id: tc.id, name: tc.name, steps }, headless: true }),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         results.push({ testCaseId: tc.id, name: tc.name, status: data.status === 'completed' && data.allStepsPassed ? 'passed' : 'failed', error: data.error });
       }
     } catch (err: any) {
@@ -1649,7 +1649,7 @@ app.post('/api/projects/:projectId/run-category/:category', asyncHandler(async (
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ playwrightCode: tc.playwright_code, timeoutMs: 30000 }),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         results.push({ testCaseId: tc.id, name: tc.name, status: data.passed ? 'passed' : 'failed', error: data.error });
       } else {
         const steps = typeof tc.steps === 'string' ? JSON.parse(tc.steps) : tc.steps;
@@ -1658,7 +1658,7 @@ app.post('/api/projects/:projectId/run-category/:category', asyncHandler(async (
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ testCase: { id: tc.id, name: tc.name, steps }, headless: true }),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         results.push({ testCaseId: tc.id, name: tc.name, status: data.status === 'completed' && data.allStepsPassed ? 'passed' : 'failed', error: data.error });
       }
     } catch (err: any) {

@@ -141,8 +141,8 @@ export class RetestExecutor {
           data: { phase: 'testing', current: index + 1, total: testCases.length, testCase: testCase.name }
         });
 
-        // Skip auth-required tests when no credentials are provided
-        if ((testCase as any).requires_auth && !hasCredentials) {
+        // Only skip tests explicitly tagged as requiring auth AND no credentials provided
+        if ((testCase as any).requires_auth === true && !hasCredentials) {
           return {
             testCaseId: testCase.id,
             testCaseName: testCase.name,

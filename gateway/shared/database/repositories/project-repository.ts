@@ -55,6 +55,18 @@ export class ProjectRepository {
   }
 
   /**
+   * Find project by ID scoped to a workspace (security: ownership check)
+   */
+  async findByIdForWorkspace(id: string, workspaceId: string): Promise<ProjectEntity | null> {
+    const result = await query<ProjectEntity>(
+      'SELECT * FROM projects WHERE id = $1 AND workspace_id = $2',
+      [id, workspaceId]
+    );
+
+    return result[0] || null;
+  }
+
+  /**
    * List all projects with pagination, optionally scoped to a workspace
    */
   async list(offset: number = 0, limit: number = 50, workspaceId?: string): Promise<ProjectEntity[]> {
@@ -136,13 +148,20 @@ export class ProjectRepository {
   /**
    * Get project with user story count
    */
-  async findByIdWithStats(id: string): Promise<(ProjectEntity & { user_story_count: number }) | null> {
-    const result = await query<ProjectEntity & { user_story_count: string }>(
-      `SELECT p.*, 
+  async findByIdWithStats(id: string, workspaceId?: string): Promise<(ProjectEntity & { user_story_count: number }) | null> {
+    const sql = workspaceId
+      ? `SELECT p.*,
               (SELECT COUNT(*) FROM user_stories WHERE project_id = p.id) as user_story_count
-       FROM projects p
-       WHERE p.id = $1`,
-      [id]
+         FROM projects p
+         WHERE p.id = $1 AND p.workspace_id = $2`
+      : `SELECT p.*,
+              (SELECT COUNT(*) FROM user_stories WHERE project_id = p.id) as user_story_count
+         FROM projects p
+         WHERE p.id = $1`;
+
+    const result = await query<ProjectEntity & { user_story_count: string }>(
+      sql,
+      workspaceId ? [id, workspaceId] : [id]
     );
 
     if (!result[0]) return null;

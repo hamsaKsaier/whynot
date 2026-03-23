@@ -351,12 +351,9 @@ export class ParallelTestExecutor {
    * /api/run-playwright endpoint.
    */
   private async executeViaPlaywright(testCase: any, observedResult: 'pass' | 'fail'): Promise<void> {
-    // Short-term workaround: skip tests that reference authenticated pages when no credentials
-    // are available. The verification browser launches fresh with no cookies/session.
-    const codeRefsLogin = testCase.playwright_code &&
-      (/process\.env\.TEST_USERNAME|process\.env\.TEST_PASSWORD/i.test(testCase.playwright_code) ||
-       /login|sign.?in|auth/i.test(testCase.source_page_url || ''));
-    if (codeRefsLogin && !this.config.loginCredentials) {
+    // Only skip tests explicitly tagged as requiring auth when no credentials are available.
+    // Do NOT skip based on heuristic pattern matching — only skip when requires_auth === true.
+    if (testCase.requires_auth === true && !this.config.loginCredentials) {
       logger.info('Skipping test — references authenticated page but no credentials available', {
         sessionId: this.sessionId,
         testCaseId: testCase.id,
