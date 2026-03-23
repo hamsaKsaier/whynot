@@ -1490,8 +1490,13 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
       ORDER BY started_at DESC
       LIMIT 1
     ) e ON true
-    WHERE tc.user_story_id IN (
-      SELECT us.id FROM user_stories us WHERE us.project_id = $1
+    WHERE (
+      tc.user_story_id IN (
+        SELECT us.id FROM user_stories us WHERE us.project_id = $1
+      )
+      OR tc.test_suite_id IN (
+        SELECT ts.id FROM test_suites ts WHERE ts.project_id = $1
+      )
     )
     ORDER BY tc.feature_category, tc.name
   `, [projectId]);

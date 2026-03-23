@@ -51,7 +51,18 @@ export class StateTools {
             pendingUrls: unexploredPages.slice(0, 10).map(p => p.url),
             recentTests: testCases.slice(0, 5).map(t => t.name),
             openBugs: bugs.filter(b => b.status === 'open').length
-          }
+          },
+          existingTestCases: testCases.map(t => ({
+            name: t.name,
+            category: t.category,
+            sourcePageUrl: t.source_page_url,
+            status: t.last_run_status
+          })),
+          deduplicationWarning: testCases.length > 0
+            ? `TEST CASES ALREADY GENERATED IN THIS SESSION (${testCases.length} total):\n` +
+              testCases.map(t => `- "${t.name}" (${t.category}) — page: ${t.source_page_url || 'unknown'}`).join('\n') +
+              '\n\nDO NOT generate duplicate test cases for pages/features already covered above. Focus on UNTESTED pages and features.'
+            : undefined
         }
       };
     } catch (error: any) {
