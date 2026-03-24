@@ -102,7 +102,7 @@ export class BaselineManager {
       return this.mapEntityToBaseline(baseline);
     } catch (err: any) {
       logger.warn('Visual baseline save failed (non-critical)', { error: err.message, testCaseId, stepId });
-      throw err; // re-throw so caller's catch handles it
+      return null as any; // Don't crash — visual baselines are non-critical
     }
   }
 
