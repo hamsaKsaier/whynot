@@ -596,6 +596,28 @@ When generating Playwright code, use SPECIFIC selectors that match exactly ONE e
   Strict mode violations (multiple matches) cause test failures. Use page.getByRole() with exact name matching
   to avoid ambiguity. Example: page.getByRole('link', { name: 'Login', exact: true })
 
+IMPORTANT: Each test case's Playwright code must be SELF-CONTAINED.
+The verification browser starts FRESH with no cookies, no login session, nothing.
+If a test case needs the user to be logged in first, the Playwright code MUST
+include the login steps at the beginning:
+
+  await page.goto('LOGIN_URL');
+  await page.fill('USERNAME_SELECTOR', 'USERNAME');
+  await page.fill('PASSWORD_SELECTOR', 'PASSWORD');
+  await page.click('LOGIN_BUTTON_SELECTOR');
+  await page.waitForURL('EXPECTED_URL_AFTER_LOGIN');
+
+Then proceed with the actual test.
+Do NOT assume the browser is already logged in. Every test starts from zero.
+
+After any action that causes navigation (login, form submit, link click),
+always add a wait:
+  await page.waitForURL('**/expected-path**', { timeout: 15000 });
+or:
+  await page.waitForSelector('EXPECTED_ELEMENT', { timeout: 15000 });
+
+Do NOT check for elements immediately after a navigation. Wait first.
+
 Example playwright_code format:
 \`\`\`
 await page.goto('https://example.com/login');
