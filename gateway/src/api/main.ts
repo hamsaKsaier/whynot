@@ -1520,7 +1520,7 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
   const bugs = await query<any>(`
     SELECT b.id, b.title, b.description, b.severity, b.category, b.page_url,
            b.verification_status, b.regression_test_id, b.discovered_by_test_case_id,
-           b.created_at, b.screenshot_url
+           b.created_at, b.evidence_screenshots
     FROM qa_loop_bugs b
     JOIN qa_loop_sessions s ON b.session_id = s.id
     WHERE s.project_id = $1
