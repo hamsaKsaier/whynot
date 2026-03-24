@@ -1576,9 +1576,10 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
     categoryMap[cat].testCases.push(tc);
 
     const status = tc.last_run_status || tc.observed_result || 'review';
-    if (status === 'completed' || status === 'pass' || status === 'passed') categoryMap[cat].stats.passed++;
-    else if (status === 'failed' || status === 'fail') categoryMap[cat].stats.failed++;
+    if (status === 'completed' || status === 'pass' || status === 'passed' || status === 'confirmed') categoryMap[cat].stats.passed++;
+    else if (status === 'failed' || status === 'fail' || status === 'error') categoryMap[cat].stats.failed++;
     else if (status === 'skipped') categoryMap[cat].stats.skipped++;
+    else if (status === 'mismatch') categoryMap[cat].stats.review++;
     else categoryMap[cat].stats.review++;
   }
 

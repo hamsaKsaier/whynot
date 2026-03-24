@@ -42,10 +42,14 @@ function statusIcon(status: string) {
     case 'completed':
     case 'pass':
     case 'passed':
+    case 'confirmed':
       return <FiCheck className="h-4 w-4 text-emerald-400" />;
     case 'failed':
     case 'fail':
+    case 'error':
       return <FiX className="h-4 w-4 text-red-400" />;
+    case 'mismatch':
+      return <FiAlertTriangle className="h-4 w-4 text-amber-400" />;
     case 'skipped':
       return <FiSkipForward className="h-4 w-4 text-slate-400" />;
     default:
@@ -58,8 +62,11 @@ function statusBadge(status: string) {
     completed: 'bg-emerald-500/10 text-emerald-400',
     pass: 'bg-emerald-500/10 text-emerald-400',
     passed: 'bg-emerald-500/10 text-emerald-400',
+    confirmed: 'bg-emerald-500/10 text-emerald-400',
     failed: 'bg-red-500/10 text-red-400',
     fail: 'bg-red-500/10 text-red-400',
+    error: 'bg-red-500/10 text-red-400',
+    mismatch: 'bg-amber-500/10 text-amber-400',
     skipped: 'bg-slate-500/10 text-slate-400',
   };
   return map[status] || 'bg-amber-500/10 text-amber-400';
@@ -67,8 +74,9 @@ function statusBadge(status: string) {
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
-    completed: 'Passed', pass: 'Passed', passed: 'Passed',
-    failed: 'Failed', fail: 'Failed',
+    completed: 'Passed', pass: 'Passed', passed: 'Passed', confirmed: 'Passed',
+    failed: 'Failed', fail: 'Failed', error: 'Failed',
+    mismatch: 'Needs Review',
     skipped: 'Skipped',
   };
   return map[status] || 'Needs Review';
