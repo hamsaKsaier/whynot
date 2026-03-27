@@ -660,6 +660,18 @@ REMEMBER:
       contextKeys: this.config.projectContext ? Object.keys(this.config.projectContext) : [],
     });
     if (this.config.projectContext && Object.keys(this.config.projectContext).length > 0) {
+      // Inject critical retest guidance BEFORE project context so Claude sees it first
+      contextSection += `
+
+⚠️ CRITICAL: DO NOT re-test pages that already have passing test cases.
+The test_coverage section below shows tests that ALREADY PASSED.
+Skip those pages entirely. Focus ONLY on:
+1. Pages marked as "explored: false" in known_pages
+2. Pages where tests FAILED (retest those)
+3. New pages you discover during exploration
+
+Start by navigating to untested pages, NOT the login page (unless login tests failed).
+`;
       const ctx = this.config.projectContext;
       let projectContextBlock = '\n\n═══ PROJECT KNOWLEDGE BASE ═══\n';
       projectContextBlock += 'This project has been scanned before. Use this knowledge to be more efficient.\n\n';
@@ -685,6 +697,15 @@ REMEMBER:
           projectContextBlock += `  - [${b.severity}] ${b.title} (status: ${b.status})${b.page_url ? ` on ${b.page_url}` : ''}\n`;
         });
         projectContextBlock += 'Strategy: Re-verify bugs marked as "open" — they may have been fixed.\n\n';
+      }
+
+      if (ctx.test_coverage && ctx.test_coverage.length > 0) {
+        projectContextBlock += `TEST COVERAGE (${ctx.test_coverage.length} test cases):\n`;
+        ctx.test_coverage.slice(0, 30).forEach((tc: any) => {
+          const statusIcon = tc.status === 'passed' ? '✅' : tc.status === 'failed' ? '❌' : '⏳';
+          projectContextBlock += `  ${statusIcon} ${tc.name || tc.test_case_id} — ${tc.status}${tc.page_url ? ` (${tc.page_url})` : ''}\n`;
+        });
+        projectContextBlock += '\n';
       }
 
       if (ctx.total_scans) {
