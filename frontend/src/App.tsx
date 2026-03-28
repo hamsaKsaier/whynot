@@ -19,6 +19,7 @@ import { QALoopPage } from './pages/QALoopPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
 import { PublicScanResultsPage } from './pages/PublicScanResultsPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { MonitorsPage } from './pages/MonitorsPage';
 import { UpgradePrompt } from './components/common/UpgradePrompt';
 
@@ -57,6 +58,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/scan/:sessionId" element={<PublicScanResultsPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               {/* All other routes require auth + workspace */}
               <Route element={<ProtectedRoute />}>

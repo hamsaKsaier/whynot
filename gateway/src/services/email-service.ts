@@ -210,3 +210,24 @@ export async function sendAutoFixPREmail(userId: string, data: AutoFixPRData): P
   );
   await sendEmail(to, subject, html);
 }
+
+// ── Password Reset Email ─────────────────────────────────────────────────────
+
+export async function sendPasswordResetEmail(to: string, resetToken: string): Promise<void> {
+  const frontendUrl = process.env.FRONTEND_URL || 'https://whynotqa.com';
+  const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+  const subject = 'Reset your WhyNot password';
+  const html = emailLayout(
+    `<h2 style="margin:0 0 12px;font-size:18px;color:#0f172a">Password Reset</h2>
+     <p style="margin:0 0 8px;color:#334155;font-size:14px;line-height:1.5">
+       We received a request to reset your password. Click the button below to choose a new one.
+     </p>
+     <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.5">
+       This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
+     </p>`,
+    resetUrl,
+    'Reset Password',
+  );
+  await sendEmail(to, subject, html);
+}

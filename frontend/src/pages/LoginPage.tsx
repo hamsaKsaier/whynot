@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { FiZap, FiGithub, FiMail, FiLock, FiUser, FiAlertCircle, FiLoader } from 'react-icons/fi';
+import { FiZap, FiGithub, FiMail, FiLock, FiUser, FiAlertCircle, FiLoader, FiArrowLeft, FiCheck } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../contexts/AuthContext';
+import { forgotPassword } from '../services/api';
 
 type Mode = 'login' | 'register';
 
@@ -13,6 +14,25 @@ export const LoginPage: React.FC = () => {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotLoading(true);
+    try {
+      await forgotPassword(forgotEmail);
+      setForgotSent(true);
+    } catch (err: any) {
+      setForgotError(err?.response?.data?.error || err?.message || 'Something went wrong');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const apiBase = (import.meta as any).env?.VITE_API_URL || '/api';
 
@@ -57,6 +77,61 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="bg-navy-800 rounded-2xl shadow-lg border border-navy-700 p-8">
+          {/* Forgot password view */}
+          {showForgotPassword ? (
+            <div>
+              <button
+                onClick={() => { setShowForgotPassword(false); setForgotSent(false); setForgotError(null); }}
+                className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors mb-4"
+              >
+                <FiArrowLeft className="h-4 w-4" />
+                Back to sign in
+              </button>
+              <h2 className="text-lg font-semibold text-white mb-2">Reset your password</h2>
+              {forgotSent ? (
+                <div className="flex items-start gap-3 p-4 bg-emerald-900/20 border border-emerald-500/20 rounded-lg">
+                  <FiCheck className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm text-emerald-300 font-medium">Check your email</p>
+                    <p className="text-sm text-slate-400 mt-1">If an account exists for that email, we sent password reset instructions.</p>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <p className="text-sm text-slate-400">Enter your email and we'll send you a link to reset your password.</p>
+                  <div className="relative">
+                    <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  {forgotError && (
+                    <div className="flex items-start gap-2 p-3 bg-red-900/20 border border-red-500/20 rounded-lg text-sm text-red-400">
+                      <FiAlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>{forgotError}</span>
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full py-2.5 px-4 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {forgotLoading ? (
+                      <><FiLoader className="h-4 w-4 animate-spin" /> Sending...</>
+                    ) : (
+                      'Send Reset Link'
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          ) : (
+          <>
           {/* Tab selector */}
           <div className="flex rounded-lg border border-navy-700 p-1 mb-6">
             <button
@@ -159,6 +234,15 @@ export const LoginPage: React.FC = () => {
                   className="w-full pl-10 pr-4 py-2.5 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
+              {mode === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotPassword(true); setForgotEmail(email); setError(null); }}
+                  className="text-xs text-primary-400 hover:text-primary-300 transition-colors mt-1"
+                >
+                  Forgot password?
+                </button>
+              )}
             </div>
 
             {error && (
@@ -185,6 +269,8 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
           </form>
+          </>
+          )}
         </div>
       </div>
     </div>

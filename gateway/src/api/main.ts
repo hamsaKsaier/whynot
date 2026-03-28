@@ -350,6 +350,45 @@ app.get('/api/auth/google/callback', asyncHandler(async (req, res) => {
   }
 }));
 
+// ==================== FORGOT / RESET PASSWORD (public) ====================
+
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import { sendPasswordResetEmail } from '../services/email-service';
+
+app.post('/api/auth/forgot-password', loginRateLimiter, asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    return res.json({ success: true, message: 'If an account exists, a reset email has been sent' });
+  }
+  const users = await query<{ id: string; email: string }>('SELECT id, email FROM users WHERE email = $1', [email.trim().toLowerCase()]);
+  if (users.length > 0) {
+    const user = users[0];
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await query('UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3', [resetToken, expires, user.id]);
+    sendPasswordResetEmail(email.trim().toLowerCase(), resetToken).catch(() => {});
+  }
+  res.json({ success: true, message: 'If an account exists, a reset email has been sent' });
+}));
+
+app.post('/api/auth/reset-password', loginRateLimiter, asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || typeof token !== 'string' || !newPassword || typeof newPassword !== 'string') {
+    throw createError('Token and new password are required', 400, 'VALIDATION_ERROR');
+  }
+  if (newPassword.length < 8) {
+    throw createError('Password must be at least 8 characters', 400, 'VALIDATION_ERROR');
+  }
+  const rows = await query<{ id: string }>('SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()', [token]);
+  if (rows.length === 0) {
+    throw createError('Invalid or expired reset token', 400, 'INVALID_TOKEN');
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await query('UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2', [passwordHash, rows[0].id]);
+  res.json({ success: true });
+}));
+
 // ==================== WORKSPACE ROUTES (require auth) ====================
 
 app.get('/api/workspaces', requireAuth, asyncHandler(async (req, res) => {
