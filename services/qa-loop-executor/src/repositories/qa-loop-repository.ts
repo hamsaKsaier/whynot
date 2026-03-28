@@ -151,7 +151,7 @@ export class QALoopRepository {
       params.targetUrl,
       params.mode,
       params.qualityThreshold || 80,
-      params.maxIterations || 100,
+      params.maxIterations || 3,
       params.maxDurationHours || 12,
       params.documentContext || null,
       JSON.stringify(params.config || {})

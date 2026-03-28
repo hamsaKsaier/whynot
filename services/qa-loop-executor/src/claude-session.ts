@@ -56,6 +56,9 @@ export class ClaudeSession {
    */
   private documentContext: string | null | undefined = undefined;
 
+  /** Cached system prompt — built once per runIteration call and reused across tool-call loops. */
+  private cachedSystemPrompt: string | null = null;
+
   constructor(
     sessionId: string,
     config: LoopConfig,
@@ -184,6 +187,10 @@ export class ClaudeSession {
       let loopCount = 0;
       const maxLoops = 60;
 
+      // Build system prompt ONCE per iteration and reuse across all tool-call loops.
+      // Previously this was rebuilt on every loop (60+ times), wasting CPU and string allocations.
+      this.cachedSystemPrompt = this.buildSystemPrompt();
+
       while (continueLoop && loopCount < maxLoops) {
         loopCount++;
 
@@ -203,7 +210,7 @@ export class ClaudeSession {
           system: [
             {
               type: 'text',
-              text: this.buildSystemPrompt(),
+              text: this.cachedSystemPrompt!,
               cache_control: { type: 'ephemeral' }
             }
           ] as any,

@@ -35,7 +35,7 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
       targetUrl,
       mode = 'explore',
       qualityThreshold = 80,
-      maxIterations = 100,
+      maxIterations = 3,
       maxDurationHours = 12,
       documentContext,
       config = {},

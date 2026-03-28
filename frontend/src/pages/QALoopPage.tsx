@@ -70,7 +70,7 @@ export const QALoopPage: React.FC = () => {
   // ── Form state (local — only this page + SessionForm need it) ───────────────
   const [targetUrl,        setTargetUrl]        = useState('');
   const [qualityThreshold, setQualityThreshold] = useState(80);
-  const [maxIterations,    setMaxIterations]    = useState(100);
+  const [maxIterations,    setMaxIterations]    = useState(3);
   const [documentContext,  setDocumentContext]  = useState('');
   const [useLogin,         setUseLogin]         = useState(false);
   const [loginCredentials, setLoginCredentials] = useState({

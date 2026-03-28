@@ -483,6 +483,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const thinkingContainerRef = useRef<HTMLDivElement>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
   const prevToolCallsLen = useRef(toolCalls.length);
 
   // ── Elapsed timer ──────────────────────────────────────────────────────────
@@ -553,8 +554,26 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
         </div>
       )}
 
+      {/* ── Collapsed AI Preview Status Bar ──────────────────────────────────── */}
+      {!showPreview && isRunning && (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-slate-300 text-sm">
+              AI is scanning... {pagesExplored} pages found, {testsGenerated} test cases generated
+            </span>
+          </div>
+          <button
+            onClick={() => setShowPreview(true)}
+            className="text-sky-400 hover:text-sky-300 text-sm flex items-center gap-1"
+          >
+            Show AI Preview
+          </button>
+        </div>
+      )}
+
       {/* ── Main Grid: Browser + Thinking ────────────────────────────────────── */}
-      <div className={`grid gap-4 ${expandedPreview ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[3fr_2fr]'}`}>
+      {showPreview && (<div className={`grid gap-4 ${expandedPreview ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[3fr_2fr]'}`}>
 
         {/* Browser Preview */}
         <div className="rounded-xl overflow-hidden border border-gray-700/60 bg-gray-900/80"
@@ -719,7 +738,17 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             )}
           </div>
         )}
-      </div>
+
+        {/* Hide Preview button */}
+        <div className="col-span-full flex justify-end mt-1">
+          <button
+            onClick={() => setShowPreview(false)}
+            className="text-slate-400 hover:text-slate-300 text-xs flex items-center gap-1"
+          >
+            Hide Preview
+          </button>
+        </div>
+      </div>)}
 
       {/* ── Stats Bar ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-3 justify-start">

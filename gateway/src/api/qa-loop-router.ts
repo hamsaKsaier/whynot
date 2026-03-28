@@ -198,7 +198,7 @@ export const qaLoopSchemas = {
       .string({ error: 'targetUrl is required' })
       .url('targetUrl must be a valid URL'),
     qualityThreshold: z.number().min(0).max(100).optional().default(80),
-    maxIterations:    z.number().int().min(1).max(10_000).optional().default(100),
+    maxIterations:    z.number().int().min(1).max(10_000).optional().default(3),
     documentContext:  z.string().max(50_000).optional(),
     testPriority:     z.enum(['functional_first', 'balanced', 'security_first']).optional(),
     sourceSessionId:  z.string().uuid().optional(),

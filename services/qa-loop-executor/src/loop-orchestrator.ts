@@ -66,6 +66,9 @@ export class LoopOrchestrator {
   /** MCP browser instance — one per session, shared across all phases */
   private mcpBrowser: MCPBrowser | null = null;
 
+  /** Track test case IDs that have already been corrected once — max 1 retry per test case. */
+  private correctedTestCaseIds: Set<string> = new Set();
+
   // Multi-agent system
   private chaosAgent: ChaosAgent;
   private detectiveAgent: DetectiveAgent;
@@ -967,9 +970,40 @@ CRITICAL RULES:
    * Claude API call to fix the test steps, then re-execute corrected tests.
    */
   private async runCorrectionPhase(parallelExecutor: ParallelTestExecutor): Promise<void> {
-    const mismatches = parallelExecutor.getMismatches();
-    if (mismatches.length === 0) {
+    const allMismatches = parallelExecutor.getMismatches();
+    if (allMismatches.length === 0) {
       logger.info('No mismatches found — skipping correction phase', { sessionId: this.sessionId });
+      return;
+    }
+
+    // Filter out test cases that have already been corrected once (max 1 retry per test case).
+    // Already-retried tests that still mismatch are marked "needs_review" permanently.
+    const mismatches = allMismatches.filter(m => !this.correctedTestCaseIds.has(m.testCaseId));
+    const alreadyRetried = allMismatches.filter(m => this.correctedTestCaseIds.has(m.testCaseId));
+
+    if (alreadyRetried.length > 0) {
+      logger.info('Skipping already-retried test cases, marking as needs_review', {
+        sessionId: this.sessionId,
+        skippedCount: alreadyRetried.length,
+        skippedIds: alreadyRetried.map(m => m.testCaseId)
+      });
+      // Mark previously-corrected tests that still fail as "needs_review" permanently
+      for (const m of alreadyRetried) {
+        emitToSession(this.sessionId, {
+          type: 'test_run_result',
+          data: {
+            testCaseId: m.testCaseId,
+            testCaseName: m.testCaseName,
+            status: 'needs_review',
+            isMismatch: true,
+            message: 'Already corrected once — marked as needs_review permanently'
+          }
+        });
+      }
+    }
+
+    if (mismatches.length === 0) {
+      logger.info('All mismatched tests already retried once — skipping correction phase', { sessionId: this.sessionId });
       return;
     }
 
@@ -994,8 +1028,9 @@ CRITICAL RULES:
         return;
       }
 
-      // Update corrected test cases in DB
+      // Update corrected test cases in DB and track them as retried (max 1 correction per test)
       for (const c of corrected) {
+        this.correctedTestCaseIds.add(c.testCaseId);
         try {
           await this.repository.updateTestCaseSteps(c.testCaseId, {
             steps: c.correctedSteps,
