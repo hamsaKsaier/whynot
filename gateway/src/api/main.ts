@@ -1532,10 +1532,10 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
     ) e ON true
     LEFT JOIN qa_loop_test_cases q ON q.standard_test_case_id = tc.id
     LEFT JOIN LATERAL (
-      SELECT r.status as run_status, r.duration_ms as run_duration_ms, r.completed_at as run_completed_at, r.failure_reason as run_failure_reason
+      SELECT r.status as run_status, r.duration_ms as run_duration_ms, r.executed_at as run_completed_at, r.failure_reason as run_failure_reason
       FROM qa_loop_test_runs r
       WHERE r.test_case_id = q.id
-      ORDER BY r.created_at DESC
+      ORDER BY r.executed_at DESC
       LIMIT 1
     ) qlr ON true
     WHERE (
