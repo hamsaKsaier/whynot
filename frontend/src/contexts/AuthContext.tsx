@@ -84,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       token: string;
       user: { id: string; email: string | null; name: string; avatarUrl: string | null; role?: string };
     }>('/auth/login', { email, password });
+    localStorage.removeItem('active_workspace_id');
     storeToken(res.data.token);
     setUser(serverUserToAuthUser(res.data.user));
   }, []);
@@ -94,6 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       token: string;
       user: { id: string; email: string | null; name: string; avatarUrl: string | null; role?: string };
     }>('/auth/register', { email, password, name });
+    localStorage.removeItem('active_workspace_id');
     storeToken(res.data.token);
     setUser(serverUserToAuthUser(res.data.user));
   }, []);
