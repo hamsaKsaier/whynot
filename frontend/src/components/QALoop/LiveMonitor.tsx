@@ -483,7 +483,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const thinkingContainerRef = useRef<HTMLDivElement>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const prevToolCallsLen = useRef(toolCalls.length);
 
   // ── Elapsed timer ──────────────────────────────────────────────────────────

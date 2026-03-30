@@ -131,7 +131,7 @@ export const QALoopPage: React.FC = () => {
   );
   const [showThinking,          setShowThinking]          = useState(true);
   const [showToolCalls,         setShowToolCalls]         = useState(true);
-  const [showQualityDashboard,  setShowQualityDashboard]  = useState(true);
+  const [showQualityDashboard,  setShowQualityDashboard]  = useState(false);
   const [expandedPreview,       setExpandedPreview]       = useState(false);
 
   const dismissOnboarding = useCallback(() => {
