@@ -121,9 +121,9 @@ export class LoopOrchestrator {
     this.startTime = new Date();
 
     try {
-      // Force-cleanup any lingering browser processes from previous sessions
-      // to prevent "Browser is already in use" errors
-      await MCPBrowser.forceCleanup();
+      // Force-cleanup any lingering browser for THIS session to prevent
+      // "Browser is already in use" errors — never kills other sessions' browsers
+      await MCPBrowser.forceCleanup(this.sessionId);
 
       // Start MCP browser — one instance for the entire session
       this.mcpBrowser = new MCPBrowser(this.sessionId);
@@ -152,12 +152,12 @@ export class LoopOrchestrator {
           await this.performLogin();
           this.loginEstablished = true;
         } else {
-          // FRESH START: explore auth page first, then log in
-          await this.performAuthExploration();
-          if (!this.isStopped && this.mcpBrowser) {
-            await this.performLogin();
-            this.loginEstablished = true;
-          }
+          // FRESH START: skip auth exploration — go straight to login.
+          // Auth exploration wastes 10-15 tool calls before the user's credentials
+          // are even used. The login page will be tested during the main exploration
+          // loop after login is established.
+          await this.performLogin();
+          this.loginEstablished = true;
         }
       } else if (this.config.isResume && this.config.config?.hasLoginCredentials) {
         // Resumed WITHOUT credentials but the session originally used login.

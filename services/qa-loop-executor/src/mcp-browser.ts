@@ -65,13 +65,11 @@ export class MCPBrowser {
   }
 
   /**
-   * Force-cleanup any existing browser for this sessionId (or all browsers).
-   * Must be called at the start of every new session initialization to prevent
-   * "browser is not free" race conditions when a user stops and immediately
-   * restarts a session.
+   * Force-cleanup browser(s) to prevent "browser is not free" race conditions.
    *
    * @param sessionId — if provided, only kill that session's browser.
-   *                     If omitted, kills ALL active browsers (nuclear option).
+   *                     If omitted, only kill browsers that have EXPIRED (>30 min old).
+   *                     NEVER kills another active session's browser.
    */
   static async forceCleanup(sessionId?: string): Promise<void> {
     if (sessionId) {
@@ -88,18 +86,22 @@ export class MCPBrowser {
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
     } else {
-      // Kill all active browsers
+      // Only kill EXPIRED browsers — never kill another active session's browser
       const entries = Array.from(MCPBrowser.activeBrowsers.entries());
+      let cleaned = 0;
       for (const [sid, browser] of entries) {
-        logger.warn('Force-cleaning up browser (global cleanup)', { sessionId: sid });
-        try {
-          await browser.forceStop();
-        } catch {
-          // ignore
+        if (browser.isExpired()) {
+          logger.warn('Force-cleaning up expired browser', { sessionId: sid });
+          try {
+            await browser.forceStop();
+          } catch {
+            // ignore
+          }
+          MCPBrowser.activeBrowsers.delete(sid);
+          cleaned++;
         }
-        MCPBrowser.activeBrowsers.delete(sid);
       }
-      if (entries.length > 0) {
+      if (cleaned > 0) {
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
@@ -192,11 +194,11 @@ export class MCPBrowser {
    * Automatically force-kills any previous browser for this session first.
    */
   async start(): Promise<void> {
-    // Kill any lingering browser from ANY previous session to prevent "browser is already in use"
-    // First clean up all active browsers (nuclear option — only one session at a time per executor)
+    // Kill any lingering browser for THIS session to prevent "browser is already in use"
+    // Only cleans up this session's browser — never kills another user's active browser
+    await MCPBrowser.forceCleanup(this.sessionId);
+    // Also clean up any expired browsers (>30 min old) as a safety net
     await MCPBrowser.forceCleanup();
-    // Brief wait for OS-level process cleanup after killing all browsers
-    await new Promise(resolve => setTimeout(resolve, 2000));
 
     logger.info('Starting Playwright MCP server', { sessionId: this.sessionId });
 
