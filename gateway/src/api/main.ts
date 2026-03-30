@@ -1517,10 +1517,11 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
            COALESCE(tc.feature_category, 'General') as feature_category,
            COALESCE(tc.requires_auth, false) as requires_auth,
            tc.created_at, tc.updated_at,
-           e.status as last_run_status,
-           e.total_duration_ms as last_run_duration,
-           e.completed_at as last_run_at,
-           e.error as last_run_error
+           COALESCE(e.status, qlr.status) as last_run_status,
+           COALESCE(e.total_duration_ms, qlr.duration_ms) as last_run_duration,
+           COALESCE(e.completed_at, qlr.completed_at) as last_run_at,
+           COALESCE(e.error, qlr.failure_reason) as last_run_error,
+           q.observed_result
     FROM test_cases tc
     LEFT JOIN LATERAL (
       SELECT status, total_duration_ms, completed_at, error
@@ -1529,6 +1530,14 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
       ORDER BY started_at DESC
       LIMIT 1
     ) e ON true
+    LEFT JOIN qa_loop_test_cases q ON q.standard_test_case_id = tc.id
+    LEFT JOIN LATERAL (
+      SELECT status, duration_ms, completed_at, failure_reason
+      FROM qa_loop_test_runs
+      WHERE test_case_id = q.id
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) qlr ON true
     WHERE (
       tc.user_story_id IN (
         SELECT us.id FROM user_stories us WHERE us.project_id = $1
