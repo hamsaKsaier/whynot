@@ -57,10 +57,9 @@ export interface QALoopEvent {
 }
 
 export function setupWebSocketServer(server: Server): WebSocketServer {
-  const wss = new WebSocketServer({
-    server,
-    path: '/ws/qa-loop'
-  });
+  // Use noServer mode — upgrade routing is handled in index.ts
+  // to prevent conflicts with other WebSocket servers on the same HTTP server
+  const wss = new WebSocketServer({ noServer: true });
 
   wss.on('connection', (ws: WebSocket, req) => {
     // Extract session ID from URL query parameter

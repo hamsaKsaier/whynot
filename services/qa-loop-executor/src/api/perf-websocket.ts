@@ -30,10 +30,8 @@ setInterval(() => {
 }, 60 * 1000);
 
 export function setupPerfWebSocketServer(server: Server): WebSocketServer {
-  const wss = new WebSocketServer({
-    server,
-    path: '/ws/perf',
-  });
+  // Use noServer mode — upgrade routing is handled in index.ts
+  const wss = new WebSocketServer({ noServer: true });
 
   wss.on('connection', (ws: WebSocket, req) => {
     const url = new URL(req.url || '', `http://${req.headers.host}`);

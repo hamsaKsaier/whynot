@@ -58,9 +58,26 @@ app.get('/', (req, res) => {
   });
 });
 
-// Setup WebSocket servers for real-time streaming
-setupWebSocketServer(server);
-setupPerfWebSocketServer(server);
+// Setup WebSocket servers (noServer mode — manually route upgrades)
+const qaLoopWss = setupWebSocketServer(server);
+const perfWss = setupPerfWebSocketServer(server);
+
+// Route WebSocket upgrade requests to the correct server based on path
+server.on('upgrade', (request, socket, head) => {
+  const pathname = new URL(request.url || '', `http://${request.headers.host}`).pathname;
+
+  if (pathname === '/ws/perf') {
+    perfWss.handleUpgrade(request, socket, head, (ws) => {
+      perfWss.emit('connection', ws, request);
+    });
+  } else if (pathname === '/ws/qa-loop') {
+    qaLoopWss.handleUpgrade(request, socket, head, (ws) => {
+      qaLoopWss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
 
 /**
  * On startup, find any sessions that were left in the 'running' state by a
