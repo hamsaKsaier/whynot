@@ -119,7 +119,7 @@ export function emitPerfMetric(runId: string, metric: any): void {
 
 export function emitPerfComplete(runId: string, summary: any): void {
   emitToRun(runId, { type: 'perf_complete', data: summary });
-  // Cleanup after a delay to allow final events to be sent
+  // Cleanup after a long delay to ensure late-connecting clients get final results
   setTimeout(() => {
     perfEventQueues.delete(runId);
     const clients = perfClients.get(runId);
@@ -129,7 +129,7 @@ export function emitPerfComplete(runId: string, summary: any): void {
       }
       perfClients.delete(runId);
     }
-  }, 5000);
+  }, 60_000);
 }
 
 export function emitPerfError(runId: string, error: string): void {

@@ -148,6 +148,7 @@ export const PerformancePage: React.FC = () => {
               targetUrl={selectedPastRun?.target_url || currentTargetUrl}
               startedAt={selectedPastRun?.started_at || startedAt}
               onStop={handleStop}
+              onRunAgain={() => { setSelectedPastRun(null); perfStream.disconnect(); }}
             />
 
             {/* Past Runs */}
