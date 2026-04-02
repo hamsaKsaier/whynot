@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import routes, { shutdownActiveSessions } from './api/routes';
 import { setupWebSocketServer } from './api/websocket';
+import perfRoutes from './api/perf-routes';
+import { setupPerfWebSocketServer } from './api/perf-websocket';
+import { stopAllK6Tests } from './perf/k6-runner';
 import { createLogger } from '../../shared/logger/logger';
 import { getPool } from '../../shared/database/connection';
 
@@ -31,6 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/', routes);
+app.use('/', perfRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -52,8 +56,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// Setup WebSocket server for real-time streaming
+// Setup WebSocket servers for real-time streaming
 setupWebSocketServer(server);
+setupPerfWebSocketServer(server);
 
 /**
  * On startup, find any sessions that were left in the 'running' state by a
@@ -112,6 +117,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
   // Stop accepting new HTTP connections
   server.close(async () => {
     try {
+      stopAllK6Tests();
       await shutdownActiveSessions();
       logger.info('All active sessions stopped cleanly');
     } catch (error: any) {

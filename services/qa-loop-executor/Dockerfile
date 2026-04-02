@@ -10,7 +10,12 @@ COPY tsconfig.json ./
 RUN npm install
 
 # Install ffmpeg for video stitching (screenshot frames → MP4)
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+# Install k6 for performance testing
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg gpg curl && \
+    curl -fsSL https://dl.k6.io/key.gpg | gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" > /etc/apt/sources.list.d/k6.list && \
+    apt-get update && apt-get install -y k6 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Chromium browser WITH all system dependencies.
 # --with-deps tells Playwright to auto-install all required OS packages for the browser.

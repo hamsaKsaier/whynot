@@ -485,6 +485,10 @@ app.use('/api', requireAuth);
 import { monitorRouter } from './monitor-router';
 app.use('/api/monitors', monitorRouter);
 
+// ─── Performance testing routes (requires auth) ──────────────────────────────
+import { perfRouter } from './perf-router';
+app.use('/api/perf', perfRouter);
+
 // ─── Bug Reporting + ClickUp/GitHub integration routes ──────────────────────
 import { integrationsRouter, bugReportRouter } from './integrations-router';
 app.use('/api/integrations', integrationsRouter);

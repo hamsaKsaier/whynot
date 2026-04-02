@@ -9,6 +9,7 @@ import {
   FiClipboard,
   FiActivity,
   FiSettings,
+  FiBarChart2,
 } from 'react-icons/fi';
 import { Tooltip } from '../common/Tooltip';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { icon: FiZap,       label: 'QA Loop',       path: '/qa-loop' },
+    { icon: FiBarChart2, label: 'Performance',   path: '/performance' },
     { icon: FiHome,      label: 'Dashboard',     path: '/' },
     { icon: FiFolder,    label: 'Projects',      path: '/projects' },
     { icon: FiClipboard, label: 'Test Results',  path: '/test-results' },

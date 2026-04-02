@@ -21,6 +21,7 @@ import { LandingPage } from './pages/LandingPage';
 import { PublicScanResultsPage } from './pages/PublicScanResultsPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { MonitorsPage } from './pages/MonitorsPage';
+import { PerformancePage } from './pages/PerformancePage';
 import { UpgradePrompt } from './components/common/UpgradePrompt';
 
 /** Wraps all authenticated routes inside the app shell (sidebar + header). */
@@ -72,6 +73,7 @@ function App() {
                     <Route path="/test-runs/:executionId" element={<TestRunDetailPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/monitors" element={<MonitorsPage />} />
+                    <Route path="/performance" element={<PerformancePage />} />
                     <Route path="/architecture-flow" element={<ArchitectureFlowPage />} />
 
                     {/* Redirects from old routes */}
