@@ -71,23 +71,15 @@ export function usePerfStream(): UsePerfStreamReturn {
     setSummary(null);
     setIsComplete(false);
 
-    // Build WebSocket URL — connect to qa-loop-executor
-    const qaLoopWsUrl = import.meta.env.VITE_QA_LOOP_WS_URL;
-    let wsUrl: string;
+    // Build WebSocket URL — same pattern as useQALoopStream since
+    // the perf WebSocket is on the same qa-loop-executor service
+    const baseWsUrl = import.meta.env.VITE_QA_LOOP_WS_URL || (
+      window.location.protocol === 'https:'
+        ? `wss://${window.location.host}`
+        : 'ws://localhost:3012'
+    );
 
-    if (qaLoopWsUrl) {
-      wsUrl = qaLoopWsUrl;
-    } else {
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      if (apiUrl.startsWith('http')) {
-        wsUrl = apiUrl.replace('/api', '').replace('https://', 'wss://').replace('http://', 'ws://');
-      } else {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.host}`;
-      }
-    }
-
-    const fullUrl = `${wsUrl}/ws/perf?runId=${runId}`;
+    const fullUrl = `${baseWsUrl}/ws/perf?runId=${runId}`;
     const ws = new WebSocket(fullUrl);
     wsRef.current = ws;
 

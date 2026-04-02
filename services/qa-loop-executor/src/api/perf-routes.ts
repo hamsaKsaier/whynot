@@ -151,17 +151,29 @@ router.post('/api/perf/stop/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const stopped = stopK6Test(id);
 
+    const pool = getPool();
+
     if (stopped) {
-      const pool = getPool();
       await pool.query(
         `UPDATE perf_test_runs SET status = 'stopped', completed_at = CURRENT_TIMESTAMP,
          duration_ms = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - started_at)) * 1000
-         WHERE id = $1`,
+         WHERE id = $1 AND status = 'running'`,
         [id],
       );
       res.json({ success: true, message: 'Test stopped' });
     } else {
-      res.status(404).json({ error: 'No running test found with this ID' });
+      // Process already exited — update DB if still marked running
+      const result = await pool.query(
+        `UPDATE perf_test_runs SET status = 'stopped', completed_at = CURRENT_TIMESTAMP,
+         duration_ms = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - started_at)) * 1000
+         WHERE id = $1 AND status = 'running' RETURNING id`,
+        [id],
+      );
+      if (result.rows.length > 0) {
+        res.json({ success: true, message: 'Test marked as stopped (process already exited)' });
+      } else {
+        res.json({ success: true, message: 'Test already completed' });
+      }
     }
   } catch (error: any) {
     logger.error('Failed to stop perf test', { error: error.message });
