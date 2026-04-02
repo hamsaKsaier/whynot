@@ -80,12 +80,10 @@ export function usePerfStream(): UsePerfStreamReturn {
     );
 
     const fullUrl = `${baseWsUrl}/ws/perf?runId=${runId}`;
-    console.log('[PerfStream] Connecting to WebSocket:', fullUrl);
     const ws = new WebSocket(fullUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('[PerfStream] WebSocket connected');
       setIsConnected(true);
       setError(null);
     };
@@ -93,7 +91,6 @@ export function usePerfStream(): UsePerfStreamReturn {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[PerfStream] Received:', data.type, data.data?.requests ?? '');
 
         switch (data.type) {
           case 'connected':
@@ -123,13 +120,11 @@ export function usePerfStream(): UsePerfStreamReturn {
       }
     };
 
-    ws.onerror = (e) => {
-      console.error('[PerfStream] WebSocket error:', e);
+    ws.onerror = () => {
       setError('WebSocket connection failed');
     };
 
-    ws.onclose = (e) => {
-      console.log('[PerfStream] WebSocket closed:', e.code, e.reason);
+    ws.onclose = () => {
       setIsConnected(false);
     };
   }, [disconnect]);

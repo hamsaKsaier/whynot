@@ -9,12 +9,74 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../../../shared/logger/logger';
 import { getPool } from '../../../shared/database/connection';
-import { runK6Test, stopK6Test, isK6TestRunning } from '../perf/k6-runner';
+import { runK6Test, stopK6Test } from '../perf/k6-runner';
 import { getPresetConfig, PerfTestConfig } from '../perf/k6-script-generator';
 import { emitPerfMetric, emitPerfComplete, emitPerfError } from './perf-websocket';
 
 const router = Router();
 const logger = createLogger('perf-routes');
+
+// ── Concurrent test tracking ─────────────────────────────────────────────────
+const MAX_CONCURRENT_TESTS_PER_WORKSPACE = 2;
+const runningTestsByWorkspace = new Map<string, Set<string>>();
+
+function getRunningCount(workspaceId: string): number {
+  return runningTestsByWorkspace.get(workspaceId)?.size ?? 0;
+}
+function trackRunning(workspaceId: string, runId: string): void {
+  if (!runningTestsByWorkspace.has(workspaceId)) {
+    runningTestsByWorkspace.set(workspaceId, new Set());
+  }
+  runningTestsByWorkspace.get(workspaceId)!.add(runId);
+}
+function untrackRunning(workspaceId: string, runId: string): void {
+  const set = runningTestsByWorkspace.get(workspaceId);
+  if (set) {
+    set.delete(runId);
+    if (set.size === 0) runningTestsByWorkspace.delete(workspaceId);
+  }
+}
+
+// ── SSRF protection ──────────────────────────────────────────────────────────
+function validateTargetUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return 'targetUrl must be a valid URL';
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return 'targetUrl must use http or https';
+  }
+
+  const host = parsed.hostname.toLowerCase();
+
+  // Block localhost variants
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') {
+    return 'targetUrl may not point to localhost';
+  }
+
+  // Block private IP ranges
+  const privateRanges = [
+    /^10\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./, /^169\.254\./, /^0\./, /^127\./,
+  ];
+  if (privateRanges.some(r => r.test(host))) {
+    return 'targetUrl may not point to a private network address';
+  }
+
+  // Block decimal IP notation
+  if (/^\d+$/.test(host)) {
+    return 'targetUrl may not use decimal IP notation';
+  }
+
+  // Block cloud metadata endpoints
+  if (host === '169.254.169.254' || host === 'metadata.google.internal') {
+    return 'targetUrl may not point to cloud metadata endpoints';
+  }
+
+  return null; // valid
+}
 
 // POST /api/perf/run — Start a performance test
 router.post('/api/perf/run', async (req: Request, res: Response) => {
@@ -40,14 +102,36 @@ router.post('/api/perf/run', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'targetUrl is required' });
     }
 
+    // SSRF validation
+    const urlError = validateTargetUrl(targetUrl);
+    if (urlError) {
+      return res.status(400).json({ error: urlError });
+    }
+
+    // Validate additional request URLs too
+    for (const addReq of additionalRequests) {
+      if (addReq.url) {
+        const addUrlError = validateTargetUrl(addReq.url);
+        if (addUrlError) {
+          return res.status(400).json({ error: `Additional request "${addReq.name}": ${addUrlError}` });
+        }
+      }
+    }
+
     if (!['smoke', 'load', 'stress', 'spike'].includes(testType)) {
       return res.status(400).json({ error: 'testType must be smoke, load, stress, or spike' });
+    }
+
+    // Concurrent test limit
+    if (getRunningCount(workspaceId) >= MAX_CONCURRENT_TESTS_PER_WORKSPACE) {
+      return res.status(429).json({
+        error: `Maximum ${MAX_CONCURRENT_TESTS_PER_WORKSPACE} concurrent tests per workspace. Wait for a running test to finish or stop it.`,
+      });
     }
 
     const runId = uuidv4();
     const preset = getPresetConfig(testType);
 
-    // Build full config — merge user overrides with preset
     const stages = config.stages || preset.stages;
     const fullConfig: PerfTestConfig = {
       testType,
@@ -62,16 +146,15 @@ router.post('/api/perf/run', async (req: Request, res: Response) => {
 
     const pool = getPool();
 
-    // Insert run record
     await pool.query(
       `INSERT INTO perf_test_runs (id, project_id, workspace_id, test_type, target_url, method, config, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'running')`,
       [runId, projectId || null, workspaceId, testType, targetUrl, method, JSON.stringify(fullConfig)],
     );
 
+    trackRunning(workspaceId, runId);
     logger.info('Starting performance test', { runId, testType, targetUrl });
 
-    // Return immediately — test runs in background
     res.json({
       success: true,
       runId,
@@ -87,6 +170,7 @@ router.post('/api/perf/run', async (req: Request, res: Response) => {
         emitPerfMetric(runId, metric);
       },
       onComplete: async (summary) => {
+        untrackRunning(workspaceId, runId);
         try {
           await pool.query(
             `UPDATE perf_test_runs SET
@@ -127,6 +211,7 @@ router.post('/api/perf/run', async (req: Request, res: Response) => {
         }
       },
       onError: async (error) => {
+        untrackRunning(workspaceId, runId);
         try {
           await pool.query(
             `UPDATE perf_test_runs SET status = 'failed', completed_at = CURRENT_TIMESTAMP WHERE id = $1`,
@@ -137,6 +222,7 @@ router.post('/api/perf/run', async (req: Request, res: Response) => {
         logger.error('Performance test error', { runId, error });
       },
     }).catch((err) => {
+      untrackRunning(workspaceId, runId);
       logger.error('K6 runner threw', { runId, error: err.message });
     });
   } catch (error: any) {
@@ -150,7 +236,6 @@ router.post('/api/perf/stop/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const stopped = stopK6Test(id);
-
     const pool = getPool();
 
     if (stopped) {
@@ -162,7 +247,6 @@ router.post('/api/perf/stop/:id', async (req: Request, res: Response) => {
       );
       res.json({ success: true, message: 'Test stopped' });
     } else {
-      // Process already exited — update DB if still marked running
       const result = await pool.query(
         `UPDATE perf_test_runs SET status = 'stopped', completed_at = CURRENT_TIMESTAMP,
          duration_ms = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - started_at)) * 1000
@@ -202,12 +286,11 @@ router.get('/api/perf/runs', async (req: Request, res: Response) => {
     }
 
     query += ` ORDER BY created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
-    params.push(Number(limit), Number(offset));
+    params.push(Math.min(Number(limit) || 20, 50), Number(offset) || 0);
 
     const pool = getPool();
     const result = await pool.query(query, params);
 
-    // Get total count
     let countQuery = `SELECT COUNT(*) FROM perf_test_runs WHERE workspace_id = $1`;
     const countParams: any[] = [workspaceId];
     if (projectId) {

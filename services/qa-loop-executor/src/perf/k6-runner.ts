@@ -51,8 +51,15 @@ export async function runK6Test(
 
     logger.info('Spawning k6 process', { runId, args: k6Args });
 
+    // Only pass safe env vars to k6 — never leak secrets like API keys or JWT_SECRET
+    const safeEnv: Record<string, string> = {
+      PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+      HOME: process.env.HOME || '/tmp',
+      TERM: process.env.TERM || 'xterm',
+    };
+
     const proc = spawn('k6', k6Args, {
-      env: { ...process.env },
+      env: safeEnv,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -162,6 +169,9 @@ export async function runK6Test(
     proc.on('error', (err) => {
       clearInterval(jsonStreamInterval);
       activeProcesses.delete(runId);
+      // Cleanup temp files on spawn error
+      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      try { fs.unlinkSync(jsonOutputPath); } catch { /* ignore */ }
       const errorMsg = `Failed to spawn k6: ${err.message}`;
       logger.error(errorMsg, { runId });
       callbacks.onError(errorMsg);

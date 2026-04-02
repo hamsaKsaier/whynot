@@ -16,7 +16,18 @@ const logger = createLogger('perf-websocket');
 const perfClients = new Map<string, Set<WebSocket>>();
 
 // Event queue for metrics before client connects
-const perfEventQueues = new Map<string, any[]>();
+const perfEventQueues = new Map<string, { events: any[]; createdAt: number }>();
+
+// Periodically evict stale event queues to prevent memory leak
+setInterval(() => {
+  const cutoff = Date.now() - 5 * 60 * 1000; // 5 minutes
+  for (const [runId, queue] of perfEventQueues) {
+    if (queue.createdAt < cutoff) {
+      perfEventQueues.delete(runId);
+      logger.debug('Evicted stale perf event queue', { runId });
+    }
+  }
+}, 60 * 1000);
 
 export function setupPerfWebSocketServer(server: Server): WebSocketServer {
   const wss = new WebSocketServer({
@@ -48,11 +59,13 @@ export function setupPerfWebSocketServer(server: Server): WebSocketServer {
     }));
 
     // Send queued events
-    const queued = perfEventQueues.get(runId) || [];
-    for (const event of queued) {
-      ws.send(JSON.stringify(event));
+    const queued = perfEventQueues.get(runId);
+    if (queued) {
+      for (const event of queued.events) {
+        ws.send(JSON.stringify(event));
+      }
+      perfEventQueues.delete(runId);
     }
-    perfEventQueues.delete(runId);
 
     ws.on('message', (message: Buffer) => {
       try {
@@ -93,11 +106,11 @@ function emitToRun(runId: string, event: any): void {
   if (!clients || clients.size === 0) {
     // Queue events for late-connecting clients
     if (!perfEventQueues.has(runId)) {
-      perfEventQueues.set(runId, []);
+      perfEventQueues.set(runId, { events: [], createdAt: Date.now() });
     }
     const queue = perfEventQueues.get(runId)!;
-    queue.push(fullEvent);
-    if (queue.length > 500) queue.shift();
+    queue.events.push(fullEvent);
+    if (queue.events.length > 500) queue.events.shift();
     return;
   }
 
