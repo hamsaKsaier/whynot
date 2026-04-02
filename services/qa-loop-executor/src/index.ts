@@ -32,9 +32,11 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/', routes);
+// Routes — perf routes MUST be registered before the main routes because
+// routes.ts mounts webhookRoutes at '/api' with authenticateAPIKey middleware
+// that acts as a catch-all and would reject /api/perf/* with 401.
 app.use('/', perfRoutes);
+app.use('/', routes);
 
 // Root endpoint
 app.get('/', (req, res) => {
