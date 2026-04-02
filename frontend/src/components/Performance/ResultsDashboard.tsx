@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiSquare, FiCheckCircle, FiXCircle, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
 import { MetricCard } from './MetricCard';
+import { ChartErrorBoundary } from './ChartErrorBoundary';
 import { ResponseTimeChart } from './ResponseTimeChart';
 import { VirtualUsersChart } from './VirtualUsersChart';
 import { RPSChart } from './RPSChart';
@@ -242,13 +243,13 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
 
       {/* ── Charts ────────────────────────────────────────────────── */}
       {metricHistory.length > 1 && (
-        <>
+        <ChartErrorBoundary>
           <ResponseTimeChart data={metricHistory} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mt-4">
             <VirtualUsersChart data={metricHistory} />
             <RPSChart data={metricHistory} />
           </div>
-        </>
+        </ChartErrorBoundary>
       )}
 
       {/* ── Thresholds ────────────────────────────────────────────── */}

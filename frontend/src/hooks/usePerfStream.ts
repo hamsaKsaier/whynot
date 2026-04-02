@@ -2,6 +2,7 @@
  * usePerfStream.ts
  *
  * WebSocket hook for real-time performance test metric streaming.
+ * Includes exponential backoff reconnection on disconnect.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -44,6 +45,9 @@ export interface UsePerfStreamReturn {
   disconnect: () => void;
 }
 
+const MAX_RECONNECT_ATTEMPTS = 5;
+const BASE_RECONNECT_DELAY = 1000; // 1s
+
 export function usePerfStream(): UsePerfStreamReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,26 +57,19 @@ export function usePerfStream(): UsePerfStreamReturn {
   const [isComplete, setIsComplete] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const runIdRef = useRef<string | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intentionalCloseRef = useRef(false);
 
-  const disconnect = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
   }, []);
 
-  const connect = useCallback((runId: string) => {
-    disconnect();
-
-    setIsConnected(false);
-    setError(null);
-    setCurrentMetric(null);
-    setMetricHistory([]);
-    setSummary(null);
-    setIsComplete(false);
-
-    // Build WebSocket URL — same pattern as useQALoopStream since
-    // the perf WebSocket is on the same qa-loop-executor service
+  const createConnection = useCallback((runId: string) => {
     const baseWsUrl = import.meta.env.VITE_QA_LOOP_WS_URL || (
       window.location.protocol === 'https:'
         ? `wss://${window.location.host}`
@@ -86,11 +83,13 @@ export function usePerfStream(): UsePerfStreamReturn {
     ws.onopen = () => {
       setIsConnected(true);
       setError(null);
+      reconnectAttemptRef.current = 0;
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        if (!data || typeof data !== 'object') return;
 
         switch (data.type) {
           case 'connected':
@@ -98,21 +97,25 @@ export function usePerfStream(): UsePerfStreamReturn {
             break;
 
           case 'perf_metric':
-            setCurrentMetric(data.data);
-            setMetricHistory(prev => {
-              const next = [...prev, data.data];
-              return next.length > 600 ? next.slice(-600) : next;
-            });
+            if (data.data && typeof data.data.requests === 'number') {
+              setCurrentMetric(data.data);
+              setMetricHistory(prev => {
+                const next = [...prev, data.data];
+                return next.length > 600 ? next.slice(-600) : next;
+              });
+            }
             break;
 
           case 'perf_complete':
             setSummary(data.data);
             setIsComplete(true);
+            intentionalCloseRef.current = true;
             break;
 
           case 'perf_error':
-            setError(data.data.error);
+            setError(data.data?.error || 'Test failed');
             setIsComplete(true);
+            intentionalCloseRef.current = true;
             break;
         }
       } catch {
@@ -121,13 +124,54 @@ export function usePerfStream(): UsePerfStreamReturn {
     };
 
     ws.onerror = () => {
-      setError('WebSocket connection failed');
+      // onerror is always followed by onclose — handle reconnection there
     };
 
     ws.onclose = () => {
       setIsConnected(false);
+
+      // Don't reconnect if intentional close, test completed, or max attempts reached
+      if (intentionalCloseRef.current || !runIdRef.current) return;
+
+      if (reconnectAttemptRef.current < MAX_RECONNECT_ATTEMPTS) {
+        const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttemptRef.current);
+        reconnectAttemptRef.current++;
+        reconnectTimerRef.current = setTimeout(() => {
+          if (runIdRef.current) {
+            createConnection(runIdRef.current);
+          }
+        }, delay);
+      } else {
+        setError('Lost connection to server. Please refresh the page.');
+      }
     };
-  }, [disconnect]);
+  }, []);
+
+  const disconnect = useCallback(() => {
+    intentionalCloseRef.current = true;
+    clearReconnectTimer();
+    runIdRef.current = null;
+    reconnectAttemptRef.current = 0;
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  }, [clearReconnectTimer]);
+
+  const connect = useCallback((runId: string) => {
+    disconnect();
+
+    intentionalCloseRef.current = false;
+    runIdRef.current = runId;
+    setIsConnected(false);
+    setError(null);
+    setCurrentMetric(null);
+    setMetricHistory([]);
+    setSummary(null);
+    setIsComplete(false);
+
+    createConnection(runId);
+  }, [disconnect, createConnection]);
 
   useEffect(() => {
     return () => { disconnect(); };

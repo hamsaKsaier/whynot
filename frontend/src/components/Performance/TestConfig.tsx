@@ -1,6 +1,28 @@
-import React, { useState } from 'react';
-import { FiPlus, FiTrash2, FiPlay } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiPlus, FiTrash2, FiPlay, FiSave, FiBookmark } from 'react-icons/fi';
 import type { PerfRunConfig } from '../../services/perf-api';
+
+// ── Saved configs in localStorage ──────────────────────────────────────────
+interface SavedConfig {
+  name: string;
+  targetUrl: string;
+  method: string;
+  headers: Array<{ key: string; value: string }>;
+  requestBody: string;
+  testType: string;
+}
+
+const SAVED_CONFIGS_KEY = 'whynot_perf_saved_configs';
+
+function loadSavedConfigs(): SavedConfig[] {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_CONFIGS_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveSavedConfigs(configs: SavedConfig[]) {
+  localStorage.setItem(SAVED_CONFIGS_KEY, JSON.stringify(configs));
+}
 
 interface TestConfigProps {
   onRun: (config: PerfRunConfig) => void;
@@ -61,6 +83,38 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
   const [vus, setVus] = useState(TEST_TYPE_INFO.load.vus);
   const [duration, setDuration] = useState(TEST_TYPE_INFO.load.duration);
   const [additionalRequests, setAdditionalRequests] = useState<AdditionalRequest[]>([]);
+  const [bodyError, setBodyError] = useState<string | null>(null);
+  const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [showSaveInput, setShowSaveInput] = useState(false);
+
+  useEffect(() => { setSavedConfigs(loadSavedConfigs()); }, []);
+
+  const handleSaveConfig = () => {
+    if (!saveName.trim() || !targetUrl.trim()) return;
+    const config: SavedConfig = { name: saveName.trim(), targetUrl, method, headers, requestBody, testType };
+    const updated = [...savedConfigs.filter(c => c.name !== config.name), config];
+    saveSavedConfigs(updated);
+    setSavedConfigs(updated);
+    setShowSaveInput(false);
+    setSaveName('');
+  };
+
+  const handleLoadConfig = (config: SavedConfig) => {
+    setTargetUrl(config.targetUrl);
+    setMethod(config.method);
+    setHeaders(config.headers);
+    setRequestBody(config.requestBody);
+    handleTestTypeChange(config.testType as TestType);
+    setShowSaved(false);
+  };
+
+  const handleDeleteConfig = (name: string) => {
+    const updated = savedConfigs.filter(c => c.name !== name);
+    saveSavedConfigs(updated);
+    setSavedConfigs(updated);
+  };
 
   const handleTestTypeChange = (type: TestType) => {
     setTestType(type);
@@ -102,8 +156,10 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       try {
         parsedBody = JSON.parse(requestBody);
-      } catch {
-        parsedBody = {};
+        setBodyError(null);
+      } catch (e: any) {
+        setBodyError(`Invalid JSON: ${e.message}`);
+        return; // Don't run with invalid JSON
       }
     }
 
@@ -222,10 +278,15 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
           <label className="block text-sm font-medium text-slate-300 mb-1">Request Body (JSON)</label>
           <textarea
             value={requestBody}
-            onChange={(e) => setRequestBody(e.target.value)}
+            onChange={(e) => { setRequestBody(e.target.value); setBodyError(null); }}
             rows={5}
-            className="w-full px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg text-white font-mono text-sm placeholder-slate-600 focus:outline-none focus:border-sky-500 resize-none"
+            className={`w-full px-3 py-2 bg-[#0f172a] border rounded-lg text-white font-mono text-sm placeholder-slate-600 focus:outline-none resize-none ${
+              bodyError ? 'border-red-500/50 focus:border-red-500' : 'border-[#334155] focus:border-sky-500'
+            }`}
           />
+          {bodyError && (
+            <p className="text-xs text-red-400 mt-1">{bodyError}</p>
+          )}
         </div>
       )}
 
@@ -316,6 +377,62 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
           <FiPlus className="h-3 w-3" /> Add Another Request
         </button>
       </div>
+
+      {/* Saved Configs */}
+      <div className="border-t border-[#334155] pt-4 flex gap-2">
+        {savedConfigs.length > 0 && (
+          <button
+            onClick={() => setShowSaved(!showSaved)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 border border-[#334155] rounded-lg hover:border-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <FiBookmark className="h-3 w-3" /> Load Saved ({savedConfigs.length})
+          </button>
+        )}
+        {targetUrl.trim() && (
+          <button
+            onClick={() => setShowSaveInput(!showSaveInput)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 border border-[#334155] rounded-lg hover:border-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <FiSave className="h-3 w-3" /> Save Config
+          </button>
+        )}
+      </div>
+
+      {showSaveInput && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            placeholder="Config name (e.g. Login API)"
+            className="flex-1 px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+            onKeyDown={(e) => e.key === 'Enter' && handleSaveConfig()}
+          />
+          <button
+            onClick={handleSaveConfig}
+            disabled={!saveName.trim()}
+            className="px-3 py-1.5 bg-sky-500/20 text-sky-400 border border-sky-500/50 rounded-lg text-xs hover:bg-sky-500/30 disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
+      )}
+
+      {showSaved && savedConfigs.length > 0 && (
+        <div className="space-y-1.5">
+          {savedConfigs.map((cfg) => (
+            <div key={cfg.name} className="flex items-center gap-2 px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg">
+              <button onClick={() => handleLoadConfig(cfg)} className="flex-1 text-left">
+                <div className="text-xs font-medium text-white">{cfg.name}</div>
+                <div className="text-[10px] text-slate-500 truncate">{cfg.method} {cfg.targetUrl}</div>
+              </button>
+              <button onClick={() => handleDeleteConfig(cfg.name)} className="text-slate-600 hover:text-red-400">
+                <FiTrash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Run Button */}
       <button
