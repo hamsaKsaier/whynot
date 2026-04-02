@@ -111,7 +111,14 @@ function emitToRun(runId: string, event: any): void {
     const queue = perfEventQueues.get(runId)!;
     queue.events.push(fullEvent);
     if (queue.events.length > 500) queue.events.shift();
+    if (event.type === 'perf_metric' && queue.events.length % 10 === 1) {
+      logger.debug('Perf event queued (no clients)', { runId, queueSize: queue.events.length, type: event.type });
+    }
     return;
+  }
+
+  if (event.type === 'perf_metric') {
+    logger.debug('Sending perf metric to clients', { runId, clientCount: clients.size });
   }
 
   const eventString = JSON.stringify(fullEvent);

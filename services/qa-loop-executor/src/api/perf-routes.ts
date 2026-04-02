@@ -164,9 +164,10 @@ router.post('/api/perf/run', async (req: Request, res: Response) => {
       wsPath: `/ws/perf?runId=${runId}`,
     });
 
-    // Run k6 in background
+    // Run k6 in background — do NOT await, response already sent
     runK6Test(runId, fullConfig, {
       onMetric: (metric) => {
+        logger.debug('perf onMetric callback', { runId, requests: metric?.requests, vus: metric?.vus });
         emitPerfMetric(runId, metric);
       },
       onComplete: async (summary) => {
