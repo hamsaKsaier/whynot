@@ -1,3 +1,7 @@
+# Stage 1: Copy k6 binary from official image (avoids SSL/download issues on Railway)
+FROM grafana/k6:0.54.0 AS k6
+
+# Stage 2: Build the actual service
 FROM node:20-slim
 
 WORKDIR /app
@@ -10,14 +14,10 @@ COPY tsconfig.json ./
 RUN npm install
 
 # Install ffmpeg for video stitching (screenshot frames → MP4)
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Install k6 for performance testing (direct binary — more reliable than apt in Railway)
-RUN curl -fsSL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz -o /tmp/k6.tar.gz && \
-    tar -xzf /tmp/k6.tar.gz -C /tmp && \
-    mv /tmp/k6-v0.54.0-linux-amd64/k6 /usr/local/bin/k6 && \
-    chmod +x /usr/local/bin/k6 && \
-    rm -rf /tmp/k6*
+# Copy k6 binary from stage 1
+COPY --from=k6 /usr/bin/k6 /usr/local/bin/k6
 
 # Install Chromium browser WITH all system dependencies.
 # --with-deps tells Playwright to auto-install all required OS packages for the browser.

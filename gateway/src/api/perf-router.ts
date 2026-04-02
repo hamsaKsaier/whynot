@@ -29,9 +29,17 @@ function forwardError(error: any, label: string, res: express.Response): void {
     status: error.response?.status,
   });
   if (error.response) {
-    res.status(error.response.status).json(error.response.data);
+    // Never forward 401/403 from upstream — auth is handled by the gateway's
+    // requireAuth middleware. Forwarding upstream 401 would trigger the
+    // frontend's logout interceptor and log the user out incorrectly.
+    const status = error.response.status;
+    const safeStatus = (status === 401 || status === 403) ? 502 : status;
+    res.status(safeStatus).json({
+      error: label,
+      details: error.response.data?.error || error.response.data || 'Upstream error',
+    });
   } else {
-    res.status(500).json({ error: label, details: 'Service unavailable' });
+    res.status(502).json({ error: label, details: 'Performance testing service unavailable' });
   }
 }
 
