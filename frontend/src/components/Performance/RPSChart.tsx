@@ -10,19 +10,19 @@ import {
 } from 'recharts';
 import type { PerfMetric } from '../../hooks/usePerfStream';
 
-interface VirtualUsersChartProps {
+interface RPSChartProps {
   data: PerfMetric[];
 }
 
-export const VirtualUsersChart: React.FC<VirtualUsersChartProps> = ({ data }) => {
+export const RPSChart: React.FC<RPSChartProps> = ({ data }) => {
   const chartData = data.map((m, i) => ({
     time: i,
-    vus: m.vus,
+    rps: Math.round(m.requestsPerSecond * 10) / 10,
   }));
 
   return (
     <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
-      <h3 className="text-sm font-medium text-slate-300 mb-3">Virtual Users</h3>
+      <h3 className="text-sm font-medium text-slate-300 mb-3">Requests/Second</h3>
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData}>
@@ -45,13 +45,13 @@ export const VirtualUsersChart: React.FC<VirtualUsersChartProps> = ({ data }) =>
                 fontSize: 12,
               }}
               labelFormatter={(v) => `${v}s`}
-              formatter={(value: any) => [`${value} VUs`, 'Virtual Users']}
+              formatter={(value: any) => [`${value} req/s`, 'Throughput']}
             />
             <Area
               type="monotone"
-              dataKey="vus"
-              stroke="#10b981"
-              fill="#10b981"
+              dataKey="rps"
+              stroke="#0ea5e9"
+              fill="#0ea5e9"
               fillOpacity={0.12}
               strokeWidth={2}
               isAnimationActive={false}

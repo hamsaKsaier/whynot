@@ -16,8 +16,9 @@ RUN npm install
 # Install ffmpeg for video stitching (screenshot frames → MP4)
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Copy k6 binary from stage 1
+# Copy k6 binary from stage 1 and verify it works
 COPY --from=k6 /usr/bin/k6 /usr/local/bin/k6
+RUN k6 version
 
 # Install Chromium browser WITH all system dependencies.
 # --with-deps tells Playwright to auto-install all required OS packages for the browser.

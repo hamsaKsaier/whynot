@@ -12,7 +12,9 @@ export interface PerfMetric {
   requests: number;
   failed: number;
   avgResponseTime: number;
+  p50ResponseTime: number;
   p95ResponseTime: number;
+  p99ResponseTime: number;
   requestsPerSecond: number;
   errorRate: number;
 }
@@ -51,21 +53,17 @@ export function usePerfStream(): UsePerfStreamReturn {
   const [isComplete, setIsComplete] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const runIdRef = useRef<string | null>(null);
 
   const disconnect = useCallback(() => {
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
     }
-    runIdRef.current = null;
   }, []);
 
   const connect = useCallback((runId: string) => {
-    // Disconnect existing connection
     disconnect();
 
-    runIdRef.current = runId;
     setIsConnected(false);
     setError(null);
     setCurrentMetric(null);
@@ -73,24 +71,23 @@ export function usePerfStream(): UsePerfStreamReturn {
     setSummary(null);
     setIsComplete(false);
 
-    // Build WebSocket URL
-    const apiUrl = import.meta.env.VITE_API_URL || '';
+    // Build WebSocket URL — connect to qa-loop-executor
+    const qaLoopWsUrl = import.meta.env.VITE_QA_LOOP_WS_URL;
     let wsUrl: string;
 
-    if (apiUrl.startsWith('http')) {
-      // Direct connection to qa-loop-executor
-      const qaLoopUrl = import.meta.env.VITE_QA_LOOP_WS_URL || apiUrl.replace('/api', '');
-      wsUrl = qaLoopUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+    if (qaLoopWsUrl) {
+      wsUrl = qaLoopWsUrl;
     } else {
-      // Relative URL — construct from window.location
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsUrl = `${protocol}//${window.location.host}`;
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (apiUrl.startsWith('http')) {
+        wsUrl = apiUrl.replace('/api', '').replace('https://', 'wss://').replace('http://', 'ws://');
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}`;
+      }
     }
 
-    // The perf WS endpoint is on the qa-loop-executor service
-    const qaLoopWsUrl = import.meta.env.VITE_QA_LOOP_WS_URL || wsUrl;
-    const fullUrl = `${qaLoopWsUrl}/ws/perf?runId=${runId}`;
-
+    const fullUrl = `${wsUrl}/ws/perf?runId=${runId}`;
     const ws = new WebSocket(fullUrl);
     wsRef.current = ws;
 
@@ -112,8 +109,7 @@ export function usePerfStream(): UsePerfStreamReturn {
             setCurrentMetric(data.data);
             setMetricHistory(prev => {
               const next = [...prev, data.data];
-              // Keep last 500 data points
-              return next.length > 500 ? next.slice(-500) : next;
+              return next.length > 600 ? next.slice(-600) : next;
             });
             break;
 
@@ -141,11 +137,8 @@ export function usePerfStream(): UsePerfStreamReturn {
     };
   }, [disconnect]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      disconnect();
-    };
+    return () => { disconnect(); };
   }, [disconnect]);
 
   return {

@@ -25,11 +25,6 @@ export interface K6RunCallbacks {
 
 /**
  * Run a k6 performance test.
- *
- * 1. Generates a k6 script from user config
- * 2. Spawns k6 process with JSON output
- * 3. Parses output line-by-line and streams metrics via callbacks
- * 4. Returns final summary when process exits
  */
 export async function runK6Test(
   runId: string,
@@ -40,10 +35,10 @@ export async function runK6Test(
   const scriptPath = path.join(tmpDir, `k6-script-${runId}.js`);
   const jsonOutputPath = path.join(tmpDir, `k6-results-${runId}.json`);
 
-  // Generate k6 script
+  // Generate k6 script and log it for debugging
   const script = generateK6Script(config);
   fs.writeFileSync(scriptPath, script, 'utf-8');
-  logger.info('Generated k6 script', { runId, scriptPath });
+  logger.info('Generated k6 script', { runId, scriptPath, scriptContent: script });
 
   const aggregator = new K6MetricsAggregator();
 
@@ -63,12 +58,14 @@ export async function runK6Test(
 
     activeProcesses.set(runId, proc);
 
-    // Buffer partial lines from stdout/stderr
+    // Collect all stderr for error reporting
+    let stderrFull = '';
     let stdoutBuffer = '';
     let stderrBuffer = '';
 
     proc.stdout?.on('data', (chunk: Buffer) => {
-      stdoutBuffer += chunk.toString();
+      const text = chunk.toString();
+      stdoutBuffer += text;
       const lines = stdoutBuffer.split('\n');
       stdoutBuffer = lines.pop() || '';
 
@@ -79,19 +76,22 @@ export async function runK6Test(
     });
 
     proc.stderr?.on('data', (chunk: Buffer) => {
-      stderrBuffer += chunk.toString();
+      const text = chunk.toString();
+      stderrFull += text;
+      stderrBuffer += text;
       const lines = stderrBuffer.split('\n');
       stderrBuffer = lines.pop() || '';
 
       for (const line of lines) {
         if (!line.trim()) continue;
-        // k6 also outputs progress to stderr
+        // k6 outputs progress info to stderr
         aggregator.parseStdoutLine(line);
+        // Log stderr lines for debugging
+        logger.debug('k6 stderr', { runId, line });
       }
     });
 
     // Stream metrics from JSON output in real-time
-    // k6 writes JSON lines to the output file as the test runs
     let jsonReadOffset = 0;
     const jsonStreamInterval = setInterval(() => {
       try {
@@ -117,6 +117,14 @@ export async function runK6Test(
       clearInterval(jsonStreamInterval);
       activeProcesses.delete(runId);
 
+      logger.info('k6 process exited', { runId, code, stderrLength: stderrFull.length });
+
+      // Log full stderr on non-zero exit for debugging
+      if (code !== 0 && code !== 99) {
+        logger.error('k6 failed — full stderr output', { runId, code, stderr: stderrFull });
+        logger.error('k6 failed — script content was', { runId, script });
+      }
+
       // Parse any remaining JSON output
       try {
         if (fs.existsSync(jsonOutputPath)) {
@@ -139,15 +147,13 @@ export async function runK6Test(
       const summary = aggregator.getSummary();
 
       if (code === 0 || code === 99) {
-        // code 99 = k6 completed but thresholds failed — still a valid result
         logger.info('k6 test completed', { runId, code });
         callbacks.onComplete(summary);
         resolve(summary);
       } else {
-        const errorMsg = `k6 exited with code ${code}`;
-        logger.error('k6 test failed', { runId, code, stderr: stderrBuffer });
+        const errorMsg = `k6 exited with code ${code}: ${stderrFull.slice(0, 500)}`;
+        logger.error('k6 test failed', { runId, code });
         callbacks.onError(errorMsg);
-        // Still resolve with summary even on failure — we have partial data
         callbacks.onComplete(summary);
         resolve(summary);
       }

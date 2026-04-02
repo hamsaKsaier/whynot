@@ -10,6 +10,7 @@ export const PerformancePage: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [currentTestType, setCurrentTestType] = useState<string>('load');
+  const [currentTargetUrl, setCurrentTargetUrl] = useState<string>('');
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [pastRuns, setPastRuns] = useState<PerfRun[]>([]);
   const [selectedPastRun, setSelectedPastRun] = useState<PerfRun | null>(null);
@@ -47,6 +48,7 @@ export const PerformancePage: React.FC = () => {
       const response = await startPerfRun(config);
       setCurrentRunId(response.runId);
       setCurrentTestType(config.testType);
+      setCurrentTargetUrl(config.targetUrl);
       setStartedAt(new Date().toISOString());
       setIsRunning(true);
 
@@ -143,6 +145,7 @@ export const PerformancePage: React.FC = () => {
               metricHistory={perfStream.metricHistory}
               summary={selectedPastRun ? pastRunSummary : perfStream.summary}
               testType={selectedPastRun?.test_type || currentTestType}
+              targetUrl={selectedPastRun?.target_url || currentTargetUrl}
               startedAt={selectedPastRun?.started_at || startedAt}
               onStop={handleStop}
             />

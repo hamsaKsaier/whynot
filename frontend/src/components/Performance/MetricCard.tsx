@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface MetricCardProps {
   label: string;
-  value: string | number;
+  value: number;
   unit?: string;
-  trend?: 'up' | 'down' | 'neutral';
   color?: 'default' | 'success' | 'warning' | 'danger';
+  previousValue?: number;
+  formatValue?: (v: number) => string;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -13,6 +14,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   value,
   unit = '',
   color = 'default',
+  previousValue,
+  formatValue,
 }) => {
   const colorMap = {
     default: 'text-white',
@@ -21,13 +24,31 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     danger: 'text-red-400',
   };
 
+  // Trend arrow
+  let trend: 'up' | 'down' | 'stable' = 'stable';
+  if (previousValue !== undefined && previousValue !== value) {
+    trend = value > previousValue ? 'up' : 'down';
+  }
+
+  const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
+  const trendColor = label === 'Error Rate'
+    ? (trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-emerald-400' : 'text-slate-500')
+    : (trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-amber-400' : 'text-slate-500');
+
+  const displayValue = formatValue ? formatValue(value) : value.toLocaleString();
+
   return (
     <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
-      <div className={`text-2xl font-bold ${colorMap[color]}`}>
-        {typeof value === 'number' ? value.toLocaleString() : value}
-        {unit && <span className="text-sm font-normal text-slate-400 ml-1">{unit}</span>}
+      <div className="flex items-baseline gap-1.5">
+        <span className={`text-2xl font-bold tabular-nums ${colorMap[color]}`}>
+          {displayValue}
+        </span>
+        {unit && <span className="text-sm text-slate-500">{unit}</span>}
+        {previousValue !== undefined && (
+          <span className={`text-xs ml-1 ${trendColor}`}>{trendIcon}</span>
+        )}
       </div>
-      <div className="text-sm text-slate-400 mt-1">{label}</div>
+      <div className="text-xs text-slate-500 mt-1">{label}</div>
     </div>
   );
 };

@@ -11,7 +11,9 @@ export interface K6Metric {
   requests: number;
   failed: number;
   avgResponseTime: number;
+  p50ResponseTime: number;
   p95ResponseTime: number;
+  p99ResponseTime: number;
   requestsPerSecond: number;
   errorRate: number;
 }
@@ -41,7 +43,6 @@ export class K6MetricsAggregator {
 
   /**
    * Parse a single line of k6 JSON output.
-   * k6 outputs one JSON object per line with metric data points.
    */
   parseLine(line: string): K6Metric | null {
     try {
@@ -49,9 +50,6 @@ export class K6MetricsAggregator {
 
       if (data.type === 'Point') {
         this.handleDataPoint(data);
-      } else if (data.type === 'Metric') {
-        // Metric definition — can be used for threshold evaluation
-        return null;
       }
 
       // Emit aggregated metric at most every 1 second
@@ -63,7 +61,6 @@ export class K6MetricsAggregator {
 
       return null;
     } catch {
-      // Not JSON or unparseable — skip
       return null;
     }
   }
@@ -92,14 +89,17 @@ export class K6MetricsAggregator {
     }
   }
 
+  private percentile(sorted: number[], p: number): number {
+    if (sorted.length === 0) return 0;
+    const idx = Math.floor(sorted.length * p);
+    return sorted[Math.min(idx, sorted.length - 1)];
+  }
+
   getCurrentSnapshot(): K6Metric {
     const elapsed = this.startTime ? (Date.now() - this.startTime) / 1000 : 1;
     const sorted = [...this.responseTimes].sort((a, b) => a - b);
     const avg = sorted.length > 0
       ? sorted.reduce((a, b) => a + b, 0) / sorted.length
-      : 0;
-    const p95 = sorted.length > 0
-      ? sorted[Math.floor(sorted.length * 0.95)] || 0
       : 0;
 
     return {
@@ -108,7 +108,9 @@ export class K6MetricsAggregator {
       requests: this.totalRequests,
       failed: this.failedRequests,
       avgResponseTime: Math.round(avg * 100) / 100,
-      p95ResponseTime: Math.round(p95 * 100) / 100,
+      p50ResponseTime: Math.round(this.percentile(sorted, 0.5) * 100) / 100,
+      p95ResponseTime: Math.round(this.percentile(sorted, 0.95) * 100) / 100,
+      p99ResponseTime: Math.round(this.percentile(sorted, 0.99) * 100) / 100,
       requestsPerSecond: Math.round((this.totalRequests / elapsed) * 100) / 100,
       errorRate: this.totalRequests > 0
         ? Math.round((this.failedRequests / this.totalRequests) * 10000) / 100
@@ -118,11 +120,8 @@ export class K6MetricsAggregator {
 
   /**
    * Parse k6 stdout for threshold pass/fail results.
-   * k6 prints threshold results in its text summary output.
    */
   parseStdoutLine(line: string): void {
-    // k6 threshold output format: "  ✓ http_req_duration..........: avg=245ms min=12ms ..."
-    // or "  ✗ http_req_failed............: 2.50% ✗ 0"
     const passMatch = line.match(/✓\s+(\S+)/);
     const failMatch = line.match(/✗\s+(\S+)/);
 
@@ -138,18 +137,16 @@ export class K6MetricsAggregator {
     const len = sorted.length;
     const elapsed = this.startTime ? (Date.now() - this.startTime) / 1000 : 1;
 
-    const percentile = (p: number) => len > 0 ? sorted[Math.floor(len * p)] || 0 : 0;
-
     return {
       totalRequests: this.totalRequests,
       failedRequests: this.failedRequests,
       avgResponseTimeMs: len > 0
         ? Math.round((sorted.reduce((a, b) => a + b, 0) / len) * 100) / 100
         : 0,
-      p50ResponseTimeMs: Math.round(percentile(0.5) * 100) / 100,
-      p90ResponseTimeMs: Math.round(percentile(0.9) * 100) / 100,
-      p95ResponseTimeMs: Math.round(percentile(0.95) * 100) / 100,
-      p99ResponseTimeMs: Math.round(percentile(0.99) * 100) / 100,
+      p50ResponseTimeMs: Math.round(this.percentile(sorted, 0.5) * 100) / 100,
+      p90ResponseTimeMs: Math.round(this.percentile(sorted, 0.9) * 100) / 100,
+      p95ResponseTimeMs: Math.round(this.percentile(sorted, 0.95) * 100) / 100,
+      p99ResponseTimeMs: Math.round(this.percentile(sorted, 0.99) * 100) / 100,
       maxResponseTimeMs: len > 0 ? Math.round(sorted[len - 1] * 100) / 100 : 0,
       minResponseTimeMs: len > 0 ? Math.round(sorted[0] * 100) / 100 : 0,
       requestsPerSecond: Math.round((this.totalRequests / elapsed) * 100) / 100,
