@@ -2,6 +2,7 @@
  * k6-runner.ts
  *
  * Spawns k6 processes and streams results via WebSocket.
+ * Uses stdout JSON streaming (--out json=-) instead of file-based polling.
  */
 
 import { spawn, ChildProcess } from 'child_process';
@@ -14,7 +15,6 @@ import { generateK6Script, PerfTestConfig } from './k6-script-generator';
 
 const logger = createLogger('k6-runner');
 
-/** Track active k6 processes so they can be stopped */
 const activeProcesses = new Map<string, ChildProcess>();
 
 export interface K6RunCallbacks {
@@ -23,9 +23,6 @@ export interface K6RunCallbacks {
   onError: (error: string) => void;
 }
 
-/**
- * Run a k6 performance test.
- */
 export async function runK6Test(
   runId: string,
   config: PerfTestConfig,
@@ -33,21 +30,20 @@ export async function runK6Test(
 ): Promise<K6Summary> {
   const tmpDir = os.tmpdir();
   const scriptPath = path.join(tmpDir, `k6-script-${runId}.js`);
-  const jsonOutputPath = path.join(tmpDir, `k6-results-${runId}.json`);
 
   const script = generateK6Script(config);
   fs.writeFileSync(scriptPath, script, 'utf-8');
-  logger.info('Generated k6 script', { runId, scriptPath, scriptLength: script.length });
+  logger.info('k6 script generated', { runId, scriptLength: script.length });
   logger.info('k6 script content', { runId, script });
 
   const aggregator = new K6MetricsAggregator();
 
   return new Promise((resolve, reject) => {
-    const k6Args = ['run', '--out', `json=${jsonOutputPath}`, scriptPath];
+    // Use --out json=- to stream JSON to stdout (instead of file-based polling)
+    const k6Args = ['run', '--out', 'json=-', scriptPath];
 
-    logger.info('Spawning k6 process', { runId, args: k6Args });
+    logger.info('Spawning k6', { runId, args: k6Args });
 
-    // Only pass safe env vars to k6
     const safeEnv: Record<string, string> = {
       PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
       HOME: process.env.HOME || '/tmp',
@@ -60,24 +56,40 @@ export async function runK6Test(
     });
 
     activeProcesses.set(runId, proc);
-    logger.info('k6 process spawned', { runId, pid: proc.pid });
+    logger.info('k6 spawned', { runId, pid: proc.pid });
 
     let stderrFull = '';
     let stdoutBuffer = '';
     let stderrBuffer = '';
+    let linesProcessed = 0;
+    let metricsEmitted = 0;
 
+    // ── STDOUT: JSON metric lines from --out json=- ──────────────────
     proc.stdout?.on('data', (chunk: Buffer) => {
-      const text = chunk.toString();
-      stdoutBuffer += text;
+      stdoutBuffer += chunk.toString();
       const lines = stdoutBuffer.split('\n');
-      stdoutBuffer = lines.pop() || '';
+      stdoutBuffer = lines.pop() || ''; // keep incomplete last line
 
       for (const line of lines) {
         if (!line.trim()) continue;
-        aggregator.parseStdoutLine(line);
+        linesProcessed++;
+
+        const metric = aggregator.parseLine(line);
+        if (metric) {
+          metricsEmitted++;
+          callbacks.onMetric(metric);
+        }
+      }
+
+      // Force-emit a snapshot every chunk to guarantee updates reach frontend
+      const snapshot = aggregator.getCurrentSnapshot();
+      if (snapshot.requests > 0 || snapshot.vus > 0) {
+        callbacks.onMetric(snapshot);
+        metricsEmitted++;
       }
     });
 
+    // ── STDERR: k6 progress info + final summary ──────────────────────
     proc.stderr?.on('data', (chunk: Buffer) => {
       const text = chunk.toString();
       stderrFull += text;
@@ -91,112 +103,42 @@ export async function runK6Test(
       }
     });
 
-    // Stream metrics from JSON output in real-time
-    let jsonReadOffset = 0;
-    let tickCount = 0;
-    let totalLinesProcessed = 0;
-    let totalMetricsEmitted = 0;
+    // ── Periodic progress logging ─────────────────────────────────────
+    const logInterval = setInterval(() => {
+      logger.info('k6 progress', {
+        runId,
+        linesProcessed,
+        metricsEmitted,
+        snapshot: aggregator.getCurrentSnapshot(),
+      });
+    }, 5000);
 
-    const jsonStreamInterval = setInterval(() => {
-      tickCount++;
-      try {
-        const fileExists = fs.existsSync(jsonOutputPath);
-        if (!fileExists) {
-          if (tickCount <= 3) {
-            logger.info('k6 JSON file not yet created', { runId, tick: tickCount });
-          }
-          return;
-        }
-
-        const stat = fs.statSync(jsonOutputPath);
-        if (stat.size <= jsonReadOffset) return; // No new data
-
-        const content = fs.readFileSync(jsonOutputPath, 'utf-8');
-        const newContent = content.slice(jsonReadOffset);
-        jsonReadOffset = content.length;
-
-        const lines = newContent.split('\n').filter(l => l.trim());
-        totalLinesProcessed += lines.length;
-
-        for (const line of lines) {
-          const metric = aggregator.parseLine(line);
-          if (metric) {
-            totalMetricsEmitted++;
-            logger.info('Emitting perf metric', {
-              runId,
-              requests: metric.requests,
-              avgRT: metric.avgResponseTime,
-              vus: metric.vus,
-              rps: metric.requestsPerSecond,
-            });
-            callbacks.onMetric(metric);
-          }
-        }
-
-        // Force emit a snapshot every tick even if parseLine didn't emit
-        // (parseLine throttles to 1/sec, but we want guaranteed updates)
-        if (lines.length > 0) {
-          const snapshot = aggregator.getCurrentSnapshot();
-          if (snapshot.requests > 0) {
-            totalMetricsEmitted++;
-            callbacks.onMetric(snapshot);
-          }
-        }
-
-        if (tickCount % 5 === 0) {
-          logger.info('k6 stream progress', {
-            runId, tick: tickCount,
-            fileSize: stat.size,
-            linesProcessed: totalLinesProcessed,
-            metricsEmitted: totalMetricsEmitted,
-          });
-        }
-      } catch (err: any) {
-        logger.warn('k6 JSON stream tick error', { runId, error: err.message });
-      }
-    }, 1000);
-
+    // ── Process exit ──────────────────────────────────────────────────
     proc.on('close', (code) => {
-      clearInterval(jsonStreamInterval);
+      clearInterval(logInterval);
       activeProcesses.delete(runId);
 
-      logger.info('k6 process exited', {
-        runId, code,
-        totalLinesProcessed,
-        totalMetricsEmitted,
-        stderrLength: stderrFull.length,
-      });
+      logger.info('k6 exited', { runId, code, linesProcessed, metricsEmitted });
 
       if (code !== 0 && code !== 99) {
-        logger.error('k6 failed — stderr', { runId, code, stderr: stderrFull.slice(0, 2000) });
+        logger.error('k6 stderr', { runId, code, stderr: stderrFull.slice(0, 2000) });
       }
 
-      // Parse any remaining JSON output
-      try {
-        if (fs.existsSync(jsonOutputPath)) {
-          const content = fs.readFileSync(jsonOutputPath, 'utf-8');
-          const remaining = content.slice(jsonReadOffset);
-          for (const line of remaining.split('\n')) {
-            if (line.trim()) aggregator.parseLine(line);
-          }
-        }
-      } catch { /* ignore */ }
-
-      // Emit final snapshot
+      // Final snapshot
       const finalMetric = aggregator.getCurrentSnapshot();
       callbacks.onMetric(finalMetric);
 
-      // Cleanup temp files
+      // Cleanup
       try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
-      try { fs.unlinkSync(jsonOutputPath); } catch { /* ignore */ }
 
       const summary = aggregator.getSummary();
-      logger.info('k6 final summary', {
+      logger.info('k6 summary', {
         runId,
         totalRequests: summary.totalRequests,
         avgMs: summary.avgResponseTimeMs,
         p95Ms: summary.p95ResponseTimeMs,
         rps: summary.requestsPerSecond,
+        failed: summary.failedRequests,
       });
 
       if (code === 0 || code === 99) {
@@ -211,10 +153,9 @@ export async function runK6Test(
     });
 
     proc.on('error', (err) => {
-      clearInterval(jsonStreamInterval);
+      clearInterval(logInterval);
       activeProcesses.delete(runId);
       try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
-      try { fs.unlinkSync(jsonOutputPath); } catch { /* ignore */ }
       const errorMsg = `Failed to spawn k6: ${err.message}`;
       logger.error(errorMsg, { runId });
       callbacks.onError(errorMsg);
@@ -226,12 +167,11 @@ export async function runK6Test(
 export function stopK6Test(runId: string): boolean {
   const proc = activeProcesses.get(runId);
   if (!proc) {
-    logger.warn('No active k6 process found for stop', { runId });
+    logger.warn('No active k6 process for stop', { runId });
     return false;
   }
-  logger.info('Stopping k6 test', { runId, pid: proc.pid });
+  logger.info('Stopping k6', { runId, pid: proc.pid });
   proc.kill('SIGTERM');
-  // Don't delete from activeProcesses here — let the 'close' handler do it
   return true;
 }
 
@@ -241,7 +181,7 @@ export function isK6TestRunning(runId: string): boolean {
 
 export function stopAllK6Tests(): void {
   for (const [runId, proc] of activeProcesses) {
-    logger.info('Stopping k6 test during shutdown', { runId });
+    logger.info('Stopping k6 (shutdown)', { runId });
     proc.kill('SIGTERM');
   }
   activeProcesses.clear();

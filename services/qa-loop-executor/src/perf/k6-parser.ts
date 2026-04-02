@@ -1,7 +1,7 @@
 /**
  * k6-parser.ts
  *
- * Parses k6 JSON output (from --out json) line by line.
+ * Parses k6 JSON output (from --out json=-) streamed via stdout.
  * Aggregates metrics for real-time streaming and final summaries.
  */
 
@@ -38,54 +38,45 @@ export class K6MetricsAggregator {
   private failedRequests = 0;
   private currentVUs = 0;
   private startTime: number | null = null;
-  private lastEmitTime = 0;
   private thresholdResults: Record<string, { passed: boolean; actual: string }> = {};
 
   /**
    * Parse a single line of k6 JSON output.
+   * Returns a snapshot on every http_req_duration point (most meaningful metric).
    */
   parseLine(line: string): K6Metric | null {
     try {
       const data = JSON.parse(line);
 
       if (data.type === 'Point') {
-        this.handleDataPoint(data);
-      }
+        const metric = data.metric;
+        const value = data.data?.value;
 
-      // Emit aggregated metric at most every 1 second
-      const now = Date.now();
-      if (now - this.lastEmitTime >= 1000) {
-        this.lastEmitTime = now;
-        return this.getCurrentSnapshot();
+        if (!this.startTime) {
+          this.startTime = Date.now();
+        }
+
+        switch (metric) {
+          case 'http_reqs':
+            this.totalRequests += value;
+            break;
+          case 'http_req_failed':
+            if (value === 1) this.failedRequests++;
+            break;
+          case 'http_req_duration':
+            this.responseTimes.push(value);
+            // Emit a snapshot on every duration point — this is the best trigger
+            // because it fires once per completed request
+            return this.getCurrentSnapshot();
+          case 'vus':
+            this.currentVUs = value;
+            break;
+        }
       }
 
       return null;
     } catch {
       return null;
-    }
-  }
-
-  private handleDataPoint(data: any): void {
-    const metric = data.metric;
-    const value = data.data?.value;
-
-    if (!this.startTime) {
-      this.startTime = Date.now();
-    }
-
-    switch (metric) {
-      case 'http_reqs':
-        this.totalRequests += value;
-        break;
-      case 'http_req_failed':
-        if (value === 1) this.failedRequests++;
-        break;
-      case 'http_req_duration':
-        this.responseTimes.push(value);
-        break;
-      case 'vus':
-        this.currentVUs = value;
-        break;
     }
   }
 
@@ -118,13 +109,9 @@ export class K6MetricsAggregator {
     };
   }
 
-  /**
-   * Parse k6 stdout for threshold pass/fail results.
-   */
   parseStdoutLine(line: string): void {
     const passMatch = line.match(/✓\s+(\S+)/);
     const failMatch = line.match(/✗\s+(\S+)/);
-
     if (passMatch) {
       this.thresholdResults[passMatch[1]] = { passed: true, actual: line.trim() };
     } else if (failMatch) {

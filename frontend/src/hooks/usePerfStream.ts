@@ -77,10 +77,12 @@ export function usePerfStream(): UsePerfStreamReturn {
     );
 
     const fullUrl = `${baseWsUrl}/ws/perf?runId=${runId}`;
+    console.log('[PERF-WS] Connecting:', fullUrl);
     const ws = new WebSocket(fullUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      console.log('[PERF-WS] Connected');
       setIsConnected(true);
       setError(null);
       reconnectAttemptRef.current = 0;
@@ -89,6 +91,7 @@ export function usePerfStream(): UsePerfStreamReturn {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('[PERF-WS] Message:', data.type, data.data?.requests ?? data.data);
         if (!data || typeof data !== 'object') return;
 
         switch (data.type) {
@@ -107,12 +110,14 @@ export function usePerfStream(): UsePerfStreamReturn {
             break;
 
           case 'perf_complete':
+            console.log('[PERF-WS] Test complete!', data.data);
             setSummary(data.data);
             setIsComplete(true);
             intentionalCloseRef.current = true;
             break;
 
           case 'perf_error':
+            console.error('[PERF-WS] Error:', data.data);
             setError(data.data?.error || 'Test failed');
             setIsComplete(true);
             intentionalCloseRef.current = true;
@@ -123,11 +128,12 @@ export function usePerfStream(): UsePerfStreamReturn {
       }
     };
 
-    ws.onerror = () => {
-      // onerror is always followed by onclose — handle reconnection there
+    ws.onerror = (e) => {
+      console.error('[PERF-WS] Error event', e);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      console.log('[PERF-WS] Closed:', e.code, e.reason);
       setIsConnected(false);
 
       // Don't reconnect if intentional close, test completed, or max attempts reached
