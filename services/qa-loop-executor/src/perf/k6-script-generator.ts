@@ -8,6 +8,7 @@ export interface PerfTestConfig {
   testType: 'smoke' | 'load' | 'stress' | 'spike';
   targetUrl: string;
   method: string;
+  expectedStatus?: number;
   headers?: Record<string, string>;
   body?: any;
   config?: {
@@ -95,24 +96,22 @@ export function generateK6Script(config: PerfTestConfig): string {
   const hasBody = method === 'post' || method === 'put' || method === 'patch';
   const headers = config.headers || { 'Content-Type': 'application/json' };
   const body = config.body || {};
+  const expectedStatus = config.expectedStatus || 200;
 
   const additionalCode = (config.additionalRequests || [])
     .map(r => generateAdditionalRequestCode(r))
     .join('\n');
 
-  // Generate k6 script that:
-  // - Tracks status codes via custom counters (for breakdown in results)
-  // - Only counts 5xx as "server errors" (4xx means server is working correctly)
-  // - Reports response times, throughput, and status code distribution
   return `import http from "k6/http";
 import { check, sleep } from "k6";
-import { Counter, Rate, Trend } from "k6/metrics";
+import { Counter, Trend } from "k6/metrics";
 
-// Custom metrics for accurate reporting
-const serverErrors = new Counter("server_errors");       // 5xx only
-const clientErrors = new Counter("client_errors");       // 4xx
-const successCount = new Counter("success_count");       // 2xx + 3xx
+// Custom metrics — errors = responses that don't match expected status
+const errorCount = new Counter("error_count");
+const successCount = new Counter("success_count");
 const requestDuration = new Trend("request_duration", true);
+
+const EXPECTED_STATUS = ${expectedStatus};
 
 export const options = {
   stages: ${JSON.stringify(stages, null, 2)},
@@ -128,17 +127,14 @@ export default function () {
 
   const response = http.${method}("${config.targetUrl}"${hasBody ? ', payload, params' : ', params'});
 
-  // Track status code categories
-  if (response.status >= 500) {
-    serverErrors.add(1);
-  } else if (response.status >= 400) {
-    clientErrors.add(1);
-  } else {
+  if (response.status === EXPECTED_STATUS) {
     successCount.add(1);
+  } else {
+    errorCount.add(1);
   }
 
   check(response, {
-    "no server error (5xx)": (r) => r.status < 500,
+    [\`status is \${EXPECTED_STATUS}\`]: (r) => r.status === EXPECTED_STATUS,
     "response time < 2s": (r) => r.timings.duration < 2000,
   });
 

@@ -83,6 +83,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
   const [vus, setVus] = useState(TEST_TYPE_INFO.load.vus);
   const [duration, setDuration] = useState(TEST_TYPE_INFO.load.duration);
   const [additionalRequests, setAdditionalRequests] = useState<AdditionalRequest[]>([]);
+  const [expectedStatus, setExpectedStatus] = useState('200');
   const [bodyError, setBodyError] = useState<string | null>(null);
   const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>([]);
   const [showSaved, setShowSaved] = useState(false);
@@ -168,6 +169,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
       testType,
       targetUrl: targetUrl.trim(),
       method,
+      expectedStatus: parseInt(expectedStatus, 10) || 200,
       headers: headersObj,
       body: parsedBody,
       additionalRequests: additionalRequests
@@ -233,6 +235,20 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
           <option value="PATCH">PATCH</option>
           <option value="DELETE">DELETE</option>
         </select>
+      </div>
+
+      {/* Expected Status */}
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-1">Expected Status Code</label>
+        <input
+          type="number"
+          value={expectedStatus}
+          onChange={(e) => setExpectedStatus(e.target.value)}
+          min={100}
+          max={599}
+          className="w-full px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:border-sky-500 text-sm"
+        />
+        <p className="text-xs text-slate-600 mt-1">Requests not matching this status are counted as errors</p>
       </div>
 
       {/* Headers */}

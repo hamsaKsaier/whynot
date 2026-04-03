@@ -11,22 +11,20 @@ export interface PerfMetric {
   timestamp: string;
   vus: number;
   requests: number;
-  failed: number;         // 5xx server errors
-  clientErrors: number;   // 4xx responses
-  successful: number;     // 2xx + 3xx
+  failed: number;        // did not match expected status
+  successful: number;    // matched expected status
   avgResponseTime: number;
   p50ResponseTime: number;
   p95ResponseTime: number;
   p99ResponseTime: number;
   requestsPerSecond: number;
-  errorRate: number;      // 5xx / total
+  errorRate: number;     // failed / total
 }
 
 export interface PerfSummary {
   totalRequests: number;
-  failedRequests: number;     // 5xx server errors
-  clientErrors: number;       // 4xx
-  successfulRequests: number; // 2xx + 3xx
+  failedRequests: number;
+  successfulRequests: number;
   avgResponseTimeMs: number;
   p50ResponseTimeMs: number;
   p90ResponseTimeMs: number;

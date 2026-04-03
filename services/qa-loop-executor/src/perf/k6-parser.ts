@@ -3,33 +3,29 @@
  *
  * Parses k6 JSON output (from --out json=-) streamed via stdout.
  *
- * Error rate philosophy:
- * - Only 5xx (server errors) count as "errors" — these mean the server is broken
- * - 4xx (client errors like 401, 422) mean the server is WORKING correctly
- *   (rejecting bad input as expected)
- * - Status code breakdown is tracked separately so users see the full picture
+ * Error rate: User defines the expected status code (default 200).
+ * Any response not matching the expected status counts as an error.
+ * This gives the user full control over what "success" means.
  */
 
 export interface K6Metric {
   timestamp: string;
   vus: number;
   requests: number;
-  failed: number;        // 5xx server errors only
-  clientErrors: number;  // 4xx responses
-  successful: number;    // 2xx + 3xx
+  failed: number;        // did not match expected status
+  successful: number;    // matched expected status
   avgResponseTime: number;
   p50ResponseTime: number;
   p95ResponseTime: number;
   p99ResponseTime: number;
   requestsPerSecond: number;
-  errorRate: number;     // 5xx / total — the real error rate
+  errorRate: number;     // failed / total
 }
 
 export interface K6Summary {
   totalRequests: number;
-  failedRequests: number;    // 5xx only
-  clientErrors: number;      // 4xx
-  successfulRequests: number; // 2xx + 3xx
+  failedRequests: number;
+  successfulRequests: number;
   avgResponseTimeMs: number;
   p50ResponseTimeMs: number;
   p90ResponseTimeMs: number;
@@ -44,9 +40,8 @@ export interface K6Summary {
 export class K6MetricsAggregator {
   private responseTimes: number[] = [];
   private totalRequests = 0;
-  private serverErrors = 0;  // 5xx
-  private clientErrors = 0;  // 4xx
-  private successful = 0;    // 2xx + 3xx
+  private errorCount = 0;    // did not match expected status
+  private successCount = 0;  // matched expected status
   private currentVUs = 0;
   private startTime: number | null = null;
   private thresholdResults: Record<string, { passed: boolean; actual: string }> = {};
@@ -69,15 +64,12 @@ export class K6MetricsAggregator {
             this.totalRequests++;
             return this.getCurrentSnapshot();
 
-          // Track our custom counters from the k6 script
-          case 'server_errors':
-            this.serverErrors += value;
-            break;
-          case 'client_errors':
-            this.clientErrors += value;
+          // Custom counters from the k6 script
+          case 'error_count':
+            this.errorCount += value;
             break;
           case 'success_count':
-            this.successful += value;
+            this.successCount += value;
             break;
 
           case 'vus':
@@ -109,17 +101,15 @@ export class K6MetricsAggregator {
       timestamp: new Date().toISOString(),
       vus: this.currentVUs,
       requests: this.totalRequests,
-      failed: this.serverErrors,
-      clientErrors: this.clientErrors,
-      successful: this.successful,
+      failed: this.errorCount,
+      successful: this.successCount,
       avgResponseTime: Math.round(avg * 100) / 100,
       p50ResponseTime: Math.round(this.percentile(sorted, 0.5) * 100) / 100,
       p95ResponseTime: Math.round(this.percentile(sorted, 0.95) * 100) / 100,
       p99ResponseTime: Math.round(this.percentile(sorted, 0.99) * 100) / 100,
       requestsPerSecond: Math.round((this.totalRequests / elapsed) * 100) / 100,
-      // Error rate = server errors only / total requests
       errorRate: this.totalRequests > 0
-        ? Math.round((this.serverErrors / this.totalRequests) * 10000) / 100
+        ? Math.round((this.errorCount / this.totalRequests) * 10000) / 100
         : 0,
     };
   }
@@ -141,9 +131,8 @@ export class K6MetricsAggregator {
 
     return {
       totalRequests: this.totalRequests,
-      failedRequests: this.serverErrors,
-      clientErrors: this.clientErrors,
-      successfulRequests: this.successful,
+      failedRequests: this.errorCount,
+      successfulRequests: this.successCount,
       avgResponseTimeMs: len > 0
         ? Math.round((sorted.reduce((a, b) => a + b, 0) / len) * 100) / 100
         : 0,

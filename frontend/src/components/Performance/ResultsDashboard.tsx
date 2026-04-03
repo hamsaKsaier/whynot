@@ -40,28 +40,16 @@ function getVerdict(summary: PerfSummary): {
     ? summary.requestsPerSecond.toFixed(1)
     : Math.round(summary.requestsPerSecond).toString();
 
-  // Check server error rate (5xx only — 4xx means server is working correctly)
-  const serverErrorRate = summary.totalRequests > 0
+  const errorRate = summary.totalRequests > 0
     ? (summary.failedRequests / summary.totalRequests) * 100
     : 0;
 
-  if (serverErrorRate > 5) {
+  if (errorRate > 5) {
     status = 'fail';
-    issues.push(`${serverErrorRate.toFixed(1)}% server errors (5xx) — your server is crashing under load. Check server logs immediately.`);
-  } else if (serverErrorRate > 1) {
+    issues.push(`${errorRate.toFixed(1)}% of requests returned an unexpected status — your API is failing under load.`);
+  } else if (errorRate > 1) {
     status = status === 'pass' ? 'warning' : status;
-    issues.push(`${serverErrorRate.toFixed(1)}% server errors — some requests trigger server failures. Investigate before scaling.`);
-  }
-
-  // Show 4xx info (not an error — server is working)
-  const clientErrorCount = summary.clientErrors || 0;
-  if (clientErrorCount > 0 && summary.totalRequests > 0) {
-    const clientPct = Math.round((clientErrorCount / summary.totalRequests) * 100);
-    if (clientPct > 50) {
-      issues.push(`${clientPct}% of responses are 4xx (${clientErrorCount} requests) — the server is rejecting requests. Check your request body, headers, or authentication.`);
-    } else if (clientPct > 10) {
-      issues.push(`${clientPct}% of responses are 4xx — some requests are being rejected. This may be expected (e.g., rate limiting).`);
-    }
+    issues.push(`${errorRate.toFixed(1)}% of requests returned an unexpected status. Investigate if this increases under higher load.`);
   }
 
   // Check response time
@@ -91,11 +79,10 @@ function getVerdict(summary: PerfSummary): {
 
   if (issues.length === 0) {
     issues.push(`Average response time: ${Math.round(summary.avgResponseTimeMs)}ms — well within acceptable range.`);
-    if (summary.successfulRequests != null && summary.successfulRequests > 0) {
-      issues.push(`${summary.successfulRequests.toLocaleString()} successful responses out of ${summary.totalRequests.toLocaleString()} total.`);
-    } else {
-      issues.push(`${summary.totalRequests.toLocaleString()} requests handled successfully.`);
-    }
+    const successPct = summary.totalRequests > 0
+      ? Math.round(((summary.successfulRequests || 0) / summary.totalRequests) * 100)
+      : 0;
+    issues.push(`${summary.totalRequests.toLocaleString()} requests — ${successPct}% returned the expected status.`);
   }
 
   return { status, headline, details: issues };
@@ -271,24 +258,22 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         <ThresholdStatus thresholds={summary.thresholdResults} />
       )}
 
-      {/* ── Status Code Breakdown (after completion) */}
+      {/* ── Response Breakdown (after completion) */}
       {isComplete && summary && (
         <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-5">
           <h3 className="text-sm font-medium text-slate-300 mb-3">Response Breakdown</h3>
           <div className="space-y-2">
             {(() => {
               const success = summary.successfulRequests || 0;
-              const client = summary.clientErrors || 0;
-              const server = summary.failedRequests || 0;
+              const failed = summary.failedRequests || 0;
               const total = summary.totalRequests || 1;
               const rows = [
-                { label: '2xx/3xx Success', count: success, pct: Math.round((success / total) * 100), color: 'bg-emerald-500', textColor: 'text-emerald-400' },
-                { label: '4xx Client Response', count: client, pct: Math.round((client / total) * 100), color: 'bg-amber-500', textColor: 'text-amber-400' },
-                { label: '5xx Server Error', count: server, pct: Math.round((server / total) * 100), color: 'bg-red-500', textColor: 'text-red-400' },
+                { label: 'Expected Status', count: success, pct: Math.round((success / total) * 100), color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+                { label: 'Unexpected Status', count: failed, pct: Math.round((failed / total) * 100), color: 'bg-red-500', textColor: 'text-red-400' },
               ].filter(r => r.count > 0);
               return rows.map(r => (
                 <div key={r.label} className="flex items-center gap-3">
-                  <div className="w-32 text-xs text-slate-400">{r.label}</div>
+                  <div className="w-36 text-xs text-slate-400">{r.label}</div>
                   <div className="flex-1 h-5 bg-[#0f172a] rounded overflow-hidden">
                     <div className={`h-full ${r.color} rounded`} style={{ width: `${Math.max(r.pct, 2)}%`, opacity: 0.7 }} />
                   </div>
@@ -299,11 +284,6 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
               ));
             })()}
           </div>
-          {(summary.clientErrors || 0) > 0 && summary.failedRequests === 0 && (
-            <p className="text-[11px] text-slate-600 mt-3">
-              4xx responses are not errors — they mean the server correctly rejected the request (e.g., invalid credentials, missing fields, rate limiting).
-            </p>
-          )}
         </div>
       )}
 

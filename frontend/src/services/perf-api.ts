@@ -11,6 +11,7 @@ export interface PerfRunConfig {
   testType: 'smoke' | 'load' | 'stress' | 'spike';
   targetUrl: string;
   method: string;
+  expectedStatus?: number;
   headers?: Record<string, string>;
   body?: any;
   config?: {
