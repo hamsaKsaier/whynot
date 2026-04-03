@@ -3,6 +3,10 @@
  *
  * Parses k6 JSON output (from --out json=-) streamed via stdout.
  * Aggregates metrics for real-time streaming and final summaries.
+ *
+ * Error counting: k6's built-in http_req_failed marks any status >= 400
+ * as failed. We track both total requests and failures ourselves to
+ * ensure the error rate matches what users see.
  */
 
 export interface K6Metric {
@@ -34,16 +38,16 @@ export interface K6Summary {
 
 export class K6MetricsAggregator {
   private responseTimes: number[] = [];
+  // Count requests from http_req_duration points (1 per completed request)
   private totalRequests = 0;
+  // Count failures from http_req_failed points (value=1 means status >= 400)
   private failedRequests = 0;
+  // Track total http_req_failed points to compute rate correctly
+  private totalFailedPoints = 0;
   private currentVUs = 0;
   private startTime: number | null = null;
   private thresholdResults: Record<string, { passed: boolean; actual: string }> = {};
 
-  /**
-   * Parse a single line of k6 JSON output.
-   * Returns a snapshot on every http_req_duration point (most meaningful metric).
-   */
   parseLine(line: string): K6Metric | null {
     try {
       const data = JSON.parse(line);
@@ -57,17 +61,19 @@ export class K6MetricsAggregator {
         }
 
         switch (metric) {
-          case 'http_reqs':
-            this.totalRequests += value;
-            break;
-          case 'http_req_failed':
-            if (value === 1) this.failedRequests++;
-            break;
           case 'http_req_duration':
             this.responseTimes.push(value);
-            // Emit a snapshot on every duration point — this is the best trigger
-            // because it fires once per completed request
+            this.totalRequests++;
             return this.getCurrentSnapshot();
+
+          case 'http_req_failed':
+            // k6 emits one point per request: value=0 (success) or value=1 (status >= 400)
+            this.totalFailedPoints++;
+            if (value === 1) {
+              this.failedRequests++;
+            }
+            break;
+
           case 'vus':
             this.currentVUs = value;
             break;
@@ -93,6 +99,10 @@ export class K6MetricsAggregator {
       ? sorted.reduce((a, b) => a + b, 0) / sorted.length
       : 0;
 
+    // Use totalFailedPoints as denominator if available (more accurate than totalRequests
+    // since http_req_failed fires exactly once per request with 0 or 1)
+    const errorDenominator = this.totalFailedPoints > 0 ? this.totalFailedPoints : this.totalRequests;
+
     return {
       timestamp: new Date().toISOString(),
       vus: this.currentVUs,
@@ -103,8 +113,8 @@ export class K6MetricsAggregator {
       p95ResponseTime: Math.round(this.percentile(sorted, 0.95) * 100) / 100,
       p99ResponseTime: Math.round(this.percentile(sorted, 0.99) * 100) / 100,
       requestsPerSecond: Math.round((this.totalRequests / elapsed) * 100) / 100,
-      errorRate: this.totalRequests > 0
-        ? Math.round((this.failedRequests / this.totalRequests) * 10000) / 100
+      errorRate: errorDenominator > 0
+        ? Math.round((this.failedRequests / errorDenominator) * 10000) / 100
         : 0,
     };
   }

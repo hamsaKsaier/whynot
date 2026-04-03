@@ -123,7 +123,7 @@ export default function () {
   const response = http.${method}("${config.targetUrl}"${hasBody ? ', payload, params' : ', params'});
 
   const success = check(response, {
-    "status is 200": (r) => r.status === 200,
+    "status is 2xx": (r) => r.status >= 200 && r.status < 300,
     "response time < 2s": (r) => r.timings.duration < 2000,
   });
 
