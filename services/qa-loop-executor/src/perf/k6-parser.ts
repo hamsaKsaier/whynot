@@ -2,29 +2,34 @@
  * k6-parser.ts
  *
  * Parses k6 JSON output (from --out json=-) streamed via stdout.
- * Aggregates metrics for real-time streaming and final summaries.
  *
- * Error counting: k6's built-in http_req_failed marks any status >= 400
- * as failed. We track both total requests and failures ourselves to
- * ensure the error rate matches what users see.
+ * Error rate philosophy:
+ * - Only 5xx (server errors) count as "errors" — these mean the server is broken
+ * - 4xx (client errors like 401, 422) mean the server is WORKING correctly
+ *   (rejecting bad input as expected)
+ * - Status code breakdown is tracked separately so users see the full picture
  */
 
 export interface K6Metric {
   timestamp: string;
   vus: number;
   requests: number;
-  failed: number;
+  failed: number;        // 5xx server errors only
+  clientErrors: number;  // 4xx responses
+  successful: number;    // 2xx + 3xx
   avgResponseTime: number;
   p50ResponseTime: number;
   p95ResponseTime: number;
   p99ResponseTime: number;
   requestsPerSecond: number;
-  errorRate: number;
+  errorRate: number;     // 5xx / total — the real error rate
 }
 
 export interface K6Summary {
   totalRequests: number;
-  failedRequests: number;
+  failedRequests: number;    // 5xx only
+  clientErrors: number;      // 4xx
+  successfulRequests: number; // 2xx + 3xx
   avgResponseTimeMs: number;
   p50ResponseTimeMs: number;
   p90ResponseTimeMs: number;
@@ -38,12 +43,10 @@ export interface K6Summary {
 
 export class K6MetricsAggregator {
   private responseTimes: number[] = [];
-  // Count requests from http_req_duration points (1 per completed request)
   private totalRequests = 0;
-  // Count failures from http_req_failed points (value=1 means status >= 400)
-  private failedRequests = 0;
-  // Track total http_req_failed points to compute rate correctly
-  private totalFailedPoints = 0;
+  private serverErrors = 0;  // 5xx
+  private clientErrors = 0;  // 4xx
+  private successful = 0;    // 2xx + 3xx
   private currentVUs = 0;
   private startTime: number | null = null;
   private thresholdResults: Record<string, { passed: boolean; actual: string }> = {};
@@ -66,12 +69,15 @@ export class K6MetricsAggregator {
             this.totalRequests++;
             return this.getCurrentSnapshot();
 
-          case 'http_req_failed':
-            // k6 emits one point per request: value=0 (success) or value=1 (status >= 400)
-            this.totalFailedPoints++;
-            if (value === 1) {
-              this.failedRequests++;
-            }
+          // Track our custom counters from the k6 script
+          case 'server_errors':
+            this.serverErrors += value;
+            break;
+          case 'client_errors':
+            this.clientErrors += value;
+            break;
+          case 'success_count':
+            this.successful += value;
             break;
 
           case 'vus':
@@ -99,22 +105,21 @@ export class K6MetricsAggregator {
       ? sorted.reduce((a, b) => a + b, 0) / sorted.length
       : 0;
 
-    // Use totalFailedPoints as denominator if available (more accurate than totalRequests
-    // since http_req_failed fires exactly once per request with 0 or 1)
-    const errorDenominator = this.totalFailedPoints > 0 ? this.totalFailedPoints : this.totalRequests;
-
     return {
       timestamp: new Date().toISOString(),
       vus: this.currentVUs,
       requests: this.totalRequests,
-      failed: this.failedRequests,
+      failed: this.serverErrors,
+      clientErrors: this.clientErrors,
+      successful: this.successful,
       avgResponseTime: Math.round(avg * 100) / 100,
       p50ResponseTime: Math.round(this.percentile(sorted, 0.5) * 100) / 100,
       p95ResponseTime: Math.round(this.percentile(sorted, 0.95) * 100) / 100,
       p99ResponseTime: Math.round(this.percentile(sorted, 0.99) * 100) / 100,
       requestsPerSecond: Math.round((this.totalRequests / elapsed) * 100) / 100,
-      errorRate: errorDenominator > 0
-        ? Math.round((this.failedRequests / errorDenominator) * 10000) / 100
+      // Error rate = server errors only / total requests
+      errorRate: this.totalRequests > 0
+        ? Math.round((this.serverErrors / this.totalRequests) * 10000) / 100
         : 0,
     };
   }
@@ -136,7 +141,9 @@ export class K6MetricsAggregator {
 
     return {
       totalRequests: this.totalRequests,
-      failedRequests: this.failedRequests,
+      failedRequests: this.serverErrors,
+      clientErrors: this.clientErrors,
+      successfulRequests: this.successful,
       avgResponseTimeMs: len > 0
         ? Math.round((sorted.reduce((a, b) => a + b, 0) / len) * 100) / 100
         : 0,

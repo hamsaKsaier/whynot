@@ -116,7 +116,9 @@ export const PerformancePage: React.FC = () => {
   // Build summary from selected past run
   const pastRunSummary = selectedPastRun ? {
     totalRequests: selectedPastRun.total_requests || 0,
-    failedRequests: selectedPastRun.failed_requests || 0,
+    failedRequests: selectedPastRun.raw_metrics?.failedRequests ?? selectedPastRun.failed_requests ?? 0,
+    clientErrors: selectedPastRun.raw_metrics?.clientErrors ?? 0,
+    successfulRequests: selectedPastRun.raw_metrics?.successfulRequests ?? (selectedPastRun.total_requests || 0) - (selectedPastRun.failed_requests || 0),
     avgResponseTimeMs: selectedPastRun.avg_response_time_ms || 0,
     p50ResponseTimeMs: selectedPastRun.p50_response_time_ms || 0,
     p90ResponseTimeMs: selectedPastRun.p90_response_time_ms || 0,

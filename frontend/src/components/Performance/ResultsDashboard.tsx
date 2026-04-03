@@ -36,17 +36,32 @@ function getVerdict(summary: PerfSummary): {
   const issues: string[] = [];
   let status: 'pass' | 'warning' | 'fail' = 'pass';
 
-  // Check error rate
-  const errorRate = summary.totalRequests > 0
+  const rpsLabel = summary.requestsPerSecond < 1
+    ? summary.requestsPerSecond.toFixed(1)
+    : Math.round(summary.requestsPerSecond).toString();
+
+  // Check server error rate (5xx only — 4xx means server is working correctly)
+  const serverErrorRate = summary.totalRequests > 0
     ? (summary.failedRequests / summary.totalRequests) * 100
     : 0;
 
-  if (errorRate > 5) {
+  if (serverErrorRate > 5) {
     status = 'fail';
-    issues.push(`${errorRate.toFixed(1)}% of requests failed — your server is returning errors under load. Check server logs for 500 errors.`);
-  } else if (errorRate > 1) {
+    issues.push(`${serverErrorRate.toFixed(1)}% server errors (5xx) — your server is crashing under load. Check server logs immediately.`);
+  } else if (serverErrorRate > 1) {
     status = status === 'pass' ? 'warning' : status;
-    issues.push(`${errorRate.toFixed(1)}% error rate — some requests are failing. Investigate if this increases under higher load.`);
+    issues.push(`${serverErrorRate.toFixed(1)}% server errors — some requests trigger server failures. Investigate before scaling.`);
+  }
+
+  // Show 4xx info (not an error — server is working)
+  const clientErrorCount = summary.clientErrors || 0;
+  if (clientErrorCount > 0 && summary.totalRequests > 0) {
+    const clientPct = Math.round((clientErrorCount / summary.totalRequests) * 100);
+    if (clientPct > 50) {
+      issues.push(`${clientPct}% of responses are 4xx (${clientErrorCount} requests) — the server is rejecting requests. Check your request body, headers, or authentication.`);
+    } else if (clientPct > 10) {
+      issues.push(`${clientPct}% of responses are 4xx — some requests are being rejected. This may be expected (e.g., rate limiting).`);
+    }
   }
 
   // Check response time
@@ -55,19 +70,19 @@ function getVerdict(summary: PerfSummary): {
     issues.push(`95% of requests take over ${(summary.p95ResponseTimeMs / 1000).toFixed(1)}s — users will experience timeouts. Optimize your API or add caching.`);
   } else if (summary.p95ResponseTimeMs > 2000) {
     status = status === 'pass' ? 'warning' : status;
-    issues.push(`95% of requests take ${Math.round(summary.p95ResponseTimeMs)}ms — this is slow for a good user experience. Target under 1 second.`);
+    issues.push(`95% of requests take ${Math.round(summary.p95ResponseTimeMs)}ms — slow for a good user experience. Target under 1 second.`);
   }
 
   // Check p99 spikes
-  if (summary.p99ResponseTimeMs > summary.p95ResponseTimeMs * 3) {
+  if (summary.p99ResponseTimeMs > summary.p95ResponseTimeMs * 3 && summary.p99ResponseTimeMs > 1000) {
     status = status === 'pass' ? 'warning' : status;
-    issues.push(`Occasional spikes up to ${Math.round(summary.p99ResponseTimeMs)}ms — some users will experience very slow responses. Check for database query bottlenecks.`);
+    issues.push(`Occasional spikes up to ${Math.round(summary.p99ResponseTimeMs)}ms — some users will experience very slow responses.`);
   }
 
   // Generate headline
   let headline: string;
   if (status === 'pass') {
-    headline = `Your API handles ${summary.requestsPerSecond < 1 ? summary.requestsPerSecond.toFixed(1) : Math.round(summary.requestsPerSecond)} req/s with ${Math.round(summary.avgResponseTimeMs)}ms average response time — looking good!`;
+    headline = `Your API handles ${rpsLabel} req/s with ${Math.round(summary.avgResponseTimeMs)}ms average response time — looking good!`;
   } else if (status === 'warning') {
     headline = `Your API works but has performance concerns that should be addressed before scaling.`;
   } else {
@@ -76,7 +91,11 @@ function getVerdict(summary: PerfSummary): {
 
   if (issues.length === 0) {
     issues.push(`Average response time: ${Math.round(summary.avgResponseTimeMs)}ms — well within acceptable range.`);
-    issues.push(`${summary.totalRequests.toLocaleString()} requests handled with ${errorRate.toFixed(2)}% error rate.`);
+    if (summary.successfulRequests != null && summary.successfulRequests > 0) {
+      issues.push(`${summary.successfulRequests.toLocaleString()} successful responses out of ${summary.totalRequests.toLocaleString()} total.`);
+    } else {
+      issues.push(`${summary.totalRequests.toLocaleString()} requests handled successfully.`);
+    }
   }
 
   return { status, headline, details: issues };
@@ -105,12 +124,12 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
     return () => clearInterval(interval);
   }, [isRunning, startedAt]);
 
-  // Current + previous metric for trend arrows
   const prev = metricHistory.length > 1 ? metricHistory[metricHistory.length - 2] : undefined;
 
   const requests = summary?.totalRequests ?? currentMetric?.requests ?? 0;
   const avgRt = summary?.avgResponseTimeMs ?? currentMetric?.avgResponseTime ?? 0;
   const rps = summary?.requestsPerSecond ?? currentMetric?.requestsPerSecond ?? 0;
+  // Error rate = server errors (5xx) only
   const errorRate = currentMetric?.errorRate ?? (
     summary && summary.totalRequests > 0
       ? Math.round((summary.failedRequests / summary.totalRequests) * 10000) / 100
@@ -119,11 +138,10 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
 
   const rtColor = avgRt > 2000 ? 'danger' : avgRt > 500 ? 'warning' : 'success';
   const errorColor = errorRate > 5 ? 'danger' : errorRate > 1 ? 'warning' : 'success';
-
   const label = testType.charAt(0).toUpperCase() + testType.slice(1);
   const verdict = isComplete && summary ? getVerdict(summary) : null;
 
-  // ── Empty state ─────────────────────────────────────────────
+  // ── Empty state
   if (!isRunning && !isComplete && metricHistory.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -140,7 +158,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* ── Status Header ─────────────────────────────────────────── */}
+      {/* ── Status Header */}
       <div className="bg-[#1e293b] border border-[#334155] rounded-lg px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {isRunning && (
@@ -169,10 +187,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           {isRunning && (
             <>
               <span className="text-sm font-mono text-slate-400 tabular-nums">{formatTime(elapsed)}</span>
-              <button
-                onClick={onStop}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg text-sm hover:bg-red-500/20 transition-colors"
-              >
+              <button onClick={onStop} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg text-sm hover:bg-red-500/20 transition-colors">
                 <FiSquare className="h-3 w-3" /> Stop
               </button>
             </>
@@ -185,7 +200,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         </div>
       </div>
 
-      {/* ── Verdict Banner (after completion) ─────────────────────── */}
+      {/* ── Verdict Banner (after completion) */}
       {isComplete && verdict && (
         <div className={`rounded-lg px-5 py-4 border ${
           verdict.status === 'pass' ? 'bg-emerald-500/5 border-emerald-500/20' :
@@ -202,15 +217,14 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           <ul className="space-y-1">
             {verdict.details.map((d, i) => (
               <li key={i} className="text-xs text-slate-400 flex items-start gap-2">
-                <span className="mt-0.5">•</span>
-                <span>{d}</span>
+                <span className="mt-0.5">•</span><span>{d}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* ── Metric Cards ──────────────────────────────────────────── */}
+      {/* ── Metric Cards */}
       <div className="grid grid-cols-4 gap-3">
         <MetricCard
           label="Total Requests"
@@ -232,7 +246,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           formatValue={(v) => (Math.round(v * 10) / 10).toString()}
         />
         <MetricCard
-          label="Error Rate"
+          label="Server Errors"
           value={errorRate}
           unit="%"
           color={errorColor}
@@ -241,7 +255,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         />
       </div>
 
-      {/* ── Charts ────────────────────────────────────────────────── */}
+      {/* ── Charts */}
       {metricHistory.length > 1 && (
         <ChartErrorBoundary>
           <ResponseTimeChart data={metricHistory} />
@@ -252,35 +266,68 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         </ChartErrorBoundary>
       )}
 
-      {/* ── Thresholds ────────────────────────────────────────────── */}
+      {/* ── Thresholds */}
       {summary?.thresholdResults && Object.keys(summary.thresholdResults).length > 0 && (
         <ThresholdStatus thresholds={summary.thresholdResults} />
       )}
 
-      {/* ── Response Time Distribution (after completion) ─────────── */}
+      {/* ── Status Code Breakdown (after completion) */}
+      {isComplete && summary && (
+        <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-5">
+          <h3 className="text-sm font-medium text-slate-300 mb-3">Response Breakdown</h3>
+          <div className="space-y-2">
+            {(() => {
+              const success = summary.successfulRequests || 0;
+              const client = summary.clientErrors || 0;
+              const server = summary.failedRequests || 0;
+              const total = summary.totalRequests || 1;
+              const rows = [
+                { label: '2xx/3xx Success', count: success, pct: Math.round((success / total) * 100), color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+                { label: '4xx Client Response', count: client, pct: Math.round((client / total) * 100), color: 'bg-amber-500', textColor: 'text-amber-400' },
+                { label: '5xx Server Error', count: server, pct: Math.round((server / total) * 100), color: 'bg-red-500', textColor: 'text-red-400' },
+              ].filter(r => r.count > 0);
+              return rows.map(r => (
+                <div key={r.label} className="flex items-center gap-3">
+                  <div className="w-32 text-xs text-slate-400">{r.label}</div>
+                  <div className="flex-1 h-5 bg-[#0f172a] rounded overflow-hidden">
+                    <div className={`h-full ${r.color} rounded`} style={{ width: `${Math.max(r.pct, 2)}%`, opacity: 0.7 }} />
+                  </div>
+                  <div className={`text-xs font-mono tabular-nums w-20 text-right ${r.textColor}`}>
+                    {r.count.toLocaleString()} ({r.pct}%)
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+          {(summary.clientErrors || 0) > 0 && summary.failedRequests === 0 && (
+            <p className="text-[11px] text-slate-600 mt-3">
+              4xx responses are not errors — they mean the server correctly rejected the request (e.g., invalid credentials, missing fields, rate limiting).
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Response Time Distribution (after completion) */}
       {isComplete && summary && (
         <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-5">
           <h3 className="text-sm font-medium text-slate-300 mb-1">Response Time Distribution</h3>
           <p className="text-xs text-slate-500 mb-4">How long users wait for a response — lower is better</p>
           <div className="flex items-end gap-2" style={{ height: 80 }}>
             {[
-              { label: 'Fastest', key: 'min', value: summary.minResponseTimeMs, color: '#10b981' },
-              { label: '50% of users', key: 'p50', value: summary.p50ResponseTimeMs, color: '#0ea5e9' },
-              { label: '90% of users', key: 'p90', value: summary.p90ResponseTimeMs, color: '#f59e0b' },
-              { label: '95% of users', key: 'p95', value: summary.p95ResponseTimeMs, color: '#f97316' },
-              { label: '99% of users', key: 'p99', value: summary.p99ResponseTimeMs, color: '#ef4444' },
-              { label: 'Slowest', key: 'max', value: summary.maxResponseTimeMs, color: '#dc2626' },
-            ].map(({ label, key, value, color }) => {
+              { label: 'Fastest', value: summary.minResponseTimeMs, color: '#10b981' },
+              { label: '50% of users', value: summary.p50ResponseTimeMs, color: '#0ea5e9' },
+              { label: '90% of users', value: summary.p90ResponseTimeMs, color: '#f59e0b' },
+              { label: '95% of users', value: summary.p95ResponseTimeMs, color: '#f97316' },
+              { label: '99% of users', value: summary.p99ResponseTimeMs, color: '#ef4444' },
+              { label: 'Slowest', value: summary.maxResponseTimeMs, color: '#dc2626' },
+            ].map(({ label: l, value, color }) => {
               const maxVal = summary.maxResponseTimeMs || 1;
               const height = Math.max(8, (value / maxVal) * 68);
               return (
-                <div key={key} className="flex-1 flex flex-col items-center gap-1">
+                <div key={l} className="flex-1 flex flex-col items-center gap-1">
                   <span className="text-[11px] font-mono text-slate-300 tabular-nums">{Math.round(value)}ms</span>
-                  <div
-                    className="w-full rounded-t transition-all"
-                    style={{ height, backgroundColor: color, opacity: 0.85 }}
-                  />
-                  <span className="text-[10px] text-slate-500 text-center leading-tight">{label}</span>
+                  <div className="w-full rounded-t transition-all" style={{ height, backgroundColor: color, opacity: 0.85 }} />
+                  <span className="text-[10px] text-slate-500 text-center leading-tight">{l}</span>
                 </div>
               );
             })}
@@ -288,13 +335,10 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         </div>
       )}
 
-      {/* ── Run Again button ──────────────────────────────────────── */}
+      {/* ── Run Again */}
       {isComplete && onRunAgain && (
         <div className="flex gap-3">
-          <button
-            onClick={onRunAgain}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-lg text-sm hover:bg-sky-500/20 transition-colors"
-          >
+          <button onClick={onRunAgain} className="flex items-center gap-2 px-4 py-2 bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded-lg text-sm hover:bg-sky-500/20 transition-colors">
             <FiRefreshCw className="h-4 w-4" /> Run Again
           </button>
         </div>

@@ -81,7 +81,7 @@ function generateAdditionalRequestCode(req: { name: string; url: string; method:
     code += `  const ${req.name.replace(/[^a-zA-Z0-9_]/g, '_')}_res = http.${method}("${req.url}", ${req.name.replace(/[^a-zA-Z0-9_]/g, '_')}_params);\n`;
   }
 
-  code += `  check(${req.name.replace(/[^a-zA-Z0-9_]/g, '_')}_res, { "${req.name} status 200": (r) => r.status === 200 });\n`;
+  code += `  check(${req.name.replace(/[^a-zA-Z0-9_]/g, '_')}_res, { "${req.name} no server error": (r) => r.status < 500 });\n`;
   return code;
 }
 
@@ -90,7 +90,6 @@ export function generateK6Script(config: PerfTestConfig): string {
   const stages = config.config?.stages || preset.stages;
   const thresholds = config.thresholds || {
     http_req_duration: ['p(95)<2000'],
-    http_req_failed: ['rate<0.01'],
   };
   const method = (config.method || 'POST').toLowerCase();
   const hasBody = method === 'post' || method === 'put' || method === 'patch';
@@ -101,11 +100,18 @@ export function generateK6Script(config: PerfTestConfig): string {
     .map(r => generateAdditionalRequestCode(r))
     .join('\n');
 
+  // Generate k6 script that:
+  // - Tracks status codes via custom counters (for breakdown in results)
+  // - Only counts 5xx as "server errors" (4xx means server is working correctly)
+  // - Reports response times, throughput, and status code distribution
   return `import http from "k6/http";
 import { check, sleep } from "k6";
-import { Rate, Trend } from "k6/metrics";
+import { Counter, Rate, Trend } from "k6/metrics";
 
-const successRate = new Rate("request_success");
+// Custom metrics for accurate reporting
+const serverErrors = new Counter("server_errors");       // 5xx only
+const clientErrors = new Counter("client_errors");       // 4xx
+const successCount = new Counter("success_count");       // 2xx + 3xx
 const requestDuration = new Trend("request_duration", true);
 
 export const options = {
@@ -122,12 +128,20 @@ export default function () {
 
   const response = http.${method}("${config.targetUrl}"${hasBody ? ', payload, params' : ', params'});
 
-  const success = check(response, {
-    "status is 2xx": (r) => r.status >= 200 && r.status < 300,
+  // Track status code categories
+  if (response.status >= 500) {
+    serverErrors.add(1);
+  } else if (response.status >= 400) {
+    clientErrors.add(1);
+  } else {
+    successCount.add(1);
+  }
+
+  check(response, {
+    "no server error (5xx)": (r) => r.status < 500,
     "response time < 2s": (r) => r.timings.duration < 2000,
   });
 
-  successRate.add(success);
   requestDuration.add(response.timings.duration);
 ${additionalCode}
   sleep(Math.random() * 2 + 1);
