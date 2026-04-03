@@ -67,7 +67,7 @@ function getVerdict(summary: PerfSummary): {
   // Generate headline
   let headline: string;
   if (status === 'pass') {
-    headline = `Your API handles ${summary.requestsPerSecond.toFixed(0)} req/s with ${Math.round(summary.avgResponseTimeMs)}ms average response time — looking good!`;
+    headline = `Your API handles ${summary.requestsPerSecond < 1 ? summary.requestsPerSecond.toFixed(1) : Math.round(summary.requestsPerSecond)} req/s with ${Math.round(summary.avgResponseTimeMs)}ms average response time — looking good!`;
   } else if (status === 'warning') {
     headline = `Your API works but has performance concerns that should be addressed before scaling.`;
   } else {

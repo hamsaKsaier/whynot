@@ -66,6 +66,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) =>
               fillOpacity={0.08}
               stroke="none"
               isAnimationActive={false}
+              legendType="none"
             />
             <Line
               type="monotone"
