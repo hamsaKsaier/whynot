@@ -395,7 +395,13 @@ export class ClaudeSession {
   }
 
   private buildSystemPrompt(): string {
-    const basePrompt = `You are an expert QA engineer autonomously exploring a web application to discover its functionality and generate comprehensive test cases.
+    const authSkipBlock = this.config.loginCredentials
+      ? `\n\nIMPORTANT: Credentials have been provided and login is ALREADY DONE.
+You are authenticated. DO NOT test the login page. DO NOT explore auth flows.
+Navigate DIRECTLY to the target URL and test the application features.\n`
+      : '';
+
+    const basePrompt = `${authSkipBlock}You are an expert QA engineer autonomously exploring a web application to discover its functionality and generate comprehensive test cases.
 
 TARGET URL: ${this.config.targetUrl}
 MODE: ${this.config.mode}

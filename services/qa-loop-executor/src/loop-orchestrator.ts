@@ -151,6 +151,16 @@ export class LoopOrchestrator {
           });
           await this.performLogin();
           this.loginEstablished = true;
+          // After login, navigate straight to the target URL so Claude's first
+          // snapshot is the authenticated app, not the login page.
+          try {
+            await this.mcpBrowser!.callTool('browser_navigate', { url: this.config.targetUrl });
+          } catch (err: any) {
+            logger.warn('Post-login navigation to targetUrl failed', {
+              sessionId: this.sessionId,
+              error: err.message,
+            });
+          }
         } else {
           // FRESH START: skip auth exploration — go straight to login.
           // Auth exploration wastes 10-15 tool calls before the user's credentials
@@ -158,6 +168,16 @@ export class LoopOrchestrator {
           // loop after login is established.
           await this.performLogin();
           this.loginEstablished = true;
+          // After login, navigate straight to the target URL so Claude's first
+          // snapshot is the authenticated app, not the login page.
+          try {
+            await this.mcpBrowser!.callTool('browser_navigate', { url: this.config.targetUrl });
+          } catch (err: any) {
+            logger.warn('Post-login navigation to targetUrl failed', {
+              sessionId: this.sessionId,
+              error: err.message,
+            });
+          }
         }
       } else if (this.config.isResume && this.config.config?.hasLoginCredentials) {
         // Resumed WITHOUT credentials but the session originally used login.

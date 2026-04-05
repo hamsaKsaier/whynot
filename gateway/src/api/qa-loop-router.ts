@@ -324,29 +324,37 @@ router.post(
   asyncHandler(async (req, res) => {
     validateTargetUrl(req.body.targetUrl);
 
-    // Auto-create or auto-select a project if none provided
+    // Auto-link or auto-create a project based on the target URL's domain.
+    // NEVER reuse a workspace's "first" project — that leaks test cases across apps.
     if (!req.body.projectId && req.workspaceId) {
       try {
-        const existingProjects = await projectRepository.list(0, 1, req.workspaceId);
-        if (existingProjects.length > 0) {
-          // Auto-link to the most recently used project
-          req.body.projectId = existingProjects[0].id;
-          logger.info('Auto-linked session to existing project', { projectId: existingProjects[0].id });
+        let domain: string;
+        try {
+          domain = new URL(req.body.targetUrl).hostname;
+        } catch {
+          domain = req.body.targetUrl;
+        }
+
+        // Look for an existing project in this workspace that matches the domain
+        const existing = await projectRepository.findByDomain(domain, req.workspaceId);
+        if (existing) {
+          req.body.projectId = existing.id;
+          logger.info('Auto-linked session to project matching domain', {
+            projectId: existing.id,
+            domain,
+          });
         } else {
-          // Auto-create a project named after the target URL's domain
-          let projectName: string;
-          try {
-            projectName = new URL(req.body.targetUrl).hostname;
-          } catch {
-            projectName = req.body.targetUrl;
-          }
+          // Create a new project for this domain — never reuse a wrong project
           const project = await projectRepository.create({
-            name: projectName,
+            name: domain,
             website_url: req.body.targetUrl,
             workspace_id: req.workspaceId,
           });
           req.body.projectId = project.id;
-          logger.info('Auto-created project for QA session', { projectId: project.id, name: projectName });
+          logger.info('Auto-created project for QA session by domain', {
+            projectId: project.id,
+            name: domain,
+          });
         }
       } catch (err: any) {
         logger.warn('Failed to auto-create/select project, proceeding without', { error: err.message });

@@ -50,8 +50,12 @@ export class MCPBrowser {
   // Track when the browser was started for max-duration safety net
   private startedAt: number = 0;
 
-  /** Maximum browser session duration in ms (30 minutes). */
-  private static readonly MAX_BROWSER_DURATION_MS = 30 * 60 * 1000;
+  // True while a tool call is in flight — guards against concurrent cleanup
+  // killing a browser mid-operation from another session's forceCleanup() sweep.
+  private isExecuting = false;
+
+  /** Maximum browser session duration in ms (45 minutes). */
+  private static readonly MAX_BROWSER_DURATION_MS = 45 * 60 * 1000;
 
   /**
    * Global registry of active MCPBrowser instances, keyed by sessionId.
@@ -87,9 +91,14 @@ export class MCPBrowser {
       }
     } else {
       // Only kill EXPIRED browsers — never kill another active session's browser
+      // Also skip browsers that are currently executing a tool call (isExecuting=true)
       const entries = Array.from(MCPBrowser.activeBrowsers.entries());
       let cleaned = 0;
       for (const [sid, browser] of entries) {
+        if (browser.isExecuting) {
+          logger.info('Skipping cleanup for actively-executing browser', { sessionId: sid });
+          continue;
+        }
         if (browser.isExpired()) {
           logger.warn('Force-cleaning up expired browser', { sessionId: sid });
           try {
@@ -286,6 +295,7 @@ export class MCPBrowser {
       return { error: 'MCP browser not connected' };
     }
 
+    this.isExecuting = true;
     try {
       // Track navigation timing
       if (toolName === 'browser_navigate') {
@@ -375,6 +385,8 @@ export class MCPBrowser {
         error: error.message
       });
       return { error: `MCP tool ${toolName} failed: ${error.message}` };
+    } finally {
+      this.isExecuting = false;
     }
   }
 
