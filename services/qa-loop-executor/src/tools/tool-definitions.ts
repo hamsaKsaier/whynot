@@ -4,6 +4,36 @@ import { DETECTIVE_TOOL_DEFINITIONS } from './detective-tools';
 import { GUARDIAN_TOOL_DEFINITIONS } from './guardian-tools';
 
 /**
+ * Convert Anthropic-format tool definitions to Google GenAI functionDeclarations.
+ * The schemas are mostly JSON-Schema compatible; we just strip `additionalProperties`
+ * which Google's API does not support.
+ */
+export function toGemmaFunctionDeclarations(tools: Anthropic.Tool[]): any[] {
+  return tools.map(tool => ({
+    name: tool.name,
+    description: tool.description || '',
+    parameters: stripUnsupportedSchemaFields(tool.input_schema),
+  }));
+}
+
+function stripUnsupportedSchemaFields(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema;
+  const { additionalProperties, ...rest } = schema;
+  // Recurse into nested properties
+  if (rest.properties) {
+    const cleaned: any = {};
+    for (const [key, val] of Object.entries(rest.properties)) {
+      cleaned[key] = stripUnsupportedSchemaFields(val);
+    }
+    rest.properties = cleaned;
+  }
+  if (rest.items) {
+    rest.items = stripUnsupportedSchemaFields(rest.items);
+  }
+  return rest;
+}
+
+/**
  * Get non-browser tool definitions (state + report tools).
  * Browser tools come from Playwright MCP and are merged dynamically.
  */

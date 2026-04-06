@@ -7,7 +7,8 @@ const logger = createLogger('model-selector');
  */
 export type ClaudeModel =
   | 'claude-3-5-haiku-20241022'
-  | 'claude-sonnet-4-6';
+  | 'claude-sonnet-4-6'
+  | 'gemma-4-26b-a4b-it';
 
 /**
  * Task complexity levels
@@ -25,6 +26,7 @@ export type FocusArea = 'explore' | 'chaos' | 'investigate' | 'retest';
 export const MODEL_PRICING: Record<ClaudeModel, { input: number; output: number }> = {
   'claude-3-5-haiku-20241022': { input: 1, output: 5 },
   'claude-sonnet-4-6': { input: 3, output: 15 },
+  'gemma-4-26b-a4b-it': { input: 0, output: 0 },  // Free via Google AI Studio
 };
 
 /**
@@ -45,6 +47,11 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
     maxTokens: 64000,
     description: 'Best all-round model — coding, analysis, complex reasoning, and vision'
   },
+  'gemma-4-26b-a4b-it': {
+    complexity: ['simple', 'medium', 'complex'],
+    maxTokens: 8192,
+    description: 'Free via Google AI Studio — QA exploration, JSON generation, tool calling'
+  },
 };
 
 /**
@@ -53,8 +60,18 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
  * save_test_case / add_bug with well-structured payloads.
  * chaos/retest are mechanical tool calls that Haiku 3.5 handles fine.
  */
+/**
+ * When GOOGLE_AI_API_KEY is set, exploration uses Gemma 4 ($0).
+ * Chaos / retest / investigate still use Claude (Gemma lacks the specialised
+ * agents). The orchestrator handles the actual session creation — this map
+ * is used for model selection logging and cost estimation.
+ */
+const defaultExploreModel: ClaudeModel = process.env.GOOGLE_AI_API_KEY
+  ? 'gemma-4-26b-a4b-it'
+  : 'claude-sonnet-4-6';
+
 export const FOCUS_AREA_MODELS: Record<FocusArea, ClaudeModel> = {
-  explore: 'claude-sonnet-4-6',            // Sonnet 4.6: reliable for structured tool calls
+  explore: defaultExploreModel,
   chaos: 'claude-3-5-haiku-20241022',      // Haiku 3.5: simple mechanical tool calls
   investigate: 'claude-sonnet-4-6',        // Sonnet 4.6 for analysis
   retest: 'claude-3-5-haiku-20241022'      // Haiku 3.5: straightforward test execution
@@ -232,6 +249,8 @@ export function getModelDisplayName(model: ClaudeModel): string {
       return 'Claude 3.5 Haiku';
     case 'claude-sonnet-4-6':
       return 'Claude Sonnet 4.6';
+    case 'gemma-4-26b-a4b-it':
+      return 'Gemma 4 26B';
     default:
       return model;
   }

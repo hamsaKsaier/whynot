@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
+    "@google/genai": "^1.48.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@types/ws": "^8.18.1",
     "axios": "^1.6.2",
