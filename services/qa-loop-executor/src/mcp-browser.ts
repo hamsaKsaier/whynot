@@ -375,6 +375,12 @@ export class MCPBrowser {
         };
       }
 
+      // Compress browser_snapshot results to save tokens — keep only
+      // interactive elements + short text lines (removes decorative divs, SVGs, etc.)
+      if (toolName === 'browser_snapshot' && typeof textParts === 'string' && textParts.length > 500) {
+        return { data: MCPBrowser.compressSnapshot(textParts) };
+      }
+
       // For all other tools, return the text content
       return { data: textParts || { success: true } };
 
@@ -552,5 +558,31 @@ export class MCPBrowser {
 
       logger.info('Playwright MCP server stopped', { sessionId: this.sessionId });
     }
+  }
+
+  /**
+   * Compress a browser_snapshot accessibility tree to only interactive/meaningful lines.
+   * Cuts typical snapshots from ~2,500 tokens to ~500 tokens.
+   */
+  static compressSnapshot(raw: string): string {
+    const lines = raw.split('\n');
+    const kept = lines.filter(line => {
+      const lower = line.toLowerCase();
+      return (
+        lower.includes('button') ||
+        lower.includes('input') ||
+        lower.includes('link') ||
+        lower.includes('heading') ||
+        lower.includes('textbox') ||
+        lower.includes('select') ||
+        lower.includes('checkbox') ||
+        lower.includes('radio') ||
+        lower.includes('tab') ||
+        lower.includes('menu') ||
+        lower.includes('ref=') ||
+        line.trim().length < 120 // short lines are likely meaningful text content
+      );
+    });
+    return kept.slice(0, 150).join('\n');
   }
 }

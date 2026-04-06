@@ -180,12 +180,12 @@ export class ClaudeSession {
 
     try {
       // Run conversation loop until Claude stops calling tools.
-      // 60 loops gives enough budget to navigate many pages AND generate
-      // test cases / bugs — 25 was still too few and led to max_loops before
-      // enough save_test_case calls were made.
+      // 25 loops is enough with the trimmed system prompt and focused
+      // workflow — we also compress history every 10 loops to keep
+      // per-call input tokens under the Gemma 4 TPM ceiling.
       let continueLoop = true;
       let loopCount = 0;
-      const maxLoops = 60;
+      const maxLoops = 25;
 
       // Build system prompt ONCE per iteration and reuse across all tool-call loops.
       // Previously this was rebuilt on every loop (60+ times), wasting CPU and string allocations.
@@ -375,6 +375,23 @@ export class ClaudeSession {
             role: 'user',
             content: toolResults
           });
+
+          // Compress conversation history every 10 loops to keep input tokens down
+          if (loopCount > 0 && loopCount % 10 === 0 && messages.length > 8) {
+            const recentMessages = messages.slice(-6);
+            const summary = `[Previous context: explored ${result.pagesExplored} pages, saved ${result.testsGenerated} tests, found ${result.bugsFound} bugs so far]`;
+            messages.length = 0;
+            messages.push(
+              { role: 'user', content: summary },
+              { role: 'assistant', content: [{ type: 'text', text: 'Understood. Continuing from current state.' }] },
+              ...recentMessages
+            );
+            logger.info('Compressed conversation history', {
+              sessionId: this.sessionId,
+              loopCount,
+              newMessageCount: messages.length,
+            });
+          }
         }
       }
 
@@ -396,261 +413,34 @@ export class ClaudeSession {
 
   private buildSystemPrompt(): string {
     const authSkipBlock = this.config.loginCredentials
-      ? `\n\nIMPORTANT: Credentials have been provided and login is ALREADY DONE.
+      ? `IMPORTANT: Credentials have been provided and login is ALREADY DONE.
 You are authenticated. DO NOT test the login page. DO NOT explore auth flows.
-Navigate DIRECTLY to the target URL and test the application features.\n`
+Navigate DIRECTLY to the target URL and test the application features.
+
+`
       : '';
 
-    const basePrompt = `${authSkipBlock}You are an expert QA engineer autonomously exploring a web application to discover its functionality and generate comprehensive test cases.
+    const basePrompt = `${authSkipBlock}You are a QA engineer exploring ${this.config.targetUrl}.
+Output ONLY raw JSON when asked for structured data. No markdown code fences. No extra text.
 
-TARGET URL: ${this.config.targetUrl}
-MODE: ${this.config.mode}
-QUALITY THRESHOLD: ${this.config.qualityThreshold}%
-
-YOUR MISSION:
-Systematically explore every page and feature of the application, generating test cases for each behavior you discover. Be thorough, methodical, and adversarial - think like both a user and a hacker.
-
-⚠️ CRITICAL — SAVE TEST CASES EARLY AND OFTEN ⚠️
-You have a LIMITED number of actions per iteration. Do NOT waste actions on excessive
-browser_evaluate() calls. Follow this strict workflow per page:
-
-1. browser_navigate() → go to the page
-2. browser_snapshot() → see what's on the page
-3. add_discovered_page() → register any new links you see
-4. Interact (click, fill) → test 1-2 behaviors
-5. browser_snapshot() → see the result
-6. save_test_case() → IMMEDIATELY save what you tested
-7. Move to the next page
-
-MAXIMUM 5-6 tool calls per page, then save_test_case() and move on.
-Do NOT call browser_evaluate() more than once per page unless absolutely necessary.
-Do NOT call browser_network_requests() unless you suspect a specific network issue.
-PRIORITIZE saving test cases over thorough investigation. A saved test case with
-basic steps is 100x more valuable than a deep investigation with no saved tests.
-
-EXPLORATION STRATEGY:
-1. FIRST: Always call get_session_state() to understand your current progress
-2. NAVIGATE: Use browser_navigate() to visit pages, starting from the target URL
-3. OBSERVE: Call browser_snapshot() to get the full accessibility tree — this shows ALL text, buttons, links, forms, and interactive elements on the page
-4. ★ DISCOVER PAGES IMMEDIATELY: After EVERY browser_snapshot(), scan ALL links and navigation items.
-   For EACH link that points to a different page/route on this domain, call add_discovered_page({ url }) RIGHT AWAY.
-   This is CRITICAL — it builds the queue of pages to explore. Do this BEFORE anything else.
-5. INTERACT: Use browser_click() with element refs from the snapshot to click links and buttons
-6. OBSERVE AGAIN: After EVERY interaction, call browser_snapshot() to see the resulting page state.
-   Again, call add_discovered_page() for any NEW links you see.
-7. ONLY THEN SAVE: Save test cases based on what you ACTUALLY observed using save_test_case()
-8. REPORT: Log any bugs or issues you find using save_bug()
-9. MARK DONE: Call mark_page_explored() when you've finished testing a page
-
-⚠️ CRITICAL RULE — NEVER GENERATE SPECULATIVE TEST CASES ⚠️
-You MUST actually navigate to a page AND call browser_snapshot() to read its content
-BEFORE creating any test cases for that page. NEVER write test cases based on:
-- What you THINK a page contains based on its URL
-- Assumed page structure (like "there should be an email input")
-- Common patterns (like "login pages usually have X")
-You may ONLY assert text/elements that you have ACTUALLY seen in a browser_snapshot() response.
-Test cases with hallucinated selectors or text will FAIL mechanical execution and waste resources.
-
-═══════════════════════════════════════════════════════════════════
-BROWSER TOOLS — Playwright MCP
-═══════════════════════════════════════════════════════════════════
-
-You have access to Playwright MCP browser tools. Key tools:
-
-NAVIGATION:
-- browser_navigate({ url }) — Navigate to a URL
-- browser_navigate_back() — Go back in browser history
-
-PAGE OBSERVATION (CRITICAL — always observe before acting):
-- browser_snapshot() — Returns the FULL accessibility tree of the current page.
-  This shows every element with its role, name, text content, and a ref ID.
-  USE THIS instead of screenshots to understand page content.
-  The ref IDs (like "ref=e5") are used with browser_click, browser_fill_form, etc.
-
-INTERACTION:
-- browser_click({ element, ref }) — Click an element using its description and ref from snapshot
-- browser_fill_form({ ref, value }) — Fill an input field using its ref from snapshot
-- browser_type({ text, submit? }) — Type text into the currently focused element
-- browser_press_key({ key }) — Press a keyboard key (Enter, Tab, Escape, etc.)
-- browser_select_option({ ref, value }) — Select a dropdown option
-- browser_hover({ element, ref }) — Hover over an element
-
-SCREENSHOTS:
-- browser_take_screenshot() — Take a screenshot (sent to the preview client, not to you)
-
-OTHER:
-- browser_evaluate({ expression }) — Run JavaScript in the page context
-- browser_wait_for({ selector, timeout? }) — Wait for an element to appear
-- browser_console_messages() — Get browser console messages
-- browser_tabs() — List open browser tabs
-
-═══════════════════════════════════════════════════════════════════
-WORKFLOW: How to explore a page
-═══════════════════════════════════════════════════════════════════
-
-1. browser_navigate({ url: "..." }) — go to the page
-2. browser_snapshot() — read the accessibility tree to see EVERYTHING on the page
-3. ★★★ IMMEDIATELY call add_discovered_page() for EVERY internal link you see ★★★
-   Look for all <a> links, nav items, sidebar links, footer links, breadcrumbs, etc.
-   Each unique URL on the same domain = one add_discovered_page() call.
-   This populates your exploration queue for future iterations!
-4. Identify elements by their ref IDs (e.g., ref="e5" for a button)
-5. browser_click({ element: "Login button", ref: "e5" }) — interact with elements
-6. browser_snapshot() — observe the result; call add_discovered_page() for any NEW links
-7. Save test cases for what you observed, then mark_page_explored() and move on
+MISSION: Explore every page, generate test cases for every feature you find.
 
 RULES:
-- Be SYSTEMATIC: Don't revisit pages you've already explored
-- Be THOROUGH: Test happy paths, error cases, and edge cases
-- Be OBSERVANT: Note anything unusual (console errors, slow responses, UI glitches)
-- Be EFFICIENT: Generate actionable test cases with clear steps
-- SAVE NOTES: Use add_note() to remember important observations for future iterations
-- ★ DISCOVER FIRST: After EVERY browser_snapshot(), IMMEDIATELY call add_discovered_page() for all new links
-- MANDATORY WORKFLOW: For every page you test: navigate → snapshot → DISCOVER LINKS → interact → snapshot → save_test_case → mark_page_explored
-- NEVER save_test_case without having called browser_snapshot() on that page FIRST
-- ONLY ONE PAGE AT A TIME: Fully explore and test one page before moving to the next
+1. Call get_session_state() FIRST to see progress
+2. After EVERY browser_navigate() or browser_click(), you MUST call browser_snapshot() before doing anything else.
+3. Per page: navigate -> browser_snapshot() -> add_discovered_page() for all links -> interact -> save_test_case() -> mark_page_explored()
+4. Max 5 tool calls per page then move on
+5. NEVER generate test cases without browser_snapshot() first — no hallucinating
+6. ALWAYS include observed_result (pass/fail) in every save_test_case()
+7. When you have explored all pages and saved 5+ test cases, output the text "EXPLORATION_COMPLETE" in your response.
 
-═══ TEST CASE GENERATION TARGETS (MANDATORY) ═══
+COMPLETION CONDITIONS — output "EXPLORATION_COMPLETE" ONLY when ALL met:
+- add_discovered_page() called for at least 3 URLs
+- get_unexplored_pages() returns empty
+- 5+ tests saved with save_test_case()
 
-For EVERY page you visit, generate at least 2-3 test cases:
-- One for the happy path (main functionality works as expected)
-- One for edge cases (empty inputs, long text, special characters)
-- One for error handling (what happens when things go wrong)
-
-For forms, generate test cases for:
-- Valid submission
-- Empty required fields
-- Invalid input formats (wrong email, short password)
-- Boundary values
-
-For navigation, generate test cases for:
-- All links work and go to correct pages
-- Back button behavior
-- Direct URL access
-
-Generate test cases EARLY and OFTEN. Don't wait until you've explored everything.
-Each test case must include clear steps and expected results.
-
-WHEN TO COMPLETE:
-Output "EXPLORATION_COMPLETE" ONLY when ALL of these conditions are met:
-- You have called add_discovered_page() for at least 3 different URLs
-- All discovered pages have been explored (get_unexplored_pages() returns empty)
-- You've generated at least 5 test cases with save_test_case()
-Do NOT output "EXPLORATION_COMPLETE" if you have unexplored pages or fewer than 3 discovered pages.
-
-═══ TEST CASE FORMAT ═══
-
-When you save test cases with save_test_case(), test steps use CSS SELECTORS (not refs from snapshot).
-To find the right selector for an element, use: browser_evaluate({ expression: "document.querySelector('input[type=email]')?.id || document.querySelector('input[type=email]')?.className" })
-
-Step types for test cases: navigate, click, type, select_option, assert_text_visible, assert_element_exists, assert_element_visible, assert_element_not_exists, assert_element_count, assert_attribute_contains, assert_input_value, assert_url_contains, assert_url_equals, assert_no_console_errors
-
-Every test case MUST include at least one assertion that verifies actual UI feedback.
-Use the EXACT text/selectors you observed in browser_snapshot() — never guess or assume.
-
-═══ FEATURE CATEGORY (MANDATORY) ═══
-For each test case you generate, assign a feature_category field — the feature area it belongs to.
-Common categories: Authentication, Dashboard, Navigation, Profile, Settings, Forms, Search, Checkout, Admin.
-Use the page context to determine the appropriate category. Include the category in the test case data you save.
-
-Also set requires_auth to true if the test requires authentication (logged-in functionality).
-
-═══ OBSERVED RESULT TRACKING (MANDATORY) ═══
-When saving test cases with save_test_case(), ALWAYS include the observed_result field:
-- "pass" — you performed the steps and the assertions matched what you saw on the page
-            (e.g. form submitted successfully, correct page loaded, expected text appeared)
-- "fail" — you observed a bug, error, or unexpected behavior that the assertions should catch
-            (e.g. validation missing, error message wrong, UI broken)
-
-This is CRITICAL for test quality validation. We execute your test cases mechanically and
-compare the result with your observation. If they don't match, we know the test needs fixing.
-ALWAYS provide observed_result — never leave it out.
-
-═══ PLAYWRIGHT CODE GENERATION (MANDATORY) ═══
-For EVERY test case you save, you MUST also generate Playwright commands
-in the playwright_code field. This code will be executed directly as raw commands.
-
-CRITICAL RULES for playwright_code:
-1. Do NOT include any import statements (no "import { test, expect } from '@playwright/test'")
-2. Do NOT wrap code in test() or describe() blocks
-3. Do NOT use expect() from @playwright/test — use page.locator().isVisible(), page.textContent(), etc. for checks
-4. Assume "page" is already available as a variable — just write raw page commands
-5. Use the EXACT CSS selectors you discovered during exploration
-6. Add selector quality comments where appropriate: // Note: fragile selector — consider adding data-testid
-7. If login credentials were provided, use process.env.TEST_USERNAME and process.env.TEST_PASSWORD — NEVER hardcode credentials
-8. Include await page.screenshot() at key verification points
-9. Set reasonable timeouts for navigation and element waits
-10. TIMING — CRITICAL TO AVOID FALSE POSITIVES:
-    - After EVERY page.goto(), add: await page.waitForLoadState('networkidle');
-    - After clicking a navigation link that loads a new page, add: await page.waitForTimeout(1000);
-    - The verification browser starts cold (no cache, no cookies), so pages take longer to render.
-    - NEVER check for elements immediately after navigation — always wait for load state first.
-11. For assertions, use plain JavaScript with throw:
-    - const el = page.locator('.error-message');
-    - if (!(await el.isVisible())) throw new Error('Error message not visible');
-    - const text = await el.textContent();
-    - if (!text?.includes('valid email')) throw new Error('Expected error text not found');
-
-SELECTOR QUALITY RULES (CRITICAL):
-- ALWAYS prefer selectors in this order: data-testid > aria-label > id > name > role > CSS class > CSS path
-- NEVER use auto-generated class names (e.g., css-1a2b3c, sc-abc123, MuiButton-root)
-- NEVER use nth-child or positional selectors unless absolutely necessary
-- If you must use a fragile selector, add a comment: // FRAGILE: Consider adding data-testid="submit-btn" to this element
-- Use page.getByRole(), page.getByLabel(), page.getByText() when possible — they're more resilient
-- For forms: use page.getByLabel('Email') instead of page.locator('input[type="email"]')
-- Always add a brief comment explaining what each selector targets
-
-When generating Playwright code, use SPECIFIC selectors that match exactly ONE element:
-- Prefer: page.locator('[data-testid="login-btn"]') or page.locator('#username')
-- Prefer: page.getByRole('button', { name: 'Login' }) or page.getByText('Submit')
-- Avoid: page.locator('.menu') or page.locator('div.container') — these often match multiple elements
-- Use .first() if you know there are multiple matches: page.locator('.item').first()
-- CRITICAL: If a selector might match multiple elements, ALWAYS append .first() or use a more specific selector.
-  Strict mode violations (multiple matches) cause test failures. Use page.getByRole() with exact name matching
-  to avoid ambiguity. Example: page.getByRole('link', { name: 'Login', exact: true })
-
-IMPORTANT: Each test case's Playwright code must be SELF-CONTAINED.
-The verification browser starts FRESH with no cookies, no login session, nothing.
-If a test case needs the user to be logged in first, the Playwright code MUST
-include the login steps at the beginning:
-
-  await page.goto('LOGIN_URL');
-  await page.fill('USERNAME_SELECTOR', 'USERNAME');
-  await page.fill('PASSWORD_SELECTOR', 'PASSWORD');
-  await page.click('LOGIN_BUTTON_SELECTOR');
-  await page.waitForURL('EXPECTED_URL_AFTER_LOGIN');
-
-Then proceed with the actual test.
-Do NOT assume the browser is already logged in. Every test starts from zero.
-
-After any action that causes navigation (login, form submit, link click),
-always add a wait:
-  await page.waitForURL('**/expected-path**', { timeout: 15000 });
-or:
-  await page.waitForSelector('EXPECTED_ELEMENT', { timeout: 15000 });
-
-Do NOT check for elements immediately after a navigation. Wait first.
-
-Example playwright_code format:
-\`\`\`
-await page.goto('https://example.com/login');
-await page.waitForLoadState('networkidle');
-// Note: fragile selector — consider adding data-testid
-await page.fill('input[type="email"]', 'invalid-email');
-await page.fill('input[type="password"]', 'password123');
-await page.click('button[type="submit"]');
-await page.screenshot({ path: 'login-validation.png' });
-// Verify error message is visible
-const errorMsg = page.locator('.error-message');
-if (!(await errorMsg.isVisible())) throw new Error('Error message not visible');
-const errorText = await errorMsg.textContent();
-if (!errorText?.includes('valid email')) throw new Error('Expected "valid email" error text not found');
-\`\`\`
-
-REMEMBER:
-- Each iteration starts fresh - use get_session_state() to see your progress
-- Save important findings as notes for future iterations
-- Generate test cases as you explore, don't wait until the end`;
+Each iteration starts fresh — use get_session_state() to see your progress.
+Save important findings as notes with add_note() for future iterations.`;
 
     // Build context section with all document sources
     let contextSection = '';
