@@ -4,6 +4,36 @@ import { DETECTIVE_TOOL_DEFINITIONS } from './detective-tools';
 import { GUARDIAN_TOOL_DEFINITIONS } from './guardian-tools';
 
 /**
+ * Convert Anthropic-format tool definitions to Google GenAI functionDeclarations.
+ * The schemas are mostly JSON-Schema compatible; we just strip `additionalProperties`
+ * which Google's API does not support.
+ */
+export function toGemmaFunctionDeclarations(tools: Anthropic.Tool[]): any[] {
+  return tools.map(tool => ({
+    name: tool.name,
+    description: tool.description || '',
+    parameters: stripUnsupportedSchemaFields(tool.input_schema),
+  }));
+}
+
+function stripUnsupportedSchemaFields(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema;
+  const { additionalProperties, ...rest } = schema;
+  // Recurse into nested properties
+  if (rest.properties) {
+    const cleaned: any = {};
+    for (const [key, val] of Object.entries(rest.properties)) {
+      cleaned[key] = stripUnsupportedSchemaFields(val);
+    }
+    rest.properties = cleaned;
+  }
+  if (rest.items) {
+    rest.items = stripUnsupportedSchemaFields(rest.items);
+  }
+  return rest;
+}
+
+/**
  * Get non-browser tool definitions (state + report tools).
  * Browser tools come from Playwright MCP and are merged dynamically.
  */
@@ -121,7 +151,18 @@ export function getToolDefinitions(): Anthropic.Tool[] {
     // Report Tools
     {
       name: 'save_test_case',
-      description: 'Save a generated test case. IMPORTANT: Every test case MUST include at least one meaningful assertion (assert_text_visible, assert_element_exists, assert_element_visible, or assert_attribute_contains) that verifies the actual UI outcome — not just assert_url_contains or assert_no_console_errors.',
+      description: `Save a generated test case. Every test case MUST include at least one meaningful assertion (assert_text_visible, assert_element_exists, assert_element_visible, or assert_attribute_contains) that verifies actual UI outcome.
+
+PLAYWRIGHT CODE RULES for playwright_code field:
+- No imports, no test() wrapper. Assume "page" is available.
+- Use page.* methods only (page.goto, page.fill, page.click, page.locator, page.getByRole, etc.)
+- Include login steps if requires_auth=true (every test starts with a fresh browser, no cookies).
+- Prefer selectors: data-testid > aria-label > id > name > role > CSS class.
+- After every page.goto(), add: await page.waitForLoadState('networkidle');
+- Use throw new Error() for assertions, NOT expect().
+- Use process.env.TEST_USERNAME / process.env.TEST_PASSWORD for credentials — never hardcode.
+- If a selector might match multiple elements, append .first() or use getByRole with exact name.
+- Each test must be SELF-CONTAINED (login steps included if behind auth).`,
       input_schema: {
         type: 'object' as const,
         properties: {
@@ -320,6 +361,15 @@ export function getAllToolDefinitions(): Anthropic.Tool[] {
 }
 
 /**
+ * MCP browser tools that are never useful for QA — strip to save token budget.
+ */
+const EXCLUDED_MCP_BROWSER_TOOLS = new Set([
+  'browser_tabs',
+  'browser_hover',
+  'browser_network_requests',
+]);
+
+/**
  * Non-browser tool names to EXCLUDE during retest (lightweight replay).
  * Retest only needs MCP browser tools + get_session_state.
  */
@@ -328,21 +378,84 @@ const RETEST_KEEP_TOOLS = new Set([
 ]);
 
 /**
+ * Custom tools allowed during the explore phase.
+ * State + report tools needed for the navigate-snapshot-save loop.
+ */
+const EXPLORE_TOOLS = new Set([
+  'get_session_state',
+  'get_unexplored_pages',
+  'add_discovered_page',
+  'mark_page_explored',
+  'add_note',
+  'get_notes',
+  'save_test_case',
+  'save_bug',
+  'get_test_cases',
+  'get_explored_pages',
+]);
+
+/**
+ * Custom tools allowed during the report phase (lighter set).
+ */
+const REPORT_TOOLS = new Set([
+  'get_session_state',
+  'save_test_case',
+  'save_bug',
+  'get_test_cases',
+  'get_bugs',
+]);
+
+/**
+ * Filter MCP browser tools to remove unused ones (saves ~300 tokens per tool).
+ */
+function filterMcpTools(mcpTools: Anthropic.Tool[]): Anthropic.Tool[] {
+  return mcpTools.filter(t => !EXCLUDED_MCP_BROWSER_TOOLS.has(t.name));
+}
+
+/**
  * Return the appropriate tool subset for the given focus area.
  * MCP browser tools are passed in and merged with our custom tools.
  *
- * - 'explore'    -> MCP browser tools + all custom tools
+ * - 'explore'    -> filtered MCP browser tools + explore custom tools (~10 tools)
+ * - 'report'     -> browser_navigate + browser_snapshot + report custom tools (~5 tools)
  * - 'retest'     -> MCP browser tools + get_session_state only
- * - other phases -> MCP browser tools + all custom tools
+ * - other phases -> filtered MCP browser tools + all custom tools
  */
 export function getToolsForFocusArea(
   focusArea: 'explore' | 'chaos' | 'retest' | 'investigate',
   mcpTools: Anthropic.Tool[] = []
 ): Anthropic.Tool[] {
+  const filteredMcp = filterMcpTools(mcpTools);
+
   if (focusArea === 'retest') {
     const customTools = getToolDefinitions().filter(t => RETEST_KEEP_TOOLS.has(t.name));
-    return [...mcpTools, ...customTools];
+    return [...filteredMcp, ...customTools];
   }
-  // 'explore', 'chaos', 'investigate' all get MCP browser tools + full custom tool set
-  return [...mcpTools, ...getToolDefinitions()];
+
+  // 'explore', 'chaos', 'investigate' all get filtered MCP browser tools + explore tool set
+  const customTools = getToolDefinitions().filter(t => EXPLORE_TOOLS.has(t.name));
+  return [...filteredMcp, ...customTools];
+}
+
+/**
+ * Return tool definitions for Gemma 4's explore / report phases.
+ * Used by GemmaSession to further reduce per-call tool tokens.
+ */
+export function getToolsForPhase(
+  phase: 'explore' | 'report',
+  mcpTools: Anthropic.Tool[] = []
+): Anthropic.Tool[] {
+  const filteredMcp = filterMcpTools(mcpTools);
+  const toolSet = phase === 'report' ? REPORT_TOOLS : EXPLORE_TOOLS;
+  const customTools = getToolDefinitions().filter(t => toolSet.has(t.name));
+
+  if (phase === 'report') {
+    // Report phase only needs navigate + snapshot from MCP
+    const reportMcp = filteredMcp.filter(t =>
+      t.name === 'browser_navigate' || t.name === 'browser_snapshot'
+    );
+    return [...reportMcp, ...customTools];
+  }
+
+  return [...filteredMcp, ...customTools];
 }

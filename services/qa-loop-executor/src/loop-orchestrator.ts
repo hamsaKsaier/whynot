@@ -1,6 +1,7 @@
 import { createLogger } from '../../shared/logger/logger';
 import { QALoopRepository } from './repositories/qa-loop-repository';
 import { ClaudeSession, CostInfo } from './claude-session';
+import { GemmaSession } from './gemma-session';
 import { emitToSession, cleanupSession } from './api/websocket';
 import { ChaosAgent } from './agents/chaos-agent';
 import { DetectiveAgent } from './agents/detective-agent';
@@ -55,7 +56,7 @@ export class LoopOrchestrator {
   private sessionId: string;
   private config: LoopConfig;
   private repository: QALoopRepository;
-  private claudeSession: ClaudeSession | null = null;
+  private claudeSession: ClaudeSession | GemmaSession | null = null;
   private isPaused: boolean = false;
   private isStopped: boolean = false;
   private currentIteration: number = 0;
@@ -151,6 +152,16 @@ export class LoopOrchestrator {
           });
           await this.performLogin();
           this.loginEstablished = true;
+          // After login, navigate straight to the target URL so Claude's first
+          // snapshot is the authenticated app, not the login page.
+          try {
+            await this.mcpBrowser!.callTool('browser_navigate', { url: this.config.targetUrl });
+          } catch (err: any) {
+            logger.warn('Post-login navigation to targetUrl failed', {
+              sessionId: this.sessionId,
+              error: err.message,
+            });
+          }
         } else {
           // FRESH START: skip auth exploration — go straight to login.
           // Auth exploration wastes 10-15 tool calls before the user's credentials
@@ -158,6 +169,16 @@ export class LoopOrchestrator {
           // loop after login is established.
           await this.performLogin();
           this.loginEstablished = true;
+          // After login, navigate straight to the target URL so Claude's first
+          // snapshot is the authenticated app, not the login page.
+          try {
+            await this.mcpBrowser!.callTool('browser_navigate', { url: this.config.targetUrl });
+          } catch (err: any) {
+            logger.warn('Post-login navigation to targetUrl failed', {
+              sessionId: this.sessionId,
+              error: err.message,
+            });
+          }
         }
       } else if (this.config.isResume && this.config.config?.hasLoginCredentials) {
         // Resumed WITHOUT credentials but the session originally used login.
@@ -786,14 +807,33 @@ Start now with get_session_state(), then navigate and explore.
     // Pass focusArea so the session selects the right tool subset (2.2),
     // and pass the pre-loaded document context to skip the per-iteration DB query (2.6).
     // The onTestCaseCreated callback feeds each new test case into the parallel executor.
-    this.claudeSession = new ClaudeSession(
-      this.sessionId,
-      this.config,
-      this.mcpBrowser!,
-      plan.focusArea as any,
-      this.cachedDocumentContext,
-      (testCase, observedResult) => parallelExecutor.enqueue(testCase, observedResult || 'pass')
-    );
+    //
+    // When GOOGLE_AI_API_KEY is set, use GemmaSession ($0 per scan) instead of ClaudeSession.
+    // Removing the env var instantly falls back to Claude — no code change needed.
+    const useGemma = !!process.env.GOOGLE_AI_API_KEY;
+    const testCaseCallback = (testCase: any, observedResult?: 'pass' | 'fail') =>
+      parallelExecutor.enqueue(testCase, observedResult || 'pass');
+
+    if (useGemma) {
+      this.claudeSession = new GemmaSession(
+        this.sessionId,
+        this.config,
+        this.mcpBrowser!,
+        plan.focusArea as any,
+        this.cachedDocumentContext,
+        testCaseCallback,
+      );
+      logger.info('Using Gemma 4 26B for exploration (free tier)', { sessionId: this.sessionId });
+    } else {
+      this.claudeSession = new ClaudeSession(
+        this.sessionId,
+        this.config,
+        this.mcpBrowser!,
+        plan.focusArea as any,
+        this.cachedDocumentContext,
+        testCaseCallback,
+      );
+    }
 
     // Select model based on focus area (Phase 6: Tiered Models)
     const modelSelection = selectModel({
@@ -803,9 +843,9 @@ Start now with get_session_state(), then navigate and explore.
 
     logger.info('Model selected for exploration', {
       sessionId: this.sessionId,
-      model: modelSelection.model,
-      reason: modelSelection.reason,
-      estimatedCostPerCall: modelSelection.estimatedCostPerCall
+      model: useGemma ? 'gemma-4-26b-a4b-it' : modelSelection.model,
+      reason: useGemma ? 'GOOGLE_AI_API_KEY set — using free Gemma 4' : modelSelection.reason,
+      estimatedCostPerCall: useGemma ? 0 : modelSelection.estimatedCostPerCall,
     });
 
     const targetHint = plan.targets.length > 0

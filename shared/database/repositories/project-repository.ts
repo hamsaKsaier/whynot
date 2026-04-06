@@ -69,6 +69,33 @@ export class ProjectRepository {
   }
 
   /**
+   * Find an existing project in the workspace whose website_url shares the given domain.
+   * Used to prevent project-context leaks when auto-linking a QA session by URL.
+   */
+  async findByDomain(domain: string, workspaceId: string): Promise<ProjectEntity | null> {
+    const result = await query<ProjectEntity>(
+      `SELECT * FROM projects
+       WHERE workspace_id = $1
+         AND website_url IS NOT NULL
+         AND website_url ILIKE $2
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [workspaceId, `%${domain}%`]
+    );
+    // Validate exact hostname match (ILIKE is a coarse prefilter)
+    for (const row of result) {
+      try {
+        if (row.website_url && new URL(row.website_url).hostname.toLowerCase() === domain.toLowerCase()) {
+          return row;
+        }
+      } catch {
+        // Skip malformed URLs
+      }
+    }
+    return null;
+  }
+
+  /**
    * List all projects with pagination, optionally scoped to a workspace
    */
   async list(offset: number = 0, limit: number = 50, workspaceId?: string): Promise<ProjectEntity[]> {
