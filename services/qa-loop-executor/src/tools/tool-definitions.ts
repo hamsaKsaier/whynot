@@ -156,7 +156,7 @@ export function getToolDefinitions(): Anthropic.Tool[] {
 PLAYWRIGHT CODE RULES for playwright_code field:
 - No imports, no test() wrapper. Assume "page" is available.
 - Use page.* methods only (page.goto, page.fill, page.click, page.locator, page.getByRole, etc.)
-- Include login steps if requires_auth=true (every test starts with a fresh browser, no cookies).
+- IMPORTANT: Set requires_auth=true for ANY page behind login. playwright_code MUST include login steps at the top — the verification browser has no session.
 - Prefer selectors: data-testid > aria-label > id > name > role > CSS class.
 - After every page.goto(), add: await page.waitForLoadState('networkidle');
 - Use throw new Error() for assertions, NOT expect().

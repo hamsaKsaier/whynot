@@ -301,6 +301,16 @@ RULES:
 
 You are being evaluated on QUANTITY and COVERAGE. A scan with 10 simple test cases across 5 pages is better than 2 detailed test cases on 1 page. Move fast.
 
+${this.config.loginCredentials ? `CRITICAL — EVERY test case's playwright_code MUST start with these login steps:
+  await page.goto('${this.config.loginCredentials.loginUrl || this.config.targetUrl}');
+  await page.waitForLoadState('networkidle');
+  await page.fill('${this.config.loginCredentials.emailSelector || "input[name=\\"username\\"]"}', '${this.config.loginCredentials.email}');
+  await page.fill('${this.config.loginCredentials.passwordSelector || "input[name=\\"password\\"]"}', '${this.config.loginCredentials.password}');
+  await page.click('${this.config.loginCredentials.submitSelector || "button[type=\\"submit\\"]"}');
+  await page.waitForLoadState('networkidle');
+The verification browser starts COLD — no cookies, no session. If you skip login, the test WILL fail.
+Set requires_auth=true for ANY page behind login.` : ''}
+
 COMPLETION CONDITIONS — output "EXPLORATION_COMPLETE" ONLY when ALL met:
 - add_discovered_page() called for at least 3 URLs
 - get_unexplored_pages() returns empty

@@ -40,7 +40,7 @@ export class ToolExecutor {
     this.config = config;
     this.mcpBrowser = mcpBrowser;
     this.stateTools = new StateTools(sessionId);
-    this.reportTools = new ReportTools(sessionId, onTestCaseCreated);
+    this.reportTools = new ReportTools(sessionId, onTestCaseCreated, config.loginCredentials);
     this.chaosTools = new ChaosTools(sessionId);
     this.detectiveTools = new DetectiveTools(sessionId);
     this.guardianTools = new GuardianTools(sessionId);

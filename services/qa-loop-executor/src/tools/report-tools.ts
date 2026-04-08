@@ -3,8 +3,35 @@ import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { ToolResult } from '../tool-executor';
 import { emitToSession } from '../api/websocket';
 import { notifyGateway } from '../notifications/email-notifier';
+import { LoginCredentials } from '../loop-orchestrator';
 
 const logger = createLogger('report-tools');
+
+/**
+ * Safety net: if requires_auth is true but playwright_code has no login steps,
+ * prepend them automatically so the cold verification browser can authenticate.
+ */
+function ensureLoginSteps(code: string, credentials: LoginCredentials): string {
+  // If code already has login steps, return as-is
+  if (code.includes('/auth/login') || code.includes('/login') || code.includes(credentials.loginUrl || '__none__')) {
+    return code;
+  }
+
+  const loginUrl = credentials.loginUrl || '';
+  const emailSelector = credentials.emailSelector || 'input[name="username"]';
+  const passwordSelector = credentials.passwordSelector || 'input[name="password"]';
+  const submitSelector = credentials.submitSelector || 'button[type="submit"]';
+
+  const loginCode = `// Auto-injected login steps (verification browser has no session)
+await page.goto('${loginUrl}');
+await page.waitForLoadState('networkidle');
+await page.fill('${emailSelector}', process.env.TEST_USERNAME || '${credentials.email}');
+await page.fill('${passwordSelector}', process.env.TEST_PASSWORD || '${credentials.password}');
+await page.click('${submitSelector}');
+await page.waitForLoadState('networkidle');
+`;
+  return loginCode + '\n' + code;
+}
 
 export interface TestCaseInput {
   name: string;
@@ -59,11 +86,13 @@ export class ReportTools {
   private sessionId: string;
   private repository: QALoopRepository;
   private onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void;
+  private loginCredentials?: LoginCredentials;
 
-  constructor(sessionId: string, onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void) {
+  constructor(sessionId: string, onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void, loginCredentials?: LoginCredentials) {
     this.sessionId = sessionId;
     this.repository = new QALoopRepository();
     this.onTestCaseCreated = onTestCaseCreated;
+    this.loginCredentials = loginCredentials;
   }
 
   async saveTestCase(input: TestCaseInput): Promise<ToolResult> {
@@ -76,6 +105,12 @@ export class ReportTools {
       // Determine feature category: use Claude's suggestion, fall back to auto-categorize from name
       const featureCategory = input.feature_category || categorizeTestCase(input.name);
 
+      // Safety net: auto-inject login steps if requires_auth but code is missing them
+      let playwrightCode = input.playwright_code;
+      if (playwrightCode && input.requires_auth && this.loginCredentials) {
+        playwrightCode = ensureLoginSteps(playwrightCode, this.loginCredentials);
+      }
+
       const testCase = await this.repository.addTestCase(this.sessionId, {
         name: input.name,
         description: input.description,
@@ -86,7 +121,7 @@ export class ReportTools {
         sourcePageUrl: input.source_page_url,
         source: 'exploration',
         observedResult: input.observed_result,
-        playwrightCode: input.playwright_code,
+        playwrightCode,
         featureCategory,
         requiresAuth: input.requires_auth || false
       });
