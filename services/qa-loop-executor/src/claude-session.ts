@@ -427,12 +427,17 @@ MISSION: Explore every page, generate test cases for every feature you find.
 
 RULES:
 1. Call get_session_state() FIRST to see progress
-2. After EVERY browser_navigate() or browser_click(), you MUST call browser_snapshot() before doing anything else.
-3. Per page: navigate -> browser_snapshot() -> add_discovered_page() for all links -> interact -> save_test_case() -> mark_page_explored()
-4. Max 5 tool calls per page then move on
-5. NEVER generate test cases without browser_snapshot() first — no hallucinating
-6. ALWAYS include observed_result (pass/fail) in every save_test_case()
-7. When you have explored all pages and saved 5+ test cases, output the text "EXPLORATION_COMPLETE" in your response.
+2. After EVERY browser_navigate() or browser_click(), IMMEDIATELY call browser_snapshot()
+3. After EVERY browser_snapshot(), do TWO things:
+   a. Call add_discovered_page() for EVERY link you see on the page
+   b. Call save_test_case() for what you observed — DO NOT WAIT, save immediately
+4. After saving test case, call mark_page_explored() and IMMEDIATELY navigate to the next unexplored page via get_unexplored_pages()
+5. Max 5 tool calls per page then move on — do NOT spend 10+ calls on one page
+6. If you see ANY issue (missing validation, UI bug, spelling error, broken link), call save_bug() IMMEDIATELY
+7. TARGET: explore 3-4 pages and save 4-5 test cases PER ITERATION
+8. NEVER generate test cases without browser_snapshot() first
+
+You are being evaluated on QUANTITY and COVERAGE. A scan with 10 simple test cases across 5 pages is better than 2 detailed test cases on 1 page. Move fast.
 
 COMPLETION CONDITIONS — output "EXPLORATION_COMPLETE" ONLY when ALL met:
 - add_discovered_page() called for at least 3 URLs
@@ -463,59 +468,43 @@ Save important findings as notes with add_note() for future iterations.`;
       contextKeys: this.config.projectContext ? Object.keys(this.config.projectContext) : [],
     });
     if (this.config.projectContext && Object.keys(this.config.projectContext).length > 0) {
-      // Inject critical retest guidance BEFORE project context so Claude sees it first
-      contextSection += `
-
-⚠️ CRITICAL: DO NOT re-test pages that already have passing test cases.
-The test_coverage section below shows tests that ALREADY PASSED.
-Skip those pages entirely. Focus ONLY on:
-1. Pages marked as "explored: false" in known_pages
-2. Pages where tests FAILED (retest those)
-3. New pages you discover during exploration
-
-Start by navigating to untested pages, NOT the login page (unless login tests failed).
-`;
       const ctx = this.config.projectContext;
-      let projectContextBlock = '\n\n═══ PROJECT KNOWLEDGE BASE ═══\n';
-      projectContextBlock += 'This project has been scanned before. Use this knowledge to be more efficient.\n\n';
+      let projectContextBlock = '\n\nPROJECT CONTEXT (prior scans exist — skip already-tested areas):\n';
 
+      // Only list unexplored pages (skip explored entirely)
       if (ctx.known_pages && ctx.known_pages.length > 0) {
-        const explored = ctx.known_pages.filter((p: any) => p.explored);
         const unexplored = ctx.known_pages.filter((p: any) => !p.explored);
-        projectContextBlock += `KNOWN PAGES (${ctx.known_pages.length} total, ${explored.length} explored, ${unexplored.length} unexplored):\n`;
         if (unexplored.length > 0) {
-          projectContextBlock += `Unexplored pages (PRIORITIZE THESE):\n`;
-          unexplored.slice(0, 20).forEach((p: any) => { projectContextBlock += `  - ${p.url}\n`; });
+          projectContextBlock += `UNEXPLORED PAGES (${unexplored.length}):\n`;
+          unexplored.slice(0, 10).forEach((p: any) => { projectContextBlock += `  - ${p.url}\n`; });
+          if (unexplored.length > 10) projectContextBlock += `  ... and ${unexplored.length - 10} more\n`;
+          projectContextBlock += '\n';
         }
-        if (explored.length > 0) {
-          projectContextBlock += `Previously explored pages (skip unless re-verifying):\n`;
-          explored.slice(0, 10).forEach((p: any) => { projectContextBlock += `  - ${p.url}\n`; });
-        }
-        projectContextBlock += '\n';
       }
 
+      // Only list open bugs (skip fixed/wont_fix)
       if (ctx.known_bugs && ctx.known_bugs.length > 0) {
-        projectContextBlock += `KNOWN BUGS (${ctx.known_bugs.length}):\n`;
-        ctx.known_bugs.slice(0, 15).forEach((b: any) => {
-          projectContextBlock += `  - [${b.severity}] ${b.title} (status: ${b.status})${b.page_url ? ` on ${b.page_url}` : ''}\n`;
-        });
-        projectContextBlock += 'Strategy: Re-verify bugs marked as "open" — they may have been fixed.\n\n';
+        const openBugs = ctx.known_bugs.filter((b: any) => b.status === 'open');
+        if (openBugs.length > 0) {
+          projectContextBlock += `OPEN BUGS (${openBugs.length}) — re-verify these:\n`;
+          openBugs.slice(0, 10).forEach((b: any) => {
+            projectContextBlock += `  - [${b.severity}] ${b.title}${b.page_url ? ` on ${b.page_url}` : ''}\n`;
+          });
+          projectContextBlock += '\n';
+        }
       }
 
+      // Only list failed tests (skip passed)
       if (ctx.test_coverage && ctx.test_coverage.length > 0) {
-        projectContextBlock += `TEST COVERAGE (${ctx.test_coverage.length} test cases):\n`;
-        ctx.test_coverage.slice(0, 30).forEach((tc: any) => {
-          const statusIcon = tc.status === 'passed' ? '✅' : tc.status === 'failed' ? '❌' : '⏳';
-          projectContextBlock += `  ${statusIcon} ${tc.name || tc.test_case_id} — ${tc.status}${tc.page_url ? ` (${tc.page_url})` : ''}\n`;
-        });
-        projectContextBlock += '\n';
+        const failed = ctx.test_coverage.filter((tc: any) => tc.status === 'failed');
+        if (failed.length > 0) {
+          projectContextBlock += `FAILED TESTS (${failed.length}) — retest these:\n`;
+          failed.slice(0, 10).forEach((tc: any) => {
+            projectContextBlock += `  - ${tc.name || tc.test_case_id}${tc.page_url ? ` (${tc.page_url})` : ''}\n`;
+          });
+          projectContextBlock += '\n';
+        }
       }
-
-      if (ctx.total_scans) {
-        projectContextBlock += `SCAN HISTORY: ${ctx.total_scans} previous scans. Last scan: ${ctx.last_scan_at || 'unknown'}\n`;
-      }
-
-      projectContextBlock += `\nSTRATEGY:\n- Focus on UNEXPLORED pages first\n- Re-verify previously found bugs to check if fixed\n- Skip pages that were thoroughly tested and had no issues\n- Generate NEW test cases for areas not yet covered\n`;
 
       contextSection += projectContextBlock;
     }
