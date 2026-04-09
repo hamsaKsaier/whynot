@@ -7,11 +7,16 @@
  *
  * Each specialized agent extends this base to add their own system prompt
  * and tool set.
+ *
+ * Architecture: tools have `execute` callbacks so the AI SDK's `maxSteps`
+ * loop handles tool calling automatically. We emit WebSocket events from
+ * `onStepFinish` to keep the frontend updated.
  */
-import { generateText, LanguageModel, CoreTool, CoreMessage } from 'ai';
+import { generateText, LanguageModel, CoreMessage, tool as defineTool, ToolSet } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
 import { createLogger } from '../../../../shared/logger/logger';
 import { emitToSession } from '../../api/websocket';
 import { AgentType, AgentConfig, AgentResult } from '../types';
@@ -27,7 +32,7 @@ const logger = createLogger('base-agent');
  * Select the AI model based on available API keys.
  * Priority: Gemma 4 (free) → Claude → GPT
  */
-function selectModel(): { model: LanguageModel; name: string } {
+export function selectModel(): { model: LanguageModel; name: string } {
   if (process.env.GOOGLE_AI_API_KEY) {
     const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
     return { model: google('gemma-4-26b-a4b-it'), name: 'Gemma 4 26B' };
@@ -88,8 +93,7 @@ export abstract class BaseAgent {
   }
 
   /**
-   * Run the agent's main loop. Each agent overrides `buildTools()` and
-   * `getSystemPrompt()` to customize behavior.
+   * Run the agent's main loop.
    */
   async run(): Promise<AgentResult> {
     const startTime = Date.now();
@@ -140,6 +144,7 @@ export abstract class BaseAgent {
         pagesExplored: this.pagesExplored,
         testsGenerated: this.testsGenerated,
         bugsFound: this.bugsFound,
+        totalToolCalls: this.totalToolCalls,
       });
 
       emitToSession(this.sessionId, {
@@ -147,7 +152,7 @@ export abstract class BaseAgent {
         data: {
           agent: this.agentType,
           status: 'done',
-          message: `${this.agentType} finished: ${this.testsGenerated} tests, ${this.bugsFound} bugs`,
+          message: `${this.agentType} finished: ${this.testsGenerated} tests, ${this.bugsFound} bugs, ${this.pagesExplored} pages`,
         },
       });
 
@@ -163,17 +168,14 @@ export abstract class BaseAgent {
       logger.error(`${this.agentType} agent failed`, {
         sessionId: this.sessionId,
         error: err.message,
+        stack: err.stack?.slice(0, 300),
       });
 
-      await this.board.updateStatus(this.sessionId, this.agentType, 'error', err.message);
+      await this.board.updateStatus(this.sessionId, this.agentType, 'error', err.message).catch(() => {});
 
       emitToSession(this.sessionId, {
         type: 'status_update',
-        data: {
-          agent: this.agentType,
-          status: 'error',
-          message: `${this.agentType} error: ${err.message}`,
-        },
+        data: { agent: this.agentType, status: 'error', message: `${this.agentType} error: ${err.message}` },
       });
 
       return {
@@ -189,29 +191,34 @@ export abstract class BaseAgent {
   }
 
   /**
-   * The core agentic loop using Vercel AI SDK's generateText with tools.
+   * The core agentic loop. Uses generateText with maxSteps so the SDK
+   * handles tool calling internally. We use onStepFinish for WebSocket events.
    */
   protected async executeLoop(systemPrompt: string): Promise<void> {
     const { model, name: modelName } = selectModel();
-    const maxLoops = this.getMaxLoops();
+    const maxOuterLoops = this.getMaxLoops();
 
     logger.info(`Starting ${this.agentType} agent loop`, {
       sessionId: this.sessionId,
       model: modelName,
-      maxLoops,
+      maxOuterLoops,
     });
+
+    // Build tools with execute callbacks
+    const tools = this.buildToolsWithExecute();
 
     const messages: CoreMessage[] = [
       { role: 'user', content: this.getInitialPrompt() },
     ];
 
-    let loopCount = 0;
+    let outerLoop = 0;
+    let isDone = false;
 
-    while (loopCount < maxLoops) {
-      loopCount++;
+    while (outerLoop < maxOuterLoops && !isDone) {
+      outerLoop++;
 
-      // Board polling: every 5 loops, inject new discoveries
-      if (loopCount > 1 && loopCount % 5 === 0) {
+      // Board polling: every 3 outer loops, inject new discoveries
+      if (outerLoop > 1 && outerLoop % 3 === 0) {
         const boardEntries = await this.board.getAllForSession(this.sessionId);
         const boardUpdate = this.contextBuilder.buildBoardUpdate(
           this.agentType,
@@ -225,73 +232,76 @@ export abstract class BaseAgent {
       }
 
       // Update progress
-      const progressPct = Math.min(95, Math.round((loopCount / maxLoops) * 100));
-      await this.board.updateStatus(this.sessionId, this.agentType, 'working', undefined, progressPct);
+      const progressPct = Math.min(95, Math.round((outerLoop / maxOuterLoops) * 100));
+      await this.board.updateStatus(this.sessionId, this.agentType, 'working', undefined, progressPct).catch(() => {});
 
       try {
         const result = await generateText({
           model,
           system: systemPrompt,
           messages,
-          tools: this.buildTools(),
-          maxSteps: 5, // Allow up to 5 tool calls per generateText invocation
+          tools,
+          maxSteps: 8, // SDK auto-loops up to 8 tool calls per generateText
           maxTokens: 2048,
+          onStepFinish: async (event) => {
+            // Emit tool calls for WebSocket
+            if (event.toolCalls) {
+              for (const tc of event.toolCalls) {
+                emitToSession(this.sessionId, {
+                  type: 'tool_call',
+                  data: { tool: tc.toolName, input: tc.args, agent: this.agentType },
+                });
+              }
+            }
+            // Emit tool results
+            if (event.toolResults) {
+              for (const tr of event.toolResults as any[]) {
+                emitToSession(this.sessionId, {
+                  type: 'tool_result',
+                  data: {
+                    tool: tr.toolName,
+                    success: !tr.result?.error,
+                    result: tr.result?.error || 'Success',
+                    agent: this.agentType,
+                  },
+                });
+              }
+            }
+          },
         });
 
-        // Process text output
+        // Check text output for completion
         if (result.text) {
           emitToSession(this.sessionId, {
             type: 'thinking',
             data: { text: result.text, agent: this.agentType },
           });
 
-          if (result.text.includes('EXPLORATION_COMPLETE') || result.text.includes('AGENT_DONE')) {
-            break;
+          if (result.text.includes('AGENT_DONE') || result.text.includes('EXPLORATION_COMPLETE')) {
+            isDone = true;
           }
-        }
 
-        // Process tool calls from all steps
-        for (const step of result.steps) {
-          for (const tc of step.toolCalls) {
-            this.totalToolCalls++;
-            emitToSession(this.sessionId, {
-              type: 'tool_call',
-              data: { tool: tc.toolName, input: tc.args, agent: this.agentType },
-            });
-
-            // Execute the tool
-            const toolResult = await this.executeTool(tc.toolName, tc.args as Record<string, any>);
-
-            emitToSession(this.sessionId, {
-              type: 'tool_result',
-              data: {
-                tool: tc.toolName,
-                success: !toolResult.error,
-                result: toolResult.error || 'Success',
-                agent: this.agentType,
-              },
-            });
-
-            // Track metrics
-            this.trackMetrics(tc.toolName, toolResult);
-          }
-        }
-
-        // Add assistant response to conversation
-        if (result.text) {
+          // Add assistant response to conversation history for next loop
           messages.push({ role: 'assistant', content: result.text });
         }
 
-        // If no tool calls were made, the model is done
-        const totalStepToolCalls = result.steps.reduce(
-          (sum, step) => sum + step.toolCalls.length, 0
+        // Count tool calls across all steps
+        const stepToolCalls = result.steps.reduce(
+          (sum, step) => sum + (step.toolCalls?.length || 0), 0
         );
-        if (totalStepToolCalls === 0) {
-          break;
+        this.totalToolCalls += stepToolCalls;
+
+        // If no tool calls were made, the model is done
+        if (stepToolCalls === 0 && !result.text) {
+          isDone = true;
+        }
+
+        // Prompt the model to continue if it stopped but has more to do
+        if (!isDone && stepToolCalls > 0) {
+          messages.push({ role: 'user', content: 'Continue. What pages are left to explore? Check get_unexplored_pages() and move to the next one. Say "AGENT_DONE" when finished.' });
         }
 
       } catch (err: any) {
-        // Rate limit handling
         if (err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED')) {
           logger.warn('Rate limited — waiting 30s', { sessionId: this.sessionId, agent: this.agentType });
           await new Promise(r => setTimeout(r, 30_000));
@@ -300,6 +310,30 @@ export abstract class BaseAgent {
         throw err;
       }
     }
+  }
+
+  /**
+   * Build tools with execute callbacks. The execute function routes each
+   * tool call to the right handler (board tools, tool executor, MCP browser).
+   */
+  protected buildToolsWithExecute(): ToolSet {
+    const tools: Record<string, any> = {};
+    const rawTools = this.buildToolSchemas();
+
+    for (const [name, schema] of Object.entries(rawTools)) {
+      const toolName = name;
+      tools[name] = defineTool({
+        description: schema.description || toolName,
+        parameters: schema.parameters || z.object({}),
+        execute: async (args: any) => {
+          const result = await this.executeTool(toolName, args);
+          this.trackMetrics(toolName, result);
+          return result.data || { error: result.error };
+        },
+      });
+    }
+
+    return tools;
   }
 
   /**
@@ -335,14 +369,14 @@ export abstract class BaseAgent {
 
   // ─── Abstract methods for agent customization ───────────────────────
 
-  /** Build the tool set for this agent type. */
-  protected abstract buildTools(): Record<string, CoreTool>;
+  /** Build tool schemas (description + parameters) — execute is added by base. */
+  protected abstract buildToolSchemas(): Record<string, { description: string; parameters: z.ZodType }>;
 
   /** Get the initial user prompt to start the agent. */
   protected abstract getInitialPrompt(): string;
 
-  /** Maximum tool-call loops for this agent. */
+  /** Maximum outer loops (each does up to 8 tool calls via maxSteps). */
   protected getMaxLoops(): number {
-    return 25;
+    return 10; // 10 outer × 8 maxSteps = up to 80 tool calls total
   }
 }

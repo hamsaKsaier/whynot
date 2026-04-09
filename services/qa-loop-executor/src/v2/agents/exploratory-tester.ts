@@ -1,55 +1,81 @@
 /**
  * Exploratory Tester Agent — browses the app, discovers pages/forms/APIs.
  *
- * This is the first agent to run. Other agents (Security, API) depend on
- * its board discoveries. It refactors the existing scan logic into a
- * focused exploration agent.
+ * First agent to run. Other agents depend on its board discoveries.
  *
- * Responsibilities:
- * - Navigate to every page in the plan
- * - Take snapshots and discover interactive elements
- * - Write every form, link, and API endpoint to the board
- * - Save test cases for basic page functionality
- * - Report bugs for any issues found
+ * Key behaviors:
+ * - Navigates to every page in the plan
+ * - Takes snapshots, discovers interactive elements
+ * - Writes EVERY form, link, API endpoint to the board
+ * - Saves test cases and bugs with agent_source='exploratory'
+ * - Saves pages with discovered_by='exploratory'
  */
-import { CoreTool } from 'ai';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';
 import { AgentConfig } from '../types';
 import { MCPBrowser } from '../../mcp-browser';
-import { getToolSchemasForAgent } from '../tools/agent-tools';
+import { getToolSchemasForAgent, ToolSchema } from '../tools/agent-tools';
+import { ToolResult } from '../../tool-executor';
 
 export class ExploratoryTesterAgent extends BaseAgent {
   constructor(config: AgentConfig, mcpBrowser: MCPBrowser) {
     super(config, mcpBrowser);
   }
 
-  protected buildTools(): Record<string, CoreTool> {
+  protected buildToolSchemas(): Record<string, { description: string; parameters: z.ZodType }> {
     const agentTools = getToolSchemasForAgent('exploratory');
 
     // Add MCP browser tools from the browser instance
-    const mcpTools: Record<string, CoreTool> = {};
     if (this.mcpBrowser) {
       const browserTools = this.mcpBrowser.getTools();
+      const include = [
+        'browser_navigate', 'browser_snapshot', 'browser_click',
+        'browser_fill', 'browser_type', 'browser_press_key',
+        'browser_select_option', 'browser_evaluate', 'browser_wait_for',
+      ];
+
       for (const tool of browserTools) {
-        // Convert Anthropic tool format to AI SDK format
-        // Only include tools useful for exploration
-        const include = [
-          'browser_navigate', 'browser_snapshot', 'browser_click',
-          'browser_fill', 'browser_type', 'browser_press_key',
-          'browser_select_option', 'browser_evaluate', 'browser_wait_for',
-        ];
         if (!include.includes(tool.name)) continue;
 
-        mcpTools[tool.name] = {
+        agentTools[tool.name] = {
           description: tool.description || `Browser tool: ${tool.name}`,
           parameters: this.convertSchema(tool.input_schema),
-          execute: undefined, // Handled by executeTool in base agent
-        } as any;
+        };
       }
     }
 
-    return { ...agentTools, ...mcpTools };
+    return agentTools;
+  }
+
+  /**
+   * Override executeTool to auto-write board discoveries when
+   * add_discovered_page or save_bug are called.
+   */
+  protected async executeTool(toolName: string, args: Record<string, any>): Promise<ToolResult> {
+    const result = await super.executeTool(toolName, args);
+
+    // Auto-write page discoveries to the board
+    if (toolName === 'add_discovered_page' && !result.error && args.url) {
+      await this.boardTools.writeToBoard({
+        type: 'page',
+        url: args.url,
+        page: args.url,
+        auth_required: !!this.config.loginCredentials,
+      }).catch(() => {});
+    }
+
+    // Auto-write bugs to the board
+    if (toolName === 'save_bug' && !result.error && args.title) {
+      await this.boardTools.writeToBoard({
+        type: 'bug',
+        title: args.title,
+        severity: args.severity || 'medium',
+        page: args.page_url,
+        description: args.description,
+      }).catch(() => {});
+    }
+
+    return result;
   }
 
   protected getInitialPrompt(): string {
@@ -58,20 +84,19 @@ export class ExploratoryTesterAgent extends BaseAgent {
       ?.filter(o => o.agent === 'exploratory')
       ?.map(o => o.objective) || [];
 
-    return `Begin exploring ${targetUrl}. ${objectives.length > 0 ? 'Your objectives: ' + objectives.join('; ') : ''}
+    return `Begin exploring ${targetUrl}. ${objectives.length > 0 ? 'Objectives: ' + objectives.join('; ') : ''}
 
-Start by calling get_session_state(), then browser_navigate to ${targetUrl}, then browser_snapshot to see the page.
-For every page: discover forms/links, write them to board with write_to_board(), save a test case, then move on.
-Say "AGENT_DONE" when you have explored all reachable pages.`;
+Start: call get_session_state(), then browser_navigate to ${targetUrl}, then browser_snapshot.
+For each page: snapshot → write_to_board for forms/links/APIs → save_test_case → mark_page_explored → move to next.
+Say "AGENT_DONE" when all reachable pages are explored.`;
   }
 
   protected getMaxLoops(): number {
-    return 25; // Exploratory gets the most loops
+    return 12; // 12 outer × 8 maxSteps = up to 96 tool calls
   }
 
   /**
-   * Convert Anthropic tool schema to Zod schema for AI SDK.
-   * Simplified conversion — handles the common cases.
+   * Convert Anthropic tool schema to Zod schema.
    */
   private convertSchema(schema: any): z.ZodType {
     if (!schema || !schema.properties) {
