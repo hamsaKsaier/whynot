@@ -67,7 +67,7 @@ export class QALeadAgent {
           role: 'user',
           content: `Analyze ${this.config.targetUrl} and create a test plan. Respond with ONLY a JSON object containing app_analysis and objectives. No extra text.`,
         }],
-        maxTokens: 1024,
+        maxOutputTokens: 1024,
       });
 
       const text = result.text.trim();
@@ -189,7 +189,7 @@ Produce the synthesis report JSON.`;
         model,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMsg }],
-        maxTokens: 1500,
+        maxOutputTokens: 1500,
       });
 
       const text = result.text.trim();

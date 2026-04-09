@@ -65,7 +65,7 @@ export class V2Orchestrator {
 
       // ─── Phase 1: Start browser + login ────────────────────────
       this.mcpBrowser = new MCPBrowser(this.sessionId);
-      await this.mcpBrowser.launch();
+      await this.mcpBrowser.start();
       logger.info('MCP Browser launched for v2 session', { sessionId: this.sessionId });
 
       if (this.config.loginCredentials) {
@@ -249,7 +249,7 @@ export class V2Orchestrator {
 
     } finally {
       if (this.mcpBrowser) {
-        await this.mcpBrowser.cleanup().catch(() => {});
+        await this.mcpBrowser.forceStop().catch(() => {});
       }
     }
   }

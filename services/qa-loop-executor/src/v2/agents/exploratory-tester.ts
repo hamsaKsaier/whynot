@@ -125,7 +125,7 @@ Say "AGENT_DONE" when all reachable pages are explored.`;
           zodType = z.array(z.any()).describe(p.description || key);
           break;
         case 'object':
-          zodType = z.record(z.any()).describe(p.description || key);
+          zodType = z.record(z.string(), z.any()).describe(p.description || key);
           break;
         default:
           zodType = z.any().describe(p.description || key);

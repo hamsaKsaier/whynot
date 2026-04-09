@@ -12,7 +12,7 @@
  * loop handles tool calling automatically. We emit WebSocket events from
  * `onStepFinish` to keep the frontend updated.
  */
-import { generateText, LanguageModel, CoreMessage, tool as defineTool, ToolSet } from 'ai';
+import { generateText, LanguageModel, CoreMessage, tool as defineTool } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -242,14 +242,14 @@ export abstract class BaseAgent {
           messages,
           tools,
           maxSteps: 8, // SDK auto-loops up to 8 tool calls per generateText
-          maxTokens: 2048,
+          maxOutputTokens: 2048,
           onStepFinish: async (event) => {
             // Emit tool calls for WebSocket
             if (event.toolCalls) {
               for (const tc of event.toolCalls) {
                 emitToSession(this.sessionId, {
                   type: 'tool_call',
-                  data: { tool: tc.toolName, input: tc.args, agent: this.agentType },
+                  data: { tool: tc.toolName, input: (tc as any).input, agent: this.agentType },
                 });
               }
             }
@@ -316,7 +316,7 @@ export abstract class BaseAgent {
    * Build tools with execute callbacks. The execute function routes each
    * tool call to the right handler (board tools, tool executor, MCP browser).
    */
-  protected buildToolsWithExecute(): ToolSet {
+  protected buildToolsWithExecute(): Record<string, any> {
     const tools: Record<string, any> = {};
     const rawTools = this.buildToolSchemas();
 
@@ -330,7 +330,7 @@ export abstract class BaseAgent {
           this.trackMetrics(toolName, result);
           return result.data || { error: result.error };
         },
-      });
+      } as any);
     }
 
     return tools;
