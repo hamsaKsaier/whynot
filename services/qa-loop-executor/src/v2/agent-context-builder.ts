@@ -328,12 +328,16 @@ FOR EVERY CRITICAL FLOW: write a happy-path test (passes = regression guard)`;
   }
 
   private loginBlock(creds: any): string {
-    return `\n\nLOGIN STEPS (include in every test behind auth):
-await page.goto('${creds.loginUrl || ''}');
-await page.waitForLoadState('networkidle');
-await page.fill('${creds.emailSelector || "input[name=\\"username\\"]"}', process.env.TEST_USERNAME || '${creds.email}');
-await page.fill('${creds.passwordSelector || "input[name=\\"password\\"]"}', process.env.TEST_PASSWORD || '${creds.password}');
-await page.click('${creds.submitSelector || "button[type=\\"submit\\"]"}');
-await page.waitForLoadState('networkidle');`;
+    const loginUrl = creds.loginUrl || '';
+    const emailSel = creds.emailSelector || 'input[name="username"]';
+    const passSel = creds.passwordSelector || 'input[name="password"]';
+    const submitSel = creds.submitSelector || 'button[type="submit"]';
+    return '\n\nLOGIN STEPS (include in every test behind auth):\n'
+      + 'await page.goto(\'' + loginUrl + '\');\n'
+      + 'await page.waitForLoadState(\'networkidle\');\n'
+      + 'await page.fill(\'' + emailSel + '\', process.env.TEST_USERNAME || \'' + creds.email + '\');\n'
+      + 'await page.fill(\'' + passSel + '\', process.env.TEST_PASSWORD || \'' + creds.password + '\');\n'
+      + 'await page.click(\'' + submitSel + '\');\n'
+      + 'await page.waitForLoadState(\'networkidle\');';
   }
 }
