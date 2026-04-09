@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../../../shared/logger/logger';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { LoopOrchestrator } from '../loop-orchestrator';
+import { V2Orchestrator } from '../v2/orchestrator';
 import { MCPBrowser } from '../mcp-browser';
 import { RetestExecutor } from '../retest-executor';
 import webhookRoutes from './webhook';
@@ -105,29 +106,55 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
       }
     }
 
-    // Start the loop orchestrator
-    const orchestrator = new LoopOrchestrator(session.id, {
-      targetUrl,
-      mode,
-      qualityThreshold,
-      maxIterations,
-      maxDurationHours,
-      documentContext,
-      config: sessionConfig,
-      loginCredentials,
-      testPriority,
-      workspaceId: resolvedWorkspaceId,
-      projectContext,
-      userPrd,
-    });
+    // Check for v2 multi-agent mode
+    const scanMode = config?.scan_mode || 'v1';
 
-    activeSessions.set(session.id, orchestrator);
+    if (scanMode === 'v2') {
+      // V2 multi-agent orchestrator
+      const v2Orchestrator = new V2Orchestrator(session.id, {
+        targetUrl,
+        mode,
+        qualityThreshold,
+        maxIterations,
+        maxDurationHours,
+        documentContext,
+        config: sessionConfig,
+        loginCredentials,
+        testPriority,
+        workspaceId: resolvedWorkspaceId,
+        projectContext,
+        userPrd,
+      });
 
-    // Start exploration asynchronously; clean up the entry if the orchestrator crashes (3.3)
-    orchestrator.start().catch(error => {
-      logger.error('QA Loop failed', { sessionId: session.id, error: error.message });
-      activeSessions.delete(session.id);
-    });
+      // Start async — v2 manages its own lifecycle
+      v2Orchestrator.run().catch(error => {
+        logger.error('V2 multi-agent session failed', { sessionId: session.id, error: error.message });
+      });
+    } else {
+      // V1 single-agent orchestrator (existing behavior)
+      const orchestrator = new LoopOrchestrator(session.id, {
+        targetUrl,
+        mode,
+        qualityThreshold,
+        maxIterations,
+        maxDurationHours,
+        documentContext,
+        config: sessionConfig,
+        loginCredentials,
+        testPriority,
+        workspaceId: resolvedWorkspaceId,
+        projectContext,
+        userPrd,
+      });
+
+      activeSessions.set(session.id, orchestrator);
+
+      // Start exploration asynchronously; clean up the entry if the orchestrator crashes (3.3)
+      orchestrator.start().catch(error => {
+        logger.error('QA Loop failed', { sessionId: session.id, error: error.message });
+        activeSessions.delete(session.id);
+      });
+    }
 
     res.status(201).json({
       success: true,
