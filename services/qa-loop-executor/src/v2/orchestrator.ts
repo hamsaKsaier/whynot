@@ -20,6 +20,9 @@ import { AgentBoard } from './agent-board';
 import { AgentType, AgentConfig, AgentResult, SessionPlan, PlanObjective } from './types';
 import { QALeadAgent } from './agents/qa-lead';
 import { ExploratoryTesterAgent } from './agents/exploratory-tester';
+import { SecurityTesterAgent } from './agents/security-tester';
+import { APITesterAgent } from './agents/api-tester';
+import { AutoTesterAgent } from './agents/auto-tester';
 
 const logger = createLogger('v2-orchestrator');
 
@@ -111,18 +114,65 @@ export class V2Orchestrator {
         status: exploratoryResult.status,
       });
 
-      // ─── Phase 4: Security, API, Auto agents (Week 3 stubs) ───
-      logger.info('Security, API, Auto agents — coming Week 3', { sessionId: this.sessionId });
+      // ─── Phase 4: Security + API Testers (sequential, same browser) ─
+      const allResults: AgentResult[] = [exploratoryResult];
 
+      // Security Tester — reads forms from board, tests XSS/SQLi/CSRF
       emitToSession(this.sessionId, {
         type: 'status_update',
-        data: { phase: 'synthesis', message: 'Agents complete. QA Lead synthesis coming Week 4.' },
+        data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
       });
 
-      // ─── Phase 5: Update session with results ─────────────────
-      const totalTests = exploratoryResult.testsGenerated;
-      const totalBugs = exploratoryResult.bugsFound;
-      const totalPages = exploratoryResult.pagesExplored;
+      const securityResult = await this.runAgent('security', plan);
+      allResults.push(securityResult);
+
+      logger.info('Security Tester completed', {
+        sessionId: this.sessionId,
+        bugs: securityResult.bugsFound,
+        status: securityResult.status,
+      });
+
+      // API Tester — reads endpoints from board, tests edge cases via fetch()
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
+      });
+
+      const apiResult = await this.runAgent('api_tester', plan);
+      allResults.push(apiResult);
+
+      logger.info('API Tester completed', {
+        sessionId: this.sessionId,
+        bugs: apiResult.bugsFound,
+        endpoints: apiResult.apiEndpointsTested,
+        status: apiResult.status,
+      });
+
+      // ─── Phase 5: Auto Tester (runs last, no browser needed) ──
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: { phase: 'auto_testing', message: 'Auto Tester generating Playwright regression tests...' },
+      });
+
+      const autoResult = await this.runAgent('auto_tester', plan);
+      allResults.push(autoResult);
+
+      logger.info('Auto Tester completed', {
+        sessionId: this.sessionId,
+        tests: autoResult.testsGenerated,
+        status: autoResult.status,
+      });
+
+      // ─── Phase 6: QA Lead synthesis (stub for Week 4) ─────────
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: { phase: 'synthesis', message: 'All agents complete. QA Lead synthesis coming Week 4.' },
+      });
+
+      // ─── Phase 7: Update session with aggregate results ───────
+      const totalTests = allResults.reduce((s, r) => s + r.testsGenerated, 0);
+      const totalBugs = allResults.reduce((s, r) => s + r.bugsFound, 0);
+      const totalPages = allResults.reduce((s, r) => s + r.pagesExplored, 0);
 
       await this.repository.updateSessionProgress(this.sessionId, {
         testsGenerated: totalTests,
@@ -141,15 +191,14 @@ export class V2Orchestrator {
           bugsFound: totalBugs,
           pagesExplored: totalPages,
           durationMin,
-          agents: [
-            {
-              agent: 'exploratory',
-              status: exploratoryResult.status,
-              tests: exploratoryResult.testsGenerated,
-              bugs: exploratoryResult.bugsFound,
-              pages: exploratoryResult.pagesExplored,
-            },
-          ],
+          agents: allResults.map(r => ({
+            agent: r.agentType,
+            status: r.status,
+            tests: r.testsGenerated,
+            bugs: r.bugsFound,
+            pages: r.pagesExplored,
+            apiEndpoints: r.apiEndpointsTested,
+          })),
         },
       });
 
@@ -212,17 +261,70 @@ export class V2Orchestrator {
    * Run the Exploratory Tester agent.
    */
   private async runExploratoryTester(plan: SessionPlan): Promise<AgentResult> {
+    return this.runAgent('exploratory', plan);
+  }
+
+  /**
+   * Run any agent by type. Instantiates the correct agent class,
+   * passes the shared browser (except Auto Tester which doesn't need it).
+   */
+  private async runAgent(agentType: AgentType, plan: SessionPlan): Promise<AgentResult> {
     const agentConfig: AgentConfig = {
       sessionId: this.sessionId,
-      agentType: 'exploratory',
+      agentType,
       targetUrl: this.config.targetUrl,
       plan,
       projectContext: this.config.projectContext,
       loginCredentials: this.config.loginCredentials,
     };
 
-    const agent = new ExploratoryTesterAgent(agentConfig, this.mcpBrowser!);
-    return agent.run();
+    emitToSession(this.sessionId, {
+      type: 'status_update',
+      data: { agent: agentType, status: 'starting', message: `${agentType} agent starting...` },
+    });
+
+    let agent: { run(): Promise<AgentResult> };
+
+    switch (agentType) {
+      case 'exploratory':
+        agent = new ExploratoryTesterAgent(agentConfig, this.mcpBrowser!);
+        break;
+      case 'security':
+        agent = new SecurityTesterAgent(agentConfig, this.mcpBrowser!);
+        break;
+      case 'api_tester':
+        agent = new APITesterAgent(agentConfig, this.mcpBrowser!);
+        break;
+      case 'auto_tester':
+        // Auto Tester does NOT use the browser — only generates code
+        agent = new AutoTesterAgent(agentConfig);
+        break;
+      default:
+        logger.warn(`Unknown agent type: ${agentType}, skipping`);
+        return {
+          agentType,
+          status: 'error',
+          pagesExplored: 0,
+          testsGenerated: 0,
+          bugsFound: 0,
+          apiEndpointsTested: 0,
+          error: `Unknown agent type: ${agentType}`,
+        };
+    }
+
+    const result = await agent.run();
+
+    emitToSession(this.sessionId, {
+      type: 'status_update',
+      data: {
+        agent: agentType,
+        status: result.status,
+        message: `${agentType} finished: ${result.testsGenerated} tests, ${result.bugsFound} bugs`,
+        summary: result,
+      },
+    });
+
+    return result;
   }
 
   /**
