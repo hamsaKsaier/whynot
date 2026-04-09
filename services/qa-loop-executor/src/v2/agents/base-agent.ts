@@ -12,7 +12,7 @@
  * loop handles tool calling automatically. We emit WebSocket events from
  * `onStepFinish` to keep the frontend updated.
  */
-import { generateText, LanguageModel, CoreMessage, tool as defineTool } from 'ai';
+import { generateText, LanguageModel, ModelMessage, tool as defineTool, stepCountIs } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -207,7 +207,7 @@ export abstract class BaseAgent {
     // Build tools with execute callbacks
     const tools = this.buildToolsWithExecute();
 
-    const messages: CoreMessage[] = [
+    const messages: ModelMessage[] = [
       { role: 'user', content: this.getInitialPrompt() },
     ];
 
@@ -241,7 +241,7 @@ export abstract class BaseAgent {
           system: systemPrompt,
           messages,
           tools,
-          maxSteps: 8, // SDK auto-loops up to 8 tool calls per generateText
+          stopWhen: stepCountIs(8), // SDK auto-loops up to 8 tool calls per generateText
           maxOutputTokens: 2048,
           onStepFinish: async (event) => {
             // Emit tool calls for WebSocket
@@ -343,9 +343,9 @@ export abstract class BaseAgent {
     // Board tools
     switch (toolName) {
       case 'write_to_board':
-        return this.boardTools.writeToBoard(args);
+        return this.boardTools.writeToBoard(args as any);
       case 'read_board':
-        return this.boardTools.readBoard(args);
+        return this.boardTools.readBoard(args as any);
       case 'send_agent_message':
         return this.boardTools.sendAgentMessage(args as any);
     }
