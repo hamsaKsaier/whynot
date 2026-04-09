@@ -11,6 +11,7 @@
  * Triggered by scan_mode='v2'. V1 remains the default.
  */
 import { createLogger } from '../../../shared/logger/logger';
+import { query } from '../../../shared/database/connection';
 import { emitToSession } from '../api/websocket';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { MCPBrowser } from '../mcp-browser';
@@ -163,13 +164,33 @@ export class V2Orchestrator {
         status: autoResult.status,
       });
 
-      // ─── Phase 6: QA Lead synthesis (stub for Week 4) ─────────
+      // ─── Phase 6: QA Lead synthesis ─────────────────────────────
       emitToSession(this.sessionId, {
         type: 'status_update',
-        data: { phase: 'synthesis', message: 'All agents complete. QA Lead synthesis coming Week 4.' },
+        data: { phase: 'synthesis', message: 'QA Lead synthesizing final report...' },
       });
 
-      // ─── Phase 7: Update session with aggregate results ───────
+      const report = await this.synthesizeReport(plan, allResults);
+
+      // Store report in session
+      await query(
+        'UPDATE qa_loop_sessions SET report_data = $1, quality_score = $2 WHERE id = $3',
+        [JSON.stringify(report), report.quality_score, this.sessionId]
+      );
+
+      logger.info('QA Lead synthesis complete', {
+        sessionId: this.sessionId,
+        qualityScore: report.quality_score,
+        clusters: report.critical_clusters.length,
+        recommendations: report.recommendations.length,
+      });
+
+      // ─── Phase 7: Update project memory ───────────────────────
+      await this.updateProjectMemory(allResults).catch(err => {
+        logger.error('Project memory update failed (non-fatal)', { error: err.message });
+      });
+
+      // ─── Phase 8: Update session with aggregate results ───────
       const totalTests = allResults.reduce((s, r) => s + r.testsGenerated, 0);
       const totalBugs = allResults.reduce((s, r) => s + r.bugsFound, 0);
       const totalPages = allResults.reduce((s, r) => s + r.pagesExplored, 0);
@@ -191,6 +212,8 @@ export class V2Orchestrator {
           bugsFound: totalBugs,
           pagesExplored: totalPages,
           durationMin,
+          qualityScore: report.quality_score,
+          report,
           agents: allResults.map(r => ({
             agent: r.agentType,
             status: r.status,
@@ -363,5 +386,161 @@ export class V2Orchestrator {
     await this.mcpBrowser.callTool('browser_navigate', { url: this.config.targetUrl });
 
     logger.info('Login completed for v2 session', { sessionId: this.sessionId });
+  }
+
+  /**
+   * QA Lead synthesis — cross-references all agent findings.
+   */
+  private async synthesizeReport(plan: SessionPlan, agentResults: AgentResult[]): Promise<any> {
+    const { QALeadAgent: QALead } = await import('./agents/qa-lead');
+
+    const qaLead = new QALead({
+      sessionId: this.sessionId,
+      agentType: 'qa_lead',
+      targetUrl: this.config.targetUrl,
+      plan,
+      projectContext: this.config.projectContext,
+    });
+
+    // Gather all data for synthesis
+    const boardEntries = await this.board.getAllForSession(this.sessionId);
+    const bugs = await this.repository.getBugs(this.sessionId).catch(() => []);
+    const testCases = await this.repository.getTestCases(this.sessionId).catch(() => []);
+    const pages = await this.repository.getExploredPages(this.sessionId).catch(() => []);
+
+    return qaLead.synthesize(agentResults, boardEntries, bugs, testCases, pages);
+  }
+
+  /**
+   * Update project memory with findings from this scan.
+   * Atomic: read current context → merge → write back.
+   */
+  private async updateProjectMemory(agentResults: AgentResult[]): Promise<void> {
+    // Get the project ID from the session
+    const session = await this.repository.getSession(this.sessionId);
+    if (!session?.project_id) {
+      logger.info('No project ID — skipping memory update', { sessionId: this.sessionId });
+      return;
+    }
+
+    const projectId = session.project_id;
+
+    // Read current project context
+    const { context: currentCtx } = await this.repository.getProjectContext(projectId);
+    const ctx = currentCtx || {};
+
+    // Gather new data from this session
+    const pages = await this.repository.getExploredPages(this.sessionId).catch(() => []);
+    const bugs = await this.repository.getBugs(this.sessionId).catch(() => []);
+    const testCases = await this.repository.getTestCases(this.sessionId).catch(() => []);
+    const boardEntries = await this.board.getAllForSession(this.sessionId);
+
+    // Merge pages into known_pages (dedup by URL)
+    const knownPages: any[] = ctx.known_pages || [];
+    const existingUrls = new Set(knownPages.map((p: any) => p.url));
+    for (const page of pages) {
+      if (!existingUrls.has(page.url)) {
+        knownPages.push({
+          url: page.url,
+          explored: page.is_explored,
+          page_type: page.page_type,
+          discovered_by: page.discovered_by || 'exploratory',
+        });
+        existingUrls.add(page.url);
+      }
+    }
+
+    // Merge bugs into known_bugs (dedup by title)
+    const knownBugs: any[] = ctx.known_bugs || [];
+    const existingBugTitles = new Set(knownBugs.map((b: any) => b.title));
+    for (const bug of bugs) {
+      if (!existingBugTitles.has(bug.title)) {
+        knownBugs.push({
+          title: bug.title,
+          severity: bug.severity,
+          status: bug.status || 'open',
+          page_url: bug.page_url,
+          agent_source: bug.agent_source,
+          bug_type: bug.bug_type,
+        });
+        existingBugTitles.add(bug.title);
+      }
+    }
+
+    // Merge test coverage
+    const testCoverage: any[] = ctx.test_coverage || [];
+    const existingTestNames = new Set(testCoverage.map((t: any) => t.name));
+    for (const tc of testCases) {
+      if (!existingTestNames.has(tc.name)) {
+        testCoverage.push({
+          name: tc.name,
+          test_case_id: tc.id,
+          status: tc.last_run_status || 'pending',
+          page_url: tc.source_page_url,
+          agent_source: tc.agent_source,
+        });
+        existingTestNames.add(tc.name);
+      }
+    }
+
+    // Extract new API endpoints and security issues from board
+    const apiEndpoints: any[] = ctx.known_api_endpoints || [];
+    const securityIssues: any[] = ctx.known_security_issues || [];
+    for (const entry of boardEntries) {
+      const discoveries = Array.isArray(entry.discoveries) ? entry.discoveries : [];
+      for (const d of discoveries) {
+        if (d.type === 'api_endpoint' && d.path) {
+          const key = `${d.method || 'GET'} ${d.path}`;
+          if (!apiEndpoints.some((e: any) => `${e.method} ${e.path}` === key)) {
+            apiEndpoints.push({ method: d.method || 'GET', path: d.path, auth_required: d.auth_required });
+          }
+        }
+        if (d.type === 'security_issue' && d.title) {
+          if (!securityIssues.some((i: any) => i.title === d.title)) {
+            securityIssues.push({ type: d.bug_type || 'unknown', title: d.title, page: d.page, status: 'open' });
+          }
+        }
+      }
+    }
+
+    // Update scan history
+    const scanHistory: any[] = (ctx.scan_history || []).slice(-19); // Keep last 20
+    scanHistory.push({
+      session_id: this.sessionId,
+      scan_mode: 'v2',
+      date: new Date().toISOString(),
+      pages: pages.length,
+      bugs: bugs.length,
+      tests: testCases.length,
+      agents: agentResults.map(r => r.agentType),
+    });
+
+    // Build updated context
+    const updatedCtx = {
+      ...ctx,
+      known_pages: knownPages,
+      known_bugs: knownBugs,
+      test_coverage: testCoverage,
+      known_api_endpoints: apiEndpoints,
+      known_security_issues: securityIssues,
+      scan_history: scanHistory,
+      total_scans: (ctx.total_scans || 0) + 1,
+      last_scan_at: new Date().toISOString(),
+    };
+
+    // Write back atomically
+    await query(
+      'UPDATE projects SET context = $1 WHERE id = $2',
+      [JSON.stringify(updatedCtx), projectId]
+    );
+
+    logger.info('Project memory updated', {
+      sessionId: this.sessionId,
+      projectId,
+      pages: knownPages.length,
+      bugs: knownBugs.length,
+      tests: testCoverage.length,
+      apiEndpoints: apiEndpoints.length,
+    });
   }
 }

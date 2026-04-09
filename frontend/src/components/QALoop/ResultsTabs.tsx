@@ -8,6 +8,7 @@ import { QALoopTestCase, QALoopBug, QALoopPage as QAPage } from '../../services/
 import { ChaosResult, ChaosSummary, RootCauseAnalysis, FailureCorrelation } from './index';
 import { ChaosResultsTab } from './ChaosResultsTab';
 import { AnalysisTab } from './AnalysisTab';
+import { ReportTab } from './ReportTab';
 import { BugCard } from './BugCard';
 
 function safePathname(url: string | undefined | null, fallback?: string): string {
@@ -29,13 +30,14 @@ export interface ResultsTabsProps {
   correlations: FailureCorrelation[];
   isRunning?: boolean;
   projectId?: string | null;
+  reportData?: any;
 }
 
 export const ResultsTabs: React.FC<ResultsTabsProps> = ({
-  testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning, projectId
+  testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning, projectId, reportData
 }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'analysis'>('tests');
+  const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'analysis' | 'report'>('tests');
 
   const severityColor = (s: string) => {
     switch (s) {
@@ -156,6 +158,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
           {tab('bugs',     'Bugs',     bugs.length,      <FiAlertTriangle className="text-sm" />, 'border-red-500 text-red-600')}
           {tab('pages',    'Pages',    pages.length,     <FiGlobe className="text-sm" />,         'border-blue-500 text-blue-600')}
           {tab('analysis', 'Analysis', analyses.length,  <FiSearch className="text-sm" />,        'border-green-500 text-green-600')}
+          {reportData && tab('report', 'Report', 1, <FiShield className="text-sm" />, 'border-purple-500 text-purple-600')}
         </nav>
       </div>
 
@@ -229,6 +232,10 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
 
         {activeTab === 'analysis' && (
           <AnalysisTab analyses={analyses} correlations={correlations} />
+        )}
+
+        {activeTab === 'report' && (
+          <ReportTab report={reportData} />
         )}
       </div>
     </>

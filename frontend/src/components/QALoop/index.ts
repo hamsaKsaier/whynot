@@ -31,3 +31,6 @@ export type { BugCardProps } from './BugCard';
 
 export { ResultsTabs } from './ResultsTabs';
 export type { ResultsTabsProps } from './ResultsTabs';
+
+export { AgentProgressPanel } from './AgentProgressPanel';
+export { ReportTab } from './ReportTab';

@@ -276,6 +276,20 @@ router.get('/api/sessions/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Get agent board for a session (v2 multi-agent)
+router.get('/api/sessions/:id/agents', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { AgentBoard } = await import('../v2/agent-board');
+    const board = new AgentBoard();
+    const entries = await board.getAllForSession(id);
+    res.json({ agents: entries });
+  } catch (error: any) {
+    logger.error('Failed to get agent board', { error: error.message });
+    res.status(500).json({ error: 'Failed to get agent board' });
+  }
+});
+
 // Pause session
 router.post('/api/sessions/:id/pause', async (req: Request, res: Response) => {
   try {

@@ -43,6 +43,7 @@ export interface StartSessionParams {
   testPriority?: 'functional_first' | 'balanced' | 'security_first';
   sourceSessionId?: string;
   projectId?: string;
+  config?: Record<string, any>;
 }
 
 interface UseSessionManagerOptions {
@@ -274,6 +275,7 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
         testPriority:    params.testPriority,
         sourceSessionId: params.sourceSessionId,
         projectId:       params.projectId,
+        config:          params.config,
       });
       const { session } = result;
       // Store WS auth token for secure WebSocket connection

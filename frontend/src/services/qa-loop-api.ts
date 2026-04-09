@@ -20,6 +20,8 @@ export interface QALoopSession {
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
+  config?: Record<string, any>;
+  report_data?: any;
 }
 
 export interface QALoopPage {

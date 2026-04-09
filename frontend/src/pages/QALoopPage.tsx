@@ -29,6 +29,7 @@ import {
   LiveMonitor,
   ExistingSessionInfo,
   ResultsTabs,
+  AgentProgressPanel,
 } from '../components/QALoop';
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ export const QALoopPage: React.FC = () => {
   const [useExisting,   setUseExisting]   = useState(false);
   const [useProjectContext, setUseProjectContext] = useState(true);
   const [projectContextInfo, setProjectContextInfo] = useState<string | null>(null);
+  const [scanMode, setScanMode] = useState<'v1' | 'v2'>('v2'); // Default to v2 for investor demo
 
   // ── Project state ───────────────────────────────────────────────────────────
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
@@ -199,6 +201,7 @@ export const QALoopPage: React.FC = () => {
       testPriority,
       sourceSessionId: useExisting && existingSession ? existingSession.id : undefined,
       projectId: selectedProjectId || undefined,
+      config: scanMode === 'v2' ? { scan_mode: 'v2' } : undefined,
     });
     // Auto-scroll to the live monitor / cinema mode after session starts.
     // Retry until the element exists since cinema mode replaces the page.
@@ -243,6 +246,8 @@ export const QALoopPage: React.FC = () => {
     useProjectContext,
     setUseProjectContext,
     projectContextInfo,
+    scanMode,
+    setScanMode,
   };
 
   const sessionListProps = {
@@ -449,6 +454,14 @@ export const QALoopPage: React.FC = () => {
                   bugsFound={streamBugsFound?.length || sessionBugs.length}
                 />
 
+                {/* Agent progress panel for v2 multi-agent scans */}
+                {activeSession?.config?.scan_mode === 'v2' && (
+                  <AgentProgressPanel
+                    sessionId={activeSession.id}
+                    isRunning={activeSession.status === 'running'}
+                  />
+                )}
+
                 {/* Results tabs — wrapped in a light-bg card for readability */}
                 <div className="rounded-xl overflow-hidden border border-gray-700/40 bg-slate-800 shadow-sm">
                   <div className="p-4">
@@ -462,6 +475,7 @@ export const QALoopPage: React.FC = () => {
                       correlations={correlations}
                       isRunning={activeSession.status === 'running'}
                       projectId={activeSession.project_id}
+                      reportData={activeSession.report_data}
                     />
                   </div>
                 </div>

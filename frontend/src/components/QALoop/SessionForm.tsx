@@ -85,6 +85,9 @@ export interface SessionFormProps {
   useProjectContext?: boolean;
   setUseProjectContext?: (v: boolean) => void;
   projectContextInfo?: string | null;
+  // Scan mode (v1 single agent vs v2 multi-agent)
+  scanMode?: 'v1' | 'v2';
+  setScanMode?: (v: 'v1' | 'v2') => void;
   // Submit
   isStarting: boolean;
   onStart: () => void;
@@ -105,6 +108,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   environments,
   documents, activeSession, onUpload, onDelete, onToggle,
   useProjectContext, setUseProjectContext, projectContextInfo,
+  scanMode, setScanMode,
   isStarting, onStart,
 }) => (
   <Card className="p-6 bg-slate-800 border-slate-700">
@@ -186,6 +190,40 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               <FiInfo size={12} />
               {projectContextInfo}
             </span>
+          )}
+        </div>
+      )}
+
+      {/* Scan Mode Toggle — v1 (Single Agent) vs v2 (QA Team) */}
+      {setScanMode && (
+        <div className="p-3 bg-slate-900/60 border border-slate-700/40 rounded-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-300">Scan Mode:</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setScanMode('v1')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  scanMode !== 'v2' ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                Single Agent
+              </button>
+              <button
+                type="button"
+                onClick={() => setScanMode('v2')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  scanMode === 'v2' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                QA Team (5 agents)
+              </button>
+            </div>
+          </div>
+          {scanMode === 'v2' && (
+            <p className="text-xs text-purple-300 mt-2">
+              5 specialized QA agents analyze your app — Exploratory, Security, API, and Automation testing
+            </p>
           )}
         </div>
       )}
