@@ -64,6 +64,8 @@ export abstract class BaseAgent {
   protected bugsFound = 0;
   protected apiEndpointsTested = 0;
   protected totalToolCalls = 0;
+  protected successfulToolCalls = 0;
+  protected failedToolCalls = 0;
   protected lastBoardPollTime: string;
 
   constructor(config: AgentConfig, mcpBrowser?: MCPBrowser) {
@@ -138,13 +140,20 @@ export abstract class BaseAgent {
       });
 
       const durationSec = Math.round((Date.now() - startTime) / 1000);
-      logger.info(`${this.agentType} agent completed`, {
+      const successRate = this.totalToolCalls > 0
+        ? ((this.successfulToolCalls / this.totalToolCalls) * 100).toFixed(1) + '%'
+        : 'N/A';
+      logger.info(`${this.agentType} agent completed with tool stats`, {
         sessionId: this.sessionId,
+        agentType: this.agentType,
         durationSec,
         pagesExplored: this.pagesExplored,
         testsGenerated: this.testsGenerated,
         bugsFound: this.bugsFound,
         totalToolCalls: this.totalToolCalls,
+        successfulToolCalls: this.successfulToolCalls,
+        failedToolCalls: this.failedToolCalls,
+        successRate,
       });
 
       emitToSession(this.sessionId, {
@@ -314,7 +323,8 @@ export abstract class BaseAgent {
 
   /**
    * Build tools with execute callbacks. The execute function routes each
-   * tool call to the right handler (board tools, tool executor, MCP browser).
+   * tool call to the right handler and injects errors back into the AI
+   * conversation so the model can retry with correct fields.
    */
   protected buildToolsWithExecute(): Record<string, any> {
     const tools: Record<string, any> = {};
@@ -326,9 +336,61 @@ export abstract class BaseAgent {
         description: schema.description || toolName,
         parameters: schema.parameters || z.object({}),
         execute: async (args: any) => {
-          const result = await this.executeTool(toolName, args);
-          this.trackMetrics(toolName, result);
-          return result.data || { error: result.error };
+          try {
+            const result = await this.executeTool(toolName, args);
+
+            // Check if the tool executor returned an error (not thrown, but set on result)
+            if (result.error) {
+              this.failedToolCalls++;
+              logger.error('Tool execution failed — returning error to AI', {
+                sessionId: this.sessionId,
+                agentType: this.agentType,
+                toolName,
+                argsKeys: Object.keys(args || {}),
+                argsPreview: JSON.stringify(args).slice(0, 200),
+                error: result.error,
+              });
+              // Throw so the AI SDK surfaces the error as a tool error
+              // and the model can see it and retry with correct fields.
+              throw new Error(
+                `Tool ${toolName} failed: ${result.error}. ` +
+                `Please check all REQUIRED fields are provided and retry. ` +
+                `You called with: ${JSON.stringify(args).slice(0, 200)}`
+              );
+            }
+
+            this.successfulToolCalls++;
+            this.trackMetrics(toolName, result);
+
+            logger.debug('Tool executed successfully', {
+              sessionId: this.sessionId,
+              agentType: this.agentType,
+              toolName,
+              argsKeys: Object.keys(args || {}),
+            });
+
+            return result.data || { success: true };
+          } catch (err: any) {
+            // Already counted if thrown above (result.error branch)
+            // This branch catches true exceptions (DB errors, network, etc.)
+            if (!err.message?.startsWith(`Tool ${toolName} failed:`)) {
+              this.failedToolCalls++;
+              logger.error('Tool execution threw exception', {
+                sessionId: this.sessionId,
+                agentType: this.agentType,
+                toolName,
+                argsPreview: JSON.stringify(args).slice(0, 200),
+                error: err.message,
+                stack: err.stack?.slice(0, 500),
+              });
+              throw new Error(
+                `Tool ${toolName} failed: ${err.message}. ` +
+                `Please check all REQUIRED fields are provided and retry. ` +
+                `You called with: ${JSON.stringify(args).slice(0, 200)}`
+              );
+            }
+            throw err;
+          }
         },
       } as any);
     }

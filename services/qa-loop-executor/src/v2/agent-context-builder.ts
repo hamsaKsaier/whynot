@@ -15,6 +15,25 @@ const logger = createLogger('agent-context-builder');
 
 const MAX_LIST_ITEMS = 10;
 
+/**
+ * Preamble added to EVERY agent's system prompt.
+ * These rules are critical for correct tool usage and error recovery.
+ */
+const CRITICAL_TOOL_RULES = `CRITICAL TOOL USAGE RULES:
+1. Every tool you call REQUIRES specific fields. Never call a tool without all required fields.
+2. If a tool call fails, READ the error message and retry with the missing fields.
+3. For save_bug: ALWAYS include title (5+ chars), description (10+ chars), and severity.
+4. For add_note: ALWAYS include the note text (5+ chars).
+5. For mark_page_explored: ALWAYS include the url.
+6. For add_discovered_page: ALWAYS include the url.
+7. For save_test_case: ALWAYS include name, description, feature_category, steps, observed_result, and playwright_code.
+8. Tool errors are learning moments — fix the missing fields and retry immediately.
+
+If you see "Tool X failed: null value in column Y", that means you forgot to provide field Y. Retry with field Y filled in.
+If you see "Tool X failed: Please check all REQUIRED fields", re-read the tool description and include every REQUIRED field.
+
+`;
+
 export class AgentContextBuilder {
   /**
    * Build a focused system prompt for the given agent type.
@@ -46,7 +65,7 @@ export class AgentContextBuilder {
   // ─── QA Lead (planning phase) ───────────────────────────────────────
 
   private buildQALeadPrompt(targetUrl: string, projectContext: any): string {
-    let prompt = `You are a QA Lead planning a test session for ${targetUrl}.
+    let prompt = `${CRITICAL_TOOL_RULES}You are a QA Lead planning a test session for ${targetUrl}.
 
 YOUR JOB: Analyze this app and create a test plan. Make ONE decision:
 1. What type of app is this? (e-commerce, SaaS, blog, etc.)
@@ -102,18 +121,29 @@ Respond with ONLY a JSON object:
     const objectives = plan.objectives.filter(o => o.agent === 'exploratory');
     const pages = objectives.flatMap(o => o.pages || []);
 
-    let prompt = `You are an Exploratory Tester for ${targetUrl}.
+    let prompt = `${CRITICAL_TOOL_RULES}You are an Exploratory Tester for ${targetUrl}.
 
 MISSION: Navigate every page, discover forms/links/APIs, find bugs. Other agents depend on your discoveries.
 
+MANDATORY WORKFLOW — do not skip steps:
+1. browser_navigate(url) → go to the page
+2. browser_snapshot() → see the page structure
+3. Look at the links in the snapshot → for EVERY new URL, call add_discovered_page({ url })
+4. Interact with the page (click, fill, etc.) if it has forms or buttons
+5. browser_snapshot() → see the result of your interactions
+6. save_bug() if you found any issue (with title, description, severity ALL REQUIRED)
+7. mark_page_explored({ url, description, page_type }) → MANDATORY before moving to next page
+8. Repeat for next page
+
+You are NOT done with a page until you call mark_page_explored(). Call it EVERY time.
+
 RULES:
-1. Call get_session_state() FIRST
-2. After EVERY navigate/click, IMMEDIATELY call browser_snapshot()
-3. After EVERY snapshot: call write_to_board() for every form, link, and API you see
-4. Call save_test_case() for each page you test, then mark_page_explored()
-5. Max 5 tool calls per page then move on
-6. Call save_bug() for ANY issue you see
-7. TARGET: explore 4-5 pages per iteration
+- Call get_session_state() FIRST to see progress
+- After EVERY navigate/click, IMMEDIATELY call browser_snapshot()
+- After EVERY snapshot: call write_to_board() for every form, link, and API you see
+- Call save_test_case() when you have actually tested a feature (with ALL required fields)
+- Max 5 tool calls per page then move on
+- TARGET: explore 4-5 pages per iteration
 
 You are evaluated on DISCOVERY THROUGHPUT. Find forms, links, APIs — the Security and API agents need them.`;
 
@@ -154,7 +184,7 @@ You are evaluated on DISCOVERY THROUGHPUT. Find forms, links, APIs — the Secur
   ): string {
     const objectives = plan.objectives.filter(o => o.agent === 'security');
 
-    let prompt = `You are a Security Tester for ${targetUrl}.
+    let prompt = `${CRITICAL_TOOL_RULES}You are a Security Tester for ${targetUrl}.
 
 MISSION: Test all discovered forms and endpoints for OWASP Top 10 vulnerabilities.
 
@@ -202,7 +232,7 @@ Write findings to board with save_bug(). Set severity accurately.`;
   ): string {
     const objectives = plan.objectives.filter(o => o.agent === 'api_tester');
 
-    let prompt = `You are an API Tester for ${targetUrl}.
+    let prompt = `${CRITICAL_TOOL_RULES}You are an API Tester for ${targetUrl}.
 
 MISSION: Test all discovered API endpoints with edge cases.
 
@@ -245,7 +275,7 @@ Write findings to board with save_bug(). Include endpoint + request + response i
   ): string {
     const objectives = plan.objectives.filter(o => o.agent === 'auto_tester');
 
-    let prompt = `You are an Auto Tester for ${targetUrl}.
+    let prompt = `${CRITICAL_TOOL_RULES}You are an Auto Tester for ${targetUrl}.
 
 MISSION: Write Playwright regression tests for every bug found + happy-path tests for critical flows.
 
