@@ -183,7 +183,8 @@ async function withQALoopBreaker<T>(
 // ── Zod schemas (5.3) ─────────────────────────────────────────────────────────
 
 const loginCredentialsSchema = z.object({
-  email:            z.string().email('Invalid email address'),
+  // Accept both email addresses and plain usernames (e.g. "Admin" for OrangeHRM)
+  email:            z.string().min(1, 'Username or email is required'),
   password:         z.string().min(1, 'Password is required'),
   loginUrl:         z.string().url().optional(),
   emailSelector:    z.string().optional(),
