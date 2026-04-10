@@ -387,7 +387,7 @@ export abstract class BaseAgent {
       const toolName = name;
       tools[name] = defineTool({
         description: schema.description || toolName,
-        parameters: schema.parameters || z.object({}),
+        inputSchema: schema.parameters || z.object({}),
         execute: async (args: any) => {
           try {
             const result = await this.executeTool(toolName, args);
