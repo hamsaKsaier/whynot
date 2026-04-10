@@ -97,24 +97,34 @@ export class ReportTools {
 
   async saveTestCase(input: TestCaseInput): Promise<ToolResult> {
     try {
-      // Validate steps
-      if (!input.steps || input.steps.length === 0) {
-        return { error: 'Test case must have at least one step' };
-      }
-
-      // Determine feature category: use Claude's suggestion, fall back to auto-categorize from name
-      const featureCategory = input.feature_category || categorizeTestCase(input.name);
-
       // Safety net: auto-inject login steps if requires_auth but code is missing them
       let playwrightCode = input.playwright_code;
       if (playwrightCode && input.requires_auth && this.loginCredentials) {
         playwrightCode = ensureLoginSteps(playwrightCode, this.loginCredentials);
       }
 
+      // Validate: accept either structured steps OR playwright_code.
+      // playwright_code is self-sufficient — derive a minimal step array if needed.
+      let steps = input.steps;
+      if (!steps || steps.length === 0) {
+        if (!playwrightCode || playwrightCode.trim().length === 0) {
+          return { error: 'Test case must have either steps OR playwright_code' };
+        }
+        // Derive a single placeholder step from playwright_code
+        steps = [{
+          action: 'execute_playwright',
+          target: 'browser',
+          description: input.description || input.name || 'Run playwright test',
+        }];
+      }
+
+      // Determine feature category: use AI's suggestion, fall back to auto-categorize from name
+      const featureCategory = input.feature_category || categorizeTestCase(input.name);
+
       const testCase = await this.repository.addTestCase(this.sessionId, {
         name: input.name,
         description: input.description,
-        steps: input.steps,
+        steps,
         category: input.category || 'functional',
         priority: input.priority || 50,
         riskLevel: input.risk_level || 'medium',

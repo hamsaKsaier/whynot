@@ -117,6 +117,14 @@ export class MCPBrowser {
   }
 
   /**
+   * Public read-only check for connection status.
+   * Used by v2 orchestrator to detect if the browser died mid-session.
+   */
+  get connected(): boolean {
+    return this.isConnected && this.client !== null;
+  }
+
+  /**
    * Check if this browser has exceeded the maximum allowed duration.
    */
   isExpired(): boolean {

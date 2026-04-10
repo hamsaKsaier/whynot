@@ -290,6 +290,10 @@ export class V2Orchestrator {
   /**
    * Run any agent by type. Instantiates the correct agent class,
    * passes the shared browser (except Auto Tester which doesn't need it).
+   *
+   * CRITICAL: The same MCPBrowser instance is reused across all browser-using
+   * agents (Exploratory, Security, API) so cookies / auth state persist.
+   * If the browser died mid-session, we restart it here before the next agent.
    */
   private async runAgent(agentType: AgentType, plan: SessionPlan): Promise<AgentResult> {
     const agentConfig: AgentConfig = {
@@ -300,6 +304,25 @@ export class V2Orchestrator {
       projectContext: this.config.projectContext,
       loginCredentials: this.config.loginCredentials,
     };
+
+    // Browser-using agents: verify the shared browser is still alive, restart if not
+    const needsBrowser = agentType !== 'auto_tester' && agentType !== 'qa_lead';
+    if (needsBrowser) {
+      if (!this.mcpBrowser || !this.mcpBrowser.connected) {
+        logger.warn(`MCP browser not connected for ${agentType} — restarting`, {
+          sessionId: this.sessionId,
+        });
+        this.mcpBrowser = new MCPBrowser(this.sessionId);
+        await this.mcpBrowser.start();
+        if (this.config.loginCredentials) {
+          await this.performLogin();
+        }
+      } else {
+        logger.info(`Reusing existing MCP browser for ${agentType}`, {
+          sessionId: this.sessionId,
+        });
+      }
+    }
 
     emitToSession(this.sessionId, {
       type: 'status_update',

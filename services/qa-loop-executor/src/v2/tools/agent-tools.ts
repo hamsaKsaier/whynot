@@ -116,34 +116,31 @@ Example: add_note({
 export function getReportToolSchemas(): Record<string, ToolSchema> {
   return {
     save_test_case: {
-      description: `Save a test case with executable Playwright code. ALL fields marked REQUIRED must be provided.
+      description: `Save a test case with executable Playwright code. The playwright_code is the primary output — it's the complete self-contained test.
 Example: save_test_case({
   name: "Successful login with valid credentials",
   description: "Verifies the login flow completes successfully",
   feature_category: "Authentication",
-  steps: [
-    { action: "navigate", target: "/login", description: "Go to login page" },
-    { action: "fill", target: "input[name='username']", value: "Admin", description: "Enter username" }
-  ],
   observed_result: "pass",
   playwright_code: "await page.goto('https://app.com/login'); await page.fill(...); ...",
   requires_auth: false
 })
 
 PLAYWRIGHT RULES: No imports, no test() wrapper, use page.* methods, throw new Error() for assertions.
-If requires_auth=true, include login steps at the top of playwright_code.`,
+If requires_auth=true, include login steps at the top of playwright_code.
+'steps' is OPTIONAL — playwright_code is self-sufficient.`,
       parameters: z.object({
         name: z.string().min(5).describe('REQUIRED. Test case name (5+ chars).'),
         description: z.string().min(10).describe('REQUIRED. What this test validates (10+ chars).'),
         feature_category: z.string().min(3).describe('REQUIRED. Feature area: Authentication, Dashboard, Navigation, Forms, Search, etc.'),
+        observed_result: z.enum(['pass', 'fail']).describe('REQUIRED. Did you observe this passing or failing during exploration?'),
+        playwright_code: z.string().min(20).describe('REQUIRED. Self-contained Playwright code (20+ chars). Must include login steps if requires_auth=true.'),
         steps: z.array(z.object({
           action: z.string().describe('Step action: navigate, click, fill, assert, etc.'),
           target: z.string().optional().describe('CSS selector or URL'),
           value: z.string().optional().describe('Input value or expected text'),
           description: z.string().optional().describe('Step description'),
-        })).min(1).describe('REQUIRED. At least one test step.'),
-        observed_result: z.enum(['pass', 'fail']).describe('REQUIRED. Did you observe this passing or failing during exploration?'),
-        playwright_code: z.string().min(20).describe('REQUIRED. Self-contained Playwright code (20+ chars). Must include login steps if requires_auth=true.'),
+        })).optional().describe('OPTIONAL. Structured steps (auto-derived from playwright_code if omitted).'),
         category: z.string().optional().describe('Deprecated: use feature_category instead'),
         priority: z.number().optional().describe('Priority 1-100'),
         risk_level: z.enum(['low', 'medium', 'high', 'critical']).optional().describe('Risk level'),

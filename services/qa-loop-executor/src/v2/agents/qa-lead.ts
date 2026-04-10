@@ -7,7 +7,7 @@
  * Phase 2 (Synthesis): After all agents finish, reads all findings,
  * cross-references them, and produces a unified report with quality score.
  */
-import { generateText, LanguageModel } from 'ai';
+import { generateText } from 'ai';
 import { createLogger } from '../../../../shared/logger/logger';
 import { AgentConfig, AgentResult, AppAnalysis, PlanObjective, AgentBoardEntry } from '../types';
 import { AgentContextBuilder } from '../agent-context-builder';

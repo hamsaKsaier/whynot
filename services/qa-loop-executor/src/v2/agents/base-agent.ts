@@ -30,12 +30,17 @@ const logger = createLogger('base-agent');
 
 /**
  * Select the AI model based on available API keys.
- * Priority: Gemma 4 (free) → Claude → GPT
+ * Priority: Gemini 2.5 Flash (free, 500 req/day) → Claude → GPT
+ *
+ * NOTE: Previously used Gemma 4 26B, but that model has a 15 req/DAY hard cap
+ * on the free tier. Gemini 2.5 Flash has 500 req/day which is enough for
+ * several full scans.
  */
 export function selectModel(): { model: LanguageModel; name: string } {
   if (process.env.GOOGLE_AI_API_KEY) {
     const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
-    return { model: google('gemma-4-26b-a4b-it'), name: 'Gemma 4 26B' };
+    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
+    return { model: google(modelId), name: `Google ${modelId}` };
   }
   if (process.env.ANTHROPIC_API_KEY) {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
