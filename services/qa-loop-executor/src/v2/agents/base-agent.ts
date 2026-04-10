@@ -33,23 +33,48 @@ const logger = createLogger('base-agent');
  * Select the AI model based on available API keys.
  *
  * Priority order (set env var to activate):
- * 1. Z.ai GLM-5.1 — primary, MIT licensed, #1 on SWE-Bench Pro, 202K context
- *    QA Lead + Auto Tester get glm-5.1 (best reasoning/code gen)
- *    Other agents get glm-5-turbo (faster, fewer prompts on subscription)
- *    Override with Z_AI_MODEL env var for all agents
- * 2. Google Gemini / Gemma — fallback (15 req/day limit on Gemma free tier)
- * 3. Anthropic Claude — last resort (expensive)
- * 4. OpenAI GPT — BYOK option
+ * 1. OpenRouter free Gemma 4 26B — primary (200 req/day free, no usage restrictions)
+ *    QA Lead + Auto Tester get gemma-4-31b-it:free (larger, better reasoning)
+ *    Other agents get gemma-4-26b-a4b-it:free (faster)
+ *    Backup: z-ai/glm-4.5-air:free (also 200 req/day free)
+ * 2. Google Gemini 2.5 Flash — tertiary (500 req/day free via Google AI Studio)
+ * 3. Z.ai GLM-5.1 — kept for when budget is available (demoted from primary)
+ * 4. Anthropic Claude — last resort (expensive)
+ * 5. OpenAI GPT — BYOK option
  */
 export function selectModel(agentType?: string): { model: LanguageModel; name: string } {
-  // Priority 1: Z.ai GLM-5.1
+  // Priority 1: OpenRouter (200 req/day free, no usage policy issues)
+  if (process.env.OPENROUTER_API_KEY) {
+    const openrouter = createOpenAICompatible({
+      name: 'openrouter',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+      headers: {
+        'HTTP-Referer': 'https://whynotqa.com',
+        'X-Title': 'WhyNot QA',
+      },
+    });
+    // Premium agents get larger model, others get faster model
+    const isPremium = agentType === 'qa_lead' || agentType === 'auto_tester';
+    const modelName = process.env.OPENROUTER_MODEL
+      || (isPremium ? 'google/gemma-4-31b-it:free' : 'google/gemma-4-26b-a4b-it:free');
+    return { model: openrouter(modelName), name: `OpenRouter (${modelName})` };
+  }
+
+  // Priority 2: Google (Gemini or Gemma) — 500 req/day free
+  if (process.env.GOOGLE_AI_API_KEY) {
+    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
+    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
+    return { model: google(modelId), name: `Google ${modelId}` };
+  }
+
+  // Priority 3: Z.ai GLM-5.1 (kept for when budget is available)
   if (process.env.Z_AI_API_KEY) {
     const zai = createOpenAICompatible({
       name: 'z-ai',
       apiKey: process.env.Z_AI_API_KEY,
       baseURL: process.env.Z_AI_BASE_URL || 'https://api.z.ai/api/paas/v4/',
     });
-    // Tier selection: premium agents get GLM-5.1, mechanical agents get turbo
     const override = process.env.Z_AI_MODEL;
     const premiumModel = process.env.Z_AI_PREMIUM_MODEL || 'glm-5.1';
     const turboModel = process.env.Z_AI_TURBO_MODEL || 'glm-5-turbo';
@@ -58,26 +83,19 @@ export function selectModel(agentType?: string): { model: LanguageModel; name: s
     return { model: zai(modelName), name: `GLM via Z.ai (${modelName})` };
   }
 
-  // Priority 2: Google (Gemini or Gemma)
-  if (process.env.GOOGLE_AI_API_KEY) {
-    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
-    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
-    return { model: google(modelId), name: `Google ${modelId}` };
-  }
-
-  // Priority 3: Anthropic Claude
+  // Priority 4: Anthropic Claude
   if (process.env.ANTHROPIC_API_KEY) {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     return { model: anthropic('claude-sonnet-4-20250514'), name: 'Claude Sonnet' };
   }
 
-  // Priority 4: OpenAI
+  // Priority 5: OpenAI
   if (process.env.OPENAI_API_KEY) {
     const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
     return { model: openai('gpt-4o'), name: 'GPT-4o' };
   }
 
-  throw new Error('No AI provider configured. Set Z_AI_API_KEY, GOOGLE_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
+  throw new Error('No AI provider configured. Set OPENROUTER_API_KEY, GOOGLE_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
 }
 
 export abstract class BaseAgent {
