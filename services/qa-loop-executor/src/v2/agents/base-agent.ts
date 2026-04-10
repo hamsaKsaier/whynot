@@ -32,19 +32,32 @@ const logger = createLogger('base-agent');
 /**
  * Select the AI model based on available API keys.
  *
- * Priority order (set env var to activate):
- * 1. OpenRouter free Gemma 4 26B — primary (200 req/day free, no usage restrictions)
- *    QA Lead + Auto Tester get gemma-4-31b-it:free (larger, better reasoning)
- *    Other agents get gemma-4-26b-a4b-it:free (faster)
- *    Backup: z-ai/glm-4.5-air:free (also 200 req/day free)
- * 2. Google Gemini 2.5 Flash — tertiary (500 req/day free via Google AI Studio)
- * 3. Z.ai GLM-5.1 — kept for when budget is available (demoted from primary)
+ * Priority order (first matching key wins):
+ * 1. Google Gemini 2.5 Flash — PRIMARY (500 req/day free, native tool calling, 1M context)
+ * 2. OpenRouter paid models — only with tool-capable model (free tier skipped, no tool calling)
+ * 3. Z.ai GLM-5.1 — standard endpoint, pay-as-you-go (NOT coding-plan endpoint)
  * 4. Anthropic Claude — last resort (expensive)
  * 5. OpenAI GPT — BYOK option
+ *
+ * Why Gemini is primary:
+ * - Gemma 4 via Google AI Studio hit 15 req/DAY hard cap (unusable)
+ * - OpenRouter free Gemma models do NOT support tool calling (agents silently fail)
+ * - Z.ai coding-plan endpoint violates policy for automated QA tools
+ * - Gemini 2.5 Flash: 500 req/day free, native tool calling, 1M context — stable path
  */
 export function selectModel(agentType?: string): { model: LanguageModel; name: string } {
-  // Priority 1: OpenRouter (200 req/day free, no usage policy issues)
-  if (process.env.OPENROUTER_API_KEY) {
+  // Priority 1: Google Gemini 2.5 Flash (primary)
+  if (process.env.GOOGLE_AI_API_KEY) {
+    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
+    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
+    return { model: google(modelId), name: `Google ${modelId}` };
+  }
+
+  // Priority 2: OpenRouter — ONLY with a PAID tool-capable model (free models don't support tools)
+  // Must explicitly set OPENROUTER_MODEL to something like 'anthropic/claude-sonnet-4'
+  // or 'openai/gpt-4o'. Free Gemma/Llama models are skipped because their tool
+  // calls silently fail.
+  if (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_MODEL && !process.env.OPENROUTER_MODEL.endsWith(':free')) {
     const openrouter = createOpenAICompatible({
       name: 'openrouter',
       apiKey: process.env.OPENROUTER_API_KEY,
@@ -54,21 +67,11 @@ export function selectModel(agentType?: string): { model: LanguageModel; name: s
         'X-Title': 'WhyNot QA',
       },
     });
-    // Premium agents get larger model, others get faster model
-    const isPremium = agentType === 'qa_lead' || agentType === 'auto_tester';
-    const modelName = process.env.OPENROUTER_MODEL
-      || (isPremium ? 'google/gemma-4-31b-it:free' : 'google/gemma-4-26b-a4b-it:free');
+    const modelName = process.env.OPENROUTER_MODEL;
     return { model: openrouter(modelName), name: `OpenRouter (${modelName})` };
   }
 
-  // Priority 2: Google (Gemini or Gemma) — 500 req/day free
-  if (process.env.GOOGLE_AI_API_KEY) {
-    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
-    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
-    return { model: google(modelId), name: `Google ${modelId}` };
-  }
-
-  // Priority 3: Z.ai GLM-5.1 (kept for when budget is available)
+  // Priority 3: Z.ai GLM-5.1 (standard pay-as-you-go endpoint only)
   if (process.env.Z_AI_API_KEY) {
     const zai = createOpenAICompatible({
       name: 'z-ai',
@@ -95,7 +98,7 @@ export function selectModel(agentType?: string): { model: LanguageModel; name: s
     return { model: openai('gpt-4o'), name: 'GPT-4o' };
   }
 
-  throw new Error('No AI provider configured. Set OPENROUTER_API_KEY, GOOGLE_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
+  throw new Error('No AI provider configured. Set GOOGLE_AI_API_KEY (primary), OPENROUTER_API_KEY + OPENROUTER_MODEL, Z_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
 }
 
 export abstract class BaseAgent {
