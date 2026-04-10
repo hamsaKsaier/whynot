@@ -143,7 +143,7 @@ export class ReportTools {
           id: testCase.id,
           name: testCase.name,
           category: testCase.category,
-          stepsCount: input.steps.length,
+          stepsCount: steps.length,
           observedResult: input.observed_result
         }
       });
@@ -174,7 +174,7 @@ export class ReportTools {
         data: {
           success: true,
           testCaseId: testCase.id,
-          message: `Test case "${input.name}" saved with ${input.steps.length} steps (observed: ${input.observed_result || 'not specified'})`
+          message: `Test case "${input.name}" saved with ${steps.length} steps (observed: ${input.observed_result || 'not specified'})`
         },
         metrics: {
           testGenerated: true
