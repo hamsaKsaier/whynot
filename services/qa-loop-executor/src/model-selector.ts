@@ -3,12 +3,15 @@ import { createLogger } from '../../shared/logger/logger';
 const logger = createLogger('model-selector');
 
 /**
- * Claude model identifiers — streamlined to 2 models for cost/performance
+ * Model identifiers for all supported providers.
+ * Type alias kept as ClaudeModel for backward compat with existing callers.
  */
 export type ClaudeModel =
   | 'claude-3-5-haiku-20241022'
   | 'claude-sonnet-4-6'
-  | 'gemma-4-26b-a4b-it';
+  | 'gemma-4-26b-a4b-it'
+  | 'glm-5.1'
+  | 'glm-5-turbo';
 
 /**
  * Task complexity levels
@@ -27,6 +30,8 @@ export const MODEL_PRICING: Record<ClaudeModel, { input: number; output: number 
   'claude-3-5-haiku-20241022': { input: 1, output: 5 },
   'claude-sonnet-4-6': { input: 3, output: 15 },
   'gemma-4-26b-a4b-it': { input: 0, output: 0 },  // Free via Google AI Studio
+  'glm-5.1': { input: 1.26, output: 3.96 },       // Z.ai — measured per-prompt on $15/mo subscription
+  'glm-5-turbo': { input: 0.60, output: 2.20 },   // Z.ai — faster/cheaper variant
 };
 
 /**
@@ -51,6 +56,16 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
     complexity: ['simple', 'medium', 'complex'],
     maxTokens: 8192,
     description: 'Free via Google AI Studio — QA exploration, JSON generation, tool calling'
+  },
+  'glm-5.1': {
+    complexity: ['simple', 'medium', 'complex'],
+    maxTokens: 8192,
+    description: '#1 open-source model on SWE-Bench Pro (58.4), MIT licensed, 744B MoE, 202K context'
+  },
+  'glm-5-turbo': {
+    complexity: ['simple', 'medium'],
+    maxTokens: 8192,
+    description: 'Faster GLM-5 variant — exploration, mechanical tool calls, 128K context'
   },
 };
 
@@ -251,6 +266,10 @@ export function getModelDisplayName(model: ClaudeModel): string {
       return 'Claude Sonnet 4.6';
     case 'gemma-4-26b-a4b-it':
       return 'Gemma 4 26B';
+    case 'glm-5.1':
+      return 'GLM-5.1 (Z.ai)';
+    case 'glm-5-turbo':
+      return 'GLM-5 Turbo (Z.ai)';
     default:
       return model;
   }

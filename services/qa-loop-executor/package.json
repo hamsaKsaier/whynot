@@ -13,6 +13,7 @@
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/google": "^3.0.60",
     "@ai-sdk/openai": "^3.0.52",
+    "@ai-sdk/openai-compatible": "^2.0.41",
     "@anthropic-ai/sdk": "^0.27.0",
     "@google/genai": "^1.48.0",
     "@modelcontextprotocol/sdk": "^1.27.1",

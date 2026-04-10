@@ -44,7 +44,7 @@ export class QALeadAgent {
     app_analysis: AppAnalysis;
     objectives: PlanObjective[];
   } | null> {
-    const { model, name: modelName } = selectModel();
+    const { model, name: modelName } = selectModel('qa_lead');
 
     const systemPrompt = this.contextBuilder.buildSystemPrompt(
       'qa_lead',
@@ -120,7 +120,7 @@ export class QALeadAgent {
     testCases: any[],
     pages: any[]
   ): Promise<SynthesisReport> {
-    const { model, name: modelName } = selectModel();
+    const { model, name: modelName } = selectModel('qa_lead');
 
     // Build compact context from all agent data
     const agentSummaries = agentResults.map(r =>

@@ -221,9 +221,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             </div>
           </div>
           {scanMode === 'v2' && (
-            <p className="text-xs text-purple-300 mt-2">
-              5 specialized QA agents analyze your app — Exploratory, Security, API, and Automation testing
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-purple-300">
+                5 specialized QA agents analyze your app — Exploratory, Security, API, and Automation testing
+              </p>
+              <p className="text-[10px] text-slate-500">
+                Powered by GLM-5.1 (open-source, MIT licensed, #1 on SWE-Bench Pro)
+              </p>
+            </div>
           )}
         </div>
       )}

@@ -16,6 +16,7 @@ import { generateText, LanguageModel, ModelMessage, tool as defineTool, stepCoun
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { z } from 'zod';
 import { createLogger } from '../../../../shared/logger/logger';
 import { emitToSession } from '../../api/websocket';
@@ -30,27 +31,53 @@ const logger = createLogger('base-agent');
 
 /**
  * Select the AI model based on available API keys.
- * Priority: Gemini 2.5 Flash (free, 500 req/day) → Claude → GPT
  *
- * NOTE: Previously used Gemma 4 26B, but that model has a 15 req/DAY hard cap
- * on the free tier. Gemini 2.5 Flash has 500 req/day which is enough for
- * several full scans.
+ * Priority order (set env var to activate):
+ * 1. Z.ai GLM-5.1 — primary, MIT licensed, #1 on SWE-Bench Pro, 202K context
+ *    QA Lead + Auto Tester get glm-5.1 (best reasoning/code gen)
+ *    Other agents get glm-5-turbo (faster, fewer prompts on subscription)
+ *    Override with Z_AI_MODEL env var for all agents
+ * 2. Google Gemini / Gemma — fallback (15 req/day limit on Gemma free tier)
+ * 3. Anthropic Claude — last resort (expensive)
+ * 4. OpenAI GPT — BYOK option
  */
-export function selectModel(): { model: LanguageModel; name: string } {
+export function selectModel(agentType?: string): { model: LanguageModel; name: string } {
+  // Priority 1: Z.ai GLM-5.1
+  if (process.env.Z_AI_API_KEY) {
+    const zai = createOpenAICompatible({
+      name: 'z-ai',
+      apiKey: process.env.Z_AI_API_KEY,
+      baseURL: process.env.Z_AI_BASE_URL || 'https://api.z.ai/api/paas/v4/',
+    });
+    // Tier selection: premium agents get GLM-5.1, mechanical agents get turbo
+    const override = process.env.Z_AI_MODEL;
+    const premiumModel = process.env.Z_AI_PREMIUM_MODEL || 'glm-5.1';
+    const turboModel = process.env.Z_AI_TURBO_MODEL || 'glm-5-turbo';
+    const modelName = override
+      || ((agentType === 'qa_lead' || agentType === 'auto_tester') ? premiumModel : turboModel);
+    return { model: zai(modelName), name: `GLM via Z.ai (${modelName})` };
+  }
+
+  // Priority 2: Google (Gemini or Gemma)
   if (process.env.GOOGLE_AI_API_KEY) {
     const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
     const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
     return { model: google(modelId), name: `Google ${modelId}` };
   }
+
+  // Priority 3: Anthropic Claude
   if (process.env.ANTHROPIC_API_KEY) {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     return { model: anthropic('claude-sonnet-4-20250514'), name: 'Claude Sonnet' };
   }
+
+  // Priority 4: OpenAI
   if (process.env.OPENAI_API_KEY) {
     const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
     return { model: openai('gpt-4o'), name: 'GPT-4o' };
   }
-  throw new Error('No AI API key configured. Set GOOGLE_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
+
+  throw new Error('No AI provider configured. Set Z_AI_API_KEY, GOOGLE_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
 }
 
 export abstract class BaseAgent {
@@ -209,7 +236,7 @@ export abstract class BaseAgent {
    * handles tool calling internally. We use onStepFinish for WebSocket events.
    */
   protected async executeLoop(systemPrompt: string): Promise<void> {
-    const { model, name: modelName } = selectModel();
+    const { model, name: modelName } = selectModel(this.agentType);
     const maxOuterLoops = this.getMaxLoops();
 
     logger.info(`Starting ${this.agentType} agent loop`, {
