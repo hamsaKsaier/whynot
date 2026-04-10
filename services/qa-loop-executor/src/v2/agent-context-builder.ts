@@ -19,17 +19,20 @@ const MAX_LIST_ITEMS = 10;
  * Preamble added to EVERY agent's system prompt.
  * These rules are critical for correct tool usage and error recovery.
  */
-const CRITICAL_TOOL_RULES = `CRITICAL TOOL USAGE RULES:
+const CRITICAL_TOOL_RULES = `CRITICAL RULES:
+Be concise. Output only structured data when asked. No long explanations, no commentary. Take action via tools instead of describing what you would do.
+
+TOOL USAGE:
 1. Every tool you call REQUIRES specific fields. Never call a tool without all required fields.
 2. If a tool call fails, READ the error message and retry with the missing fields.
 3. For save_bug: ALWAYS include title (5+ chars), description (10+ chars), and severity.
 4. For add_note: ALWAYS include the note text (5+ chars).
 5. For mark_page_explored: ALWAYS include the url.
 6. For add_discovered_page: ALWAYS include the url.
-7. For save_test_case: ALWAYS include name, description, feature_category, steps, observed_result, and playwright_code.
+7. For save_test_case: ALWAYS include name, description, feature_category, observed_result, and playwright_code.
 8. Tool errors are learning moments — fix the missing fields and retry immediately.
 
-If you see "Tool X failed: null value in column Y", that means you forgot to provide field Y. Retry with field Y filled in.
+If you see "Tool X failed: null value in column Y", you forgot field Y. Retry with field Y filled.
 If you see "Tool X failed: Please check all REQUIRED fields", re-read the tool description and include every REQUIRED field.
 
 `;

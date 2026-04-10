@@ -226,7 +226,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 5 specialized QA agents analyze your app — Exploratory, Security, API, and Automation testing
               </p>
               <p className="text-[10px] text-slate-500">
-                Powered by GLM-5.1 (open-source, MIT licensed, #1 on SWE-Bench Pro)
+                Powered by Gemini 2.5 Flash (1M context, native tool calling)
               </p>
             </div>
           )}

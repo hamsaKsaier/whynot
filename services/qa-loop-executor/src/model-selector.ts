@@ -10,6 +10,7 @@ export type ClaudeModel =
   | 'claude-3-5-haiku-20241022'
   | 'claude-sonnet-4-6'
   | 'gemma-4-26b-a4b-it'
+  | 'gemini-2.5-flash'
   | 'glm-5.1'
   | 'glm-5-turbo';
 
@@ -29,7 +30,8 @@ export type FocusArea = 'explore' | 'chaos' | 'investigate' | 'retest';
 export const MODEL_PRICING: Record<ClaudeModel, { input: number; output: number }> = {
   'claude-3-5-haiku-20241022': { input: 1, output: 5 },
   'claude-sonnet-4-6': { input: 3, output: 15 },
-  'gemma-4-26b-a4b-it': { input: 0, output: 0 },  // Free via Google AI Studio
+  'gemma-4-26b-a4b-it': { input: 0, output: 0 },  // Free via Google AI Studio (15 req/day hard cap)
+  'gemini-2.5-flash': { input: 0, output: 0 },    // Free tier: 500 req/day, native tool calling
   'glm-5.1': { input: 1.26, output: 3.96 },       // Z.ai — measured per-prompt on $15/mo subscription
   'glm-5-turbo': { input: 0.60, output: 2.20 },   // Z.ai — faster/cheaper variant
 };
@@ -55,7 +57,12 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
   'gemma-4-26b-a4b-it': {
     complexity: ['simple', 'medium', 'complex'],
     maxTokens: 8192,
-    description: 'Free via Google AI Studio — QA exploration, JSON generation, tool calling'
+    description: 'Free via Google AI Studio (15 req/day hard cap — deprecated for production use)'
+  },
+  'gemini-2.5-flash': {
+    complexity: ['simple', 'medium', 'complex'],
+    maxTokens: 8192,
+    description: 'Fast, multimodal, native tool calling. 1M context, 500 req/day free tier.'
   },
   'glm-5.1': {
     complexity: ['simple', 'medium', 'complex'],
@@ -266,6 +273,8 @@ export function getModelDisplayName(model: ClaudeModel): string {
       return 'Claude Sonnet 4.6';
     case 'gemma-4-26b-a4b-it':
       return 'Gemma 4 26B';
+    case 'gemini-2.5-flash':
+      return 'Gemini 2.5 Flash';
     case 'glm-5.1':
       return 'GLM-5.1 (Z.ai)';
     case 'glm-5-turbo':
