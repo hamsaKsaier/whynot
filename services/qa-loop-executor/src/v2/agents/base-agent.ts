@@ -86,10 +86,16 @@ export function selectModel(agentType?: string): { model: LanguageModel; name: s
     return { model: zai(modelName), name: `GLM via Z.ai (${modelName})` };
   }
 
-  // Priority 4: Anthropic Claude
+  // Priority 4: Anthropic Claude — tiered to minimize cost
+  // QA Lead runs synthesis reasoning on Sonnet ($3/$15 per M tokens).
+  // Specialist agents (exploratory/security/api_tester/auto_tester) run on
+  // Haiku ($1/$5) — 3× cheaper, still reliable at tool calling.
   if (process.env.ANTHROPIC_API_KEY) {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    return { model: anthropic('claude-sonnet-4-20250514'), name: 'Claude Sonnet' };
+    if (agentType === 'qa_lead') {
+      return { model: anthropic('claude-sonnet-4-20250514'), name: 'Claude Sonnet 4' };
+    }
+    return { model: anthropic('claude-haiku-4-5-20251001'), name: 'Claude Haiku 4.5' };
   }
 
   // Priority 5: OpenAI
@@ -269,6 +275,19 @@ export abstract class BaseAgent {
     // Build tools with execute callbacks
     const tools = this.buildToolsWithExecute();
 
+    // Fix 1: cache the system prompt with Anthropic ephemeral cache.
+    // Built once and reused every call — first call pays full price,
+    // subsequent calls within 5 minutes get ~90% discount on cached tokens.
+    // Other providers ignore providerOptions.anthropic safely.
+    const systemMessage: ModelMessage = {
+      role: 'system',
+      content: systemPrompt,
+      providerOptions: {
+        anthropic: { cacheControl: { type: 'ephemeral' } },
+      },
+    };
+    logger.debug('Requesting prompt cache', { agentType: this.agentType });
+
     const messages: ModelMessage[] = [
       { role: 'user', content: this.getInitialPrompt() },
     ];
@@ -278,6 +297,28 @@ export abstract class BaseAgent {
 
     while (outerLoop < maxOuterLoops && !isDone) {
       outerLoop++;
+
+      // Fix 2: compress conversation history every 10 outer loops to
+      // prevent linear token growth. Keeps the last 6 messages + a summary
+      // of prior state. Caps per-call input at ~10K tokens even after 100 loops.
+      if (outerLoop > 0 && outerLoop % 10 === 0 && messages.length > 20) {
+        const keepRecent = messages.slice(-6);
+        const droppedCount = messages.length - keepRecent.length;
+        const summary = `[Previous context: ${outerLoop} outer loops completed. `
+          + `Pages explored: ${this.pagesExplored}, tests generated: ${this.testsGenerated}, `
+          + `bugs found: ${this.bugsFound}, total tool calls: ${this.totalToolCalls}. `
+          + `Continue from current state.]`;
+        messages.length = 0;
+        messages.push({ role: 'user', content: summary });
+        messages.push(...keepRecent);
+        logger.info('Compressed history', {
+          sessionId: this.sessionId,
+          agentType: this.agentType,
+          outerLoop,
+          droppedMessages: droppedCount,
+          messagesAfter: messages.length,
+        });
+      }
 
       // Board polling: every 3 outer loops, inject new discoveries
       if (outerLoop > 1 && outerLoop % 3 === 0) {
@@ -300,8 +341,9 @@ export abstract class BaseAgent {
       try {
         const result = await generateText({
           model,
-          system: systemPrompt,
-          messages,
+          // System prompt is the first message with cache marker (Fix 1).
+          // Dropped the top-level `system:` field — prepending here instead.
+          messages: [systemMessage, ...messages],
           tools,
           stopWhen: stepCountIs(8), // SDK auto-loops up to 8 tool calls per generateText
           maxOutputTokens: 2048,
