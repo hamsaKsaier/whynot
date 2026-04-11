@@ -27,6 +27,13 @@ export class AutoTesterAgent extends BaseAgent {
 
     return `Generate Playwright regression tests for ${targetUrl}.
 
+Available tools:
+- read_board — see ALL bugs/findings from other agents (call this FIRST)
+- get_session_state — see existing test cases (avoid duplicates)
+- save_test_case — save a test case with playwright_code (your PRIMARY output)
+- write_to_board — share observations with other agents
+- add_note — log your reasoning for future reference
+
 Start by calling read_board() to see ALL bugs found by other agents (Exploratory, Security, API).
 Then call get_session_state() to see what tests already exist.
 

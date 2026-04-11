@@ -45,12 +45,43 @@ const logger = createLogger('base-agent');
  * - Z.ai coding-plan endpoint violates policy for automated QA tools
  * - Gemini 2.5 Flash: 500 req/day free, native tool calling, 1M context — stable path
  */
-export function selectModel(agentType?: string): { model: LanguageModel; name: string } {
+/**
+ * Pricing per million tokens (input / output). Used by the cost tracker
+ * to compute cost per agent. Only covers the models we currently use —
+ * unknown model IDs fall through to $0 (free tier) pricing.
+ */
+export const MODEL_PRICING_PER_MTOKEN: Record<string, { input: number; output: number; cachedInput: number }> = {
+  'claude-sonnet-4-20250514': { input: 3, output: 15, cachedInput: 0.30 },
+  'claude-sonnet-4-6': { input: 3, output: 15, cachedInput: 0.30 },
+  'claude-haiku-4-5-20251001': { input: 1, output: 5, cachedInput: 0.10 },
+  'claude-haiku-4-5': { input: 1, output: 5, cachedInput: 0.10 },
+  'gemini-2.5-flash': { input: 0, output: 0, cachedInput: 0 },
+  'gemma-4-26b-a4b-it': { input: 0, output: 0, cachedInput: 0 },
+  'glm-5.1': { input: 1.26, output: 3.96, cachedInput: 0.13 },
+  'glm-5-turbo': { input: 0.60, output: 2.20, cachedInput: 0.06 },
+};
+
+export function computeCostCents(
+  modelId: string,
+  inputTokens: number,
+  outputTokens: number,
+  cachedInputTokens: number = 0,
+): number {
+  const rates = MODEL_PRICING_PER_MTOKEN[modelId] || { input: 0, output: 0, cachedInput: 0 };
+  const billableInput = Math.max(0, inputTokens - cachedInputTokens);
+  const costDollars =
+    (billableInput * rates.input) / 1_000_000 +
+    (cachedInputTokens * rates.cachedInput) / 1_000_000 +
+    (outputTokens * rates.output) / 1_000_000;
+  return Math.ceil(costDollars * 100); // cents, rounded up
+}
+
+export function selectModel(agentType?: string): { model: LanguageModel; name: string; modelId: string } {
   // Priority 1: Google Gemini 2.5 Flash (primary)
   if (process.env.GOOGLE_AI_API_KEY) {
     const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
     const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
-    return { model: google(modelId), name: `Google ${modelId}` };
+    return { model: google(modelId), name: `Google ${modelId}`, modelId };
   }
 
   // Priority 2: OpenRouter — ONLY with a PAID tool-capable model (free models don't support tools)
@@ -68,7 +99,7 @@ export function selectModel(agentType?: string): { model: LanguageModel; name: s
       },
     });
     const modelName = process.env.OPENROUTER_MODEL;
-    return { model: openrouter(modelName), name: `OpenRouter (${modelName})` };
+    return { model: openrouter(modelName), name: `OpenRouter (${modelName})`, modelId: modelName };
   }
 
   // Priority 3: Z.ai GLM-5.1 (standard pay-as-you-go endpoint only)
@@ -83,25 +114,37 @@ export function selectModel(agentType?: string): { model: LanguageModel; name: s
     const turboModel = process.env.Z_AI_TURBO_MODEL || 'glm-5-turbo';
     const modelName = override
       || ((agentType === 'qa_lead' || agentType === 'auto_tester') ? premiumModel : turboModel);
-    return { model: zai(modelName), name: `GLM via Z.ai (${modelName})` };
+    return { model: zai(modelName), name: `GLM via Z.ai (${modelName})`, modelId: modelName };
   }
 
-  // Priority 4: Anthropic Claude — tiered to minimize cost
-  // QA Lead runs synthesis reasoning on Sonnet ($3/$15 per M tokens).
-  // Specialist agents (exploratory/security/api_tester/auto_tester) run on
-  // Haiku ($1/$5) — 3× cheaper, still reliable at tool calling.
+  // Priority 4: Anthropic Claude — tiered by agent reasoning needs
+  //
+  // Sonnet ($3/$15 per M tokens) for agents that need real reasoning:
+  //   - qa_lead       — planning + synthesis (complex JSON structure)
+  //   - exploratory   — intelligent navigation, form/link discovery
+  //   - auto_tester   — Playwright code generation (hard for Haiku)
+  //
+  // Haiku ($1/$5 per M tokens — 3× cheaper) for mechanical agents:
+  //   - security      — repetitive XSS/SQLi/CSRF injection testing
+  //   - api_tester    — structured edge-case endpoint calls
+  //
+  // Previous scan with Haiku on all specialists produced 0 pages, 0 tests,
+  // 0 bugs — Haiku couldn't navigate OrangeHRM's dashboard or generate
+  // working Playwright code. Tiered approach targets $1.50-2.50/scan with
+  // working quality (vs $5 full-Sonnet or $0 empty-Haiku).
   if (process.env.ANTHROPIC_API_KEY) {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    if (agentType === 'qa_lead') {
-      return { model: anthropic('claude-sonnet-4-20250514'), name: 'Claude Sonnet 4' };
+    const sonnetAgents = new Set(['qa_lead', 'exploratory', 'auto_tester']);
+    if (agentType && sonnetAgents.has(agentType)) {
+      return { model: anthropic('claude-sonnet-4-20250514'), name: 'Claude Sonnet 4', modelId: 'claude-sonnet-4-20250514' };
     }
-    return { model: anthropic('claude-haiku-4-5-20251001'), name: 'Claude Haiku 4.5' };
+    return { model: anthropic('claude-haiku-4-5-20251001'), name: 'Claude Haiku 4.5', modelId: 'claude-haiku-4-5-20251001' };
   }
 
   // Priority 5: OpenAI
   if (process.env.OPENAI_API_KEY) {
     const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    return { model: openai('gpt-4o'), name: 'GPT-4o' };
+    return { model: openai('gpt-4o'), name: 'GPT-4o', modelId: 'gpt-4o' };
   }
 
   throw new Error('No AI provider configured. Set GOOGLE_AI_API_KEY (primary), OPENROUTER_API_KEY + OPENROUTER_MODEL, Z_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
@@ -126,6 +169,13 @@ export abstract class BaseAgent {
   protected successfulToolCalls = 0;
   protected failedToolCalls = 0;
   protected lastBoardPollTime: string;
+
+  // Cost tracking (Fix D — accumulated across all generateText calls)
+  protected inputTokens = 0;
+  protected outputTokens = 0;
+  protected cachedInputTokens = 0;
+  protected modelIdUsed: string = 'unknown';
+  protected lastCompletionReason: string = '';
 
   constructor(config: AgentConfig, mcpBrowser?: MCPBrowser) {
     this.sessionId = config.sessionId;
@@ -198,10 +248,21 @@ export abstract class BaseAgent {
         api_endpoints_tested: this.apiEndpointsTested,
       });
 
-      const durationSec = Math.round((Date.now() - startTime) / 1000);
+      const durationMs = Date.now() - startTime;
+      const durationSec = Math.round(durationMs / 1000);
       const successRate = this.totalToolCalls > 0
         ? ((this.successfulToolCalls / this.totalToolCalls) * 100).toFixed(1) + '%'
         : 'N/A';
+
+      // Fix D: compute cost from accumulated usage
+      const costCents = computeCostCents(
+        this.modelIdUsed,
+        this.inputTokens,
+        this.outputTokens,
+        this.cachedInputTokens,
+      );
+      const costDollars = costCents / 100;
+
       logger.info(`${this.agentType} agent completed with tool stats`, {
         sessionId: this.sessionId,
         agentType: this.agentType,
@@ -213,6 +274,12 @@ export abstract class BaseAgent {
         successfulToolCalls: this.successfulToolCalls,
         failedToolCalls: this.failedToolCalls,
         successRate,
+        inputTokens: this.inputTokens,
+        outputTokens: this.outputTokens,
+        cachedInputTokens: this.cachedInputTokens,
+        costCents,
+        costDollars: costDollars.toFixed(3),
+        model: this.modelIdUsed,
       });
 
       emitToSession(this.sessionId, {
@@ -220,7 +287,7 @@ export abstract class BaseAgent {
         data: {
           agent: this.agentType,
           status: 'done',
-          message: `${this.agentType} finished: ${this.testsGenerated} tests, ${this.bugsFound} bugs, ${this.pagesExplored} pages`,
+          message: `${this.agentType} finished: ${this.testsGenerated} tests, ${this.bugsFound} bugs, ${this.pagesExplored} pages, $${costDollars.toFixed(3)}`,
         },
       });
 
@@ -231,6 +298,15 @@ export abstract class BaseAgent {
         testsGenerated: this.testsGenerated,
         bugsFound: this.bugsFound,
         apiEndpointsTested: this.apiEndpointsTested,
+        inputTokens: this.inputTokens,
+        outputTokens: this.outputTokens,
+        cachedInputTokens: this.cachedInputTokens,
+        costCents,
+        costDollars,
+        modelUsed: this.modelIdUsed,
+        toolCallCount: this.totalToolCalls,
+        durationMs,
+        completionReason: this.lastCompletionReason || 'iteration_end',
       };
     } catch (err: any) {
       logger.error(`${this.agentType} agent failed`, {
@@ -246,6 +322,13 @@ export abstract class BaseAgent {
         data: { agent: this.agentType, status: 'error', message: `${this.agentType} error: ${err.message}` },
       });
 
+      const errorCostCents = computeCostCents(
+        this.modelIdUsed,
+        this.inputTokens,
+        this.outputTokens,
+        this.cachedInputTokens,
+      );
+
       return {
         agentType: this.agentType,
         status: 'error',
@@ -254,6 +337,15 @@ export abstract class BaseAgent {
         bugsFound: this.bugsFound,
         apiEndpointsTested: this.apiEndpointsTested,
         error: err.message,
+        inputTokens: this.inputTokens,
+        outputTokens: this.outputTokens,
+        cachedInputTokens: this.cachedInputTokens,
+        costCents: errorCostCents,
+        costDollars: errorCostCents / 100,
+        modelUsed: this.modelIdUsed,
+        toolCallCount: this.totalToolCalls,
+        durationMs: Date.now() - startTime,
+        completionReason: 'error',
       };
     }
   }
@@ -263,7 +355,8 @@ export abstract class BaseAgent {
    * handles tool calling internally. We use onStepFinish for WebSocket events.
    */
   protected async executeLoop(systemPrompt: string): Promise<void> {
-    const { model, name: modelName } = selectModel(this.agentType);
+    const { model, name: modelName, modelId } = selectModel(this.agentType);
+    this.modelIdUsed = modelId;
     const maxOuterLoops = this.getMaxLoops();
 
     logger.info(`Starting ${this.agentType} agent loop`, {
@@ -373,6 +466,22 @@ export abstract class BaseAgent {
             }
           },
         });
+
+        // Fix D: accumulate token usage per generateText call for cost tracking.
+        // AI SDK v6 LanguageModelUsage shape: inputTokens, outputTokens,
+        // inputTokenDetails.{cacheReadTokens, cacheWriteTokens, noCacheTokens}
+        const usage: any = result.usage || {};
+        const callInput = usage.inputTokens || 0;
+        const callOutput = usage.outputTokens || 0;
+        const callCached = (usage.inputTokenDetails?.cacheReadTokens
+          || usage.cachedInputTokens
+          || 0);
+        this.inputTokens += callInput;
+        this.outputTokens += callOutput;
+        this.cachedInputTokens += callCached;
+        if ((result as any).finishReason) {
+          this.lastCompletionReason = String((result as any).finishReason);
+        }
 
         // Check text output for completion
         if (result.text) {

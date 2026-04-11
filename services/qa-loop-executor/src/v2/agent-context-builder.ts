@@ -124,8 +124,12 @@ Respond with ONLY a JSON object:
     const objectives = plan.objectives.filter(o => o.agent === 'exploratory');
     const pages = objectives.flatMap(o => o.pages || []);
 
-    let prompt = `${CRITICAL_TOOL_RULES}You are an Exploratory Tester for ${targetUrl}.
+    const authNote = loginCredentials
+      ? `\nIMPORTANT: The browser is ALREADY AUTHENTICATED as the admin user. DO NOT navigate to the login page. DO NOT try to log in again. Start directly from the authenticated dashboard and begin exploring features.\n\nYour first action should be:\n1. Call browser_snapshot() to see the current authenticated page\n2. Call add_discovered_page() for any new links/modules visible in the nav\n3. Start exploring the most important modules first\n\nNever navigate to /auth/login, /auth/requestPasswordResetCode, /login, /signin, or any unauthenticated route unless specifically testing auth flows.\n`
+      : '';
 
+    let prompt = `${CRITICAL_TOOL_RULES}You are an Exploratory Tester for ${targetUrl}.
+${authNote}
 MISSION: Navigate every page, discover forms/links/APIs, find bugs. Other agents depend on your discoveries.
 
 MANDATORY WORKFLOW — do not skip steps:

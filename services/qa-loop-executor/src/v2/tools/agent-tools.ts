@@ -185,10 +185,16 @@ export function getToolSchemasForAgent(agentType: AgentType): Record<string, Too
         add_note: getStateToolSchemas().add_note,
       };
     case 'auto_tester':
+      // Auto Tester's PRIMARY purpose is saving tests — save_test_case is required.
+      // It also needs get_session_state to see existing tests (avoid duplicates),
+      // read_board to see bugs from other agents, write_to_board for observations,
+      // and add_note for rationale. No browser tools — auto_tester generates code,
+      // it doesn't interact with the app.
       return {
         ...board,
         save_test_case: getReportToolSchemas().save_test_case,
         get_session_state: getStateToolSchemas().get_session_state,
+        add_note: getStateToolSchemas().add_note,
       };
     case 'qa_lead':
       return {};

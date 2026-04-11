@@ -34,6 +34,8 @@ export class V2Orchestrator {
   private planStore: SessionPlanStore;
   private board: AgentBoard;
   private mcpBrowser: MCPBrowser | null = null;
+  // Fix D: iteration counter for persisting cost per agent into qa_loop_iterations
+  private iterationCounter = 0;
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
@@ -270,6 +272,14 @@ export class V2Orchestrator {
     const planData = await qaLead.createPlan();
     if (!planData) return null;
 
+    // Fix D: persist QA Lead planning iteration
+    if (qaLead.lastPlanUsage) {
+      this.iterationCounter++;
+      await this.persistIteration('qa_lead_plan', qaLead.lastPlanUsage, {
+        completionReason: 'plan_created',
+      }).catch(() => {});
+    }
+
     // Store in database
     const plan = await this.planStore.create(
       this.sessionId,
@@ -278,6 +288,48 @@ export class V2Orchestrator {
     );
 
     return plan;
+  }
+
+  /**
+   * Fix D helper: persist a single QA Lead iteration to qa_loop_iterations.
+   */
+  private async persistIteration(
+    focusArea: string,
+    usage: { inputTokens: number; outputTokens: number; cachedInputTokens: number; costCents: number; modelId: string; durationMs: number },
+    extra: { completionReason?: string; errorMessage?: string } = {},
+  ): Promise<void> {
+    try {
+      await this.repository.addIteration(this.sessionId, {
+        iterationNumber: this.iterationCounter,
+        focusArea,
+        pagesExplored: 0,
+        testsGenerated: 0,
+        bugsFound: 0,
+        toolCalls: 0,
+        tokensUsed: usage.inputTokens + usage.outputTokens,
+        costUsd: usage.costCents / 100,
+        durationMs: usage.durationMs,
+        completionReason: extra.completionReason,
+        errorMessage: extra.errorMessage,
+        modelUsed: usage.modelId,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        costCents: usage.costCents,
+      });
+      logger.info('Persisted QA Lead iteration', {
+        sessionId: this.sessionId,
+        focusArea,
+        iterationNumber: this.iterationCounter,
+        costCents: usage.costCents,
+      });
+    } catch (err: any) {
+      logger.error('Failed to persist QA Lead iteration (non-fatal)', {
+        sessionId: this.sessionId,
+        focusArea,
+        error: err.message,
+      });
+      throw err;
+    }
   }
 
   /**
@@ -360,6 +412,44 @@ export class V2Orchestrator {
 
     const result = await agent.run();
 
+    // Fix D: persist per-agent cost + usage to qa_loop_iterations
+    // so v2 sessions have the same cost visibility as v1.
+    this.iterationCounter++;
+    try {
+      const costCents = result.costCents || 0;
+      await this.repository.addIteration(this.sessionId, {
+        iterationNumber: this.iterationCounter,
+        focusArea: agentType,
+        pagesExplored: result.pagesExplored,
+        testsGenerated: result.testsGenerated,
+        bugsFound: result.bugsFound,
+        toolCalls: result.toolCallCount || 0,
+        tokensUsed: (result.inputTokens || 0) + (result.outputTokens || 0),
+        costUsd: (costCents / 100),
+        durationMs: result.durationMs,
+        completionReason: result.completionReason,
+        errorMessage: result.error,
+        modelUsed: result.modelUsed,
+        inputTokens: result.inputTokens || 0,
+        outputTokens: result.outputTokens || 0,
+        costCents,
+      });
+      logger.info('Persisted agent iteration', {
+        sessionId: this.sessionId,
+        agent: agentType,
+        iterationNumber: this.iterationCounter,
+        costCents,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+      });
+    } catch (persistErr: any) {
+      logger.error('Failed to persist agent iteration (non-fatal)', {
+        sessionId: this.sessionId,
+        agent: agentType,
+        error: persistErr.message,
+      });
+    }
+
     emitToSession(this.sessionId, {
       type: 'status_update',
       data: {
@@ -431,7 +521,17 @@ export class V2Orchestrator {
     const testCases = await this.repository.getTestCases(this.sessionId).catch(() => []);
     const pages = await this.repository.getExploredPages(this.sessionId).catch(() => []);
 
-    return qaLead.synthesize(agentResults, boardEntries, bugs, testCases, pages);
+    const report = await qaLead.synthesize(agentResults, boardEntries, bugs, testCases, pages);
+
+    // Fix D: persist QA Lead synthesis iteration
+    if (qaLead.lastSynthesisUsage) {
+      this.iterationCounter++;
+      await this.persistIteration('qa_lead_synthesis', qaLead.lastSynthesisUsage, {
+        completionReason: 'synthesis_complete',
+      }).catch(() => {});
+    }
+
+    return report;
   }
 
   /**

@@ -88,4 +88,14 @@ export interface AgentResult {
   bugsFound: number;
   apiEndpointsTested: number;
   error?: string;
+  // Cost tracking (Fix D — persisted to qa_loop_iterations by orchestrator)
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  costCents?: number;
+  costDollars?: number;
+  modelUsed?: string;
+  toolCallCount?: number;
+  durationMs?: number;
+  completionReason?: string;
 }

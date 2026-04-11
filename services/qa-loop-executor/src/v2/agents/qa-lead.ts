@@ -12,7 +12,16 @@ import { createLogger } from '../../../../shared/logger/logger';
 import { AgentConfig, AgentResult, AppAnalysis, PlanObjective, AgentBoardEntry } from '../types';
 import { AgentContextBuilder } from '../agent-context-builder';
 import { AgentBoard } from '../agent-board';
-import { selectModel } from './base-agent';
+import { selectModel, computeCostCents } from './base-agent';
+
+export interface QALeadUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+  costCents: number;
+  modelId: string;
+  durationMs: number;
+}
 
 const logger = createLogger('qa-lead');
 
@@ -32,6 +41,9 @@ export interface SynthesisReport {
 export class QALeadAgent {
   private config: AgentConfig;
   private contextBuilder: AgentContextBuilder;
+  // Fix D: usage tracking exposed to the orchestrator via lastPlanUsage / lastSynthesisUsage
+  public lastPlanUsage: QALeadUsage | null = null;
+  public lastSynthesisUsage: QALeadUsage | null = null;
 
   constructor(config: AgentConfig) {
     this.config = config;
@@ -44,7 +56,8 @@ export class QALeadAgent {
     app_analysis: AppAnalysis;
     objectives: PlanObjective[];
   } | null> {
-    const { model, name: modelName } = selectModel('qa_lead');
+    const { model, name: modelName, modelId } = selectModel('qa_lead');
+    const startedAt = Date.now();
 
     const systemPrompt = this.contextBuilder.buildSystemPrompt(
       'qa_lead',
@@ -69,6 +82,20 @@ export class QALeadAgent {
         }],
         maxOutputTokens: 1024,
       });
+
+      // Fix D: record usage
+      const usage: any = result.usage || {};
+      const inputTokens = usage.inputTokens || 0;
+      const outputTokens = usage.outputTokens || 0;
+      const cachedInputTokens = (usage.inputTokenDetails?.cacheReadTokens || usage.cachedInputTokens || 0);
+      this.lastPlanUsage = {
+        inputTokens,
+        outputTokens,
+        cachedInputTokens,
+        costCents: computeCostCents(modelId, inputTokens, outputTokens, cachedInputTokens),
+        modelId,
+        durationMs: Date.now() - startedAt,
+      };
 
       const text = result.text.trim();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -120,7 +147,8 @@ export class QALeadAgent {
     testCases: any[],
     pages: any[]
   ): Promise<SynthesisReport> {
-    const { model, name: modelName } = selectModel('qa_lead');
+    const { model, name: modelName, modelId } = selectModel('qa_lead');
+    const startedAt = Date.now();
 
     // Build compact context from all agent data
     const agentSummaries = agentResults.map(r =>
@@ -191,6 +219,20 @@ Produce the synthesis report JSON.`;
         messages: [{ role: 'user', content: userMsg }],
         maxOutputTokens: 1500,
       });
+
+      // Fix D: record synthesis usage
+      const usage: any = result.usage || {};
+      const inputTokens = usage.inputTokens || 0;
+      const outputTokens = usage.outputTokens || 0;
+      const cachedInputTokens = (usage.inputTokenDetails?.cacheReadTokens || usage.cachedInputTokens || 0);
+      this.lastSynthesisUsage = {
+        inputTokens,
+        outputTokens,
+        cachedInputTokens,
+        costCents: computeCostCents(modelId, inputTokens, outputTokens, cachedInputTokens),
+        modelId,
+        durationMs: Date.now() - startedAt,
+      };
 
       const text = result.text.trim();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
