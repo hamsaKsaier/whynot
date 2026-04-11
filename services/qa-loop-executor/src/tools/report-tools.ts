@@ -157,11 +157,23 @@ export class ReportTools {
         }
       }
 
-      // Update session progress
-      const allTestCases = await this.repository.getTestCases(this.sessionId);
-      await this.repository.updateSessionProgress(this.sessionId, {
-        testsGenerated: allTestCases.length
-      });
+      // Update session progress — wrapped in try/catch so a follow-up DB
+      // error doesn't turn a successful test-case save into a reported error.
+      // This was the root cause of v2's tests_generated counter drift:
+      // test case rows were in the DB but the counter showed 0 because
+      // updateSessionProgress failures poisoned the return path.
+      try {
+        const allTestCases = await this.repository.getTestCases(this.sessionId);
+        await this.repository.updateSessionProgress(this.sessionId, {
+          testsGenerated: allTestCases.length
+        });
+      } catch (progressErr: any) {
+        logger.warn('updateSessionProgress failed after test case save (non-fatal)', {
+          sessionId: this.sessionId,
+          testCaseId: testCase.id,
+          error: progressErr.message,
+        });
+      }
 
       logger.info('Test case saved', {
         sessionId: this.sessionId,
@@ -220,11 +232,19 @@ export class ReportTools {
         }
       });
 
-      // Update session progress
-      const allBugs = await this.repository.getBugs(this.sessionId);
-      await this.repository.updateSessionProgress(this.sessionId, {
-        bugsFound: allBugs.length
-      });
+      // Update session progress — same non-fatal wrapping as saveTestCase.
+      try {
+        const allBugs = await this.repository.getBugs(this.sessionId);
+        await this.repository.updateSessionProgress(this.sessionId, {
+          bugsFound: allBugs.length
+        });
+      } catch (progressErr: any) {
+        logger.warn('updateSessionProgress failed after bug save (non-fatal)', {
+          sessionId: this.sessionId,
+          bugId: bug.id,
+          error: progressErr.message,
+        });
+      }
 
       logger.info('Bug saved', {
         sessionId: this.sessionId,

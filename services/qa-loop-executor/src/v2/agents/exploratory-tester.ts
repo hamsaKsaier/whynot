@@ -92,7 +92,12 @@ Say "AGENT_DONE" when all reachable pages are explored.`;
   }
 
   protected getMaxLoops(): number {
-    return 12; // 12 outer × 8 maxSteps = up to 96 tool calls
+    // Bumped 12 → 18 after scan #2 only covered 6 of 16 discovered pages.
+    // Exploratory is the discovery bottleneck for Security + API agents,
+    // so giving it more depth compounds across the whole pipeline.
+    // Cost impact: +$0.10-0.15 per scan (Sonnet on Exploratory).
+    // 18 outer × 8 maxSteps = up to 144 tool calls.
+    return 18;
   }
 
   /**

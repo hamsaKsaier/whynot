@@ -626,11 +626,26 @@ export abstract class BaseAgent {
 
   /**
    * Track metrics from tool results.
+   *
+   * Counts by toolName (primary, reliable) OR result.metrics (legacy) —
+   * using toolName is robust against downstream code paths that strip
+   * or forget to set the metrics field. Only invoked on successful tool
+   * calls (errors throw before reaching here), so any invocation here
+   * represents a real DB write.
    */
   protected trackMetrics(toolName: string, result: ToolResult): void {
-    if (result.metrics?.pageExplored) this.pagesExplored++;
-    if (result.metrics?.testGenerated) this.testsGenerated++;
-    if (result.metrics?.bugFound) this.bugsFound++;
+    if (toolName === 'mark_page_explored' || result.metrics?.pageExplored) {
+      this.pagesExplored++;
+    }
+    if (toolName === 'save_test_case' || result.metrics?.testGenerated) {
+      this.testsGenerated++;
+    }
+    if (toolName === 'save_bug' || result.metrics?.bugFound) {
+      this.bugsFound++;
+    }
+    if (toolName === 'run_injection_test' || result.metrics?.vulnerabilityFound) {
+      this.bugsFound++;
+    }
   }
 
   // ─── Abstract methods for agent customization ───────────────────────
