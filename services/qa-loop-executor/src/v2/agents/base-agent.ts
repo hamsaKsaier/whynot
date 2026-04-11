@@ -51,10 +51,18 @@ const logger = createLogger('base-agent');
  * unknown model IDs fall through to $0 (free tier) pricing.
  */
 export const MODEL_PRICING_PER_MTOKEN: Record<string, { input: number; output: number; cachedInput: number }> = {
-  'claude-sonnet-4-20250514': { input: 3, output: 15, cachedInput: 0.30 },
+  // Opus 4.6 — premium reasoning, used for QA Lead plan + synthesis
+  'claude-opus-4-6': { input: 15, output: 75, cachedInput: 1.5 },
+  'claude-opus-4-5': { input: 15, output: 75, cachedInput: 1.5 },
+  'claude-opus-4-5-20251101': { input: 15, output: 75, cachedInput: 1.5 },
+  // Sonnet 4.6 — workhorse for all specialist agents
   'claude-sonnet-4-6': { input: 3, output: 15, cachedInput: 0.30 },
+  'claude-sonnet-4-5': { input: 3, output: 15, cachedInput: 0.30 },
+  'claude-sonnet-4-20250514': { input: 3, output: 15, cachedInput: 0.30 },
+  // Haiku 4.5 — kept for fallback / future use
   'claude-haiku-4-5-20251001': { input: 1, output: 5, cachedInput: 0.10 },
   'claude-haiku-4-5': { input: 1, output: 5, cachedInput: 0.10 },
+  // Non-Anthropic providers
   'gemini-2.5-flash': { input: 0, output: 0, cachedInput: 0 },
   'gemma-4-26b-a4b-it': { input: 0, output: 0, cachedInput: 0 },
   'glm-5.1': { input: 1.26, output: 3.96, cachedInput: 0.13 },
@@ -117,28 +125,28 @@ export function selectModel(agentType?: string): { model: LanguageModel; name: s
     return { model: zai(modelName), name: `GLM via Z.ai (${modelName})`, modelId: modelName };
   }
 
-  // Priority 4: Anthropic Claude — tiered by agent reasoning needs
+  // Priority 4: Anthropic Claude — Opus 4.6 for QA Lead, Sonnet 4.6 for everyone else
   //
-  // Sonnet ($3/$15 per M tokens) for agents that need real reasoning:
-  //   - qa_lead       — planning + synthesis (complex JSON structure)
-  //   - exploratory   — intelligent navigation, form/link discovery
-  //   - auto_tester   — Playwright code generation (hard for Haiku)
+  // Opus 4.6 ($15/$75 per M) for QA Lead ONLY:
+  //   - Planning + synthesis = only 2 API calls per scan
+  //   - Best-in-class cross-referencing and critical cluster detection
+  //   - Cost impact: ~$0.15-0.20 per scan (negligible on the plan/synthesis pair)
   //
-  // Haiku ($1/$5 per M tokens — 3× cheaper) for mechanical agents:
-  //   - security      — repetitive XSS/SQLi/CSRF injection testing
-  //   - api_tester    — structured edge-case endpoint calls
+  // Sonnet 4.6 ($3/$15 per M) for all specialist agents:
+  //   - exploratory  — intelligent navigation, form/link discovery
+  //   - security     — injection testing that requires real reasoning
+  //   - api_tester   — edge-case generation with schema awareness
+  //   - auto_tester  — Playwright code generation
   //
-  // Previous scan with Haiku on all specialists produced 0 pages, 0 tests,
-  // 0 bugs — Haiku couldn't navigate OrangeHRM's dashboard or generate
-  // working Playwright code. Tiered approach targets $1.50-2.50/scan with
-  // working quality (vs $5 full-Sonnet or $0 empty-Haiku).
+  // Prior Haiku experiment failed (0 bugs / 0 tests / 0 pages on specialists)
+  // because Haiku couldn't navigate OrangeHRM or generate working code.
+  // Sonnet 4.6 is the latest Sonnet (same price as Sonnet 4 but better tool calling).
   if (process.env.ANTHROPIC_API_KEY) {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const sonnetAgents = new Set(['qa_lead', 'exploratory', 'auto_tester']);
-    if (agentType && sonnetAgents.has(agentType)) {
-      return { model: anthropic('claude-sonnet-4-20250514'), name: 'Claude Sonnet 4', modelId: 'claude-sonnet-4-20250514' };
+    if (agentType === 'qa_lead') {
+      return { model: anthropic('claude-opus-4-6'), name: 'Claude Opus 4.6', modelId: 'claude-opus-4-6' };
     }
-    return { model: anthropic('claude-haiku-4-5-20251001'), name: 'Claude Haiku 4.5', modelId: 'claude-haiku-4-5-20251001' };
+    return { model: anthropic('claude-sonnet-4-6'), name: 'Claude Sonnet 4.6', modelId: 'claude-sonnet-4-6' };
   }
 
   // Priority 5: OpenAI

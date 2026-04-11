@@ -135,22 +135,46 @@ MISSION: Navigate every page, discover forms/links/APIs, find bugs. Other agents
 MANDATORY WORKFLOW — do not skip steps:
 1. browser_navigate(url) → go to the page
 2. browser_snapshot() → see the page structure
-3. Look at the links in the snapshot → for EVERY new URL, call add_discovered_page({ url })
-4. Interact with the page (click, fill, etc.) if it has forms or buttons
-5. browser_snapshot() → see the result of your interactions
-6. save_bug() if you found any issue (with title, description, severity ALL REQUIRED)
-7. mark_page_explored({ url, description, page_type }) → MANDATORY before moving to next page
-8. Repeat for next page
+3. browser_network_requests() → capture API endpoints loaded by this page
+4. For EVERY unique endpoint from step 3, call write_to_board() with type 'api_endpoint'
+5. Look at the links in the snapshot → for EVERY new URL, call add_discovered_page({ url })
+6. For every form in the snapshot, call write_to_board() with type 'form'
+7. Interact with the page (click, fill, etc.) if it has forms or buttons
+8. save_bug() if you found any issue (with title, description, severity ALL REQUIRED)
+9. mark_page_explored({ url, description, page_type }) → MANDATORY before moving to next page
+10. Repeat for next page
 
 You are NOT done with a page until you call mark_page_explored(). Call it EVERY time.
+
+MANDATORY: Capture API endpoints for every page you visit.
+After every browser_snapshot(), call browser_network_requests() to capture
+the API endpoints that page loaded. For EVERY unique endpoint captured,
+call write_to_board() with:
+  type: 'api_endpoint'
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  path: '/web/index.php/api/v2/...'
+  auth_required: true
+
+Example:
+  write_to_board({
+    type: 'api_endpoint',
+    method: 'GET',
+    path: '/web/index.php/api/v2/pim/employees',
+    auth_required: true
+  })
+
+API Tester DEPENDS on this data. If you don't capture network requests,
+API Tester has nothing to test and the scan produces no API bugs.
+
+TARGET: capture at least 10 unique API endpoints per scan.
 
 RULES:
 - Call get_session_state() FIRST to see progress
 - After EVERY navigate/click, IMMEDIATELY call browser_snapshot()
-- After EVERY snapshot: call write_to_board() for every form, link, and API you see
+- After EVERY snapshot: call browser_network_requests() + write_to_board for every endpoint/form/link
 - Call save_test_case() when you have actually tested a feature (with ALL required fields)
-- Max 5 tool calls per page then move on
-- TARGET: explore 4-5 pages per iteration
+- Max 6 tool calls per page then move on
+- TARGET: explore 10+ pages total, capture 10+ API endpoints
 
 You are evaluated on DISCOVERY THROUGHPUT. Find forms, links, APIs — the Security and API agents need them.`;
 

@@ -32,6 +32,8 @@ export class ExploratoryTesterAgent extends BaseAgent {
         'browser_navigate', 'browser_snapshot', 'browser_click',
         'browser_fill', 'browser_type', 'browser_press_key',
         'browser_select_option', 'browser_evaluate', 'browser_wait_for',
+        // Fix 4: network capture is mandatory for API Tester to have endpoints to test
+        'browser_network_requests',
       ];
 
       for (const tool of browserTools) {
@@ -92,12 +94,12 @@ Say "AGENT_DONE" when all reachable pages are explored.`;
   }
 
   protected getMaxLoops(): number {
-    // Bumped 12 → 18 after scan #2 only covered 6 of 16 discovered pages.
-    // Exploratory is the discovery bottleneck for Security + API agents,
-    // so giving it more depth compounds across the whole pipeline.
-    // Cost impact: +$0.10-0.15 per scan (Sonnet on Exploratory).
-    // 18 outer × 8 maxSteps = up to 144 tool calls.
-    return 18;
+    // Bumped 12 → 18 → 20. Exploratory is the discovery bottleneck for
+    // Security + API agents, so more depth compounds across the pipeline.
+    // 20 outer × 8 maxSteps = up to 160 tool calls (target: 10+ pages,
+    // 10+ API endpoints captured).
+    // Cost impact: +$0.15-0.20 per scan (Sonnet 4.6 on Exploratory).
+    return 20;
   }
 
   /**

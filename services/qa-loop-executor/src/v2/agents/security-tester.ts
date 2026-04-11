@@ -66,10 +66,41 @@ export class SecurityTesterAgent extends BaseAgent {
   protected getInitialPrompt(): string {
     return `Begin security testing for ${this.config.targetUrl}.
 
-Start by calling read_board() to see what forms and pages Exploratory discovered.
-For each form: navigate to the page, browser_snapshot, then test XSS and SQLi payloads via browser_fill.
-Also check HTTP headers by running browser_evaluate with fetch() and inspecting response headers.
-Call save_bug() for every vulnerability found. Say "AGENT_DONE" when all forms are tested.`;
+Your first step: read_board() for forms discovered by Exploratory.
+
+IF the board has fewer than 5 forms:
+1. Navigate DIRECTLY to these key pages (they have known vulnerable forms):
+   - /web/index.php/admin/viewSystemUsers
+   - /web/index.php/admin/saveSystemUser
+   - /web/index.php/pim/addEmployee
+   - /web/index.php/admin/viewSystemRole
+2. Call browser_snapshot() on each page
+3. Discover forms directly and test them
+
+IF the board has 5+ forms: proceed normally with board-driven testing.
+
+FOR EACH FORM, run these tests via browser_fill / browser_evaluate:
+- XSS: <script>alert(1)</script>, <img onerror=alert(1)>, javascript:alert(1)
+- SQLi: ' OR 1=1--, '; DROP TABLE--, UNION SELECT
+- CSRF: check for hidden token field in the form
+- Auth bypass: try accessing admin pages without login
+
+Also run browser_evaluate with fetch() to check HTTP response headers:
+- Missing Content-Security-Policy
+- Missing X-Frame-Options
+- Missing X-Content-Type-Options
+- Missing Strict-Transport-Security (HSTS)
+
+OrangeHRM has known security issues worth checking:
+- Missing X-Frame-Options (allows clickjacking)
+- Weak CSP (allows inline scripts)
+- Missing CSRF tokens on password reset
+- Exposed credentials in demo environment
+- Potential IDOR in admin user management (/admin/saveSystemUser?userId=...)
+
+Call save_bug() for every vulnerability with title, description, severity.
+Target: find 5+ security bugs per scan.
+Say "AGENT_DONE" when all forms are tested and all headers checked.`;
   }
 
   protected getMaxLoops(): number {
