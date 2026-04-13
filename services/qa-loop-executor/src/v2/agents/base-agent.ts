@@ -65,7 +65,8 @@ export const MODEL_PRICING_PER_MTOKEN: Record<string, { input: number; output: n
   // Non-Anthropic providers
   'gemini-2.5-flash': { input: 0, output: 0, cachedInput: 0 },
   'gemma-4-26b-a4b-it': { input: 0, output: 0, cachedInput: 0 },
-  'glm-5.1': { input: 1.26, output: 3.96, cachedInput: 0.13 },
+  'glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26 },
+  'z-ai/glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26 },
   'glm-5-turbo': { input: 0.60, output: 2.20, cachedInput: 0.06 },
 };
 
@@ -85,29 +86,25 @@ export function computeCostCents(
 }
 
 export function selectModel(agentType?: string): { model: LanguageModel; name: string; modelId: string } {
-  // Priority 1: Google Gemini 2.5 Flash (primary)
-  if (process.env.GOOGLE_AI_API_KEY) {
-    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
-    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
-    return { model: google(modelId), name: `Google ${modelId}`, modelId };
-  }
-
-  // Priority 2: OpenRouter — ONLY with a PAID tool-capable model (free models don't support tools)
-  // Must explicitly set OPENROUTER_MODEL to something like 'anthropic/claude-sonnet-4'
-  // or 'openai/gpt-4o'. Free Gemma/Llama models are skipped because their tool
-  // calls silently fail.
-  if (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_MODEL && !process.env.OPENROUTER_MODEL.endsWith(':free')) {
-    const openrouter = createOpenAICompatible({
-      name: 'openrouter',
+  // Priority 1: OpenRouter GLM-5.1 (paid, tool-calling capable)
+  if (process.env.OPENROUTER_API_KEY) {
+    const openrouter = createOpenAI({
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
       headers: {
         'HTTP-Referer': 'https://whynotqa.com',
         'X-Title': 'WhyNot QA',
       },
-    });
-    const modelName = process.env.OPENROUTER_MODEL;
-    return { model: openrouter(modelName), name: `OpenRouter (${modelName})`, modelId: modelName };
+    } as any);
+    const modelName = process.env.OPENROUTER_MODEL || 'z-ai/glm-5.1';
+    return { model: openrouter(modelName), name: `GLM-5.1`, modelId: modelName };
+  }
+
+  // Priority 2: Google Gemini 2.5 Flash
+  if (process.env.GOOGLE_AI_API_KEY) {
+    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
+    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
+    return { model: google(modelId), name: `Google ${modelId}`, modelId };
   }
 
   // Priority 3: Z.ai GLM-5.1 (standard pay-as-you-go endpoint only)
@@ -435,15 +432,16 @@ export abstract class BaseAgent {
           system: systemPrompt,
           messages,
           tools,
-          // Request provider-level caching: Anthropic will cache the system
-          // prompt + tool definitions as a prefix. First call creates the cache,
-          // subsequent calls within TTL get ~90% discount on cached tokens.
-          // Non-Anthropic providers ignore this safely.
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
+          // Anthropic prompt caching: cache the system prompt + tool definitions
+          // as a stable prefix. Only applied for Claude models — other providers
+          // would silently ignore it but cleaner to guard explicitly.
+          ...(modelId.startsWith('claude') ? {
+            providerOptions: {
+              anthropic: {
+                cacheControl: { type: 'ephemeral', ttl: '1h' },
+              },
             },
-          },
+          } : {}),
           // 20 tool-call steps per generateText invocation. This means
           // fewer outer loops needed → fewer system prompt retransmissions
           // → better cache utilization. Each outer loop = 1 generateText call.
