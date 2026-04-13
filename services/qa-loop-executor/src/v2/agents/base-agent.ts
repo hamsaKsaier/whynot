@@ -86,16 +86,19 @@ export function computeCostCents(
 }
 
 export function selectModel(agentType?: string): { model: LanguageModel; name: string; modelId: string } {
-  // Priority 1: OpenRouter GLM-5.1 (paid, tool-calling capable)
+  // Priority 1: OpenRouter (paid, tool-calling capable)
+  // Uses createOpenAICompatible (not createOpenAI) to force /chat/completions endpoint.
+  // createOpenAI defaults to the OpenAI Responses API which OpenRouter does not support.
   if (process.env.OPENROUTER_API_KEY) {
-    const openrouter = createOpenAI({
+    const openrouter = createOpenAICompatible({
+      name: 'openrouter',
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
       headers: {
         'HTTP-Referer': 'https://whynotqa.com',
         'X-Title': 'WhyNot QA',
       },
-    } as any);
+    });
     const modelName = process.env.OPENROUTER_MODEL || 'z-ai/glm-5.1';
     return { model: openrouter(modelName), name: `GLM-5.1`, modelId: modelName };
   }
