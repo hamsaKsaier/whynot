@@ -73,7 +73,7 @@ Call save_bug() for every issue found. Say "AGENT_DONE" when all endpoints are t
   }
 
   protected getMaxLoops(): number {
-    return 6;
+    return 4; // 4 × 20 maxSteps = 80 tool calls, 4 API calls (was 6 × 8 = 48 tool calls, 6 API calls)
   }
 
   private convertSchema(schema: any): z.ZodType {

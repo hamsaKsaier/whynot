@@ -74,6 +74,6 @@ Say "AGENT_DONE" when you have saved 10+ tests AND every bug has a regression te
   }
 
   protected getMaxLoops(): number {
-    return 8;
+    return 4; // 4 × 20 maxSteps = 80 tool calls, 4 API calls (was 8 × 8 = 64 tool calls, 8 API calls)
   }
 }

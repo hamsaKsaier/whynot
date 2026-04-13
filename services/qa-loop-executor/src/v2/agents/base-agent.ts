@@ -376,19 +376,6 @@ export abstract class BaseAgent {
     // Build tools with execute callbacks
     const tools = this.buildToolsWithExecute();
 
-    // Fix 1: cache the system prompt with Anthropic ephemeral cache.
-    // Built once and reused every call — first call pays full price,
-    // subsequent calls within 5 minutes get ~90% discount on cached tokens.
-    // Other providers ignore providerOptions.anthropic safely.
-    const systemMessage: ModelMessage = {
-      role: 'system',
-      content: systemPrompt,
-      providerOptions: {
-        anthropic: { cacheControl: { type: 'ephemeral' } },
-      },
-    };
-    logger.debug('Requesting prompt cache', { agentType: this.agentType });
-
     const messages: ModelMessage[] = [
       { role: 'user', content: this.getInitialPrompt() },
     ];
@@ -399,10 +386,9 @@ export abstract class BaseAgent {
     while (outerLoop < maxOuterLoops && !isDone) {
       outerLoop++;
 
-      // Fix 2: compress conversation history every 10 outer loops to
-      // prevent linear token growth. Keeps the last 6 messages + a summary
-      // of prior state. Caps per-call input at ~10K tokens even after 100 loops.
-      if (outerLoop > 0 && outerLoop % 10 === 0 && messages.length > 20) {
+      // Compress history every 3 outer loops (aggressive — each loop can
+      // do up to 20 tool calls now, so history grows fast).
+      if (outerLoop > 1 && outerLoop % 3 === 0 && messages.length > 10) {
         const keepRecent = messages.slice(-6);
         const droppedCount = messages.length - keepRecent.length;
         const summary = `[Previous context: ${outerLoop} outer loops completed. `
@@ -442,11 +428,26 @@ export abstract class BaseAgent {
       try {
         const result = await generateText({
           model,
-          // System prompt is the first message with cache marker (Fix 1).
-          // Dropped the top-level `system:` field — prepending here instead.
-          messages: [systemMessage, ...messages],
+          // System prompt via the top-level `system:` parameter. The AI SDK
+          // passes this as the system block to Anthropic which keeps it as a
+          // stable prefix for caching. DO NOT put system in the messages array
+          // — that breaks Anthropic's prefix-based cache matching.
+          system: systemPrompt,
+          messages,
           tools,
-          stopWhen: stepCountIs(8), // SDK auto-loops up to 8 tool calls per generateText
+          // Request provider-level caching: Anthropic will cache the system
+          // prompt + tool definitions as a prefix. First call creates the cache,
+          // subsequent calls within TTL get ~90% discount on cached tokens.
+          // Non-Anthropic providers ignore this safely.
+          providerOptions: {
+            anthropic: {
+              cacheControl: { type: 'ephemeral', ttl: '1h' },
+            },
+          },
+          // 20 tool-call steps per generateText invocation. This means
+          // fewer outer loops needed → fewer system prompt retransmissions
+          // → better cache utilization. Each outer loop = 1 generateText call.
+          stopWhen: stepCountIs(20),
           maxOutputTokens: 2048,
           onStepFinish: async (event) => {
             // Emit tool calls for WebSocket
@@ -490,6 +491,22 @@ export abstract class BaseAgent {
         if ((result as any).finishReason) {
           this.lastCompletionReason = String((result as any).finishReason);
         }
+
+        // Log cache hit rate per generateText call for cost visibility.
+        // cache_read > 0 means the system prompt was served from cache.
+        const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens || 0;
+        const cacheHitRate = callInput > 0 ? ((callCached / callInput) * 100).toFixed(1) : '0.0';
+        logger.info('generateText usage', {
+          sessionId: this.sessionId,
+          agentType: this.agentType,
+          outerLoop,
+          inputTokens: callInput,
+          outputTokens: callOutput,
+          cacheReadTokens: callCached,
+          cacheWriteTokens: cacheWrite,
+          cacheHitRate: cacheHitRate + '%',
+          model: modelId,
+        });
 
         // Check text output for completion
         if (result.text) {
@@ -664,8 +681,14 @@ export abstract class BaseAgent {
   /** Get the initial user prompt to start the agent. */
   protected abstract getInitialPrompt(): string;
 
-  /** Maximum outer loops (each does up to 8 tool calls via maxSteps). */
+  /**
+   * Maximum outer loops. Each outer loop = 1 generateText call with up to
+   * 20 tool steps (maxSteps). Fewer outer loops = fewer system prompt
+   * retransmissions = better Anthropic cache utilization.
+   *
+   * Total tool capacity = maxLoops × 20 maxSteps.
+   */
   protected getMaxLoops(): number {
-    return 10; // 10 outer × 8 maxSteps = up to 80 tool calls total
+    return 4; // 4 × 20 = up to 80 tool calls — same capacity, fewer API calls
   }
 }
