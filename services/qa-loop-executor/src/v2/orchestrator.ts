@@ -16,6 +16,7 @@ import { emitToSession } from '../api/websocket';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { MCPBrowser } from '../mcp-browser';
 import { LoopConfig } from '../loop-orchestrator';
+import { ParallelTestExecutor } from '../parallel-test-executor';
 import { SessionPlanStore } from './session-plan';
 import { AgentBoard } from './agent-board';
 import { AgentType, AgentConfig, AgentResult, SessionPlan, PlanObjective } from './types';
@@ -166,6 +167,12 @@ export class V2Orchestrator {
         status: autoResult.status,
       });
 
+      // ─── Phase 5.5: Execute generated test cases ────────────────
+      // Before synthesis, run every test case saved by Auto Tester through
+      // the test-executor so last_run_status gets populated. Pass/fail
+      // counts are passed to QA Lead for the synthesis report.
+      const execSummary = await this.executeGeneratedTests();
+
       // ─── Phase 6: QA Lead synthesis ─────────────────────────────
       emitToSession(this.sessionId, {
         type: 'status_update',
@@ -173,6 +180,11 @@ export class V2Orchestrator {
       });
 
       const report = await this.synthesizeReport(plan, allResults);
+
+      // Attach execution summary to the report so frontend can display pass/fail
+      if (execSummary) {
+        (report as any).test_execution = execSummary;
+      }
 
       // Store report in session
       await query(
@@ -665,5 +677,90 @@ export class V2Orchestrator {
       tests: testCoverage.length,
       apiEndpoints: apiEndpoints.length,
     });
+  }
+
+  /**
+   * Phase 5.5 — Execute every test case saved by Auto Tester through the
+   * test-executor service. Updates last_run_status on each test case and
+   * returns a pass/fail summary for the synthesis report.
+   *
+   * Uses the same ParallelTestExecutor that v1 uses, with the same
+   * queue/FIFO/mismatch-detection behaviour.
+   */
+  private async executeGeneratedTests(): Promise<{
+    testsExecuted: number;
+    testsPassed: number;
+    testsFailed: number;
+    mismatchCount: number;
+  } | null> {
+    try {
+      const testCases = await this.repository.getTestCases(this.sessionId, { active: true });
+
+      if (testCases.length === 0) {
+        logger.info('No test cases to execute', { sessionId: this.sessionId });
+        return null;
+      }
+
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          phase: 'test_execution',
+          message: `Executing ${testCases.length} generated tests...`,
+        },
+      });
+
+      logger.info('Starting test execution phase', {
+        sessionId: this.sessionId,
+        testCount: testCases.length,
+      });
+
+      const executor = new ParallelTestExecutor(
+        this.sessionId,
+        this.config,
+        this.repository,
+      );
+
+      for (const tc of testCases) {
+        // observed_result lives on the test case row for v2 (saved by Auto Tester)
+        const observed: 'pass' | 'fail' =
+          (tc as any).observed_result === 'fail' ? 'fail' : 'pass';
+        executor.enqueue(tc, observed);
+      }
+
+      await executor.waitForCompletion();
+      const results = executor.getResults();
+      const mismatches = executor.getMismatches();
+
+      const summary = {
+        testsExecuted: results.testsExecuted,
+        testsPassed: results.testsPassed,
+        testsFailed: results.testsFailed,
+        mismatchCount: mismatches.length,
+      };
+
+      logger.info('Test execution phase completed', {
+        sessionId: this.sessionId,
+        ...summary,
+      });
+
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          phase: 'test_execution_complete',
+          message: `Tests: ${summary.testsPassed} passed, ${summary.testsFailed} failed (of ${summary.testsExecuted})`,
+          summary,
+        },
+      });
+
+      return summary;
+    } catch (err: any) {
+      logger.error('Test execution phase failed (non-fatal)', {
+        sessionId: this.sessionId,
+        error: err.message,
+        stack: err.stack?.slice(0, 300),
+      });
+      // Don't crash the scan — synthesis can still proceed without exec data
+      return null;
+    }
   }
 }
