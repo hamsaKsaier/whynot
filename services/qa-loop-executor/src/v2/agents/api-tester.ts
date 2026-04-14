@@ -46,7 +46,8 @@ export class APITesterAgent extends BaseAgent {
   protected async executeTool(toolName: string, args: Record<string, any>): Promise<ToolResult> {
     const result = await super.executeTool(toolName, args);
 
-    if (toolName === 'save_bug' && !result.error && args.title) {
+    // Skip board write if save_bug was dedup'd
+    if (toolName === 'save_bug' && !result.error && !result.data?.deduplicated && args.title) {
       await this.boardTools.writeToBoard({
         type: 'bug',
         title: args.title,

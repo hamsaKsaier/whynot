@@ -658,8 +658,13 @@ export abstract class BaseAgent {
    * or forget to set the metrics field. Only invoked on successful tool
    * calls (errors throw before reaching here), so any invocation here
    * represents a real DB write.
+   *
+   * Fix 4 exception: if result.data.deduplicated is set, the tool returned
+   * successfully but did NOT insert a DB row (dedup). Don't increment.
    */
   protected trackMetrics(toolName: string, result: ToolResult): void {
+    if (result.data?.deduplicated) return;
+
     if (toolName === 'mark_page_explored' || result.metrics?.pageExplored) {
       this.pagesExplored++;
     }

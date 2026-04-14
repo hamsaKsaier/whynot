@@ -66,8 +66,8 @@ export class ExploratoryTesterAgent extends BaseAgent {
       }).catch(() => {});
     }
 
-    // Auto-write bugs to the board
-    if (toolName === 'save_bug' && !result.error && args.title) {
+    // Auto-write bugs to the board (skip when dedup'd — no new bug to share)
+    if (toolName === 'save_bug' && !result.error && !result.data?.deduplicated && args.title) {
       await this.boardTools.writeToBoard({
         type: 'bug',
         title: args.title,

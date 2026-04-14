@@ -49,8 +49,8 @@ export class SecurityTesterAgent extends BaseAgent {
   protected async executeTool(toolName: string, args: Record<string, any>): Promise<ToolResult> {
     const result = await super.executeTool(toolName, args);
 
-    // Auto-write security bugs to board
-    if (toolName === 'save_bug' && !result.error && args.title) {
+    // Auto-write security bugs to board (skip dedup'd)
+    if (toolName === 'save_bug' && !result.error && !result.data?.deduplicated && args.title) {
       await this.boardTools.writeToBoard({
         type: 'security_issue',
         title: args.title,

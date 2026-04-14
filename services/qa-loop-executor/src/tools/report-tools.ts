@@ -204,6 +204,33 @@ export class ReportTools {
 
   async saveBug(input: BugInput): Promise<ToolResult> {
     try {
+      // Fix 4: deduplicate bugs by title + page_url within the same session.
+      // Agents frequently re-report the same missing-header / CSRF / etc.
+      // issue across iterations. Skip silently so the report stays clean.
+      const existingBugs = await this.repository.getBugs(this.sessionId).catch(() => []);
+      const normalize = (s: string | null | undefined) =>
+        (s || '').trim().toLowerCase();
+      const normalizedTitle = normalize(input.title);
+      const normalizedPage = normalize(input.page_url);
+      const isDuplicate = existingBugs.some(b =>
+        normalize(b.title) === normalizedTitle &&
+        normalize(b.page_url) === normalizedPage
+      );
+      if (isDuplicate) {
+        logger.info('Duplicate bug — skipping', {
+          sessionId: this.sessionId,
+          title: input.title,
+          page_url: input.page_url,
+        });
+        return {
+          data: {
+            success: true,
+            deduplicated: true,
+            message: `Bug "${input.title}" already reported for this session — skipped duplicate.`,
+          },
+        };
+      }
+
       // Get current session for iteration number
       const session = await this.repository.getSession(this.sessionId);
 
