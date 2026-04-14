@@ -28,6 +28,15 @@ import { AutoTesterAgent } from './agents/auto-tester';
 
 const logger = createLogger('v2-orchestrator');
 
+// ─── Cost circuit breaker constants ─────────────────────────────────────
+// Hard cap: $5.00 estimated REAL Anthropic cost per session.
+// Our DB-tracked cost (from result.usage tokens) consistently under-reports
+// actual Anthropic bill by ~5× because the AI SDK doesn't always surface
+// cache creation tokens. We multiply DB-tracked cost by this factor before
+// comparing to the cap so we stop BEFORE we blow the real-cost budget.
+const MAX_SESSION_COST_CENTS = 500;       // $5.00 real cost cap
+const COST_UNDERCOUNT_FACTOR = 5;         // Real cost ≈ DB-tracked × 5
+
 export class V2Orchestrator {
   private sessionId: string;
   private config: LoopConfig;
@@ -37,6 +46,9 @@ export class V2Orchestrator {
   private mcpBrowser: MCPBrowser | null = null;
   // Fix D: iteration counter for persisting cost per agent into qa_loop_iterations
   private iterationCounter = 0;
+  // Fix 3: cumulative tracked cost across all agents for the circuit breaker
+  private cumulativeCostCents = 0;
+  private circuitBreakerTripped = false;
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
@@ -120,52 +132,56 @@ export class V2Orchestrator {
 
       // ─── Phase 4: Security + API Testers (sequential, same browser) ─
       const allResults: AgentResult[] = [exploratoryResult];
+      this.accumulateCost(exploratoryResult);
 
       // Security Tester — reads forms from board, tests XSS/SQLi/CSRF
-      emitToSession(this.sessionId, {
-        type: 'status_update',
-        data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
-      });
-
-      const securityResult = await this.runAgent('security', plan);
-      allResults.push(securityResult);
-
-      logger.info('Security Tester completed', {
-        sessionId: this.sessionId,
-        bugs: securityResult.bugsFound,
-        status: securityResult.status,
-      });
+      if (!this.costBudgetExceeded()) {
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
+        });
+        const securityResult = await this.runAgent('security', plan);
+        allResults.push(securityResult);
+        this.accumulateCost(securityResult);
+        logger.info('Security Tester completed', {
+          sessionId: this.sessionId,
+          bugs: securityResult.bugsFound,
+          status: securityResult.status,
+        });
+      }
 
       // API Tester — reads endpoints from board, tests edge cases via fetch()
-      emitToSession(this.sessionId, {
-        type: 'status_update',
-        data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
-      });
-
-      const apiResult = await this.runAgent('api_tester', plan);
-      allResults.push(apiResult);
-
-      logger.info('API Tester completed', {
-        sessionId: this.sessionId,
-        bugs: apiResult.bugsFound,
-        endpoints: apiResult.apiEndpointsTested,
-        status: apiResult.status,
-      });
+      if (!this.costBudgetExceeded()) {
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
+        });
+        const apiResult = await this.runAgent('api_tester', plan);
+        allResults.push(apiResult);
+        this.accumulateCost(apiResult);
+        logger.info('API Tester completed', {
+          sessionId: this.sessionId,
+          bugs: apiResult.bugsFound,
+          endpoints: apiResult.apiEndpointsTested,
+          status: apiResult.status,
+        });
+      }
 
       // ─── Phase 5: Auto Tester (runs last, no browser needed) ──
-      emitToSession(this.sessionId, {
-        type: 'status_update',
-        data: { phase: 'auto_testing', message: 'Auto Tester generating Playwright regression tests...' },
-      });
-
-      const autoResult = await this.runAgent('auto_tester', plan);
-      allResults.push(autoResult);
-
-      logger.info('Auto Tester completed', {
-        sessionId: this.sessionId,
-        tests: autoResult.testsGenerated,
-        status: autoResult.status,
-      });
+      if (!this.costBudgetExceeded()) {
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: { phase: 'auto_testing', message: 'Auto Tester generating Playwright regression tests...' },
+        });
+        const autoResult = await this.runAgent('auto_tester', plan);
+        allResults.push(autoResult);
+        this.accumulateCost(autoResult);
+        logger.info('Auto Tester completed', {
+          sessionId: this.sessionId,
+          tests: autoResult.testsGenerated,
+          status: autoResult.status,
+        });
+      }
 
       // ─── Phase 5.5: Execute generated test cases ────────────────
       // Before synthesis, run every test case saved by Auto Tester through
@@ -290,6 +306,8 @@ export class V2Orchestrator {
       await this.persistIteration('qa_lead_plan', qaLead.lastPlanUsage, {
         completionReason: 'plan_created',
       }).catch(() => {});
+      // Fix 3: include QA Lead plan cost in the circuit-breaker budget
+      this.cumulativeCostCents += qaLead.lastPlanUsage.costCents || 0;
     }
 
     // Store in database
@@ -349,6 +367,53 @@ export class V2Orchestrator {
    */
   private async runExploratoryTester(plan: SessionPlan): Promise<AgentResult> {
     return this.runAgent('exploratory', plan);
+  }
+
+  /**
+   * Fix 3: accumulate DB-tracked cost across agents for the circuit breaker.
+   */
+  private accumulateCost(result: AgentResult): void {
+    this.cumulativeCostCents += result.costCents || 0;
+  }
+
+  /**
+   * Fix 3: hard $5 real-cost circuit breaker.
+   *
+   * DB-tracked cost under-reports actual Anthropic bill by ~5× (cache
+   * creation tokens + tool defs are often missing from AI SDK usage).
+   * We multiply tracked cost by COST_UNDERCOUNT_FACTOR before comparing
+   * to the cap so we stop BEFORE blowing the real-cost budget.
+   *
+   * When tripped: skips remaining agents and jumps to synthesis with
+   * partial data. Emits cost_cap_reached WebSocket event exactly once.
+   */
+  private costBudgetExceeded(): boolean {
+    const estimatedRealCents = this.cumulativeCostCents * COST_UNDERCOUNT_FACTOR;
+    if (estimatedRealCents >= MAX_SESSION_COST_CENTS) {
+      if (!this.circuitBreakerTripped) {
+        this.circuitBreakerTripped = true;
+        logger.warn('Cost circuit breaker tripped — skipping remaining agents', {
+          sessionId: this.sessionId,
+          trackedCostCents: this.cumulativeCostCents,
+          trackedCostDollars: (this.cumulativeCostCents / 100).toFixed(3),
+          estimatedRealCostCents: estimatedRealCents,
+          estimatedRealCostDollars: (estimatedRealCents / 100).toFixed(2),
+          capDollars: (MAX_SESSION_COST_CENTS / 100).toFixed(2),
+          factor: COST_UNDERCOUNT_FACTOR,
+        });
+        emitToSession(this.sessionId, {
+          type: 'cost_cap_reached',
+          data: {
+            trackedCostDollars: this.cumulativeCostCents / 100,
+            estimatedRealCostDollars: estimatedRealCents / 100,
+            capDollars: MAX_SESSION_COST_CENTS / 100,
+            message: `Cost cap reached (~$${(estimatedRealCents / 100).toFixed(2)} estimated real cost). Skipping remaining agents; synthesis will run on partial data.`,
+          },
+        });
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
