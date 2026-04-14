@@ -15,10 +15,10 @@ import { Alert } from '../components/common/Alert';
 import { Button } from '../components/common/Button';
 import {
   FiZap, FiGlobe, FiActivity, FiPlay, FiPause,
-  FiStopCircle, FiRefreshCw, FiTarget, FiMenu,
+  FiStopCircle, FiRefreshCw, FiTarget, FiMenu, FiDownload,
 } from 'react-icons/fi';
 
-import { checkExistingSession } from '../services/qa-loop-api';
+import { checkExistingSession, exportSessionTestSuite } from '../services/qa-loop-api';
 import { getProjects, getProjectContext, ProjectWithStats } from '../services/api';
 import { useSessionManager, StartSessionParams } from '../hooks/useSessionManager';
 
@@ -385,6 +385,22 @@ export const QALoopPage: React.FC = () => {
                     <FiTarget className="mr-1" size={12} /> Smart Retest
                   </Button>
                 </>
+              )}
+              {sessionTestCases.length > 0 && (
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      await exportSessionTestSuite(activeSession.id);
+                      success('Downloading test suite…');
+                    } catch (err: any) {
+                      showError(err?.message || 'Failed to download test suite');
+                    }
+                  }}
+                  title="Download a ready-to-run Playwright project (ZIP)"
+                >
+                  <FiDownload className="mr-1" size={12} /> Download Test Suite
+                </Button>
               )}
             </div>
           </div>
