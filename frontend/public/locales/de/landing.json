@@ -1,0 +1,291 @@
+{
+  "nav": {
+    "features": "Funktionen",
+    "pricing": "Preise",
+    "signIn": "Anmelden",
+    "getStarted": "Loslegen",
+    "openApp": "App öffnen",
+    "menu": "Menü",
+    "changeLanguage": "Sprache ändern",
+    "main": "Hauptnavigation"
+  },
+  "hero": {
+    "title": "Finden Sie Bugs <highlight>bevor Ihre Nutzer es tun</highlight>",
+    "subtitle": "Autonome KI-Agenten erkunden Ihre Web-App, finden Bugs und generieren Playwright-Testcode — damit Sie mit Vertrauen ausliefern können.",
+    "cta": "Kostenlos testen",
+    "secondaryCta": "So funktioniert es",
+    "socialProof": "Vertraut von Engineering-Teams, die Qualitätssoftware ausliefern",
+    "noCreditCard": "Keine Kreditkarte erforderlich"
+  },
+  "trustBar": {
+    "ariaLabel": "Vertrauensindikatoren und unterstützte Technologien",
+    "logoTitle": "Funktioniert mit jedem Framework und Stack",
+    "badges": {
+      "soc2": "SOC 2-konform",
+      "dataPrivacy": "Daten verschlüsselt gespeichert",
+      "moneyBack": "30 Tage Geld-zurück-Garantie",
+      "uptime": "99,9 % Verfügbarkeits-SLA"
+    },
+    "stats": {
+      "bugsFound": "Bugs gefunden",
+      "testsGenerated": "Tests generiert",
+      "teams": "Teams nutzen WhyNot",
+      "accuracy": "Erkennungsgenauigkeit"
+    }
+  },
+  "features": {
+    "heading": "Alles, was Sie brauchen, um fehlerfreie Software auszuliefern",
+    "subheading": "KI-gestütztes autonomes Testen, das Bugs findet, Testcode generiert und Ihre App zuverlässig hält — ohne einen einzigen Test von Hand zu schreiben.",
+    "items": {
+      "aiAgents": {
+        "title": "Autonome KI-Agenten",
+        "description": "KI-Agenten erkunden Ihre App wie echte Benutzer, navigieren durch Abläufe und decken Grenzfälle auf, die Menschen übersehen würden."
+      },
+      "bugDetection": {
+        "title": "Intelligente Bug-Erkennung",
+        "description": "Erkennt automatisch visuelle Fehler, defekte Links, Konsolenfehler und funktionale Regressionen in Echtzeit."
+      },
+      "visualRegression": {
+        "title": "Visuelle Regressionstests",
+        "description": "Pixel-genaue Screenshot-Vergleiche erkennen UI-Änderungen, bevor sie die Produktion erreichen."
+      },
+      "playwrightGen": {
+        "title": "Playwright-Code-Generierung",
+        "description": "Erhalten Sie produktionsreife Playwright-Testskripte, die automatisch aus jedem entdeckten Bug generiert werden."
+      },
+      "chaosTest": {
+        "title": "Chaos-Tests",
+        "description": "Simulieren Sie langsame Netzwerke, fehlende APIs und Browser-Eigenheiten, um Ihre App unter realen Bedingungen zu testen."
+      },
+      "multiBrowser": {
+        "title": "Multi-Browser-Abdeckung",
+        "description": "Testen Sie gleichzeitig in Chrome, Firefox und Safari, um konsistentes Verhalten überall sicherzustellen."
+      },
+      "testSuites": {
+        "title": "Organisierte Testsuiten",
+        "description": "Verwalten Sie Testfälle in Ordnern, taggen Sie nach Priorität und verfolgen Sie die Abdeckung über User Stories und Features."
+      },
+      "security": {
+        "title": "Sicherheitsüberprüfung",
+        "description": "Erkennt häufige Schwachstellen wie XSS, offene Weiterleitungen und exponierte Geheimnisse bei jedem Testlauf."
+      }
+    }
+  },
+  "comparison": {
+    "title": "Wie WhyNot im Vergleich abschneidet",
+    "subtitle": "Erfahren Sie, warum Teams von manuellen Test-Frameworks zu KI-gestützter autonomer Qualitätssicherung wechseln.",
+    "featureColumn": "Funktion",
+    "competitors": {
+      "whynot": "WhyNot",
+      "selenium": "Selenium",
+      "cypress": "Cypress",
+      "playwrightManual": "Playwright",
+      "browserstack": "BrowserStack",
+      "lambdatest": "LambdaTest"
+    },
+    "features": {
+      "aiAutonomous": "Autonome KI-Exploration",
+      "noCodeSetup": "No-Code-Einrichtung",
+      "bugDetection": "Automatische Bug-Erkennung",
+      "testGeneration": "Testcode-Generierung",
+      "visualRegression": "Visuelle Regressionstests",
+      "chaosTest": "Chaos-Tests"
+    },
+    "values": {
+      "yes": "Ja",
+      "no": "Nein",
+      "partial": "Teilweise"
+    }
+  },
+  "testimonials": {
+    "heading": "Geschätzt von Engineering-Teams",
+    "subheading": "Erfahren Sie, wie Teams WhyNot nutzen, um Bugs vor ihren Nutzern zu finden.",
+    "items": {
+      "sarah": {
+        "quote": "Wir haben WhyNot auf unserer E-Commerce-Plattform eingesetzt und es hat in der ersten Stunde 23 Bugs gefunden — darunter ein Checkout-Problem, das uns Conversions gekostet hat. Der generierte Playwright-Code hat unserem QA-Team Tage an Arbeit gespart.",
+        "author": "Sarah Chen",
+        "title": "VP Engineering",
+        "company": "ShopFlow"
+      },
+      "marcus": {
+        "quote": "Als Startup ohne dediziertes QA-Team ist WhyNot wie ein Senior-Testingenieur, der rund um die Uhr verfügbar ist. Die KI-Agenten erkunden Pfade, an die wir nie gedacht hätten, und das Chaos-Testing hat eine Race Condition gefunden, die in der Produktion ein P0 gewesen wäre.",
+        "author": "Marcus Johnson",
+        "title": "CTO",
+        "company": "LaunchPad AI"
+      },
+      "elena": {
+        "quote": "Wir sind von null automatisierten Tests zu vollständiger Regressionsabdeckung in unter einer Woche übergegangen. WhyNot generiert die Playwright-Skripte, wir überprüfen und mergen. Unser Vertrauen in Releases war noch nie so hoch.",
+        "author": "Elena Rodriguez",
+        "title": "Leitende QA-Ingenieurin",
+        "company": "Meridian Health"
+      }
+    }
+  },
+  "faq": {
+    "heading": "Häufig gestellte Fragen",
+    "subheading": "Alles, was Sie über WhyNot wissen müssen.",
+    "items": {
+      "howItWorks": {
+        "question": "Wie findet WhyNot automatisch Bugs?",
+        "answer": "WhyNot setzt autonome KI-Agenten ein, die Ihre Web-Anwendung wie echte Benutzer navigieren. Sie klicken auf Buttons, füllen Formulare aus, erkunden Navigationspfade und überwachen Konsolenfehler, defekte Layouts, fehlgeschlagene API-Aufrufe und visuelle Regressionen — alles ohne eine einzige Zeile Testcode zu schreiben."
+      },
+      "integration": {
+        "question": "Wie integriere ich WhyNot mit meiner App?",
+        "answer": "Geben Sie einfach die URL Ihrer App an. WhyNot funktioniert mit jeder Web-Anwendung unabhängig vom Tech-Stack — React, Vue, Angular, Next.js, Django, Rails, Laravel, WordPress oder jedes andere Framework. Kein SDK oder Code-Änderungen erforderlich."
+      },
+      "pricing": {
+        "question": "Gibt es eine kostenlose Version?",
+        "answer": "Ja! Unsere kostenlose Version umfasst 50 Testläufe pro Monat, bis zu 3 Projekte und vollen Zugriff auf KI-Bug-Erkennung und Playwright-Code-Generierung. Keine Kreditkarte erforderlich."
+      },
+      "security": {
+        "question": "Sind meine Anwendungsdaten sicher?",
+        "answer": "Absolut. WhyNot führt Tests in isolierten Browser-Sandboxen aus. Wir speichern niemals Ihre Anwendungsdaten, Zugangsdaten oder Benutzerinformationen. Alle Verbindungen sind mit TLS verschlüsselt, und wir sind SOC 2-konform."
+      },
+      "accuracy": {
+        "question": "Wie genau ist die Bug-Erkennung?",
+        "answer": "Unsere KI erreicht eine Genauigkeitsrate von 99,2 % mit sehr wenigen Fehlalarmen. Jeder gemeldete Bug enthält Screenshots, Konsolenprotokolle, Netzwerk-Traces und generierten Playwright-Code, sodass Sie sofort verifizieren und reproduzieren können."
+      }
+    },
+    "contactText": "Noch Fragen?",
+    "contactLink": "Kontaktieren Sie uns"
+  },
+  "cta": {
+    "heading": "Beginnen Sie noch heute mit der Bug-Suche",
+    "subheading": "Schließen Sie sich Hunderten von Teams an, die WhyNot nutzen, um Software mit Vertrauen auszuliefern. Einrichtung in Minuten, keine Code-Änderungen erforderlich.",
+    "getStarted": "Kostenlos starten",
+    "trustSignals": {
+      "freeTier": "Kostenlose Version verfügbar",
+      "noCard": "Keine Kreditkarte erforderlich",
+      "moneyBack": "30 Tage Geld-zurück-Garantie"
+    }
+  },
+  "stickyBottomCTA": {
+    "ariaLabel": "Schnellaktionsleiste",
+    "text": "Finden Sie Bugs bevor Ihre Nutzer es tun.",
+    "cta": "Kostenlos starten",
+    "dismiss": "Schließen"
+  },
+  "emailCapture": {
+    "placeholder": "Geschäftliche E-Mail eingeben",
+    "ariaLabel": "E-Mail-Adresse",
+    "cta": "Kostenlos starten",
+    "sending": "Wird gesendet...",
+    "success": "Danke! Wir melden uns bald bei Ihnen.",
+    "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    "rateLimited": "Zu viele Versuche. Bitte versuchen Sie es später erneut."
+  },
+  "pricing": {
+    "heading": "Einfache, transparente Preise",
+    "subheading": "Starten Sie kostenlos, upgraden Sie bei Bedarf.",
+    "monthly": "/Monat",
+    "free": "Für immer kostenlos",
+    "popular": "Am beliebtesten",
+    "startFree": "Kostenlos starten",
+    "getStarted": "Loslegen",
+    "trialDays": "{{days}} Tage kostenlos testen",
+    "plans": {
+      "free": {
+        "name": "Kostenlos",
+        "description": "Perfekt, um WhyNot bei persönlichen Projekten auszuprobieren.",
+        "features": [
+          "50 Testläufe pro Monat",
+          "Bis zu 3 Projekte",
+          "KI-Fehlererkennung",
+          "Playwright-Codegenerierung",
+          "Community-Support"
+        ]
+      },
+      "pro_byo": {
+        "name": "Pro (Eigene Keys)",
+        "description": "Für Teams, die ihre eigenen KI-Anbieter-Schlüssel verwenden möchten.",
+        "features": [
+          "Unbegrenzte Testläufe",
+          "Unbegrenzte Projekte",
+          "Eigene API-Schlüssel",
+          "Visuelle Regressionstests",
+          "Chaos-Testing",
+          "CI/CD-Integration",
+          "Prioritäts-Support"
+        ]
+      },
+      "pro_managed": {
+        "name": "Pro (Verwaltet)",
+        "description": "Volle Leistung mit plattformverwalteter KI und nutzungsbasiertem Guthaben.",
+        "features": [
+          "Alles aus Pro (Eigene Keys)",
+          "Verwaltete KI-Infrastruktur",
+          "Nutzungsbasiertes Guthaben",
+          "Erweiterte Analysen",
+          "Benutzerdefinierte Monitore",
+          "SSO & Teamverwaltung",
+          "Dedizierter Support"
+        ]
+      }
+    }
+  },
+  "payg": {
+    "heading": "Nutzungsbasierte Preise",
+    "subheading": "Zahlen Sie nur, was Sie nutzen. Guthaben wird pro Vorgang im Managed-Plan verbraucht.",
+    "event": "Vorgang",
+    "credits": "Guthaben",
+    "example": "Beispiel",
+    "events": {
+      "test_generation": {
+        "name": "Testgenerierung",
+        "example": "20 Tests generieren = 1.000 Guthaben"
+      },
+      "test_execution": {
+        "name": "Testausführung",
+        "example": "100 Tests ausführen = 1.000 Guthaben"
+      },
+      "qa_loop_iteration": {
+        "name": "QA-Schleifen-Iteration",
+        "example": "30 Iterationen = 900 Guthaben"
+      },
+      "auto_fix_attempt": {
+        "name": "Automatischer Reparaturversuch",
+        "example": "10 Reparaturen = 1.000 Guthaben"
+      },
+      "visual_regression": {
+        "name": "Visuelle Regression",
+        "example": "50 Vergleiche = 750 Guthaben"
+      },
+      "qa_monitor_session": {
+        "name": "QA-Monitor-Sitzung",
+        "example": "5 Sitzungen = 1.000 Guthaben"
+      },
+      "ci_scan": {
+        "name": "CI-Scan",
+        "example": "5 Scans = 1.000 Guthaben"
+      }
+    },
+    "creditPack": "Guthaben-Pakete ab 10 $ für 1.000 Guthaben.",
+    "workedExample": {
+      "heading": "Rechenbeispiel",
+      "description": "Ein typisches mittelgroßes Team mit 50 Testgenerierungen und 200 Testausführungen pro Monat:",
+      "items": [
+        "50 × Testgenerierung (50 Guthaben) = 2.500 Guthaben",
+        "200 × Testausführung (10 Guthaben) = 2.000 Guthaben",
+        "10 × automatische Reparaturversuche (100 Guthaben) = 1.000 Guthaben"
+      ],
+      "total": "Gesamt: 5.500 Guthaben ≈ 55 $/Monat",
+      "note": "Zuzüglich des Basisabonnements von 49 $/Monat."
+    }
+  },
+  "footer": {
+    "description": "Autonome QA-Tests powered by KI-Agenten.",
+    "product": "Produkt",
+    "features": "Funktionen",
+    "pricing": "Preise",
+    "changelog": "Änderungsprotokoll",
+    "company": "Unternehmen",
+    "about": "Über uns",
+    "blog": "Blog",
+    "contact": "Kontakt",
+    "legal": "Rechtliches",
+    "privacy": "Datenschutzrichtlinie",
+    "terms": "Nutzungsbedingungen",
+    "copyright": "© {{year}} WhyNot. Alle Rechte vorbehalten."
+  }
+}

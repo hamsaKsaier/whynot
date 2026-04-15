@@ -1,78 +1,98 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { FiShield } from 'react-icons/fi';
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { Shield, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardFooter, CardHeader } from '../components/ui/card'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Alert, AlertDescription } from '../components/ui/alert'
+import { useAuth } from '../contexts/AuthContext'
 
-export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+export function LoginPage() {
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const { t } = useTranslation('auth')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setLoading(true)
     try {
-      await login(email, password);
-      navigate('/');
+      await login(email, password)
+      navigate('/')
     } catch (err: any) {
-      setError(err.message || 'Login failed. Admin access required.');
+      if (err.message === 'superadmin_required') {
+        setError(t('auth.login.accessDenied'))
+      } else {
+        setError(err.message || t('auth.login.failed'))
+      }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-      <div className="bg-slate-800 rounded-xl shadow-lg p-8 w-full max-w-md">
-        <div className="flex items-center justify-center mb-6">
-          <FiShield className="h-8 w-8 text-primary-600 mr-2" />
-          <h1 className="text-2xl font-bold text-white">Admin Login</h1>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-900/20 border border-red-800 text-red-400 text-sm rounded-lg">
-            {error}
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <Shield className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-semibold">{t('auth.login.title')}</h1>
           </div>
-        )}
+        </CardHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <p className="mt-4 text-xs text-center text-slate-500">
-          Admin access only. Regular users cannot log in here.
-        </p>
-      </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">{t('auth.login.email')}</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                placeholder={t('auth.login.emailPlaceholder')}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">{t('auth.login.password')}</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                placeholder={t('auth.login.passwordPlaceholder')}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="h-4 w-4 me-1.5 animate-spin" />}
+              {loading ? t('auth.login.submitting') : t('auth.login.submit')}
+            </Button>
+          </form>
+        </CardContent>
+
+        <CardFooter className="justify-center">
+          <p className="text-xs text-muted-foreground">
+            {t('auth.login.superadminOnly')}
+          </p>
+        </CardFooter>
+      </Card>
     </div>
-  );
-};
+  )
+}
+
+export { LoginPage as default }

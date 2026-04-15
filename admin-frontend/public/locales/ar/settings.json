@@ -1,0 +1,23 @@
+{
+  "settings.title": "إعدادات النظام",
+  "settings.tabs.general": "عام",
+  "settings.tabs.credits": "تكاليف الأرصدة",
+  "settings.tabs.email": "البريد الإلكتروني",
+  "settings.tabs.webhooks": "Webhooks",
+  "settings.tabs.security": "الأمان",
+  "settings.noSettings": "لا توجد إعدادات في هذه الفئة.",
+  "settings.saveFailed": "فشل الحفظ",
+  "settings.saveSuccess": "تم حفظ الإعدادات",
+  "settings.general.siteName": "اسم الموقع",
+  "settings.general.supportEmail": "بريد الدعم",
+  "settings.general.maintenanceMode": "وضع الصيانة",
+  "settings.credits.testExecution": "تكلفة تنفيذ الاختبار",
+  "settings.credits.testGeneration": "تكلفة توليد الاختبار",
+  "settings.credits.qaLoop": "تكلفة QA Loop",
+  "settings.email.provider": "مزود البريد الإلكتروني",
+  "settings.email.fromAddress": "عنوان المرسل",
+  "settings.webhooks.endpoint": "نقطة نهاية Webhook",
+  "settings.webhooks.secret": "مفتاح Webhook السري",
+  "settings.security.maxLoginAttempts": "الحد الأقصى لمحاولات تسجيل الدخول",
+  "settings.security.sessionTimeout": "مهلة الجلسة (بالدقائق)"
+}

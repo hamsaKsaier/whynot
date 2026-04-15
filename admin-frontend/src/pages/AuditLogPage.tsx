@@ -1,136 +1,270 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { getAuditLog } from '../services/api';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ChevronDown } from 'lucide-react'
+import { Badge } from '../components/ui/badge'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { FilterBar } from '../components/admin/FilterBar'
+import { PaginatedTable, type Column } from '../components/admin/PaginatedTable'
+import { DateRangePicker } from '../components/admin/DateRangePicker'
+import { ExportMenu } from '../components/admin/ExportMenu'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@radix-ui/react-collapsible'
+import { getAuditLog } from '../services/api'
 
-export const AuditLogPage: React.FC = () => {
-  const [entries, setEntries] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [actionFilter, setActionFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const limit = 30;
+interface AuditEntry {
+  id: string
+  created_at: string
+  actor_email?: string
+  actor_id?: string
+  action: string
+  target_type?: string
+  target_id?: string
+  details?: Record<string, unknown>
+}
+
+const actionOptions = [
+  { label: 'Role Change', value: 'user.role_change' },
+  { label: 'User Suspend', value: 'user.suspend' },
+  { label: 'User Unsuspend', value: 'user.unsuspend' },
+  { label: 'Impersonate', value: 'user.impersonate' },
+  { label: 'Credits Grant', value: 'credits.grant' },
+  { label: 'Credits Revoke', value: 'credits.revoke' },
+  { label: 'Plan Archive', value: 'plan.archive' },
+  { label: 'Plan Restore', value: 'plan.restore' },
+  { label: 'Settings Update', value: 'settings.update' },
+  { label: 'Billing Config', value: 'billing_config.update' },
+  { label: 'Feature Flag Override', value: 'feature_flag.override_set' },
+  { label: 'Announcement Create', value: 'announcement.create' },
+  { label: 'Announcement Update', value: 'announcement.update' },
+  { label: 'Announcement Delete', value: 'announcement.delete' },
+]
+
+const actionStyles: Record<string, string> = {
+  'user.role_change': 'bg-sky-50 text-sky-900 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300',
+  'user.suspend': 'bg-red-50 text-red-900 border-red-200 dark:bg-red-900/20 dark:text-red-300',
+  'user.unsuspend': 'bg-green-50 text-green-900 border-green-200 dark:bg-green-900/20 dark:text-green-300',
+  'user.impersonate': 'bg-yellow-50 text-yellow-900 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300',
+  'credits.grant': 'bg-green-50 text-green-900 border-green-200 dark:bg-green-900/20 dark:text-green-300',
+  'credits.revoke': 'bg-red-50 text-red-900 border-red-200 dark:bg-red-900/20 dark:text-red-300',
+  'announcement.delete': 'bg-red-50 text-red-900 border-red-200 dark:bg-red-900/20 dark:text-red-300',
+  'billing_config.update': 'bg-purple-50 text-purple-900 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300',
+  'feature_flag.override_set': 'bg-indigo-50 text-indigo-900 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300',
+}
+
+const fmt = (iso: string) =>
+  Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
+
+function JsonViewer({ data, label }: { data: unknown; label: string }) {
+  if (data === undefined || data === null) return null
+  return (
+    <div className="space-y-1">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <pre className="text-xs bg-muted p-2 rounded-md overflow-auto max-h-32">
+        {JSON.stringify(data, null, 2)}
+      </pre>
+    </div>
+  )
+}
+
+function DetailsCell({ details }: { details?: Record<string, unknown> }) {
+  if (!details || Object.keys(details).length === 0) return <span className="text-muted-foreground">-</span>
+
+  const hasBefore = 'before' in details
+  const hasAfter = 'after' in details
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
+        <ChevronDown className="h-3.5 w-3.5" />
+        <span className="truncate max-w-[200px]">{JSON.stringify(details)}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {hasBefore || hasAfter ? (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <JsonViewer data={details.before} label="Before" />
+            <JsonViewer data={details.after} label="After" />
+            {Object.keys(details).filter(k => k !== 'before' && k !== 'after').length > 0 && (
+              <div className="col-span-2">
+                <JsonViewer
+                  data={Object.fromEntries(Object.entries(details).filter(([k]) => k !== 'before' && k !== 'after'))}
+                  label="Metadata"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <pre className="mt-2 text-xs bg-muted p-2 rounded-md overflow-auto max-h-40">
+            {JSON.stringify(details, null, 2)}
+          </pre>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+export function AuditLogPage() {
+  const { t } = useTranslation('admin')
+  const [entries, setEntries] = useState<AuditEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [actionFilter, setActionFilter] = useState('__all__')
+  const [dateRange, setDateRange] = useState({ from: '', to: '' })
+
+  const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const cursorStack = useRef<string[]>([])
+  const [pageNum, setPageNum] = useState(1)
+  const limit = 30
 
   const fetchLog = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const data = await getAuditLog({
-        offset,
+        cursor: currentCursor,
         limit,
-        action: actionFilter || undefined,
-      });
-      setEntries(data.entries || []);
-      setTotal(data.total || 0);
+        action: actionFilter === '__all__' ? undefined : actionFilter,
+        from: dateRange.from || undefined,
+        to: dateRange.to ? `${dateRange.to}T23:59:59.999Z` : undefined,
+      })
+      setEntries(data.entries || [])
+      setNextCursor(data.nextCursor || null)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [offset, actionFilter]);
+  }, [currentCursor, actionFilter, dateRange])
 
-  useEffect(() => { fetchLog(); }, [fetchLog]);
+  useEffect(() => {
+    fetchLog()
+  }, [fetchLog])
 
-  const actionColors: Record<string, string> = {
-    'user.role_change': 'bg-sky-900/30 text-sky-300',
-    'user.suspend': 'bg-red-900/30 text-red-300',
-    'user.unsuspend': 'bg-green-900/30 text-green-300',
-    'user.impersonate': 'bg-yellow-900/30 text-yellow-300',
-    'credits.grant': 'bg-green-900/30 text-green-300',
-    'credits.revoke': 'bg-red-900/30 text-red-300',
-    'plan.archive': 'bg-slate-800 text-slate-200',
-    'plan.restore': 'bg-blue-900/30 text-blue-300',
-    'settings.update': 'bg-sky-900/30 text-sky-300',
-    'announcement.create': 'bg-blue-900/30 text-blue-300',
-    'announcement.update': 'bg-yellow-900/30 text-yellow-300',
-    'announcement.delete': 'bg-red-900/30 text-red-300',
-  };
+  const goNextPage = () => {
+    if (!nextCursor) return
+    cursorStack.current.push(currentCursor || '')
+    setCurrentCursor(nextCursor)
+    setPageNum(p => p + 1)
+  }
+
+  const goPrevPage = () => {
+    if (cursorStack.current.length === 0) return
+    const prev = cursorStack.current.pop()
+    setCurrentCursor(prev || undefined)
+    setPageNum(p => Math.max(1, p - 1))
+  }
+
+  const resetPagination = () => {
+    cursorStack.current = []
+    setCurrentCursor(undefined)
+    setNextCursor(null)
+    setPageNum(1)
+  }
+
+  const handleExportJSON = () => {
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `audit-log-page-${pageNum}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleExportCSV = () => {
+    const headers = ['Time', 'Actor', 'Action', 'Target Type', 'Target ID', 'Details']
+    const rows = entries.map(e => [
+      e.created_at,
+      e.actor_email || e.actor_id || 'System',
+      e.action,
+      e.target_type || '',
+      e.target_id || '',
+      JSON.stringify(e.details || {}),
+    ])
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `audit-log-page-${pageNum}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const columns: Column<AuditEntry>[] = [
+    {
+      key: 'time',
+      header: t('admin.audit.time', 'Time'),
+      render: (r) => <span className="text-muted-foreground whitespace-nowrap text-sm">{fmt(r.created_at)}</span>,
+    },
+    {
+      key: 'actor',
+      header: t('admin.audit.actor', 'Actor'),
+      render: (r) => <span className="text-sm">{r.actor_email || r.actor_id?.slice(0, 8) || 'System'}</span>,
+    },
+    {
+      key: 'action',
+      header: t('admin.audit.action', 'Action'),
+      render: (r) => (
+        <Badge variant="outline" className={actionStyles[r.action] ?? ''}>
+          {r.action}
+        </Badge>
+      ),
+    },
+    {
+      key: 'target',
+      header: t('admin.audit.target', 'Target'),
+      render: (r) =>
+        r.target_type ? (
+          <code className="text-xs">{r.target_type}:{r.target_id?.slice(0, 8)}</code>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
+    },
+    {
+      key: 'details',
+      header: t('admin.audit.details', 'Details'),
+      render: (r) => <DetailsCell details={r.details} />,
+    },
+  ]
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Audit Log</h1>
-        <select
-          value={actionFilter}
-          onChange={(e) => { setActionFilter(e.target.value); setOffset(0); }}
-          className="px-3 py-2 border border-slate-600 rounded-lg text-sm"
-        >
-          <option value="">All Actions</option>
-          <option value="user.role_change">Role Change</option>
-          <option value="user.suspend">User Suspend</option>
-          <option value="user.unsuspend">User Unsuspend</option>
-          <option value="user.impersonate">Impersonate</option>
-          <option value="credits.grant">Credits Grant</option>
-          <option value="credits.revoke">Credits Revoke</option>
-          <option value="plan.archive">Plan Archive</option>
-          <option value="plan.restore">Plan Restore</option>
-          <option value="settings.update">Settings Update</option>
-          <option value="announcement.create">Announcement Create</option>
-          <option value="announcement.update">Announcement Update</option>
-          <option value="announcement.delete">Announcement Delete</option>
-        </select>
-      </div>
-
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-700">
-          <thead className="bg-slate-900">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Time</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Actor</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Action</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Target</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Details</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700">
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 5 }).map((__, j) => (
-                  <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-700 rounded animate-pulse" /></td>
-                ))}</tr>
-              ))
-            ) : entries.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">No audit entries found</td></tr>
-            ) : entries.map((entry: any) => (
-              <tr key={entry.id} className="hover:bg-slate-900">
-                <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">
-                  {new Date(entry.created_at).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-200">
-                  {entry.actor_email || entry.actor_id?.slice(0, 8) || 'System'}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${actionColors[entry.action] || 'bg-slate-800 text-slate-200'}`}>
-                    {entry.action}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-400">
-                  {entry.target_type && (
-                    <span className="font-mono text-xs">
-                      {entry.target_type}:{entry.target_id?.slice(0, 8)}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-400 max-w-xs truncate">
-                  {entry.details && Object.keys(entry.details).length > 0
-                    ? JSON.stringify(entry.details)
-                    : '-'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {Math.ceil(total / limit) > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-400">Page {Math.floor(offset / limit) + 1} of {Math.ceil(total / limit)}</span>
+      <AdminPageHeader
+        title={t('admin.audit.title', 'Audit Log')}
+        actions={
           <div className="flex gap-2">
-            <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))} className="p-2 border rounded-lg disabled:opacity-50">
-              <FiChevronLeft className="h-4 w-4" />
-            </button>
-            <button disabled={offset + limit >= total} onClick={() => setOffset(offset + limit)} className="p-2 border rounded-lg disabled:opacity-50">
-              <FiChevronRight className="h-4 w-4" />
-            </button>
+            <DateRangePicker
+              value={dateRange}
+              onChange={(r) => { setDateRange(r); resetPagination() }}
+            />
+            <ExportMenu onExportCSV={handleExportCSV} onExportJSON={handleExportJSON} />
           </div>
-        </div>
-      )}
+        }
+      />
+
+      <FilterBar
+        filters={[
+          {
+            key: 'action',
+            label: t('admin.audit.allActions', 'All Actions'),
+            options: actionOptions,
+            value: actionFilter,
+            onChange: (v) => { setActionFilter(v); resetPagination() },
+          },
+        ]}
+      />
+
+      <PaginatedTable
+        columns={columns}
+        data={entries}
+        loading={loading}
+        rowKey={(r) => r.id}
+        emptyMessage={t('admin.audit.empty', 'No audit entries found')}
+        skeletonRows={8}
+        hasNextPage={!!nextCursor}
+        hasPrevPage={cursorStack.current.length > 0}
+        onNextPage={goNextPage}
+        onPrevPage={goPrevPage}
+        pageInfo={`${t('admin.audit.page', 'Page')} ${pageNum}`}
+      />
     </div>
-  );
-};
+  )
+}
+
+export { AuditLogPage as default }

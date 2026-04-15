@@ -1,5 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { FiUpload, FiFile, FiX, FiCheck, FiEye, FiTrash2, FiFileText } from 'react-icons/fi';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Switch } from '../ui/switch';
+import { Upload, File, X, Check, Eye, Trash2, FileText, Loader2 } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 export interface UploadedDocument {
   id: string;
@@ -53,13 +58,22 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const getFileTypeIcon = (fileType: string): React.ReactNode => {
     switch (fileType) {
       case 'markdown':
-        return <FiFileText className="text-blue-500" />;
+        return <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
       case 'pdf':
-        return <FiFile className="text-red-500" />;
+        return <File className="h-4 w-4 text-red-500 dark:text-red-400" />;
       case 'html':
-        return <FiFile className="text-orange-500" />;
+        return <File className="h-4 w-4 text-orange-500 dark:text-orange-400" />;
       default:
-        return <FiFile className="text-slate-400" />;
+        return <File className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getFileTypeBadgeClass = (fileType: string): string => {
+    switch (fileType) {
+      case 'markdown': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
+      case 'pdf': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
+      case 'html': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -143,19 +157,18 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   return (
     <div className="space-y-4">
       {/* Upload Zone */}
-      <div
+      <Card
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !disabled && fileInputRef.current?.click()}
-        className={`
-          border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-          ${isDragging
-            ? 'border-sky-500 bg-sky-900/20'
-            : 'border-slate-700 hover:border-sky-400'
-          }
-          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
+        className={cn(
+          'border-2 border-dashed p-6 text-center cursor-pointer transition-colors duration-150',
+          isDragging
+            ? 'border-primary bg-primary/5'
+            : 'border-border hover:border-primary/50',
+          disabled && 'opacity-50 cursor-not-allowed'
+        )}
       >
         <input
           ref={fileInputRef}
@@ -168,56 +181,55 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
         {uploading ? (
           <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500 mb-2" />
-            <span className="text-sm text-slate-400">Uploading...</span>
+            <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+            <span className="text-sm text-muted-foreground">Uploading...</span>
           </div>
         ) : (
           <>
-            <FiUpload className="mx-auto h-10 w-10 text-slate-500 mb-2" />
-            <p className="text-sm text-slate-400">
-              <span className="font-medium text-sky-600">
+            <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-primary">
                 Click to upload
               </span>
               {' '}or drag and drop
             </p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {acceptedTypes.join(', ')} up to {formatFileSize(maxFileSize)}
             </p>
           </>
         )}
-      </div>
+      </Card>
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-900/20 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2">
-          <FiX className="flex-shrink-0" />
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm p-3 rounded-lg border border-red-200 dark:border-red-800 flex items-center gap-2">
+          <X className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setError(null)}
-            className="ml-auto hover:bg-red-900/30 p-1 rounded"
+            className="ms-auto h-6 w-6 text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200"
           >
-            <FiX />
-          </button>
+            <X className="h-3 w-3" />
+          </Button>
         </div>
       )}
 
       {/* Document List */}
       {documents.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-slate-200">
+          <h4 className="text-sm font-medium text-foreground">
             Uploaded Documents ({documents.length})
           </h4>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {documents.map((doc) => (
-              <div
+              <Card
                 key={doc.id}
-                className={`
-                  flex items-center gap-3 p-3 rounded-lg border transition-colors
-                  ${doc.isActive
-                    ? 'bg-slate-800 border-slate-700'
-                    : 'bg-slate-900 border-slate-700 opacity-60'
-                  }
-                `}
+                className={cn(
+                  'flex items-center gap-3 p-3',
+                  !doc.isActive && 'opacity-60'
+                )}
               >
                 {/* File Icon */}
                 <div className="flex-shrink-0">
@@ -226,61 +238,66 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
                 {/* File Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {doc.filename}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     {formatFileSize(doc.fileSizeBytes)}
-                    {doc.estimatedTokens && ` • ~${doc.estimatedTokens.toLocaleString()} tokens`}
-                    {doc.chunkCount > 1 && ` • ${doc.chunkCount} chunks`}
+                    {doc.estimatedTokens && ` \u00B7 ~${doc.estimatedTokens.toLocaleString()} tokens`}
+                    {doc.chunkCount > 1 && ` \u00B7 ${doc.chunkCount} chunks`}
                   </p>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
                   {/* Toggle Active */}
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => onToggle(doc.id, !doc.isActive)}
-                    className={`
-                      p-1.5 rounded-lg transition-colors
-                      ${doc.isActive
-                        ? 'text-green-600 hover:bg-green-900/20 hover:bg-green-900/20'
-                        : 'text-slate-500 hover:bg-slate-900'
-                      }
-                    `}
+                    className={cn(
+                      'h-8 w-8',
+                      doc.isActive
+                        ? 'text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300'
+                        : 'text-muted-foreground'
+                    )}
                     title={doc.isActive ? 'Click to disable' : 'Click to enable'}
                   >
-                    <FiCheck />
-                  </button>
+                    <Check className="h-4 w-4" />
+                  </Button>
 
                   {/* Preview */}
                   {onPreview && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onPreview(doc)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-400 hover:bg-slate-900 transition-colors"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       title="Preview"
                     >
-                      <FiEye />
-                    </button>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   )}
 
                   {/* Delete */}
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleDeleteClick(doc.id)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-900/20 transition-colors"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     title="Delete"
                   >
-                    <FiTrash2 />
-                  </button>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
       )}
 
       {/* Help Text */}
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-muted-foreground">
         Upload PRDs, specifications, or documentation to help the AI understand your application better.
         Active documents will be included in the AI&apos;s context.
       </p>

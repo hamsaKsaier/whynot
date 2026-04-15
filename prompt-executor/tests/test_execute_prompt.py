@@ -271,7 +271,14 @@ class TestExecutePromptWithRetry:
         assert ok is False
         assert fatal is False
 
-    def test_exponential_backoff(self, runtime_files, fake_env):
+    def test_fixed_retry_wait(self, runtime_files, fake_env):
+        """Retry wait is fixed at retry_wait_min — no doubling, no exponential backoff.
+
+        The docstring on execute_prompt_with_retry is explicit: "The wait
+        between attempts is exactly ``retry_wait_min`` minutes every time
+        — no exponential backoff, no doubling." This guards against
+        accidental regression to the old doubling behavior.
+        """
         prompt = runtime_files["log"].parent / "test.md"
         prompt.write_text("stuff")
         with (
@@ -282,4 +289,4 @@ class TestExecutePromptWithRetry:
             execute_prompt_with_retry(prompt, 3, 10, "glm-5.1", BACKEND_OPENCODE)
         assert mock_sleep.call_count == 2
         assert mock_sleep.call_args_list[0][0][0] == 10
-        assert mock_sleep.call_args_list[1][0][0] == 20
+        assert mock_sleep.call_args_list[1][0][0] == 10

@@ -1,0 +1,23 @@
+{
+  "settings.title": "Paramètres système",
+  "settings.tabs.general": "Général",
+  "settings.tabs.credits": "Coûts en crédits",
+  "settings.tabs.email": "E-mail",
+  "settings.tabs.webhooks": "Webhooks",
+  "settings.tabs.security": "Sécurité",
+  "settings.noSettings": "Aucun paramètre dans cette catégorie.",
+  "settings.saveFailed": "Échec de l'enregistrement",
+  "settings.saveSuccess": "Paramètres enregistrés",
+  "settings.general.siteName": "Nom du site",
+  "settings.general.supportEmail": "E-mail du support",
+  "settings.general.maintenanceMode": "Mode maintenance",
+  "settings.credits.testExecution": "Coût d'exécution de test",
+  "settings.credits.testGeneration": "Coût de génération de test",
+  "settings.credits.qaLoop": "Coût du QA Loop",
+  "settings.email.provider": "Fournisseur d'e-mails",
+  "settings.email.fromAddress": "Adresse d'expédition",
+  "settings.webhooks.endpoint": "Point de terminaison webhook",
+  "settings.webhooks.secret": "Secret webhook",
+  "settings.security.maxLoginAttempts": "Nombre maximal de tentatives de connexion",
+  "settings.security.sessionTimeout": "Expiration de session (minutes)"
+}

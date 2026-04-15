@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import { Card, CardContent } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
+import { ChevronRight, CheckCircle, AlertCircle, Video } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { QALoopBug } from '../../services/qa-loop-api';
 import { CreateTaskButton } from './CreateTaskButton';
 import { AutoFixButton } from './AutoFixButton';
@@ -16,63 +22,63 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
   const reproSteps = Array.isArray(bug.reproduction_steps) ? bug.reproduction_steps : [];
 
   return (
-    <div className="bg-slate-900 rounded-lg border-l-4 border-red-400 overflow-hidden">
+    <Card className="overflow-hidden border-s-4 border-s-red-400 dark:border-s-red-500">
       <div
-        className="p-3 cursor-pointer hover:bg-slate-900 transition-colors"
+        className="p-3 cursor-pointer hover:bg-muted/50 transition-colors duration-150"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <svg
-              className={`w-3 h-3 text-slate-500 transition-transform ${expanded ? 'rotate-90' : ''}`}
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-            <span className="font-medium text-white">{bug.title}</span>
+            <ChevronRight
+              className={cn(
+                'h-3 w-3 text-muted-foreground transition-transform duration-150 rtl:scale-x-[-1]',
+                expanded && 'rotate-90'
+              )}
+            />
+            <span className="font-medium text-foreground">{bug.title}</span>
           </div>
           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
             <AutoFixButton bugId={bug.id} bugTitle={bug.title} />
             <CreateTaskButton bugId={bug.id} bugTitle={bug.title} />
             {bug.status === 'confirmed' ? (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 flex items-center gap-1">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800">
+                <CheckCircle className="h-3 w-3" />
                 Verified
-              </span>
+              </Badge>
             ) : (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-400 flex items-center gap-1">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <Badge variant="outline" className="gap-1 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800">
+                <AlertCircle className="h-3 w-3" />
                 AI Observed
-              </span>
+              </Badge>
             )}
-            <span className={`text-xs px-2 py-1 rounded ${severityColor(bug.severity)}`}>{bug.severity}</span>
+            <Badge variant="outline" className={severityColor(bug.severity)}>
+              {bug.severity}
+            </Badge>
           </div>
         </div>
-        {bug.description && <p className="text-sm text-slate-400 mt-1 ml-5">{bug.description}</p>}
-        <div className="text-xs text-slate-500 mt-2 ml-5 flex items-center gap-3">
-          {bug.category && <span className="bg-slate-700 px-1.5 py-0.5 rounded">{bug.category}</span>}
-          {bug.bug_type && <span className="bg-slate-700 px-1.5 py-0.5 rounded">{bug.bug_type}</span>}
+        {bug.description && <p className="text-sm text-muted-foreground mt-1 ms-5">{bug.description}</p>}
+        <div className="text-xs text-muted-foreground mt-2 ms-5 flex items-center gap-3">
+          {bug.category && <Badge variant="secondary" className="text-xs px-1.5 py-0">{bug.category}</Badge>}
+          {bug.bug_type && <Badge variant="secondary" className="text-xs px-1.5 py-0">{bug.bug_type}</Badge>}
           {bug.page_url && <span className="truncate max-w-xs">{safePathname(bug.page_url)}</span>}
-          <span className={bug.status === 'open' ? 'text-red-500' : 'text-green-500'}>{bug.status}</span>
+          <span className={bug.status === 'open' ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}>{bug.status}</span>
           {bug.video_path && (
-            <span className="text-blue-500 flex items-center gap-0.5" title="Video recording available">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+            <span className="text-blue-500 dark:text-blue-400 flex items-center gap-0.5" title="Video recording available">
+              <Video className="h-3 w-3" />
             </span>
           )}
         </div>
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-slate-700 mt-1 pt-3 ml-5 space-y-3">
+        <div className="px-3 pb-3 ms-5 space-y-3">
+          <Separator />
           {reproSteps.length > 0 && (
             <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-1">Reproduction Steps</div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Reproduction Steps</div>
               <ol className="list-decimal list-inside space-y-1">
                 {reproSteps.map((step: any, i: number) => (
-                  <li key={i} className="text-sm text-slate-200">
+                  <li key={i} className="text-sm text-foreground">
                     {typeof step === 'string' ? step : step.description || step.action || JSON.stringify(step)}
                   </li>
                 ))}
@@ -82,12 +88,12 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
 
           {bug.page_url && (
             <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-1">Page URL</div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Page URL</div>
               <a
                 href={bug.page_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary-600 hover:text-primary-700 break-all"
+                className="text-sm text-primary hover:text-primary/80 break-all"
               >
                 {bug.page_url}
               </a>
@@ -96,7 +102,7 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
 
           {bug.video_path && (
             <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-1">Session Recording</div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Session Recording</div>
               <video
                 controls
                 preload="metadata"
@@ -109,6 +115,6 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 };

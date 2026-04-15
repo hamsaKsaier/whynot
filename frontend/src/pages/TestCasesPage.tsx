@@ -1,14 +1,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiPlay, FiEdit, FiTrash2, FiSave, FiX, FiGlobe, FiSearch, FiFilter } from 'react-icons/fi';
-import { Card } from '../components/common/Card';
-import { Button } from '../components/common/Button';
-import { Alert } from '../components/common/Alert';
-import { ConfirmDialog } from '../components/common/ConfirmDialog';
-
-import { EmptyState } from '../components/common/EmptyState';
-import { SkeletonCard } from '../components/common/SkeletonCard';
-import { QuickActions } from '../components/common/QuickActions';
+import { Plus, Play, Pencil, Trash2, Save, X, Globe, Search, Filter } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Skeleton } from '../components/ui/skeleton';
+import { Separator } from '../components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { cn } from '../lib/utils';
 import { useToastContext } from '../contexts/ToastContext';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getTestCases, updateTestCase, deleteTestCase, executeTest } from '../services/api';
@@ -168,137 +183,143 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
   return (
     <div>
       {!embedded && (
-        <div className="page-header flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="page-title">Test Cases</h1>
-            <p className="page-subtitle">Manage and execute your saved test cases</p>
+            <h1 className="text-2xl font-semibold text-foreground">Test Cases</h1>
+            <p className="text-muted-foreground mt-1">Manage and execute your saved test cases</p>
           </div>
-          <Button
-            className="flex items-center space-x-2"
-            onClick={() => navigate('/qa-loop')}
-          >
-            <FiPlus className="h-4 w-4" />
-            <span>New Test Case</span>
+          <Button onClick={() => navigate('/qa-loop')}>
+            <Plus className="h-4 w-4 me-2" />
+            New Test Case
           </Button>
         </div>
       )}
 
-      {/* Filter bar — only shown when there are test cases */}
+      {/* Filter bar -- only shown when there are test cases */}
       {testCases.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-900 rounded-xl border border-slate-700">
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-muted rounded-lg border border-border">
           {/* Search */}
           <div className="relative flex-1 min-w-[180px]">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or URL…"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400"
+              placeholder="Search by name or URL..."
+              className="ps-9"
             />
           </div>
 
           {/* Domain filter */}
           {uniqueDomains.length > 0 && (
-            <select
-              value={domainFilter}
-              onChange={(e) => setDomainFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400 text-slate-200"
-            >
-              <option value="">All domains</option>
-              {uniqueDomains.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
+            <Select value={domainFilter} onValueChange={setDomainFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All domains" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All domains</SelectItem>
+                {uniqueDomains.map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
 
           {/* Status filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400 text-slate-200"
-          >
-            <option value="all">All statuses</option>
-            <option value="passed">Passed</option>
-            <option value="failed">Failed</option>
-            <option value="not_run">Not run</option>
-          </select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="passed">Passed</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="not_run">Not run</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Clear filters */}
           {hasActiveFilters && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-900 transition-colors"
             >
-              <FiX className="h-3 w-3" /> Clear
-            </button>
+              <X className="h-3 w-3 me-1" />
+              Clear
+            </Button>
           )}
 
           {/* Result count */}
-          <span className="text-xs text-slate-500 ml-auto">
+          <span className="text-xs text-muted-foreground ms-auto">
             {filteredTestCases.length} of {testCases.length}
           </span>
         </div>
       )}
 
       {error && (
-        <Alert
-          type="error"
-          title="Error"
-          message={error}
-          suggestions={[
-            'Check your network connection',
-            'Verify that the test case still exists',
-            'Try refreshing the page',
-          ]}
-          actions={[
-            {
-              label: 'Retry',
-              onClick: () => {
-                setError(null);
-                fetchTestCases();
-              },
-              variant: 'primary',
-            },
-            {
-              label: 'Dismiss',
-              onClick: () => setError(null),
-              variant: 'secondary',
-            },
-          ]}
-          onClose={() => setError(null)}
-        />
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setError(null); fetchTestCases(); }}>
+                Retry
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+                Dismiss
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {loading && testCases.length === 0 ? (
-        <div className="card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <SkeletonCard count={3} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-1/2" />
+                <Separator />
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : testCases.length === 0 ? (
         <Card>
-          <EmptyState
-            icon={<FiPlay />}
-            title="No test cases yet"
-            description="Test cases are generated from user stories. Create a project and add user stories to get started"
-            action={
-              <Button onClick={() => navigate('/qa-loop')}>
-                <FiPlus className="mr-2" />
-                Create Your First Test Case
-              </Button>
-            }
-            tip="Tip: Navigate to a project, add a user story, then generate test cases"
-          />
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Play className="h-8 w-8 text-muted-foreground mb-3" />
+            <h3 className="font-semibold text-foreground mb-1">No test cases yet</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
+              Test cases are generated from user stories. Create a project and add user stories to get started
+            </p>
+            <Button onClick={() => navigate('/qa-loop')}>
+              <Plus className="h-4 w-4 me-2" />
+              Create Your First Test Case
+            </Button>
+            <p className="text-xs text-muted-foreground mt-3">
+              Tip: Navigate to a project, add a user story, then generate test cases
+            </p>
+          </CardContent>
         </Card>
       ) : filteredTestCases.length === 0 ? (
-        <Card className="text-center py-12">
-          <FiFilter className="h-8 w-8 text-slate-500 mx-auto mb-3" />
-          <p className="text-slate-400 text-sm mb-2">No test cases match your filters</p>
-          <button
-            onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-          >
-            Clear filters
-          </button>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Filter className="h-8 w-8 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground text-sm mb-2">No test cases match your filters</p>
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+            >
+              Clear filters
+            </Button>
+          </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -307,100 +328,124 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
             const isRunning = runningTestId === testCase.id;
 
             return (
-              <Card key={testCase.id} className="p-4" hoverable>
-                {isEditing ? (
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Test case name"
-                    />
-                    <textarea
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                      rows={3}
-                      placeholder="Description"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleSaveEdit(testCase.id)}
-                        className="flex-1"
-                      >
-                        <FiSave className="mr-1" />
-                        Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={handleCancelEdit}
-                        className="flex-1"
-                      >
-                        <FiX className="mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="font-semibold text-white mb-2">{testCase.name}</h3>
-                    <p className="text-sm text-slate-400 mb-3 line-clamp-2">
-                      {testCase.description || 'No description'}
-                    </p>
-                    <div className="flex items-center text-xs text-slate-400 mb-3">
-                      <FiGlobe className="h-3 w-3 mr-1" />
-                      <span className="truncate">{testCase.website_url}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-700">
-                      <span className="text-xs text-slate-400">
-                        {testCase.steps.length} step{testCase.steps.length !== 1 ? 's' : ''}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleRunTest(testCase)}
-                          disabled={isRunning}
-                          className="p-2 rounded hover:bg-slate-900 transition-colors disabled:opacity-50"
-                          title="Run test"
+              <Card key={testCase.id} className="hover:bg-muted/50 transition-colors duration-150">
+                <CardContent className="p-4">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Test case name"
+                      />
+                      <Textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        rows={3}
+                        placeholder="Description"
+                        className="resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveEdit(testCase.id)}
+                          className="flex-1"
                         >
-                          <FiPlay className={`h-4 w-4 ${isRunning ? 'text-slate-500' : 'text-primary-600'}`} />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(testCase)}
-                          className="p-2 rounded hover:bg-slate-900 transition-colors"
-                          title="Edit"
+                          <Save className="h-4 w-4 me-1" />
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={handleCancelEdit}
+                          className="flex-1"
                         >
-                          <FiEdit className="h-4 w-4 text-slate-400" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(testCase)}
-                          className="p-2 rounded hover:bg-slate-900 transition-colors"
-                          title="Delete"
-                        >
-                          <FiTrash2 className="h-4 w-4 text-red-600" />
-                        </button>
+                          <X className="h-4 w-4 me-1" />
+                          Cancel
+                        </Button>
                       </div>
                     </div>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <h3 className="font-semibold text-foreground mb-2">{testCase.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {testCase.description || 'No description'}
+                      </p>
+                      <div className="flex items-center text-xs text-muted-foreground mb-3">
+                        <Globe className="h-3 w-3 me-1" />
+                        <span className="truncate">{testCase.website_url}</span>
+                      </div>
+                      <Separator className="mb-3" />
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {testCase.steps.length} step{testCase.steps.length !== 1 ? 's' : ''}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleRunTest(testCase)}
+                            disabled={isRunning}
+                            title="Run test"
+                          >
+                            <Play className={cn('h-4 w-4', isRunning ? 'text-muted-foreground' : 'text-primary')} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(testCase)}
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteClick(testCase)}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
               </Card>
             );
           })}
         </div>
       )}
 
-      <ConfirmDialog
-        isOpen={deleteConfirm.isOpen}
-        title="Delete Test Case"
-        message={`Are you sure you want to delete "${deleteConfirm.testCase?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeleteConfirm({ isOpen: false, testCase: null })}
-      />
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={deleteConfirm.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirm({ isOpen: false, testCase: null });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Test Case</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteConfirm.testCase?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteConfirm({ isOpen: false, testCase: null })}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

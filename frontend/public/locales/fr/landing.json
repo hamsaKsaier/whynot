@@ -1,0 +1,291 @@
+{
+  "nav": {
+    "features": "Fonctionnalités",
+    "pricing": "Tarifs",
+    "signIn": "Se connecter",
+    "getStarted": "Commencer",
+    "openApp": "Ouvrir l'application",
+    "menu": "Menu",
+    "changeLanguage": "Changer de langue",
+    "main": "Navigation principale"
+  },
+  "hero": {
+    "title": "Trouvez les bugs <highlight>avant vos utilisateurs</highlight>",
+    "subtitle": "Des agents IA autonomes qui explorent votre application web, trouvent les bugs et génèrent du code de test Playwright — pour déployer en toute confiance.",
+    "cta": "Essai gratuit",
+    "secondaryCta": "Voir comment ça marche",
+    "socialProof": "Adopté par les équipes d'ingénierie qui livrent des logiciels de qualité",
+    "noCreditCard": "Aucune carte bancaire requise"
+  },
+  "trustBar": {
+    "ariaLabel": "Indicateurs de confiance et technologies supportées",
+    "logoTitle": "Compatible avec tous les frameworks et stacks",
+    "badges": {
+      "soc2": "Conforme SOC 2",
+      "dataPrivacy": "Données chiffrées au repos",
+      "moneyBack": "Garantie de remboursement 30 jours",
+      "uptime": "SLA de disponibilité 99,9 %"
+    },
+    "stats": {
+      "bugsFound": "Bugs trouvés",
+      "testsGenerated": "Tests générés",
+      "teams": "Équipes utilisant WhyNot",
+      "accuracy": "Précision de détection"
+    }
+  },
+  "features": {
+    "heading": "Tout ce qu'il faut pour livrer des logiciels sans bugs",
+    "subheading": "Des tests autonomes pilotés par l'IA qui détectent les bugs, génèrent du code de test et maintiennent votre application fiable — sans écrire un seul test à la main.",
+    "items": {
+      "aiAgents": {
+        "title": "Agents IA autonomes",
+        "description": "Les agents IA explorent votre application comme de vrais utilisateurs, naviguant dans les flux et découvrant des cas limites que les humains manqueraient."
+      },
+      "bugDetection": {
+        "title": "Détection intelligente des bugs",
+        "description": "Détecte automatiquement les anomalies visuelles, les liens cassés, les erreurs console et les régressions fonctionnelles en temps réel."
+      },
+      "visualRegression": {
+        "title": "Tests de régression visuelle",
+        "description": "Des comparaisons de captures d'écran au pixel près détectent les changements d'interface avant la mise en production."
+      },
+      "playwrightGen": {
+        "title": "Génération de code Playwright",
+        "description": "Obtenez des scripts de test Playwright prêts pour la production, générés automatiquement pour chaque bug découvert."
+      },
+      "chaosTest": {
+        "title": "Tests de chaos",
+        "description": "Simulez des réseaux lents, des API manquantes et des bizarreries de navigateur pour tester votre application en conditions réelles."
+      },
+      "multiBrowser": {
+        "title": "Couverture multi-navigateurs",
+        "description": "Testez simultanément sur Chrome, Firefox et Safari pour garantir un comportement cohérent partout."
+      },
+      "testSuites": {
+        "title": "Suites de tests organisées",
+        "description": "Gérez les cas de test dans des dossiers, classez par priorité et suivez la couverture à travers les user stories et fonctionnalités."
+      },
+      "security": {
+        "title": "Analyse de sécurité",
+        "description": "Détecte les vulnérabilités courantes comme le XSS, les redirections ouvertes et les secrets exposés lors de chaque exécution de test."
+      }
+    }
+  },
+  "comparison": {
+    "title": "Comment WhyNot se compare",
+    "subtitle": "Découvrez pourquoi les équipes passent des frameworks de test manuels à l'assurance qualité autonome pilotée par l'IA.",
+    "featureColumn": "Fonctionnalité",
+    "competitors": {
+      "whynot": "WhyNot",
+      "selenium": "Selenium",
+      "cypress": "Cypress",
+      "playwrightManual": "Playwright",
+      "browserstack": "BrowserStack",
+      "lambdatest": "LambdaTest"
+    },
+    "features": {
+      "aiAutonomous": "Exploration autonome par IA",
+      "noCodeSetup": "Configuration sans code",
+      "bugDetection": "Détection automatique des bugs",
+      "testGeneration": "Génération de code de test",
+      "visualRegression": "Tests de régression visuelle",
+      "chaosTest": "Tests de chaos"
+    },
+    "values": {
+      "yes": "Oui",
+      "no": "Non",
+      "partial": "Partiel"
+    }
+  },
+  "testimonials": {
+    "heading": "Plébiscité par les équipes d'ingénierie",
+    "subheading": "Découvrez comment les équipes utilisent WhyNot pour trouver les bugs avant leurs utilisateurs.",
+    "items": {
+      "sarah": {
+        "quote": "Nous avons déployé WhyNot sur notre plateforme e-commerce et il a trouvé 23 bugs dans la première heure — dont un problème de tunnel de paiement qui nous coûtait des conversions. Le code Playwright généré a fait gagner des jours à notre équipe QA.",
+        "author": "Sarah Chen",
+        "title": "VP Ingénierie",
+        "company": "ShopFlow"
+      },
+      "marcus": {
+        "quote": "En tant que startup sans équipe QA dédiée, WhyNot c'est comme avoir un ingénieur test senior disponible 24h/24. Les agents IA explorent des chemins auxquels nous n'aurions jamais pensé, et les tests de chaos ont détecté une condition de concurrence qui aurait été un P0 en production.",
+        "author": "Marcus Johnson",
+        "title": "Directeur technique",
+        "company": "LaunchPad AI"
+      },
+      "elena": {
+        "quote": "Nous sommes passés de zéro tests automatisés à une couverture de régression complète en moins d'une semaine. WhyNot génère les scripts Playwright, nous révisons et fusionnons. Notre confiance dans les releases n'a jamais été aussi élevée.",
+        "author": "Elena Rodriguez",
+        "title": "Ingénieure QA principale",
+        "company": "Meridian Health"
+      }
+    }
+  },
+  "faq": {
+    "heading": "Questions fréquentes",
+    "subheading": "Tout ce que vous devez savoir sur WhyNot.",
+    "items": {
+      "howItWorks": {
+        "question": "Comment WhyNot trouve-t-il les bugs automatiquement ?",
+        "answer": "WhyNot déploie des agents IA autonomes qui naviguent dans votre application comme de vrais utilisateurs. Ils cliquent sur les boutons, remplissent les formulaires, explorent les parcours de navigation et surveillent les erreurs console, les mises en page cassées, les appels API échoués et les régressions visuelles — le tout sans écrire une seule ligne de code de test."
+      },
+      "integration": {
+        "question": "Comment intégrer WhyNot avec mon application ?",
+        "answer": "Fournissez simplement l'URL de votre application. WhyNot fonctionne avec toute application web, quelle que soit la stack technique — React, Vue, Angular, Next.js, Django, Rails, Laravel, WordPress ou tout autre framework. Aucun SDK ni modification de code nécessaire."
+      },
+      "pricing": {
+        "question": "Y a-t-il une offre gratuite ?",
+        "answer": "Oui ! Notre offre gratuite comprend 50 exécutions de tests par mois, jusqu'à 3 projets et un accès complet à la détection de bugs par IA et à la génération de code Playwright. Aucune carte bancaire nécessaire."
+      },
+      "security": {
+        "question": "Les données de mon application sont-elles sécurisées ?",
+        "answer": "Absolument. WhyNot exécute les tests dans des sandboxes de navigateur isolés. Nous ne stockons jamais les données de votre application, vos identifiants ou les informations utilisateur. Toutes les connexions sont chiffrées avec TLS et nous sommes conformes SOC 2."
+      },
+      "accuracy": {
+        "question": "Quelle est la précision de la détection des bugs ?",
+        "answer": "Notre IA atteint un taux de précision de 99,2 % avec très peu de faux positifs. Chaque bug signalé comprend des captures d'écran, des logs console, des traces réseau et du code Playwright généré pour que vous puissiez vérifier et reproduire instantanément."
+      }
+    },
+    "contactText": "Encore des questions ?",
+    "contactLink": "Contactez-nous"
+  },
+  "cta": {
+    "heading": "Commencez à trouver des bugs dès aujourd'hui",
+    "subheading": "Rejoignez des centaines d'équipes qui utilisent WhyNot pour déployer en toute confiance. Configuration en quelques minutes, aucune modification de code requise.",
+    "getStarted": "Commencer gratuitement",
+    "trustSignals": {
+      "freeTier": "Offre gratuite disponible",
+      "noCard": "Aucune carte bancaire requise",
+      "moneyBack": "Garantie de remboursement 30 jours"
+    }
+  },
+  "stickyBottomCTA": {
+    "ariaLabel": "Barre d'action rapide",
+    "text": "Trouvez les bugs avant vos utilisateurs.",
+    "cta": "Essai gratuit",
+    "dismiss": "Fermer"
+  },
+  "emailCapture": {
+    "placeholder": "Entrez votre email professionnel",
+    "ariaLabel": "Adresse email",
+    "cta": "Commencer gratuitement",
+    "sending": "Envoi en cours...",
+    "success": "Merci ! Nous vous contacterons bientôt.",
+    "error": "Une erreur est survenue. Veuillez réessayer.",
+    "invalidEmail": "Veuillez entrer une adresse email valide.",
+    "rateLimited": "Trop de tentatives. Veuillez réessayer plus tard."
+  },
+  "pricing": {
+    "heading": "Des tarifs simples et transparents",
+    "subheading": "Commencez gratuitement, évoluez quand vous avez besoin de plus.",
+    "monthly": "/mois",
+    "free": "Gratuit pour toujours",
+    "popular": "Le plus populaire",
+    "startFree": "Commencer gratuitement",
+    "getStarted": "Commencer",
+    "trialDays": "Essai gratuit de {{days}} jours",
+    "plans": {
+      "free": {
+        "name": "Gratuit",
+        "description": "Parfait pour essayer WhyNot sur vos projets personnels.",
+        "features": [
+          "50 exécutions de tests par mois",
+          "Jusqu'à 3 projets",
+          "Détection de bugs par IA",
+          "Génération de code Playwright",
+          "Support communautaire"
+        ]
+      },
+      "pro_byo": {
+        "name": "Pro (Vos clés)",
+        "description": "Pour les équipes qui veulent utiliser leurs propres clés de fournisseur IA.",
+        "features": [
+          "Exécutions illimitées",
+          "Projets illimités",
+          "Vos propres clés API",
+          "Tests de régression visuelle",
+          "Tests de chaos",
+          "Intégration CI/CD",
+          "Support prioritaire"
+        ]
+      },
+      "pro_managed": {
+        "name": "Pro (Géré)",
+        "description": "Puissance totale avec IA gérée par la plateforme et crédits à l'usage.",
+        "features": [
+          "Tout dans Pro (Vos clés)",
+          "Infrastructure IA gérée",
+          "Crédits à l'usage",
+          "Analyses avancées",
+          "Moniteurs personnalisés",
+          "SSO et gestion d'équipe",
+          "Support dédié"
+        ]
+      }
+    }
+  },
+  "payg": {
+    "heading": "Tarification à l'usage",
+    "subheading": "Payez uniquement ce que vous utilisez. Les crédits sont consommés par opération sur le plan Géré.",
+    "event": "Opération",
+    "credits": "Crédits",
+    "example": "Exemple",
+    "events": {
+      "test_generation": {
+        "name": "Génération de tests",
+        "example": "Générer 20 tests = 1 000 crédits"
+      },
+      "test_execution": {
+        "name": "Exécution de tests",
+        "example": "Exécuter 100 tests = 1 000 crédits"
+      },
+      "qa_loop_iteration": {
+        "name": "Itération de boucle QA",
+        "example": "30 itérations = 900 crédits"
+      },
+      "auto_fix_attempt": {
+        "name": "Tentative de correction auto",
+        "example": "10 corrections = 1 000 crédits"
+      },
+      "visual_regression": {
+        "name": "Régression visuelle",
+        "example": "50 comparaisons = 750 crédits"
+      },
+      "qa_monitor_session": {
+        "name": "Session de monitoring QA",
+        "example": "5 sessions = 1 000 crédits"
+      },
+      "ci_scan": {
+        "name": "Scan CI",
+        "example": "5 scans = 1 000 crédits"
+      }
+    },
+    "creditPack": "Les packs de crédits commencent à 10 $ pour 1 000 crédits.",
+    "workedExample": {
+      "heading": "Exemple concret",
+      "description": "Une équipe moyenne exécutant 50 générations de tests et 200 exécutions par mois :",
+      "items": [
+        "50 × génération de tests (50 crédits) = 2 500 crédits",
+        "200 × exécution de tests (10 crédits) = 2 000 crédits",
+        "10 × tentatives de correction auto (100 crédits) = 1 000 crédits"
+      ],
+      "total": "Total : 5 500 crédits ≈ 55 $/mois",
+      "note": "Plus l'abonnement de base à 49 $/mois."
+    }
+  },
+  "footer": {
+    "description": "Tests QA autonomes propulsés par des agents IA.",
+    "product": "Produit",
+    "features": "Fonctionnalités",
+    "pricing": "Tarifs",
+    "changelog": "Journal des modifications",
+    "company": "Entreprise",
+    "about": "À propos",
+    "blog": "Blog",
+    "contact": "Contact",
+    "legal": "Mentions légales",
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions d'utilisation",
+    "copyright": "© {{year}} WhyNot. Tous droits réservés."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "required": "{{field}} est requis",
+  "minLength": "{{field}} doit comporter au moins {{min}} caractères",
+  "maxLength": "{{field}} doit comporter au maximum {{max}} caractères",
+  "email": "Veuillez saisir une adresse e-mail valide",
+  "url": "Veuillez saisir une URL valide",
+  "number": "{{field}} doit être un nombre",
+  "positive": "{{field}} doit être un nombre positif",
+  "integer": "{{field}} doit être un nombre entier",
+  "boolean": "{{field}} doit être vrai ou faux",
+  "enum": "{{field}} doit être l'une des valeurs suivantes : {{values}}",
+  "array": "{{field}} doit être un tableau",
+  "uuid": "{{field}} doit être un UUID valide",
+  "date": "{{field}} doit être une date valide",
+  "passwordMismatch": "Les mots de passe ne correspondent pas",
+  "termsRequired": "Vous devez accepter les conditions"
+}

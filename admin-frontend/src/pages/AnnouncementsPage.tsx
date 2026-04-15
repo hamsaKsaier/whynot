@@ -1,212 +1,415 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../services/api';
-import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Plus, Pencil, Trash2, Loader2, Globe } from 'lucide-react'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Textarea } from '../components/ui/textarea'
+import { Switch } from '../components/ui/switch'
+import { Badge } from '../components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { PaginatedTable, type Column } from '../components/admin/PaginatedTable'
+import { ConfirmDialog } from '../components/admin/ConfirmDialog'
+import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../services/api'
 
-interface AnnouncementForm {
-  title: string;
-  body: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  is_active: boolean;
-  starts_at: string;
-  ends_at: string;
+const LANGUAGES = [
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
+]
+
+interface Announcement {
+  id: string
+  title: string
+  body?: string
+  type: 'info' | 'warning' | 'success' | 'error'
+  is_active: boolean
+  starts_at?: string
+  ends_at?: string
+  created_at: string
 }
 
-const emptyForm: AnnouncementForm = { title: '', body: '', type: 'info', is_active: true, starts_at: '', ends_at: '' };
+interface TranslationEntry {
+  title: string
+  body: string
+}
 
-export const AnnouncementsPage: React.FC = () => {
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<AnnouncementForm>(emptyForm);
-  const [saving, setSaving] = useState(false);
+type Translations = Record<string, TranslationEntry>
+
+interface FormState {
+  type: 'info' | 'warning' | 'success' | 'error'
+  is_active: boolean
+  starts_at: string
+  ends_at: string
+  translations: Translations
+}
+
+function emptyTranslations(): Translations {
+  const t: Translations = {}
+  for (const lang of LANGUAGES) {
+    t[lang.code] = { title: '', body: '' }
+  }
+  return t
+}
+
+const emptyForm: FormState = {
+  type: 'info',
+  is_active: true,
+  starts_at: '',
+  ends_at: '',
+  translations: emptyTranslations(),
+}
+
+function parseTranslations(announcement: Announcement): Translations {
+  const base = emptyTranslations()
+  base.en.title = announcement.title
+  if (announcement.body) {
+    try {
+      const parsed = JSON.parse(announcement.body)
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        for (const lang of LANGUAGES) {
+          if (parsed[lang.code]) {
+            base[lang.code] = {
+              title: parsed[lang.code].title || '',
+              body: parsed[lang.code].body || '',
+            }
+          }
+        }
+        return base
+      }
+    } catch {
+      // not JSON — treat as plain English body
+    }
+    base.en.body = announcement.body
+  }
+  return base
+}
+
+function serializeTranslations(translations: Translations): { title: string; body: string } {
+  return {
+    title: translations.en?.title || '',
+    body: JSON.stringify(translations),
+  }
+}
+
+const typeBadgeStyles: Record<string, string> = {
+  info: 'bg-blue-50 text-blue-900 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
+  warning: 'bg-yellow-50 text-yellow-900 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800',
+  success: 'bg-green-50 text-green-900 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
+  error: 'bg-red-50 text-red-900 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
+}
+
+const fmt = (iso?: string) =>
+  iso ? Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(iso)) : ''
+
+export function AnnouncementsPage() {
+  const { t } = useTranslation('admin')
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<FormState>(emptyForm)
+  const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null)
+  const [langTab, setLangTab] = useState('en')
 
   const fetchAll = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await getAnnouncements();
-      setAnnouncements(data.announcements || []);
+      const data = await getAnnouncements()
+      setAnnouncements(data.announcements || [])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    fetchAll()
+  }, [fetchAll])
 
   const openCreate = () => {
-    setForm(emptyForm);
-    setEditingId(null);
-    setShowModal(true);
-  };
+    setForm(emptyForm)
+    setEditingId(null)
+    setLangTab('en')
+    setDialogOpen(true)
+  }
 
-  const openEdit = (a: any) => {
+  const openEdit = (a: Announcement) => {
     setForm({
-      title: a.title,
-      body: a.body || '',
       type: a.type,
       is_active: a.is_active,
       starts_at: a.starts_at ? a.starts_at.slice(0, 16) : '',
       ends_at: a.ends_at ? a.ends_at.slice(0, 16) : '',
-    });
-    setEditingId(a.id);
-    setShowModal(true);
-  };
+      translations: parseTranslations(a),
+    })
+    setEditingId(a.id)
+    setLangTab('en')
+    setDialogOpen(true)
+  }
+
+  const updateTranslation = (lang: string, field: 'title' | 'body', value: string) => {
+    setForm((f) => ({
+      ...f,
+      translations: {
+        ...f.translations,
+        [lang]: { ...f.translations[lang], [field]: value },
+      },
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.title.trim()) return;
-    setSaving(true);
+    e.preventDefault()
+    if (!form.translations.en?.title?.trim()) return
+    setSaving(true)
     try {
+      const { title, body } = serializeTranslations(form.translations)
       const payload = {
-        title: form.title,
-        body: form.body || undefined,
+        title,
+        body,
         type: form.type,
         is_active: form.is_active,
         starts_at: form.starts_at || undefined,
         ends_at: form.ends_at || undefined,
-      };
-      if (editingId) {
-        await updateAnnouncement(editingId, payload);
-      } else {
-        await createAnnouncement(payload);
       }
-      setShowModal(false);
-      fetchAll();
+      if (editingId) {
+        await updateAnnouncement(editingId, payload)
+      } else {
+        await createAnnouncement(payload)
+      }
+      setDialogOpen(false)
+      fetchAll()
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this announcement?')) return;
-    await deleteAnnouncement(id);
-    fetchAll();
-  };
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    await deleteAnnouncement(deleteTarget.id)
+    setDeleteTarget(null)
+    fetchAll()
+  }
 
-  const typeBadge = (type: string) => {
-    const colors: Record<string, string> = {
-      info: 'bg-blue-900/30 text-blue-300',
-      warning: 'bg-yellow-900/30 text-yellow-300',
-      success: 'bg-green-900/30 text-green-300',
-      error: 'bg-red-900/30 text-red-300',
-    };
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[type] || colors.info}`}>{type}</span>;
-  };
+  const translatedCount = (a: Announcement): number => {
+    const tr = parseTranslations(a)
+    return LANGUAGES.filter(l => tr[l.code]?.title?.trim()).length
+  }
+
+  const columns: Column<Announcement>[] = [
+    { key: 'title', header: t('admin.announcements.title', 'Title'), render: (r) => <span className="font-medium">{r.title}</span> },
+    {
+      key: 'type',
+      header: t('admin.announcements.type', 'Type'),
+      render: (r) => (
+        <Badge variant="outline" className={`capitalize ${typeBadgeStyles[r.type] || ''}`}>
+          {r.type}
+        </Badge>
+      ),
+    },
+    {
+      key: 'langs',
+      header: t('admin.announcements.languages', 'Languages'),
+      render: (r) => (
+        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Globe className="h-3.5 w-3.5" />
+          {translatedCount(r)}/5
+        </span>
+      ),
+    },
+    {
+      key: 'active',
+      header: t('admin.announcements.active', 'Active'),
+      render: (r) => (
+        <span className={`h-2 w-2 rounded-full inline-block ${r.is_active ? 'bg-green-500' : 'bg-muted-foreground/30'}`} />
+      ),
+    },
+    {
+      key: 'schedule',
+      header: t('admin.announcements.schedule', 'Schedule'),
+      render: (r) => (
+        <span className="text-sm text-muted-foreground">
+          {r.starts_at ? fmt(r.starts_at) : t('admin.announcements.immediate', 'Immediate')}
+          {r.ends_at ? ` — ${fmt(r.ends_at)}` : ''}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'text-end',
+      render: (r) => (
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEdit(r) }} title={t('admin.announcements.edit', 'Edit')}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteTarget(r) }} title={t('admin.announcements.delete', 'Delete')}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Announcements</h1>
-        <button onClick={openCreate} className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 text-white text-sm font-medium rounded-lg hover:bg-sky-700">
-          <FiPlus className="h-4 w-4" /> New Announcement
-        </button>
-      </div>
+      <AdminPageHeader
+        title={t('admin.announcements.pageTitle', 'Announcements')}
+        actions={
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4 me-1.5" />
+            {t('admin.announcements.new', 'New Announcement')}
+          </Button>
+        }
+      />
 
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-700">
-          <thead className="bg-slate-900">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Title</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Type</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Active</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Schedule</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 5 }).map((__, j) => (
-                  <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-700 rounded animate-pulse" /></td>
-                ))}</tr>
-              ))
-            ) : announcements.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">No announcements</td></tr>
-            ) : announcements.map((a: any) => (
-              <tr key={a.id} className="hover:bg-slate-900">
-                <td className="px-4 py-3 text-sm font-medium text-white">{a.title}</td>
-                <td className="px-4 py-3">{typeBadge(a.type)}</td>
-                <td className="px-4 py-3">
-                  <span className={`h-2 w-2 rounded-full inline-block ${a.is_active ? 'bg-green-500' : 'bg-slate-600'}`} />
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-400">
-                  {a.starts_at ? new Date(a.starts_at).toLocaleDateString() : 'Immediate'}
-                  {a.ends_at ? ` — ${new Date(a.ends_at).toLocaleDateString()}` : ''}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => openEdit(a)} className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400" title="Edit">
-                    <FiEdit2 className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDelete(a.id)} className="p-1.5 hover:bg-red-900/20 rounded-lg text-red-500 ml-1" title="Delete">
-                    <FiTrash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PaginatedTable
+        columns={columns}
+        data={announcements}
+        loading={loading}
+        rowKey={(r) => r.id}
+        emptyMessage={t('admin.announcements.empty', 'No announcements')}
+      />
 
-      {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-slate-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-              <h2 className="text-lg font-semibold">{editingId ? 'Edit Announcement' : 'New Announcement'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-800 rounded"><FiX className="h-4 w-4" /></button>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingId
+                ? t('admin.announcements.editTitle', 'Edit Announcement')
+                : t('admin.announcements.newTitle', 'New Announcement')}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Tabs value={langTab} onValueChange={setLangTab}>
+              <TabsList className="w-full justify-start">
+                {LANGUAGES.map((lang) => (
+                  <TabsTrigger key={lang.code} value={lang.code} className="gap-1.5">
+                    <span>{lang.flag}</span>
+                    <span className="hidden sm:inline">{lang.label}</span>
+                    <span className="sm:hidden">{lang.code.toUpperCase()}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {LANGUAGES.map((lang) => (
+                <TabsContent key={lang.code} value={lang.code} className="space-y-3 mt-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`ann-title-${lang.code}`}>
+                      {t('admin.announcements.titleLabel', 'Title')} ({lang.label})
+                      {lang.code === 'en' && <span className="text-destructive ms-1">*</span>}
+                    </Label>
+                    <Input
+                      id={`ann-title-${lang.code}`}
+                      value={form.translations[lang.code]?.title || ''}
+                      onChange={(e) => updateTranslation(lang.code, 'title', e.target.value)}
+                      required={lang.code === 'en'}
+                      dir={lang.code === 'ar' ? 'rtl' : 'ltr'}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`ann-body-${lang.code}`}>
+                      {t('admin.announcements.bodyLabel', 'Body')} ({lang.label})
+                    </Label>
+                    <Textarea
+                      id={`ann-body-${lang.code}`}
+                      value={form.translations[lang.code]?.body || ''}
+                      onChange={(e) => updateTranslation(lang.code, 'body', e.target.value)}
+                      rows={3}
+                      dir={lang.code === 'ar' ? 'rtl' : 'ltr'}
+                    />
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>{t('admin.announcements.typeLabel', 'Type')}</Label>
+                <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v as any }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="success">Success</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end pb-1">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="ann-active"
+                    checked={form.is_active}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
+                  />
+                  <Label htmlFor="ann-active" className="cursor-pointer">
+                    {t('admin.announcements.activeLabel', 'Active')}
+                  </Label>
+                </div>
+              </div>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Title</label>
-                <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm" required />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="ann-start">{t('admin.announcements.startsAt', 'Starts At')}</Label>
+                <Input
+                  id="ann-start"
+                  type="datetime-local"
+                  value={form.starts_at}
+                  onChange={(e) => setForm((f) => ({ ...f, starts_at: e.target.value }))}
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Body</label>
-                <textarea value={form.body} onChange={(e) => setForm(f => ({ ...f, body: e.target.value }))}
-                  rows={3} className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm" />
+              <div className="space-y-1.5">
+                <Label htmlFor="ann-end">{t('admin.announcements.endsAt', 'Ends At')}</Label>
+                <Input
+                  id="ann-end"
+                  type="datetime-local"
+                  value={form.ends_at}
+                  onChange={(e) => setForm((f) => ({ ...f, ends_at: e.target.value }))}
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">Type</label>
-                  <select value={form.type} onChange={(e) => setForm(f => ({ ...f, type: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm">
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="success">Success</option>
-                    <option value="error">Error</option>
-                  </select>
-                </div>
-                <div className="flex items-end pb-1">
-                  <label className="inline-flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.is_active} onChange={(e) => setForm(f => ({ ...f, is_active: e.target.checked }))}
-                      className="rounded border-slate-600" />
-                    Active
-                  </label>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">Starts At</label>
-                  <input type="datetime-local" value={form.starts_at} onChange={(e) => setForm(f => ({ ...f, starts_at: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">Ends At</label>
-                  <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm(f => ({ ...f, ends_at: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 rounded-lg">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-2 bg-sky-600 text-white text-sm font-medium rounded-lg hover:bg-sky-700 disabled:opacity-50">
-                  {saving ? 'Saving...' : editingId ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                {t('admin.announcements.cancel', 'Cancel')}
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="h-4 w-4 me-1.5 animate-spin" />}
+                {editingId
+                  ? t('admin.announcements.update', 'Update')
+                  : t('admin.announcements.create', 'Create')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title={t('admin.announcements.deleteTitle', 'Delete Announcement')}
+        description={t('admin.announcements.deleteConfirm', `Are you sure you want to delete "${deleteTarget?.title}"? This cannot be undone.`)}
+        confirmText={t('admin.announcements.deleteBtn', 'Delete')}
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
     </div>
-  );
-};
+  )
+}
+
+export { AnnouncementsPage as default }

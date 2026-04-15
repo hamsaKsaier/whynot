@@ -17,6 +17,7 @@ import { asyncHandler, createError } from '../middleware/error-handler';
 import { validate } from '../middleware/validation';
 import { qaLoopSessionRateLimiter } from '../middleware/rate-limit';
 import { requireCredits, deductCredits } from '../middleware/credit-gate';
+import { recordUsageEvent } from '../utils/usage-tracker';
 import { requireFeature } from '../middleware/feature-gate';
 import { requireActiveSubscription } from '../middleware/subscription-check';
 import { createLogger } from '../../shared/logger/logger';
@@ -371,6 +372,12 @@ router.post(
       // Deduct credits after successful session creation
       if (req.workspaceId) {
         await deductCredits(req.workspaceId, 'QA_LOOP_SESSION_RESERVE', `Session ${response.data?.session?.id || 'new'}`).catch(() => {});
+        recordUsageEvent({
+          workspaceId: req.workspaceId,
+          userId: req.user?.id,
+          eventType: 'qa_loop_iteration',
+          metadata: { sessionId: response.data?.session?.id },
+        });
       }
       res.status(201).json(response.data);
     });

@@ -7,7 +7,11 @@
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '../../services/api';
-import { FiCheckCircle, FiAlertTriangle, FiLoader, FiClock } from 'react-icons/fi';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
+import { CheckCircle, AlertTriangle, Loader2, Clock } from 'lucide-react';
 
 interface AgentBoardEntry {
   agent_type: string;
@@ -32,13 +36,29 @@ const AGENT_META: Record<string, { icon: string; label: string }> = {
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'done':
-      return <span className="flex items-center gap-1 text-green-400 text-xs"><FiCheckCircle className="w-3.5 h-3.5" /> Done</span>;
+      return (
+        <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800">
+          <CheckCircle className="h-3 w-3" /> Done
+        </Badge>
+      );
     case 'working':
-      return <span className="flex items-center gap-1 text-sky-400 text-xs"><FiLoader className="w-3.5 h-3.5 animate-spin" /> Working</span>;
+      return (
+        <Badge variant="outline" className="gap-1 bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300 border-sky-200 dark:border-sky-800">
+          <Loader2 className="h-3 w-3 animate-spin" /> Working
+        </Badge>
+      );
     case 'error':
-      return <span className="flex items-center gap-1 text-red-400 text-xs"><FiAlertTriangle className="w-3.5 h-3.5" /> Error</span>;
+      return (
+        <Badge variant="outline" className="gap-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800">
+          <AlertTriangle className="h-3 w-3" /> Error
+        </Badge>
+      );
     default:
-      return <span className="flex items-center gap-1 text-slate-500 text-xs"><FiClock className="w-3.5 h-3.5" /> Idle</span>;
+      return (
+        <Badge variant="outline" className="gap-1 text-muted-foreground">
+          <Clock className="h-3 w-3" /> Idle
+        </Badge>
+      );
   }
 }
 
@@ -51,26 +71,26 @@ function AgentRow({ entry }: { entry: AgentBoardEntry }) {
   if (entry.api_endpoints_tested > 0) stats.push(`${entry.api_endpoints_tested} endpoints`);
 
   return (
-    <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-slate-800/60 border border-slate-700/40">
-      <span className="text-lg">{meta.icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-200">{meta.label}</span>
-          <StatusBadge status={entry.status} />
+    <Card className="shadow-none">
+      <CardContent className="flex items-center gap-3 py-2 px-3">
+        <span className="text-lg">{meta.icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">{meta.label}</span>
+            <StatusBadge status={entry.status} />
+          </div>
+          {entry.status === 'working' && entry.current_task && (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">{entry.current_task}</p>
+          )}
+          {stats.length > 0 && entry.status !== 'idle' && (
+            <p className="text-xs text-muted-foreground mt-0.5">{stats.join(' \u00B7 ')}</p>
+          )}
         </div>
-        {entry.status === 'working' && entry.current_task && (
-          <p className="text-xs text-slate-400 truncate mt-0.5">{entry.current_task}</p>
+        {entry.status === 'working' && entry.progress_pct > 0 && (
+          <Progress value={entry.progress_pct} className="w-12 h-1.5" />
         )}
-        {stats.length > 0 && entry.status !== 'idle' && (
-          <p className="text-xs text-slate-500 mt-0.5">{stats.join(' \u00B7 ')}</p>
-        )}
-      </div>
-      {entry.status === 'working' && entry.progress_pct > 0 && (
-        <div className="w-12 h-1.5 rounded-full bg-slate-700 overflow-hidden">
-          <div className="h-full bg-sky-500 rounded-full transition-all" style={{ width: `${entry.progress_pct}%` }} />
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -110,16 +130,22 @@ export const AgentProgressPanel: React.FC<AgentProgressPanelProps> = ({ sessionI
   const sorted = [...agents].sort((a, b) => order.indexOf(a.agent_type) - order.indexOf(b.agent_type));
 
   return (
-    <div className="rounded-xl border border-slate-700/40 bg-slate-900/80 p-4 mb-4">
-      <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-        <span className="text-base">{'\uD83E\uDD16'}</span> QA Team
-        {isRunning && <span className="text-xs text-sky-400 animate-pulse">Live</span>}
-      </h3>
-      <div className="space-y-2">
-        {sorted.map(entry => (
-          <AgentRow key={entry.agent_type} entry={entry} />
-        ))}
-      </div>
-    </div>
+    <Card className="mb-4">
+      <CardContent className="p-4">
+        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          <span className="text-base">{'\uD83E\uDD16'}</span> QA Team
+          {isRunning && (
+            <Badge variant="outline" className="text-xs bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300 border-sky-200 dark:border-sky-800">
+              Live
+            </Badge>
+          )}
+        </h3>
+        <div className="space-y-2">
+          {sorted.map(entry => (
+            <AgentRow key={entry.agent_type} entry={entry} />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

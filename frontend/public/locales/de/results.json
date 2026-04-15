@@ -1,0 +1,21 @@
+{
+  "results.title": "Testergebnisse",
+  "results.summary": "Zusammenfassung",
+  "results.passed": "Bestanden",
+  "results.failed": "Fehlgeschlagen",
+  "results.skipped": "Übersprungen",
+  "results.duration": "Dauer",
+  "results.startedAt": "Gestartet um",
+  "results.completedAt": "Abgeschlossen um",
+  "results.steps.title": "Schritte",
+  "results.steps.screenshot": "Screenshot anzeigen",
+  "results.steps.expected": "Erwartet",
+  "results.steps.actual": "Tatsächlich",
+  "results.export": "Ergebnisse exportieren",
+  "results.rerun": "Test wiederholen",
+  "results.comparison.title": "Visueller Vergleich",
+  "results.comparison.baseline": "Referenz",
+  "results.comparison.current": "Aktuell",
+  "results.comparison.diff": "Unterschied",
+  "results.empty": "Keine Ergebnisse vorhanden"
+}

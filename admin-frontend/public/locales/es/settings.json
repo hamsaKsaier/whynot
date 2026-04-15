@@ -1,0 +1,23 @@
+{
+  "settings.title": "Configuración del sistema",
+  "settings.tabs.general": "General",
+  "settings.tabs.credits": "Costos de créditos",
+  "settings.tabs.email": "Correo electrónico",
+  "settings.tabs.webhooks": "Webhooks",
+  "settings.tabs.security": "Seguridad",
+  "settings.noSettings": "No hay configuraciones en esta categoría.",
+  "settings.saveFailed": "Error al guardar",
+  "settings.saveSuccess": "Configuración guardada",
+  "settings.general.siteName": "Nombre del sitio",
+  "settings.general.supportEmail": "Correo de soporte",
+  "settings.general.maintenanceMode": "Modo de mantenimiento",
+  "settings.credits.testExecution": "Costo de ejecución de pruebas",
+  "settings.credits.testGeneration": "Costo de generación de pruebas",
+  "settings.credits.qaLoop": "Costo de QA Loop",
+  "settings.email.provider": "Proveedor de correo",
+  "settings.email.fromAddress": "Dirección del remitente",
+  "settings.webhooks.endpoint": "Endpoint del webhook",
+  "settings.webhooks.secret": "Secreto del webhook",
+  "settings.security.maxLoginAttempts": "Máximo de intentos de inicio de sesión",
+  "settings.security.sessionTimeout": "Tiempo de espera de sesión (minutos)"
+}

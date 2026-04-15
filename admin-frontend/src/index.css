@@ -2,8 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  :root {
+    --background: 1 0 0;
+    --foreground: 0.141 0.005 286;
+    --card: 1 0 0;
+    --card-foreground: 0.141 0.005 286;
+    --popover: 1 0 0;
+    --popover-foreground: 0.141 0.005 286;
+    --primary: 0.685 0.155 220;
+    --primary-foreground: 0.985 0 0;
+    --secondary: 0.967 0.001 286;
+    --secondary-foreground: 0.210 0.006 286;
+    --muted: 0.967 0.001 286;
+    --muted-foreground: 0.552 0.016 286;
+    --accent: 0.967 0.001 286;
+    --accent-foreground: 0.210 0.006 286;
+    --destructive: 0.577 0.245 27;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.920 0.004 286;
+    --input: 0.920 0.004 286;
+    --ring: 0.685 0.155 220;
+    --chart-1: 0.685 0.155 220;
+    --chart-2: 0.6 0.18 160;
+    --chart-3: 0.55 0.2 280;
+    --chart-4: 0.65 0.2 50;
+    --chart-5: 0.6 0.15 350;
+    --selection: 0.623 0.214 259;
+    --selection-foreground: 1 0 0;
+    --radius: 0.625rem;
+    --sidebar-background: 0.985 0 0;
+    --sidebar-foreground: 0.141 0.005 286;
+    --sidebar-primary: 0.685 0.155 220;
+    --sidebar-primary-foreground: 0.985 0 0;
+    --sidebar-accent: 0.967 0.001 286;
+    --sidebar-accent-foreground: 0.210 0.006 286;
+    --sidebar-border: 0.920 0.004 286;
+    --sidebar-ring: 0.685 0.155 220;
+  }
+
+  .dark {
+    --background: 0.141 0.005 286;
+    --foreground: 0.985 0 0;
+    --card: 0.210 0.006 286;
+    --card-foreground: 0.985 0 0;
+    --popover: 0.210 0.006 286;
+    --popover-foreground: 0.985 0 0;
+    --primary: 0.746 0.155 218;
+    --primary-foreground: 0.141 0.005 286;
+    --secondary: 0.274 0.006 286;
+    --secondary-foreground: 0.985 0 0;
+    --muted: 0.274 0.006 286;
+    --muted-foreground: 0.705 0.015 286;
+    --accent: 0.372 0.013 286;
+    --accent-foreground: 0.985 0 0;
+    --destructive: 0.65 0.2 25;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.274 0.006 286;
+    --input: 0.372 0.013 286;
+    --ring: 0.746 0.155 218;
+    --chart-1: 0.746 0.155 218;
+    --chart-2: 0.7 0.18 160;
+    --chart-3: 0.65 0.2 280;
+    --chart-4: 0.75 0.2 50;
+    --chart-5: 0.7 0.15 350;
+    --selection: 0.546 0.245 264;
+    --selection-foreground: 1 0 0;
+    --sidebar-background: 0.210 0.006 286;
+    --sidebar-foreground: 0.985 0 0;
+    --sidebar-primary: 0.746 0.155 218;
+    --sidebar-primary-foreground: 0.141 0.005 286;
+    --sidebar-accent: 0.372 0.013 286;
+    --sidebar-accent-foreground: 0.985 0 0;
+    --sidebar-border: 0.274 0.006 286;
+    --sidebar-ring: 0.746 0.155 218;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: oklch(var(--selection));
+    color: oklch(var(--selection-foreground));
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { @apply bg-muted; }
+  ::-webkit-scrollbar-thumb { @apply bg-muted-foreground/30 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/50; }
+
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
 }

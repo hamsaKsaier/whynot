@@ -1,0 +1,20 @@
+{
+  "runner.title": "منفذ الاختبار",
+  "runner.configure": "تهيئة التشغيل",
+  "runner.start": "بدء التشغيل",
+  "runner.stop": "إيقاف",
+  "runner.status.idle": "خامل",
+  "runner.status.running": "قيد التشغيل",
+  "runner.status.completed": "مكتمل",
+  "runner.status.failed": "فشل",
+  "runner.status.cancelled": "ملغى",
+  "runner.steps.title": "خطوات الاختبار",
+  "runner.steps.add": "إضافة خطوة",
+  "runner.steps.remove": "حذف خطوة",
+  "runner.steps.reorder": "إعادة الترتيب",
+  "runner.baseUrl": "URL الأساسي",
+  "runner.baseUrl.placeholder": "https://example.com",
+  "runner.progress": "الخطوة {{current}} من {{total}}",
+  "runner.duration": "المدة: {{time}}",
+  "runner.creditsRequired": "الأرصدة المطلوبة: {{count}}"
+}

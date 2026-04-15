@@ -20,7 +20,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className = '' 
       className={`flex items-center gap-2 text-sm ${className}`}
     >
       <Link
-        to="/"
+        to="/app"
         className="text-slate-400 hover:text-slate-200 transition-colors"
         aria-label="Home"
       >

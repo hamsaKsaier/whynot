@@ -1,0 +1,15 @@
+{
+  "dashboard.title": "Dashboard",
+  "dashboard.welcome": "Welcome back, {{name}}",
+  "dashboard.projects.title": "Projects",
+  "dashboard.projects.create": "New Project",
+  "dashboard.projects.empty": "No projects yet. Create your first project to get started.",
+  "dashboard.projects.search": "Search projects...",
+  "dashboard.recentTests": "Recent Test Runs",
+  "dashboard.recentTests.empty": "No test runs yet",
+  "dashboard.recentTests.viewAll": "View all",
+  "dashboard.stats.totalTests": "Total Tests",
+  "dashboard.stats.passRate": "Pass Rate",
+  "dashboard.stats.avgDuration": "Avg Duration",
+  "dashboard.stats.creditsUsed": "Credits Used"
+}

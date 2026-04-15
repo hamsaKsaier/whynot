@@ -787,11 +787,24 @@ class TestRemainingCoverage:
         assert "builder" in captured.out
 
     def test_stop_pid_file_successful_kill_and_wait(self, tmp_path):
+        """_stop_pid_file returns True after SIGTERM + wait loop + cleanup.
+
+        Mocks _pid_alive directly (instead of os.kill) because the refactored
+        _stop_pid_file now performs multi-stage graceful shutdown (SIGTERM,
+        20×500ms poll, SIGKILL fallback, final liveness check, /proc sweep)
+        and calls _pid_alive many times across those stages.
+        """
         pf = tmp_path / ".prompt_executor_test.pid"
         pf.write_text("12345")
+        # Sequence: alive, alive, then dead for all subsequent polls.
+        alive_sequence = [True, True] + [False] * 40
         with (
             patch("prompt_executor._read_pid_from_file", return_value=12345),
-            patch("os.kill", side_effect=[None, None, ProcessLookupError]),
+            patch("prompt_executor._pid_alive", side_effect=alive_sequence),
+            patch("prompt_executor._sweep_descendants", return_value=0),
+            patch("os.kill"),
+            patch("os.killpg"),
+            patch("os.getpgid", return_value=12345),
             patch("time.sleep"),
         ):
             result = _stop_pid_file(pf)

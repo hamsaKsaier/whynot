@@ -13,6 +13,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isSuperadmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -34,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .then((res) => {
         if (res.success && res.user) {
           const u = res.user;
-          if (u.role === 'admin' || u.role === 'super_admin') {
+          if (u.role === 'super_admin') {
             setUser({ id: u.id, email: u.email, name: u.name, role: u.role });
           } else {
             localStorage.removeItem('admin_auth_token');
@@ -52,8 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiLogin(email, password);
     const u = res.user;
-    if (u.role !== 'admin' && u.role !== 'super_admin') {
-      throw new Error('Admin access required');
+    if (u.role !== 'super_admin') {
+      throw new Error('superadmin_required');
     }
     localStorage.setItem('admin_auth_token', res.token);
     setUser({ id: u.id, email: u.email, name: u.name, role: u.role });
@@ -72,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin' || user?.role === 'super_admin',
+        isSuperadmin: user?.role === 'super_admin',
         login,
         logout,
       }}

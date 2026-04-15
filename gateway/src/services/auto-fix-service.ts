@@ -1,10 +1,11 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
 import axios from 'axios';
 import { createLogger } from '../../shared/logger/logger';
 import { AutoFixRepository, AutoFixAttemptEntity } from '../../shared/database/repositories/auto-fix-repository';
 import { GitHubService } from './github-service';
 import { query } from '../../shared/database/connection';
 import { sendAutoFixPREmail } from './email-service';
+import { selectAIProvider } from '../utils/ai/select-ai-provider';
 
 const logger = createLogger('auto-fix-service');
 
@@ -44,7 +45,7 @@ interface RetestResult {
 
 export class AutoFixService {
   private repository: AutoFixRepository;
-  private anthropic: Anthropic;
+  private aiProvider: ReturnType<typeof selectAIProvider>;
 
   constructor() {
     this.repository = new AutoFixRepository();
@@ -52,7 +53,10 @@ export class AutoFixService {
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY is required for auto-fix service');
     }
-    this.anthropic = new Anthropic({ apiKey });
+    this.aiProvider = selectAIProvider({
+      apiUrl: 'https://api.anthropic.com',
+      apiKey,
+    });
   }
 
   /**
@@ -933,17 +937,12 @@ IMPORTANT:
     reasoning: string;
     diff: string;
   }> {
-    const response = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8192,
+    const { text: textContent } = await generateText({
+      model: this.aiProvider('claude-sonnet-4-6'),
+      maxOutputTokens: 8192,
       system: 'You are an expert software engineer. You MUST respond with ONLY a valid JSON object. No markdown, no explanation text before or after the JSON. Just the raw JSON object starting with { and ending with }.',
-      messages: [{ role: 'user', content: prompt }],
+      prompt,
     });
-
-    const textContent = response.content
-      .filter((block: any) => block.type === 'text')
-      .map((block: any) => block.text)
-      .join('');
 
     // Parse the JSON response - try multiple extraction strategies
     let parsed: any;

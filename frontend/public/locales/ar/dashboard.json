@@ -1,0 +1,15 @@
+{
+  "dashboard.title": "لوحة التحكم",
+  "dashboard.welcome": "مرحبًا بعودتك، {{name}}",
+  "dashboard.projects.title": "المشاريع",
+  "dashboard.projects.create": "مشروع جديد",
+  "dashboard.projects.empty": "لا توجد مشاريع بعد. أنشئ مشروعك الأول للبدء.",
+  "dashboard.projects.search": "البحث في المشاريع...",
+  "dashboard.recentTests": "عمليات الاختبار الأخيرة",
+  "dashboard.recentTests.empty": "لا توجد عمليات اختبار بعد",
+  "dashboard.recentTests.viewAll": "عرض الكل",
+  "dashboard.stats.totalTests": "إجمالي الاختبارات",
+  "dashboard.stats.passRate": "نسبة النجاح",
+  "dashboard.stats.avgDuration": "متوسط المدة",
+  "dashboard.stats.creditsUsed": "الأرصدة المستخدمة"
+}

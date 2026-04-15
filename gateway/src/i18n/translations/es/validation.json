@@ -1,0 +1,17 @@
+{
+  "required": "{{field}} es obligatorio",
+  "minLength": "{{field}} debe tener al menos {{min}} caracteres",
+  "maxLength": "{{field}} debe tener como máximo {{max}} caracteres",
+  "email": "Por favor, ingrese un correo electrónico válido",
+  "url": "Por favor, ingrese una URL válida",
+  "number": "{{field}} debe ser un número",
+  "positive": "{{field}} debe ser un número positivo",
+  "integer": "{{field}} debe ser un número entero",
+  "boolean": "{{field}} debe ser verdadero o falso",
+  "enum": "{{field}} debe ser uno de: {{values}}",
+  "array": "{{field}} debe ser un arreglo",
+  "uuid": "{{field}} debe ser un UUID válido",
+  "date": "{{field}} debe ser una fecha válida",
+  "passwordMismatch": "Las contraseñas no coinciden",
+  "termsRequired": "Debe aceptar los términos"
+}

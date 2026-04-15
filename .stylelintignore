@@ -1,0 +1,6 @@
+node_modules/
+dist/
+coverage/
+*.min.css
+frontend/tailwind.config.ts
+admin-frontend/tailwind.config.ts

@@ -1,18 +1,23 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import {
-  FiShield,
-  FiActivity,
-  FiEye,
-  FiZap,
-  FiClock,
-  FiTrendingUp,
-  FiTrendingDown,
-  FiMinus,
-  FiAlertTriangle,
-  FiCheckCircle,
-  FiDollarSign,
-  FiCpu
-} from 'react-icons/fi';
+  Shield,
+  Activity,
+  Eye,
+  Zap,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  AlertTriangle,
+  CheckCircle,
+  DollarSign,
+  Cpu,
+} from 'lucide-react';
 
 export interface QualityScore {
   overall: number;
@@ -86,28 +91,29 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
   // Format cost in dollars
   const formatCost = (cents: number) => `$${(cents / 100).toFixed(4)}`;
 
-  // Get alert color based on level
-  const getAlertColor = (level: string) => {
+  // Get alert badge variant based on level
+  const getAlertBadgeClasses = (level: string) => {
     switch (level) {
-      case 'critical': return 'text-red-500 bg-red-900/30';
-      case 'warning': return 'text-orange-500 bg-orange-900/30';
-      case 'info': return 'text-blue-500 bg-blue-900/30';
-      default: return 'text-green-500 bg-green-900/30';
+      case 'critical': return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800';
+      case 'warning': return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border-orange-200 dark:border-orange-800';
+      case 'info': return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+      default: return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800';
     }
   };
 
   const getBudgetBarColor = (percentage: number) => {
-    if (percentage >= 100) return 'bg-red-900/200';
+    if (percentage >= 100) return 'bg-red-500';
     if (percentage >= 90) return 'bg-red-400';
     if (percentage >= 75) return 'bg-orange-500';
-    if (percentage >= 50) return 'bg-yellow-900/200';
-    return 'bg-green-900/200';
+    if (percentage >= 50) return 'bg-yellow-500';
+    return 'bg-green-500';
   };
+
   const getTrendIcon = () => {
     switch (qualityScore.trend) {
-      case 'improving': return <FiTrendingUp className="text-green-500" />;
-      case 'declining': return <FiTrendingDown className="text-red-500" />;
-      default: return <FiMinus className="text-slate-500" />;
+      case 'improving': return <TrendingUp className="h-4 w-4 text-green-500" />;
+      case 'declining': return <TrendingDown className="h-4 w-4 text-red-500" />;
+      default: return <Minus className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -115,16 +121,16 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
     switch (qualityScore.trend) {
       case 'improving': return 'text-green-500';
       case 'declining': return 'text-red-500';
-      default: return 'text-slate-500';
+      default: return 'text-muted-foreground';
     }
   };
 
-  // 6.5 — static map avoids dynamic class-name interpolation that Tailwind purges
+  // 6.5 -- static map avoids dynamic class-name interpolation that Tailwind purges
   const iconColorClass: Record<string, string> = {
     blue:   'text-blue-500',
     green:  'text-green-500',
     red:    'text-red-500',
-    sky: 'text-sky-500',
+    sky:    'text-sky-500',
     yellow: 'text-yellow-500',
   };
 
@@ -136,10 +142,10 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
   };
 
   const getScoreBarColor = (score: number) => {
-    if (score >= 80) return 'bg-green-900/200';
-    if (score >= 60) return 'bg-yellow-900/200';
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-yellow-500';
     if (score >= 40) return 'bg-orange-500';
-    return 'bg-red-900/200';
+    return 'bg-red-500';
   };
 
   const getGaugeRotation = (score: number) => {
@@ -156,12 +162,12 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
         {/* Gauge */}
         <div className="relative w-48 h-24 overflow-hidden">
           {/* Gauge Background */}
-          <div className="absolute w-48 h-48 rounded-full border-8 border-slate-700"
+          <div className="absolute w-48 h-48 rounded-full border-8 border-muted"
             style={{ top: '0', clipPath: 'inset(50% 0 0 0)' }} />
 
           {/* Colored arc based on score */}
           <div
-            className={`absolute w-48 h-48 rounded-full border-8 ${getScoreBarColor(qualityScore.overall)}`}
+            className={cn("absolute w-48 h-48 rounded-full border-8", getScoreBarColor(qualityScore.overall))}
             style={{
               top: '0',
               clipPath: 'inset(50% 0 0 0)',
@@ -173,10 +179,10 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           {/* Center text */}
           <div className="absolute inset-0 flex items-end justify-center pb-2">
             <div className="text-center">
-              <div className={`text-3xl font-bold ${getScoreColor(qualityScore.overall)}`}>
+              <div className={cn("text-3xl font-bold", getScoreColor(qualityScore.overall))}>
                 {qualityScore.overall}%
               </div>
-              <div className="text-xs text-slate-400 flex items-center gap-1">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
                 {getTrendIcon()}
                 <span className={getTrendColor()}>
                   {qualityScore.scoreDelta > 0 ? '+' : ''}{qualityScore.scoreDelta}
@@ -186,12 +192,12 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           </div>
 
           {/* Min/Max labels */}
-          <div className="absolute bottom-0 left-2 text-xs text-slate-500">0</div>
-          <div className="absolute bottom-0 right-2 text-xs text-slate-500">100</div>
+          <div className="absolute bottom-0 start-2 text-xs text-muted-foreground">0</div>
+          <div className="absolute bottom-0 end-2 text-xs text-muted-foreground">100</div>
 
           {/* Target threshold marker */}
           <div
-            className="absolute w-1 h-4 bg-sky-900/200 rounded"
+            className="absolute w-1 h-4 bg-sky-500 rounded"
             style={{
               bottom: '0',
               left: '50%',
@@ -203,12 +209,12 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
         {/* Trend Info */}
         <div className="text-center">
-          <div className="text-sm text-slate-400">Target</div>
+          <div className="text-sm text-muted-foreground">Target</div>
           <div className="text-2xl font-bold text-sky-500">{targetThreshold}%</div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-muted-foreground">
             {qualityScore.overall >= targetThreshold ? (
               <span className="text-green-500 flex items-center gap-1">
-                <FiCheckCircle /> Reached!
+                <CheckCircle className="h-3 w-3" /> Reached!
               </span>
             ) : (
               <span>{targetThreshold - qualityScore.overall}% to go</span>
@@ -220,26 +226,26 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       {/* Score Breakdown */}
       <div className="grid grid-cols-5 gap-3">
         {[
-          { key: 'coverage', label: 'Coverage', icon: FiEye, color: 'blue' },
-          { key: 'stability', label: 'Stability', icon: FiActivity, color: 'green' },
-          { key: 'security', label: 'Security', icon: FiShield, color: 'red' },
-          { key: 'accessibility', label: 'A11y', icon: FiEye, color: 'sky' },
-          { key: 'performance', label: 'Perf', icon: FiZap, color: 'yellow' }
+          { key: 'coverage', label: 'Coverage', icon: Eye, color: 'blue' },
+          { key: 'stability', label: 'Stability', icon: Activity, color: 'green' },
+          { key: 'security', label: 'Security', icon: Shield, color: 'red' },
+          { key: 'accessibility', label: 'A11y', icon: Eye, color: 'sky' },
+          { key: 'performance', label: 'Perf', icon: Zap, color: 'yellow' }
         ].map(({ key, label, icon: Icon, color }) => {
           const score = qualityScore.breakdown[key as keyof typeof qualityScore.breakdown];
           return (
             <div key={key} className="text-center">
-              {/* 6.5 — use static map, never interpolate class names at runtime */}
-              <Icon className={`mx-auto text-lg ${iconColorClass[color] ?? 'text-slate-400'} mb-1`} />
-              <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+              {/* 6.5 -- use static map, never interpolate class names at runtime */}
+              <Icon className={cn("mx-auto h-4 w-4 mb-1", iconColorClass[color] ?? 'text-muted-foreground')} />
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${score !== null ? getScoreBarColor(score) : 'bg-slate-600'}`}
+                  className={cn("h-full", score !== null ? getScoreBarColor(score) : 'bg-muted-foreground/30')}
                   style={{ width: `${score !== null ? score : 0}%` }}
                 />
               </div>
-              <div className="text-xs text-slate-400 mt-1">{label}</div>
-              {/* 6.4 — null means no real data: show N/A instead of a made-up number */}
-              <div className={`text-sm font-medium ${score !== null ? getScoreColor(score) : 'text-slate-500'}`}>
+              <div className="text-xs text-muted-foreground mt-1">{label}</div>
+              {/* 6.4 -- null means no real data: show N/A instead of a made-up number */}
+              <div className={cn("text-sm font-medium", score !== null ? getScoreColor(score) : 'text-muted-foreground')}>
                 {score !== null ? `${score}%` : 'N/A'}
               </div>
             </div>
@@ -248,166 +254,173 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       </div>
 
       {/* Risk Summary */}
-      <div className="p-4 bg-slate-900 rounded-lg">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-slate-200 flex items-center gap-2">
-            <FiAlertTriangle className="text-yellow-500" />
-            Risk Summary
-          </h4>
-          <span className="text-xs text-slate-400">{totalRisks} total issues</span>
-        </div>
-        <div className="flex gap-2">
-          {risks.critical > 0 && (
-            <div className="flex-1 p-2 bg-red-900/30 rounded text-center">
-              <div className="text-lg font-bold text-red-600">{risks.critical}</div>
-              <div className="text-xs text-red-500">Critical</div>
-            </div>
-          )}
-          {risks.high > 0 && (
-            <div className="flex-1 p-2 bg-orange-900/30 rounded text-center">
-              <div className="text-lg font-bold text-orange-600">{risks.high}</div>
-              <div className="text-xs text-orange-500">High</div>
-            </div>
-          )}
-          {risks.medium > 0 && (
-            <div className="flex-1 p-2 bg-yellow-900/30 rounded text-center">
-              <div className="text-lg font-bold text-yellow-600">{risks.medium}</div>
-              <div className="text-xs text-yellow-500">Medium</div>
-            </div>
-          )}
-          {risks.low > 0 && (
-            <div className="flex-1 p-2 bg-blue-900/30 rounded text-center">
-              <div className="text-lg font-bold text-blue-600">{risks.low}</div>
-              <div className="text-xs text-blue-500">Low</div>
-            </div>
-          )}
-          {totalRisks === 0 && (
-            <div className="flex-1 p-2 bg-green-900/30 rounded text-center">
-              <FiCheckCircle className="mx-auto text-lg text-green-500" />
-              <div className="text-xs text-green-500 mt-1">No issues!</div>
-            </div>
-          )}
-        </div>
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              Risk Summary
+            </h4>
+            <span className="text-xs text-muted-foreground">{totalRisks} total issues</span>
+          </div>
+          <div className="flex gap-2">
+            {risks.critical > 0 && (
+              <div className="flex-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-md text-center">
+                <div className="text-lg font-bold text-red-700 dark:text-red-300">{risks.critical}</div>
+                <div className="text-xs text-red-600 dark:text-red-400">Critical</div>
+              </div>
+            )}
+            {risks.high > 0 && (
+              <div className="flex-1 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-md text-center">
+                <div className="text-lg font-bold text-orange-700 dark:text-orange-300">{risks.high}</div>
+                <div className="text-xs text-orange-600 dark:text-orange-400">High</div>
+              </div>
+            )}
+            {risks.medium > 0 && (
+              <div className="flex-1 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md text-center">
+                <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{risks.medium}</div>
+                <div className="text-xs text-yellow-600 dark:text-yellow-400">Medium</div>
+              </div>
+            )}
+            {risks.low > 0 && (
+              <div className="flex-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md text-center">
+                <div className="text-lg font-bold text-blue-700 dark:text-blue-300">{risks.low}</div>
+                <div className="text-xs text-blue-600 dark:text-blue-400">Low</div>
+              </div>
+            )}
+            {totalRisks === 0 && (
+              <div className="flex-1 p-2 bg-green-50 dark:bg-green-900/20 rounded-md text-center">
+                <CheckCircle className="mx-auto h-4 w-4 text-green-500" />
+                <div className="text-xs text-green-600 dark:text-green-400 mt-1">No issues!</div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Phase 8: Cost Tracking Section */}
       {costTracking && (
-        <div className="p-4 bg-slate-900 rounded-lg">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-slate-200 flex items-center gap-2">
-              <FiDollarSign className="text-green-500" />
-              Cost Tracking
-            </h4>
-            <span className={`text-xs px-2 py-1 rounded ${getAlertColor(costTracking.alertLevel)}`}>
-              {costTracking.alertLevel === 'none' ? 'On Budget' :
-                costTracking.alertLevel === 'info' ? '50% Used' :
-                  costTracking.alertLevel === 'warning' ? '75% Used' :
-                    costTracking.budgetExceeded ? 'Budget Exceeded!' : '90% Used'}
-            </span>
-          </div>
-
-          {/* Budget Progress Bar */}
-          {costTracking.maxCostCents && (
-            <div className="mb-3">
-              <div className="flex justify-between text-xs text-slate-400 mb-1">
-                <span>{formatCost(costTracking.totalCostCents)}</span>
-                <span>Budget: {formatCost(costTracking.maxCostCents)}</span>
-              </div>
-              <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-500 ${getBudgetBarColor(costTracking.alertPercentage)}`}
-                  style={{ width: `${Math.min(costTracking.alertPercentage, 100)}%` }}
-                />
-              </div>
-              <div className="text-center text-xs text-slate-400 mt-1">
-                {Math.round(costTracking.alertPercentage)}% used
-              </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-500" />
+                Cost Tracking
+              </h4>
+              <Badge variant="outline" className={cn("text-xs", getAlertBadgeClasses(costTracking.alertLevel))}>
+                {costTracking.alertLevel === 'none' ? 'On Budget' :
+                  costTracking.alertLevel === 'info' ? '50% Used' :
+                    costTracking.alertLevel === 'warning' ? '75% Used' :
+                      costTracking.budgetExceeded ? 'Budget Exceeded!' : '90% Used'}
+              </Badge>
             </div>
-          )}
 
-          {/* Cost Breakdown */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* By Phase */}
-            {costTracking.costByPhase && (
-              <div>
-                <div className="text-xs text-slate-400 mb-2 flex items-center gap-1">
-                  <FiActivity className="text-sky-500" /> By Phase
+            {/* Budget Progress Bar */}
+            {costTracking.maxCostCents && (
+              <div className="mb-3">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>{formatCost(costTracking.totalCostCents)}</span>
+                  <span>Budget: {formatCost(costTracking.maxCostCents)}</span>
                 </div>
-                <div className="space-y-1">
-                  {Object.entries(costTracking.costByPhase)
-                    .filter(([_, cost]) => cost > 0)
-                    .map(([phase, cost]) => (
-                      <div key={phase} className="flex justify-between text-xs">
-                        <span className="capitalize text-slate-400">{phase}</span>
-                        <span className="font-medium">{formatCost(cost)}</span>
-                      </div>
-                    ))
-                  }
-                  {Object.values(costTracking.costByPhase).every(c => c === 0) && (
-                    <span className="text-xs text-slate-500">No usage yet</span>
-                  )}
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn("h-full transition-colors duration-150", getBudgetBarColor(costTracking.alertPercentage))}
+                    style={{ width: `${Math.min(costTracking.alertPercentage, 100)}%` }}
+                  />
+                </div>
+                <div className="text-center text-xs text-muted-foreground mt-1">
+                  {Math.round(costTracking.alertPercentage)}% used
                 </div>
               </div>
             )}
 
-            {/* By Model */}
-            {costTracking.costByModel && (
-              <div>
-                <div className="text-xs text-slate-400 mb-2 flex items-center gap-1">
-                  <FiCpu className="text-blue-500" /> By Model
+            {/* Cost Breakdown */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* By Phase */}
+              {costTracking.costByPhase && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <Activity className="h-3 w-3 text-sky-500" /> By Phase
+                  </div>
+                  <div className="space-y-1">
+                    {Object.entries(costTracking.costByPhase)
+                      .filter(([_, cost]) => cost > 0)
+                      .map(([phase, cost]) => (
+                        <div key={phase} className="flex justify-between text-xs">
+                          <span className="capitalize text-muted-foreground">{phase}</span>
+                          <span className="font-medium text-foreground">{formatCost(cost)}</span>
+                        </div>
+                      ))
+                    }
+                    {Object.values(costTracking.costByPhase).every(c => c === 0) && (
+                      <span className="text-xs text-muted-foreground">No usage yet</span>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  {Object.entries(costTracking.costByModel)
-                    .filter(([_, cost]) => cost > 0)
-                    .map(([model, cost]) => (
-                      <div key={model} className="flex justify-between text-xs">
-                        <span className="text-slate-400">{model}</span>
-                        <span className="font-medium">{formatCost(cost)}</span>
-                      </div>
-                    ))
-                  }
-                  {Object.values(costTracking.costByModel).every(c => c === 0) && (
-                    <span className="text-xs text-slate-500">No usage yet</span>
-                  )}
+              )}
+
+              {/* By Model */}
+              {costTracking.costByModel && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <Cpu className="h-3 w-3 text-blue-500" /> By Model
+                  </div>
+                  <div className="space-y-1">
+                    {Object.entries(costTracking.costByModel)
+                      .filter(([_, cost]) => cost > 0)
+                      .map(([model, cost]) => (
+                        <div key={model} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{model}</span>
+                          <span className="font-medium text-foreground">{formatCost(cost)}</span>
+                        </div>
+                      ))
+                    }
+                    {Object.values(costTracking.costByModel).every(c => c === 0) && (
+                      <span className="text-xs text-muted-foreground">No usage yet</span>
+                    )}
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* Total Tokens */}
+            {costTracking.totalTokens !== undefined && costTracking.totalTokens > 0 && (
+              <>
+                <Separator className="mt-3 mb-3" />
+                <div className="text-xs text-muted-foreground text-center">
+                  Total tokens: {costTracking.totalTokens.toLocaleString()}
+                </div>
+              </>
+            )}
+
+            {/* Budget Warning */}
+            {costTracking.budgetExceeded && (
+              <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                <AlertTriangle className="inline h-3 w-3 text-red-500 me-1" />
+                <span className="text-xs text-red-700 dark:text-red-300 font-medium">
+                  Budget limit reached! Session will stop automatically.
+                </span>
               </div>
             )}
-          </div>
-
-          {/* Total Tokens */}
-          {costTracking.totalTokens !== undefined && costTracking.totalTokens > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400 text-center">
-              Total tokens: {costTracking.totalTokens.toLocaleString()}
-            </div>
-          )}
-
-          {/* Budget Warning */}
-          {costTracking.budgetExceeded && (
-            <div className="mt-3 p-2 bg-red-900/30 rounded-lg text-center">
-              <FiAlertTriangle className="inline text-red-500 mr-1" />
-              <span className="text-xs text-red-600 font-medium">
-                Budget limit reached! Session will stop automatically.
-              </span>
-            </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Iteration Timeline */}
       <div>
-        <h4 className="text-sm font-medium text-slate-200 mb-3 flex items-center gap-2">
-          <FiClock className="text-blue-500" />
+        <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+          <Clock className="h-4 w-4 text-blue-500" />
           Iteration Timeline
         </h4>
         <div className="relative">
           {/* Timeline bar */}
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden flex">
+          <div className="h-2 bg-muted rounded-full overflow-hidden flex">
             {iterationHistory.map((item, idx) => {
               const width = 100 / Math.max(iterationHistory.length, 1);
               return (
                 <div
                   key={idx}
-                  className={`h-full ${getScoreBarColor(item.score)}`}
+                  className={getScoreBarColor(item.score)}
                   style={{ width: `${width}%` }}
                   title={`Iteration ${item.iteration}: ${item.score}%`}
                 />
@@ -419,11 +432,11 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           <div className="flex justify-between mt-2">
             {iterationHistory.slice(-5).map((item, idx) => (
               <div key={idx} className="text-center">
-                <div className={`text-xs font-medium ${getScoreColor(item.score)}`}>
+                <div className={cn("text-xs font-medium", getScoreColor(item.score))}>
                   {item.score}%
                 </div>
-                <div className="text-xs text-slate-500">#{item.iteration}</div>
-                <div className="text-xs text-slate-500 capitalize">{item.focus}</div>
+                <div className="text-xs text-muted-foreground">#{item.iteration}</div>
+                <div className="text-xs text-muted-foreground capitalize">{item.focus}</div>
               </div>
             ))}
           </div>
@@ -431,17 +444,17 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       </div>
 
       {/* Current Status */}
-      <div className="flex items-center justify-between p-3 bg-sky-900/20 rounded-lg">
+      <div className="flex items-center justify-between p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg">
         <div className="flex items-center gap-2">
-          <FiActivity className="text-sky-500 animate-pulse" />
-          <span className="text-sm text-slate-200">
+          <Activity className="h-4 w-4 text-sky-500" />
+          <span className="text-sm text-foreground">
             Iteration <span className="font-bold">{currentIteration}</span>
           </span>
         </div>
-        <div className="text-sm text-sky-600">
+        <div className="text-sm text-sky-600 dark:text-sky-400">
           {qualityScore.overall >= targetThreshold ? (
             <span className="flex items-center gap-1">
-              <FiCheckCircle /> Quality target reached
+              <CheckCircle className="h-3 w-3" /> Quality target reached
             </span>
           ) : (
             <span>Working towards {targetThreshold}%...</span>

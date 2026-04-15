@@ -300,7 +300,105 @@ REFERENCE_FILENAME_SUBSTRINGS = (
     "table-of-contents",
     "toc",
     "index-of-prompts",
+    "architecture",
+    "reference",
+    "dependency-graph",
 )
+
+# Content-level markers that flag a prompt file as a reference / architecture
+# document. If a run produces no filesystem changes AND the prompt file
+# content matches one of these markers, we treat the run as SUCCESS instead
+# of burning the retry budget on a file that was never meant to make edits.
+REFERENCE_CONTENT_MARKERS = (
+    "architecture overview",
+    "architecture summary",
+    "architecture reference",
+    "architecture document",
+    "# architecture",
+    "## architecture",
+    "table of contents",
+    "## overview",
+    "# overview",
+    "reference document",
+    "read-only reference",
+    "dependency graph",
+)
+
+# Validation / verification prompts that MUST execute (they report PASS/FAIL)
+# but whose output is expected to be text-only. They legitimately produce zero
+# filesystem changes on a successful run, so the post-run "no file changes"
+# gate must not retry them forever. These substrings are matched against the
+# filename stem (case-insensitive); they are NOT used at collection time.
+VALIDATION_FILENAME_SUBSTRINGS = (
+    "validate",
+    "validation",
+    "verify",
+    "verification",
+    "check-",
+    "-check",
+    "sanity",
+    "audit",
+)
+
+# NOTE: validator detection is intentionally filename-only. Content markers
+# (e.g. "pass/fail", "verdict:") are too broad and leak into implementation
+# prompts that mention those terms in prose. Validators must be named
+# ``*-validate-*`` / ``*-verify-*`` / ``*-audit-*`` for this gate to trip.
+
+# Conversational LLM replies that mean "I need more instructions" — these
+# never become real file changes, so retrying is waste. Matched against the
+# last ~2000 chars of stdout, case-insensitively. When a no-change run's
+# output matches any of these, we short-circuit the retry budget by
+# returning RESULT_SKIP instead of RESULT_ERROR.
+CONVERSATIONAL_NO_OP_MARKERS = (
+    "what would you like me to do",
+    "which direction should i take",
+    "which prompt would you like me to",
+    "what's the task",
+    "what's the goal",
+    "what would you like me to implement",
+    "would you like me to start",
+    "let me know what you'd like",
+    "what would you like me to work on",
+    "which prompt(s) would you like me to",
+    "which prompt(s) should i start",
+)
+
+
+def _no_change_ok_kind(prompt_file: Path) -> str | None:
+    """
+    If this prompt is one where "exit 0 with no filesystem changes" is a
+    legitimate success state, return the kind ("reference" or "validation").
+    Otherwise return None.
+
+    - Reference files: architecture overviews, READMEs, TOCs. These are also
+      skipped entirely at collection time via ``is_reference_file`` — this
+      helper exists as a safety net for content-based detection.
+    - Validation files: ``*-validate-*`` / ``*-verify-*`` prompts that run
+      checks and emit PASS/FAIL reports without editing anything.
+    """
+    name = prompt_file.name.lower()
+    stem = name[:-3] if name.endswith(".md") else name
+    if stem.endswith("_done"):
+        stem = stem[: -len("_done")]
+
+    if any(s in stem for s in REFERENCE_FILENAME_SUBSTRINGS):
+        return "reference"
+    if any(s in stem for s in VALIDATION_FILENAME_SUBSTRINGS):
+        return "validation"
+
+    try:
+        head = prompt_file.read_text(errors="ignore")[:4000].lower()
+    except OSError:
+        return None
+    if any(m in head for m in REFERENCE_CONTENT_MARKERS):
+        return "reference"
+    return None
+
+
+def _is_reference_prompt(prompt_file: Path) -> bool:
+    """Back-compat wrapper: true if reference or validation prompt."""
+    return _no_change_ok_kind(prompt_file) is not None
 
 
 def detect_backend(model: str) -> str:
@@ -351,13 +449,36 @@ def _validate_env_vars(backend: str) -> list[str]:
     return missing
 
 
+_env_warned: set[str] = set()
+
+
 def _check_env_and_warn(backend: str, model: str) -> None:
-    """Log a warning if env vars are missing. Does not raise."""
+    """
+    Log a warning if env vars are missing. Does not raise.
+
+    The Claude Code CLI has its own subscription auth (stored in
+    ``~/.claude`` by ``claude login``) and does NOT require
+    ``ANTHROPIC_API_KEY`` in the caller environment. Warning about it on
+    every prompt produces dozens of false-positives per daemon lifetime.
+    Downgrade to INFO and emit once per run.
+    """
     missing = _validate_env_vars(backend)
-    if missing:
-        resolved = MODEL_ALIASES.get(model.lower(), model)
-        log(f"  WARNING: Missing env vars for model '{resolved}': {', '.join(missing)}")
-        log(f"           Set them in your shell or .env before running.")
+    if not missing:
+        return
+    resolved = MODEL_ALIASES.get(model.lower(), model)
+
+    if backend == BACKEND_CLAUDE and missing == ["ANTHROPIC_API_KEY"]:
+        if "claude_anthropic_key" in _env_warned:
+            return
+        _env_warned.add("claude_anthropic_key")
+        log(
+            f"  INFO: ANTHROPIC_API_KEY not set; relying on 'claude' CLI "
+            f"subscription auth for '{resolved}'."
+        )
+        return
+
+    log(f"  WARNING: Missing env vars for model '{resolved}': {', '.join(missing)}")
+    log(f"           Set them in your shell or .env before running.")
 
 
 def _find_opencode_config(start_dir: Path) -> Path | None:
@@ -415,10 +536,29 @@ RETRYABLE = {RESULT_TIMEOUT, RESULT_ERROR}
 # ── Logging (fsync on every write — nothing is ever lost) ───────────────────
 
 
+LOG_ROTATE_BYTES = 10 * 1024 * 1024  # 10 MiB
+
+
+def _maybe_rotate_log() -> None:
+    """Rotate LOG_FILE once it crosses LOG_ROTATE_BYTES. Best-effort."""
+    try:
+        if LOG_FILE.exists() and LOG_FILE.stat().st_size >= LOG_ROTATE_BYTES:
+            rotated = LOG_FILE.with_suffix(LOG_FILE.suffix + ".1")
+            try:
+                if rotated.exists():
+                    rotated.unlink()
+            except OSError:
+                pass
+            LOG_FILE.rename(rotated)
+    except OSError:
+        pass
+
+
 def log(msg: str) -> None:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{timestamp}] {msg}\n"
     try:
+        _maybe_rotate_log()
         with open(LOG_FILE, "a") as f:
             f.write(line)
             f.flush()
@@ -520,7 +660,12 @@ def find_matching_executor_pids(target_folder: Path) -> list[int]:
     A match requires:
       1. The executable (argv[0] basename) to look like a python interpreter.
       2. Some argv element to end with "prompt_executor.py".
-      3. Some argv element to contain the target folder basename (slug).
+      3. Some argv element contains the slug as an **exact path segment**
+         (split on "/"), not as a substring. This prevents false positives
+         when the slug is a short common word — e.g. slug ``ai`` used to
+         match ``--retry-wait`` because the byte substring ``ai`` lives
+         inside ``wait``. Requiring a path-segment match means only argv
+         like ``prompts/ai`` or ``/home/.../prompts/ai`` is flagged.
       4. The PID is not this process's own PID.
 
     Returns [] on any /proc access failure — non-fatal, detection degrades
@@ -569,9 +714,16 @@ def find_matching_executor_pids(target_folder: Path) -> list[int]:
         if not any(arg.endswith(b"prompt_executor.py") for arg in argv[1:]):
             continue
 
-        # 3. Some argv element contains the slug (target folder basename)
+        # 3. Some argv element contains the slug as an exact path segment.
+        #    Splitting on "/" and doing equality match avoids byte-substring
+        #    false positives (e.g. slug "ai" matching "--retry-wait").
         slug_bytes = slug.encode("utf-8")
-        if not any(slug_bytes in arg for arg in argv[1:]):
+        matched_slug = False
+        for arg in argv[1:]:
+            if slug_bytes in arg.split(b"/"):
+                matched_slug = True
+                break
+        if not matched_slug:
             continue
 
         matches.append(pid)
@@ -1027,6 +1179,15 @@ def execute_prompt(
 
     child_env = os.environ.copy()
 
+    if backend == BACKEND_CLAUDE:
+        # Anthropic models always use the Claude CLI subscription (OAuth from
+        # ~/.claude/.credentials.json). Strip any external Anthropic auth env
+        # vars that _load_dotenv() may have injected from .env — claude CLI
+        # prefers them over OAuth and fails with "Invalid API key" when the
+        # .env value is a placeholder or stale key.
+        for _var in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL"):
+            child_env.pop(_var, None)
+
     if backend == BACKEND_OPENCODE and os.environ.get("ZAI_API_KEY"):
         child_env["ZAI_API_KEY"] = os.environ["ZAI_API_KEY"]
 
@@ -1073,11 +1234,34 @@ def execute_prompt(
             snapshot_after = snapshot_git_state(PROJECT_ROOT)
             files_changed = detect_git_changes(snapshot_before, snapshot_after)
             if not files_changed:
+                kind = _no_change_ok_kind(prompt_file)
+                if kind == "validation":
+                    log(
+                        f"  INFO: No filesystem changes, but '{prompt_file.name}' "
+                        f"is a validation/verify prompt. Text-only PASS report is "
+                        f"the expected outcome — treating as success."
+                    )
+                    return PromptResult(RESULT_SUCCESS, "", stdout_text, False)
+                if kind == "reference":
+                    log(
+                        f"  INFO: No filesystem changes, but '{prompt_file.name}' "
+                        f"is a reference/architecture document. Treating as success."
+                    )
+                    return PromptResult(RESULT_SUCCESS, "", stdout_text, False)
                 log(f"  WARNING: Exit code 0 but NO filesystem changes detected.")
                 log(f"  WARNING: LLM likely produced text output without using tools.")
                 err_msg = (
                     "No filesystem changes detected (text-only output, no tool use)"
                 )
+                tail = (stdout_text or "").lower()[-2000:]
+                if any(m in tail for m in CONVERSATIONAL_NO_OP_MARKERS):
+                    log(
+                        f"  SKIP: LLM replied conversationally "
+                        f"('what should I do?'-style). Retrying will not help — "
+                        f"marking prompt as unrecoverable."
+                    )
+                    log_failure(str(rel), 1, err_msg + " [conversational reply]")
+                    return PromptResult(RESULT_SKIP, err_msg, stdout_text, False)
                 log_failure(str(rel), 1, err_msg)
                 return PromptResult(RESULT_ERROR, err_msg, stdout_text, False)
 
@@ -1118,12 +1302,16 @@ def execute_prompt_with_retry(
     working_dir: Path | None = None,
 ) -> tuple[bool, bool]:
     """
-    Execute a prompt with retry logic and exponential backoff.
+    Execute a prompt with retry logic and a fixed inter-attempt wait.
 
     Takes a git snapshot before each attempt and verifies file changes
     after each successful execution. If the LLM exits 0 but did not
     modify any files (text-only output), the attempt is treated as a
     retryable failure.
+
+    The wait between attempts is exactly ``retry_wait_min`` minutes every
+    time — no exponential backoff, no doubling. ``--retry-wait 1`` means
+    one minute between every retry, regardless of attempt number.
 
     Returns (succeeded: bool, fatal: bool).
     - (True, False)  → prompt completed with real file changes, mark as done
@@ -1168,8 +1356,7 @@ def execute_prompt_with_retry(
         last_error = pr.err_msg
 
         if attempt < max_retries:
-            backoff_min = retry_wait_min * (2 ** (attempt - 1))
-            safe_sleep(backoff_min, label=f"retry {attempt + 1}")
+            safe_sleep(retry_wait_min, label=f"retry {attempt + 1}")
         else:
             log(f"  All {max_retries} attempts exhausted for: {prompt_file.name}")
 
@@ -1496,11 +1683,97 @@ def cmd_run(args: argparse.Namespace) -> None:
     log("Foreground run finished.")
 
 
+def _pid_alive(pid: int) -> bool:
+    """True if PID is still running."""
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Process exists but we cannot signal it — still "alive" for our purposes.
+        return True
+
+
+def _sweep_descendants(root_pids: set[int]) -> int:
+    """
+    Walk /proc looking for any process whose PPid chain leads back to one of
+    ``root_pids`` and SIGKILL it. Returns the number of survivors killed.
+
+    This catches stragglers that escaped killpg — e.g. grandchildren that
+    called setsid() themselves, or processes whose parent already died so
+    they were reparented to init but still reference our original PPid in
+    their own transitive chain.
+    """
+    killed = 0
+    try:
+        proc_entries = list(Path("/proc").iterdir())
+    except OSError:
+        return 0
+
+    # Build ppid map for transitive parentage check.
+    ppid_map: dict[int, int] = {}
+    for entry in proc_entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            status = (entry / "status").read_text(errors="ignore")
+        except OSError:
+            continue
+        for line in status.splitlines():
+            if line.startswith("PPid:"):
+                try:
+                    ppid_map[int(entry.name)] = int(line.split()[1])
+                except (ValueError, IndexError):
+                    pass
+                break
+
+    def _traces_to_root(pid: int) -> bool:
+        seen: set[int] = set()
+        cur = pid
+        while cur not in seen:
+            seen.add(cur)
+            parent = ppid_map.get(cur)
+            if parent is None or parent == 0 or parent == 1:
+                return False
+            if parent in root_pids:
+                return True
+            cur = parent
+        return False
+
+    for pid, _ppid in ppid_map.items():
+        if pid in root_pids:
+            continue
+        if _traces_to_root(pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+                killed += 1
+            except (ProcessLookupError, PermissionError):
+                pass
+    return killed
+
+
 def _stop_pid_file(pid_file: Path) -> bool:
-    """Stop the instance tracked by a PID file. Returns True if stopped."""
+    """
+    Stop the instance tracked by a PID file and ALL of its descendants.
+
+    Strategy:
+      1. Look up the daemon's process group (PGID). The daemon called
+         ``os.setsid()`` during daemonization so PGID == PID in the normal
+         case. Fall back to the PID if getpgid fails.
+      2. Send SIGTERM to the whole process group via ``killpg``. This
+         reaches the daemon and any in-flight ``claude`` / ``opencode``
+         subprocess it spawned.
+      3. Wait up to 10 seconds for graceful exit.
+      4. Any survivor in the group gets SIGKILL via ``killpg``.
+      5. As a final safety net, walk /proc and SIGKILL any process whose
+         PPid chain still traces back to the daemon (catches grandchildren
+         that set up their own session).
+
+    Returns True if we found and acted on a live PID.
+    """
     pid = _read_pid_from_file(pid_file)
     if not pid:
-        # Stale PID file
         try:
             pid_file.unlink()
         except FileNotFoundError:
@@ -1509,21 +1782,60 @@ def _stop_pid_file(pid_file: Path) -> bool:
 
     slug = pid_file.stem.replace(".prompt_executor_", "")
     print(f"  Stopping [{slug}] (PID {pid})...")
+
     try:
-        os.kill(pid, signal.SIGTERM)
-        for _ in range(10):
-            try:
-                os.kill(pid, 0)
-                time.sleep(0.5)
-            except ProcessLookupError:
-                break
+        pgid = os.getpgid(pid)
     except ProcessLookupError:
-        pass
+        pgid = pid
+    except PermissionError:
+        pgid = pid
+
+    # 1) Polite: SIGTERM the whole process group.
+    def _signal_group(sig: int) -> None:
+        try:
+            os.killpg(pgid, sig)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            try:
+                os.kill(pid, sig)
+            except ProcessLookupError:
+                pass
+
+    _signal_group(signal.SIGTERM)
+
+    # 2) Wait up to 10 seconds for graceful exit.
+    for _ in range(20):
+        if not _pid_alive(pid):
+            break
+        time.sleep(0.5)
+
+    # 3) Hard kill any survivor in the group.
+    if _pid_alive(pid):
+        print(f"  [{slug}] did not exit within 10s, sending SIGKILL...")
+        _signal_group(signal.SIGKILL)
+        for _ in range(10):
+            if not _pid_alive(pid):
+                break
+            time.sleep(0.2)
+
+    # 4) Safety net: sweep /proc for any descendants still tracing to us.
+    root_pids = {pid}
+    if pgid and pgid != pid:
+        root_pids.add(pgid)
+    stragglers = _sweep_descendants(root_pids)
+    if stragglers:
+        print(f"  [{slug}] killed {stragglers} straggler descendant(s).")
+
     try:
         pid_file.unlink()
     except FileNotFoundError:
         pass
-    print(f"  Stopped [{slug}].")
+
+    if _pid_alive(pid):
+        print(f"  WARNING: [{slug}] (PID {pid}) is still alive after SIGKILL.")
+    else:
+        print(f"  Stopped [{slug}].")
     return True
 
 

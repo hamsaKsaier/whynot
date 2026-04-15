@@ -16,7 +16,7 @@ export const NotFoundPage: React.FC = () => {
         The page you're looking for doesn't exist or has been moved.
       </p>
       <div className="flex gap-3">
-        <Button variant="secondary" onClick={() => navigate('/')}>
+        <Button variant="secondary" onClick={() => navigate('/app')}>
           <FiHome className="mr-2" />
           Dashboard
         </Button>

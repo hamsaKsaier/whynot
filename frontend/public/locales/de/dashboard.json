@@ -1,0 +1,15 @@
+{
+  "dashboard.title": "Dashboard",
+  "dashboard.welcome": "Willkommen zurück, {{name}}",
+  "dashboard.projects.title": "Projekte",
+  "dashboard.projects.create": "Neues Projekt",
+  "dashboard.projects.empty": "Noch keine Projekte vorhanden. Erstellen Sie Ihr erstes Projekt, um zu beginnen.",
+  "dashboard.projects.search": "Projekte suchen...",
+  "dashboard.recentTests": "Letzte Testläufe",
+  "dashboard.recentTests.empty": "Noch keine Testläufe",
+  "dashboard.recentTests.viewAll": "Alle anzeigen",
+  "dashboard.stats.totalTests": "Tests gesamt",
+  "dashboard.stats.passRate": "Erfolgsquote",
+  "dashboard.stats.avgDuration": "Ø Dauer",
+  "dashboard.stats.creditsUsed": "Verbrauchtes Guthaben"
+}

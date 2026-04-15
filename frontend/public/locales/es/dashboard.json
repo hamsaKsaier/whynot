@@ -1,0 +1,15 @@
+{
+  "dashboard.title": "Panel de control",
+  "dashboard.welcome": "Bienvenido de nuevo, {{name}}",
+  "dashboard.projects.title": "Proyectos",
+  "dashboard.projects.create": "Nuevo proyecto",
+  "dashboard.projects.empty": "Aún no hay proyectos. Cree su primer proyecto para comenzar.",
+  "dashboard.projects.search": "Buscar proyectos...",
+  "dashboard.recentTests": "Ejecuciones de pruebas recientes",
+  "dashboard.recentTests.empty": "Aún no hay ejecuciones de pruebas",
+  "dashboard.recentTests.viewAll": "Ver todas",
+  "dashboard.stats.totalTests": "Total de pruebas",
+  "dashboard.stats.passRate": "Tasa de éxito",
+  "dashboard.stats.avgDuration": "Duración promedio",
+  "dashboard.stats.creditsUsed": "Créditos utilizados"
+}

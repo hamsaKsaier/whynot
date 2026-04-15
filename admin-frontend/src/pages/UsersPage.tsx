@@ -1,141 +1,284 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { getAdminUsers } from '../services/api';
-import { FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { Download, Mail, MoreHorizontal, LogIn, KeyRound, Ban, UserCog, ArrowRight } from 'lucide-react'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { FilterBar } from '../components/admin/FilterBar'
+import { PaginatedTable, type Column } from '../components/admin/PaginatedTable'
+import { BulkActions } from '../components/admin/BulkActions'
+import { StatusBadge } from '../components/admin/StatusBadge'
+import { ExportMenu } from '../components/admin/ExportMenu'
+import { ConfirmDialog } from '../components/admin/ConfirmDialog'
+import { Badge } from '../components/ui/badge'
+import { Button } from '../components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu'
+import {
+  getAdminUsers,
+  impersonateUser,
+  resetUserPassword,
+  suspendUser,
+  unsuspendUser,
+} from '../services/api'
 
-export const UsersPage: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const limit = 20;
+interface UserRow {
+  id: string
+  name: string
+  email: string
+  role: string
+  plan_name?: string
+  credits: number
+  status?: string
+  last_seen_at?: string
+  created_at: string
+}
+
+const roleBadgeStyle: Record<string, string> = {
+  super_admin: 'bg-red-50 text-red-900 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
+  admin: 'bg-sky-50 text-sky-900 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800',
+}
+
+export function UsersPage() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [users, setUsers] = useState<UserRow[]>([])
+  const [total, setTotal] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('__all__')
+  const [loading, setLoading] = useState(true)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [banDialogOpen, setBanDialogOpen] = useState(false)
+  const [banTarget, setBanTarget] = useState<UserRow | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const limit = 20
+
+  const roleOptions = [
+    { label: t('admin.users.roles.user', 'User'), value: 'user' },
+    { label: t('admin.users.roles.admin', 'Admin'), value: 'admin' },
+    { label: t('admin.users.roles.superAdmin', 'Super Admin'), value: 'super_admin' },
+  ]
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const data = await getAdminUsers({
         offset,
         limit,
         search: search || undefined,
-        role: roleFilter || undefined,
-      });
-      setUsers(data.users || []);
-      setTotal(data.total || 0);
+        role: roleFilter === '__all__' ? undefined : roleFilter,
+      })
+      setUsers(data.users || [])
+      setTotal(data.total || 0)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [offset, search, roleFilter]);
+  }, [offset, search, roleFilter])
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
-  const totalPages = Math.ceil(total / limit);
-  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(total / limit)
+  const currentPage = Math.floor(offset / limit) + 1
+
+  const handleExportCSV = () => {
+    const header = 'id,name,email,role,plan,credits,joined\n'
+    const rows = users.map((u) => `${u.id},${u.name},${u.email},${u.role},${u.plan_name || ''},${u.credits},${u.created_at}`)
+    const blob = new Blob([header + rows.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'users.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImpersonate = async (user: UserRow) => {
+    const data = await impersonateUser(user.id)
+    if (data?.token) {
+      window.open(`/?impersonate_token=${data.token}`, '_blank')
+    }
+  }
+
+  const handleResetPassword = async (user: UserRow) => {
+    await resetUserPassword(user.id)
+    await fetchUsers()
+  }
+
+  const handleBan = async () => {
+    if (!banTarget) return
+    setActionLoading(true)
+    try {
+      await suspendUser(banTarget.id)
+      setBanDialogOpen(false)
+      setBanTarget(null)
+      await fetchUsers()
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleUnban = async (user: UserRow) => {
+    await unsuspendUser(user.id)
+    await fetchUsers()
+  }
+
+  const columns: Column<UserRow>[] = [
+    {
+      key: 'name',
+      header: t('admin.users.columns.name', 'Name'),
+      render: (row) => (
+        <Link to={`/users/${row.id}`} className="font-medium text-primary hover:underline">
+          {row.name}
+        </Link>
+      ),
+    },
+    {
+      key: 'email',
+      header: t('admin.users.columns.email', 'Email'),
+      render: (row) => <span className="text-muted-foreground">{row.email}</span>,
+    },
+    {
+      key: 'role',
+      header: t('admin.users.columns.role', 'Role'),
+      render: (row) => (
+        <Badge variant="outline" className={`capitalize ${roleBadgeStyle[row.role] ?? ''}`}>
+          {row.role.replace('_', ' ')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'plan',
+      header: t('admin.users.columns.plan', 'Plan'),
+      render: (row) => <span className="text-muted-foreground">{row.plan_name || '-'}</span>,
+    },
+    {
+      key: 'credits',
+      header: t('admin.users.columns.credits', 'Credits'),
+      className: 'text-end',
+      render: (row) => <span className="font-medium">{row.credits}</span>,
+    },
+    {
+      key: 'created_at',
+      header: t('admin.users.columns.joined', 'Joined'),
+      render: (row) => (
+        <span className="text-muted-foreground">
+          {Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(row.created_at))}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'w-12',
+      render: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate(`/users/${row.id}`)}>
+              <ArrowRight className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
+              {t('admin.users.viewDetail', 'View Details')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleImpersonate(row)}>
+              <LogIn className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
+              {t('admin.userDetail.impersonate', 'Impersonate')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleResetPassword(row)}>
+              <KeyRound className="h-4 w-4 me-2" />
+              {t('admin.userDetail.resetPassword', 'Reset Password')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {row.status === 'suspended' ? (
+              <DropdownMenuItem onClick={() => handleUnban(row)}>
+                <UserCog className="h-4 w-4 me-2" />
+                {t('admin.userDetail.unban', 'Unban')}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => { setBanTarget(row); setBanDialogOpen(true) }}
+              >
+                <Ban className="h-4 w-4 me-2" />
+                {t('admin.userDetail.ban', 'Ban')}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Users</h1>
-        <span className="text-sm text-slate-400">{total} total</span>
-      </div>
+      <AdminPageHeader
+        title={t('admin.users.title', 'Users')}
+        description={t('admin.users.totalUsers', '{{count}} total users', { count: total })}
+        actions={<ExportMenu onExportCSV={handleExportCSV} />}
+      />
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-md">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
-            className="w-full pl-10 pr-3 py-2 border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value); setOffset(0); }}
-          className="px-3 py-2 border border-slate-600 rounded-lg text-sm"
-        >
-          <option value="">All Roles</option>
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-          <option value="super_admin">Super Admin</option>
-        </select>
-      </div>
+      <FilterBar
+        search={search}
+        onSearchChange={(v) => { setSearch(v); setOffset(0) }}
+        searchPlaceholder={t('admin.users.searchPlaceholder', 'Search by name or email...')}
+        filters={[
+          {
+            key: 'role',
+            label: t('admin.users.allRoles', 'All Roles'),
+            options: roleOptions,
+            value: roleFilter,
+            onChange: (v) => { setRoleFilter(v); setOffset(0) },
+          },
+        ]}
+      />
 
-      {/* Table */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-700">
-          <thead className="bg-slate-900">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Plan</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Credits</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Joined</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700">
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  {Array.from({ length: 6 }).map((__, j) => (
-                    <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-700 rounded animate-pulse" /></td>
-                  ))}
-                </tr>
-              ))
-            ) : users.map((user) => (
-              <tr key={user.id} className="hover:bg-slate-900">
-                <td className="px-4 py-3">
-                  <Link to={`/users/${user.id}`} className="text-sm font-medium text-primary-600 hover:text-primary-800">
-                    {user.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-400">{user.email}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                    user.role === 'super_admin' ? 'bg-red-900/30 text-red-300'
-                    : user.role === 'admin' ? 'bg-sky-900/30 text-sky-300'
-                    : 'bg-slate-800 text-slate-200'
-                  }`}>
-                    {user.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-400">{user.plan_name || '-'}</td>
-                <td className="px-4 py-3 text-sm text-right text-white font-medium">{user.credits}</td>
-                <td className="px-4 py-3 text-sm text-slate-400">{new Date(user.created_at).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <BulkActions
+        selectedCount={selectedIds.size}
+        actions={[
+          { label: t('admin.users.exportSelected', 'Export selected'), icon: <Download className="h-4 w-4" />, onClick: handleExportCSV },
+          { label: t('admin.users.emailSelected', 'Email selected'), icon: <Mail className="h-4 w-4" />, onClick: () => {} },
+        ]}
+        onClear={() => setSelectedIds(new Set())}
+      />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-400">
-            Page {currentPage} of {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <button
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
-              className="p-2 border rounded-lg disabled:opacity-50 hover:bg-slate-900"
-            >
-              <FiChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              disabled={offset + limit >= total}
-              onClick={() => setOffset(offset + limit)}
-              className="p-2 border rounded-lg disabled:opacity-50 hover:bg-slate-900"
-            >
-              <FiChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <PaginatedTable
+        columns={columns}
+        data={users}
+        loading={loading}
+        rowKey={(r) => r.id}
+        emptyMessage={t('admin.users.noUsersFound', 'No users found')}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        hasNextPage={offset + limit < total}
+        hasPrevPage={offset > 0}
+        onNextPage={() => setOffset(offset + limit)}
+        onPrevPage={() => setOffset(Math.max(0, offset - limit))}
+        pageInfo={totalPages > 0 ? t('admin.common.pageOf', 'Page {{current}} of {{total}}', { current: currentPage, total: totalPages }) : undefined}
+      />
+
+      <ConfirmDialog
+        open={banDialogOpen}
+        onOpenChange={setBanDialogOpen}
+        title={t('admin.userDetail.banTitle', 'Ban User')}
+        description={t('admin.userDetail.banDescription', 'Are you sure you want to ban {{name}}? They will lose access to their account immediately.', { name: banTarget?.name })}
+        typeToConfirm={banTarget?.email}
+        confirmText={t('admin.userDetail.banConfirm', 'Ban User')}
+        variant="destructive"
+        loading={actionLoading}
+        onConfirm={handleBan}
+      />
     </div>
-  );
-};
+  )
+}
+
+export { UsersPage as default }

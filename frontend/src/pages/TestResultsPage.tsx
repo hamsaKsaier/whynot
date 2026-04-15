@@ -1,14 +1,9 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiPlay, FiFileText } from 'react-icons/fi';
-import { Tabs } from '../components/common/Tabs';
+import { Play, FileText } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { TestRunsContent } from './TestRunsPage';
 import { TestCasesContent } from './TestCasesPage';
-
-const TABS = [
-  { id: 'runs', label: 'Test Runs', icon: <FiPlay className="h-4 w-4" /> },
-  { id: 'cases', label: 'Test Cases', icon: <FiFileText className="h-4 w-4" /> },
-];
 
 export const TestResultsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,16 +16,29 @@ export const TestResultsPage: React.FC = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white">Test Results</h1>
-        <p className="text-slate-400 mt-1">View test runs and manage test cases</p>
+        <h1 className="text-2xl font-semibold text-foreground">Test Results</h1>
+        <p className="text-muted-foreground mt-1">View test runs and manage test cases</p>
       </div>
 
-      <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="runs" className="gap-1.5">
+            <Play className="h-4 w-4" />
+            Test Runs
+          </TabsTrigger>
+          <TabsTrigger value="cases" className="gap-1.5">
+            <FileText className="h-4 w-4" />
+            Test Cases
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="mt-6">
-        {activeTab === 'runs' && <TestRunsContent />}
-        {activeTab === 'cases' && <TestCasesContent />}
-      </div>
+        <TabsContent value="runs">
+          <TestRunsContent />
+        </TabsContent>
+        <TabsContent value="cases">
+          <TestCasesContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

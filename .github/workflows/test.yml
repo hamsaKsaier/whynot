@@ -1,0 +1,137 @@
+name: Test
+
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+    branches: [main, v2]
+
+jobs:
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Gateway typecheck
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm --no-deps gateway-test npx tsc --noEmit
+
+      - name: Frontend typecheck
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm --no-deps frontend-test
+          sh -c "npm install --prefer-offline && npx tsc --noEmit"
+
+      - name: Admin frontend typecheck
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm --no-deps admin-frontend-test
+          sh -c "npm install --prefer-offline && npx tsc --noEmit"
+
+  unit-integration:
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Gateway unit + integration tests (100% coverage)
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm gateway-test npx vitest run --coverage
+
+      - name: Frontend unit tests (100% coverage)
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm frontend-test npx vitest run --coverage
+
+      - name: Admin frontend unit tests (100% coverage)
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm admin-frontend-test npx vitest run --coverage
+
+      - name: Shared unit tests (100% coverage)
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm shared-test npx vitest run --coverage
+
+      - name: Upload gateway coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gateway
+          path: gateway/coverage/
+          retention-days: 14
+
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: frontend/coverage/
+          retention-days: 14
+
+      - name: Upload admin-frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-admin-frontend
+          path: admin-frontend/coverage/
+          retention-days: 14
+
+      - name: Upload shared coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-shared
+          path: shared/coverage/
+          retention-days: 14
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: unit-integration
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start test database
+        run: >
+          docker compose -f docker-compose.test.yml up -d postgres-test
+          && docker compose -f docker-compose.test.yml exec -T postgres-test
+          sh -c "until pg_isready -U whynot; do sleep 1; done"
+
+      - name: Run Playwright e2e + axe a11y
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm playwright
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: unit-integration
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run Lighthouse CI
+        run: >
+          docker compose -f docker-compose.test.yml
+          run --rm lighthouse

@@ -1,0 +1,21 @@
+{
+  "results.title": "نتائج الاختبار",
+  "results.summary": "الملخص",
+  "results.passed": "ناجح",
+  "results.failed": "فاشل",
+  "results.skipped": "تم تخطيه",
+  "results.duration": "المدة",
+  "results.startedAt": "بدأ في",
+  "results.completedAt": "اكتمل في",
+  "results.steps.title": "الخطوات",
+  "results.steps.screenshot": "عرض لقطة الشاشة",
+  "results.steps.expected": "المتوقع",
+  "results.steps.actual": "الفعلي",
+  "results.export": "تصدير النتائج",
+  "results.rerun": "إعادة تشغيل الاختبار",
+  "results.comparison.title": "المقارنة البصرية",
+  "results.comparison.baseline": "خط الأساس",
+  "results.comparison.current": "الحالي",
+  "results.comparison.diff": "الفرق",
+  "results.empty": "لا توجد نتائج لعرضها"
+}

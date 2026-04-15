@@ -1,0 +1,20 @@
+{
+  "runner.title": "Ejecutor de pruebas",
+  "runner.configure": "Configurar ejecución",
+  "runner.start": "Iniciar ejecución",
+  "runner.stop": "Detener",
+  "runner.status.idle": "Inactivo",
+  "runner.status.running": "En ejecución",
+  "runner.status.completed": "Completado",
+  "runner.status.failed": "Fallido",
+  "runner.status.cancelled": "Cancelado",
+  "runner.steps.title": "Pasos de prueba",
+  "runner.steps.add": "Agregar paso",
+  "runner.steps.remove": "Eliminar paso",
+  "runner.steps.reorder": "Reordenar",
+  "runner.baseUrl": "URL base",
+  "runner.baseUrl.placeholder": "https://example.com",
+  "runner.progress": "Paso {{current}} de {{total}}",
+  "runner.duration": "Duración: {{time}}",
+  "runner.creditsRequired": "Créditos requeridos: {{count}}"
+}

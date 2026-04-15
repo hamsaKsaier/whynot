@@ -1,0 +1,21 @@
+{
+  "results.title": "Resultados de pruebas",
+  "results.summary": "Resumen",
+  "results.passed": "Aprobados",
+  "results.failed": "Fallidos",
+  "results.skipped": "Omitidos",
+  "results.duration": "Duración",
+  "results.startedAt": "Iniciado el",
+  "results.completedAt": "Completado el",
+  "results.steps.title": "Pasos",
+  "results.steps.screenshot": "Ver captura de pantalla",
+  "results.steps.expected": "Esperado",
+  "results.steps.actual": "Actual",
+  "results.export": "Exportar resultados",
+  "results.rerun": "Volver a ejecutar prueba",
+  "results.comparison.title": "Comparación visual",
+  "results.comparison.baseline": "Línea base",
+  "results.comparison.current": "Actual",
+  "results.comparison.diff": "Diferencias",
+  "results.empty": "No hay resultados para mostrar"
+}

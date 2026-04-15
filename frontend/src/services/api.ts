@@ -649,6 +649,130 @@ export const reactivateSubscription = async () => {
   return response.data;
 };
 
+// ─── Usage API ───────────────────────────────────────────────────────────────
+
+export const getUsageSummary = async (from: string, to: string) => {
+  const response = await apiClient.get('/me/usage/summary', { params: { from, to } });
+  return response.data;
+};
+
+export const getUsageByDay = async (from: string, to: string) => {
+  const response = await apiClient.get('/me/usage/by-day', { params: { from, to } });
+  return response.data;
+};
+
+export const getUsageRecent = async (cursor?: string, limit = 50, eventType?: string) => {
+  const response = await apiClient.get('/me/usage/recent', { params: { cursor, limit, eventType } });
+  return response.data;
+};
+
+export const getUsageExportCsvUrl = (from: string, to: string) => {
+  const base = apiClient.defaults.baseURL || '/api';
+  return `${base}/me/usage/export.csv?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+};
+
+export const requestDataExport = async (format: 'json' | 'csv' = 'json') => {
+  const response = await apiClient.post('/me/export', { format });
+  return response.data;
+};
+
+export const pollExportStatus = async (exportId: string) => {
+  const response = await apiClient.get(`/me/export/${exportId}`);
+  return response.data;
+};
+
+// ─── User Settings API ───────────────────────────────────────────────────────
+
+export const getProfile = async () => {
+  const res = await apiClient.get('/me/profile');
+  return res.data;
+};
+
+export const updateProfile = async (data: { name?: string; email?: string }) => {
+  const res = await apiClient.patch('/me/profile', data);
+  return res.data;
+};
+
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+  const res = await apiClient.post('/me/password', { currentPassword, newPassword });
+  return res.data;
+};
+
+export const getOrganization = async () => {
+  const res = await apiClient.get('/me/organization');
+  return res.data;
+};
+
+export const updateOrganization = async (data: { name: string }) => {
+  const res = await apiClient.patch('/me/organization', data);
+  return res.data;
+};
+
+export const getOrganizationMembers = async () => {
+  const res = await apiClient.get('/me/organization/members');
+  return res.data;
+};
+
+export const inviteOrganizationMember = async (email: string, role: string) => {
+  const res = await apiClient.post('/me/organization/invitations', { email, role });
+  return res.data;
+};
+
+export const removeOrganizationMember = async (memberId: string) => {
+  const res = await apiClient.delete(`/me/organization/members/${memberId}`);
+  return res.data;
+};
+
+export const transferOrganizationOwnership = async (newOwnerId: string) => {
+  const res = await apiClient.post('/me/organization/transfer', { newOwnerId });
+  return res.data;
+};
+
+export const getApiKeys = async () => {
+  const res = await apiClient.get('/me/api-keys');
+  return res.data;
+};
+
+export const createApiKey = async (label: string) => {
+  const res = await apiClient.post('/me/api-keys', { label });
+  return res.data;
+};
+
+export const rotateApiKey = async (keyId: string) => {
+  const res = await apiClient.post(`/me/api-keys/${keyId}/rotate`);
+  return res.data;
+};
+
+export const revokeApiKey = async (keyId: string) => {
+  const res = await apiClient.delete(`/me/api-keys/${keyId}`);
+  return res.data;
+};
+
+export const updateLanguage = async (language: string) => {
+  const res = await apiClient.patch('/me/language', { language });
+  return res.data;
+};
+
+export const getNotificationPreferences = async () => {
+  const res = await apiClient.get('/me/notifications');
+  return res.data;
+};
+
+export const updateNotificationPreferences = async (prefs: Record<string, boolean>) => {
+  const res = await apiClient.patch('/me/notifications', prefs);
+  return res.data;
+};
+
+export const exportUserData = async (format: 'json' | 'csv') => {
+  const res = await apiClient.post('/me/export', { format });
+  return res.data;
+};
+
+export const deleteAccount = async (password: string) => {
+  const res = await apiClient.post('/me/delete', { password });
+  return res.data;
+};
+
 // ─── Auth: Forgot / Reset Password ───────────────────────────────────────────
 
 export const forgotPassword = async (email: string) => {

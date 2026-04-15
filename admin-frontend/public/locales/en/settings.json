@@ -1,0 +1,23 @@
+{
+  "settings.title": "System Settings",
+  "settings.tabs.general": "General",
+  "settings.tabs.credits": "Credit Costs",
+  "settings.tabs.email": "Email",
+  "settings.tabs.webhooks": "Webhooks",
+  "settings.tabs.security": "Security",
+  "settings.noSettings": "No settings in this category.",
+  "settings.saveFailed": "Failed to save",
+  "settings.saveSuccess": "Settings saved",
+  "settings.general.siteName": "Site name",
+  "settings.general.supportEmail": "Support email",
+  "settings.general.maintenanceMode": "Maintenance mode",
+  "settings.credits.testExecution": "Test execution cost",
+  "settings.credits.testGeneration": "Test generation cost",
+  "settings.credits.qaLoop": "QA loop cost",
+  "settings.email.provider": "Email provider",
+  "settings.email.fromAddress": "From address",
+  "settings.webhooks.endpoint": "Webhook endpoint",
+  "settings.webhooks.secret": "Webhook secret",
+  "settings.security.maxLoginAttempts": "Max login attempts",
+  "settings.security.sessionTimeout": "Session timeout (minutes)"
+}

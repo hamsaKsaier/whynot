@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
-import { Card } from '../common/Card';
-import { FiCheckCircle, FiXCircle, FiClock, FiImage, FiEdit, FiEye } from 'react-icons/fi';
+import { CheckCircle, XCircle, Clock, Image, Pencil, Eye } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { cn } from '../../lib/utils';
 import type { ExecutionResult, TestCase, TestStep } from '../../types';
 import { VisualComparisonViewer } from '../VisualRegression/VisualComparisonViewer';
 import { getExecutionVisualComparisons } from '../../services/api';
@@ -60,102 +70,106 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
   const failedSteps = executionResult.steps.filter(s => !s.success).length;
   const successRate = totalSteps > 0 ? (passedSteps / totalSteps) * 100 : 0;
 
-  const getStatusBadge = () => {
-    const status = executionResult.status;
-    const colors = {
-      completed: 'bg-green-900/40 text-green-300',
-      failed: 'bg-red-900/40 text-red-300',
-      running: 'bg-blue-900/40 text-blue-300',
-      timeout: 'bg-yellow-900/40 text-yellow-300',
-      paused: 'bg-slate-700 text-slate-300',
-      cancelled: 'bg-slate-700 text-slate-400',
-    };
-    const statusColors: Record<string, string> = colors;
-
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[status] || colors.completed}`}>
-        {status.toUpperCase()}
-      </span>
-    );
+  const statusBadgeMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string }> = {
+    completed: { label: 'COMPLETED', variant: 'outline', className: 'border-green-700 bg-green-900/20 text-green-300' },
+    failed:    { label: 'FAILED',    variant: 'destructive' },
+    running:   { label: 'RUNNING',   variant: 'outline', className: 'border-blue-700 bg-blue-900/20 text-blue-300' },
+    timeout:   { label: 'TIMEOUT',   variant: 'outline', className: 'border-yellow-700 bg-yellow-900/20 text-yellow-300' },
+    paused:    { label: 'PAUSED',    variant: 'secondary' },
+    cancelled: { label: 'CANCELLED', variant: 'secondary' },
   };
 
+  const statusInfo = statusBadgeMap[executionResult.status] || statusBadgeMap.completed;
+
   return (
-    <Card title="Test Results" className="mb-6">
-      <div className="space-y-6">
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-lg">Test Results</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-primary-900/30 to-primary-800/20 rounded-lg p-4 border border-primary-800/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-primary-400 font-medium">Test Name</p>
-                <p className="text-lg font-bold text-white mt-1">
-                  {testCase?.name || 'N/A'}
-                </p>
+          <Card className="border-border">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Test Name</p>
+                  <p className="text-lg font-bold text-foreground mt-1">
+                    {testCase?.name || 'N/A'}
+                  </p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-primary opacity-50" />
               </div>
-              <FiCheckCircle className="h-8 w-8 text-primary-500 opacity-50" />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-lg p-4 border border-green-800/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-400 font-medium">Success Rate</p>
-                <p className="text-lg font-bold text-white mt-1">
-                  {successRate.toFixed(0)}%
-                </p>
+          <Card className="border-green-800/30 bg-green-900/10">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-green-400 font-medium">Success Rate</p>
+                  <p className="text-lg font-bold text-foreground mt-1">
+                    {successRate.toFixed(0)}%
+                  </p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-500 opacity-50" />
               </div>
-              <FiCheckCircle className="h-8 w-8 text-green-500 opacity-50" />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 rounded-lg p-4 border border-blue-800/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-400 font-medium">Total Steps</p>
-                <p className="text-lg font-bold text-white mt-1">
-                  {totalSteps}
-                </p>
+          <Card className="border-blue-800/30 bg-blue-900/10">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-blue-400 font-medium">Total Steps</p>
+                  <p className="text-lg font-bold text-foreground mt-1">
+                    {totalSteps}
+                  </p>
+                </div>
+                <Clock className="h-8 w-8 text-blue-500 opacity-50" />
               </div>
-              <FiClock className="h-8 w-8 text-blue-500 opacity-50" />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="bg-gradient-to-br from-slate-800/60 to-slate-700/40 rounded-lg p-4 border border-slate-700/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400 font-medium">Duration</p>
-                <p className="text-lg font-bold text-white mt-1">
-                  {(executionResult.total_duration_ms / 1000).toFixed(2)}s
-                </p>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Duration</p>
+                  <p className="text-lg font-bold text-foreground mt-1">
+                    {(executionResult.total_duration_ms / 1000).toFixed(2)}s
+                  </p>
+                </div>
+                <Clock className="h-8 w-8 text-muted-foreground opacity-50" />
               </div>
-              <FiClock className="h-8 w-8 text-slate-500 opacity-50" />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Status and Actions */}
-        <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg border border-slate-700">
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">Status:</span>
-            {getStatusBadge()}
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-muted-foreground">Status:</span>
+            <Badge variant={statusInfo.variant} className={statusInfo.className}>
+              {statusInfo.label}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
               {passedSteps} passed, {failedSteps} failed
             </span>
           </div>
           {executionResult.screenshots.length > 0 && (
-            <button
-              onClick={onViewScreenshots}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg hover:bg-slate-600 transition-colors"
-            >
-              <FiImage className="h-4 w-4" />
-              <span className="text-sm font-medium">View Screenshots ({executionResult.screenshots.length})</span>
-            </button>
+            <Button variant="outline" size="sm" onClick={onViewScreenshots}>
+              <Image className="h-4 w-4 me-2" />
+              View Screenshots ({executionResult.screenshots.length})
+            </Button>
           )}
         </div>
 
+        <Separator />
+
         {/* Step-by-Step Results */}
         <div>
-          <h4 className="font-semibold text-white mb-3">Step-by-Step Results</h4>
+          <h4 className="font-semibold text-foreground mb-3">Step-by-Step Results</h4>
           <div className="space-y-2">
             {executionResult.steps.map((step, index) => {
               const correspondingStep = testCase?.steps.find(s => s.id === step.step_id);
@@ -163,40 +177,42 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
               return (
                 <div
                   key={step.step_id}
-                  className={`p-4 rounded-lg border-2 ${step.success
-                      ? 'bg-green-900/20 border-green-800'
-                      : 'bg-red-900/20 border-red-800'
-                    }`}
+                  className={cn(
+                    'p-4 rounded-lg border',
+                    step.success
+                      ? 'bg-green-900/10 border-green-800/50'
+                      : 'bg-destructive/10 border-destructive/50'
+                  )}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
                       {step.success ? (
-                        <FiCheckCircle className="h-5 w-5 text-green-600" />
+                        <CheckCircle className="h-5 w-5 text-green-600" />
                       ) : (
-                        <FiXCircle className="h-5 w-5 text-red-600" />
+                        <XCircle className="h-5 w-5 text-destructive" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-white">
+                        <span className="font-medium text-foreground">
                           Step {index + 1}: {correspondingStep?.description || step.step_id}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-muted-foreground">
                           {step.execution_time_ms}ms
                         </span>
                       </div>
                       {correspondingStep && (
-                        <p className="text-sm text-slate-400 mb-2">
+                        <p className="text-sm text-muted-foreground mb-2">
                           Action: <span className="font-medium capitalize">{correspondingStep.action}</span>
                         </p>
                       )}
                       {step.error && (
-                        <div className="mt-2 p-2 bg-red-900/30 rounded text-sm text-red-400">
+                        <div className="mt-2 p-2 bg-destructive/10 rounded text-sm text-destructive">
                           <strong>Error:</strong> {step.error}
                         </div>
                       )}
                       {step.selector_used && (
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className="mt-2 text-xs text-muted-foreground">
                           <span className="font-medium">Selector used:</span> {step.selector_used.type} - {step.selector_used.value}
                         </div>
                       )}
@@ -204,31 +220,32 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                       {(step.visual_comparison || visualComparisons[step.step_id]) && (() => {
                         const comparison = step.visual_comparison || visualComparisons[step.step_id];
                         const severity = comparison?.severity || comparison?.regression_severity || 'medium';
-                        const severityColors = {
-                          low: 'bg-green-900/30 text-green-400 border-green-800',
-                          medium: 'bg-yellow-900/30 text-yellow-400 border-yellow-800',
-                          high: 'bg-orange-900/30 text-orange-400 border-orange-800',
-                          critical: 'bg-red-900/30 text-red-400 border-red-800',
+                        const severityColors: Record<string, string> = {
+                          low: 'bg-green-900/20 text-green-400 border-green-800/50',
+                          medium: 'bg-yellow-900/20 text-yellow-400 border-yellow-800/50',
+                          high: 'bg-orange-900/20 text-orange-400 border-orange-800/50',
+                          critical: 'bg-destructive/20 text-destructive border-destructive/50',
                         };
-                        const severityMap: Record<string, string> = severityColors;
                         const isRegression = comparison?.isRegression || comparison?.is_regression;
 
                         if (isRegression) {
                           return (
-                            <div className={`mt-2 p-2 rounded border ${severityMap[String(severity)] ?? severityColors.medium}`}>
+                            <div className={cn('mt-2 p-2 rounded border', severityColors[String(severity)] ?? severityColors.medium)}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <FiEye className="h-4 w-4" />
+                                  <Eye className="h-4 w-4" />
                                   <span className="text-sm font-medium">
                                     Visual Regression ({severity.toUpperCase()})
                                   </span>
                                 </div>
-                                <button
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto p-0 text-xs"
                                   onClick={() => handleViewVisualComparison(step.step_id)}
-                                  className="text-xs underline hover:no-underline"
                                 >
                                   View Details
-                                </button>
+                                </Button>
                               </div>
                               {comparison?.differences && comparison.differences.length > 0 && (
                                 <p className="text-xs mt-1">
@@ -243,18 +260,20 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                     </div>
                     {/* Fix/Edit Icon */}
                     {testCase && correspondingStep && onStepFix && (
-                      <div className="flex-shrink-0 ml-2">
-                        <button
+                      <div className="flex-shrink-0 ms-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={(e) => {
                             e.stopPropagation();
                             onStepFix(testCase, index, correspondingStep);
                           }}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
                           title="Fix or modify this step"
                           aria-label="Fix or modify this step"
                         >
-                          <FiEdit className="w-4 h-4" />
-                        </button>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -282,37 +301,12 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
 
         {/* Error Summary */}
         {executionResult.error && (
-          <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg">
-            <h4 className="font-semibold text-red-900 mb-2">Execution Error</h4>
-            <p className="text-sm text-red-400">{executionResult.error}</p>
+          <div className="p-4 bg-destructive/10 border border-destructive/50 rounded-lg">
+            <h4 className="font-semibold text-destructive mb-2">Execution Error</h4>
+            <p className="text-sm text-destructive">{executionResult.error}</p>
           </div>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

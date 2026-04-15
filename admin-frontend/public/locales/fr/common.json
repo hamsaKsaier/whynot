@@ -1,0 +1,339 @@
+{
+  "admin": {
+    "nav": {
+      "dashboard": "Tableau de bord",
+      "analytics": "Analytique",
+      "users": "Utilisateurs",
+      "plans": "Plans",
+      "subscriptions": "Abonnements",
+      "credits": "Crédits",
+      "announcements": "Annonces",
+      "auditLog": "Journal d'audit",
+      "settings": "Paramètres",
+      "featureFlags": "Feature flags",
+      "billingConfig": "Configuration de facturation",
+      "aiProviders": "Fournisseurs IA",
+      "organizations": "Organisations",
+      "usageTracking": "Suivi de consommation",
+      "usage": "Consommation",
+      "management": "Gestion",
+      "system": "Système",
+      "comingSoon": "Bientôt disponible",
+      "sections": {
+        "platform": "Plateforme",
+        "billing": "Facturation",
+        "flagsAi": "Drapeaux & IA",
+        "insights": "Analyses",
+        "content": "Contenu",
+        "settings": "Paramètres"
+      }
+    },
+    "common": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "create": "Créer",
+      "update": "Mettre à jour",
+      "export": "Exporter",
+      "exportCSV": "Exporter en CSV",
+      "exportJSON": "Exporter en JSON",
+      "confirm": "Confirmer",
+      "search": "Rechercher...",
+      "noData": "Aucune donnée trouvée",
+      "loading": "Chargement...",
+      "actions": "Actions",
+      "selected": "{{count}} sélectionné(s)",
+      "clear": "Effacer",
+      "previousPage": "Page précédente",
+      "nextPage": "Page suivante",
+      "pageOf": "Page {{current}} sur {{total}}",
+      "signOut": "Se déconnecter",
+      "typeToConfirm": "Saisissez {{text}} pour confirmer"
+    },
+    "login": {
+      "title": "Connexion administrateur",
+      "email": "E-mail",
+      "password": "Mot de passe",
+      "signIn": "Se connecter",
+      "signingIn": "Connexion en cours...",
+      "adminOnly": "Accès réservé aux administrateurs. Les utilisateurs standard ne peuvent pas se connecter ici.",
+      "failed": "Échec de la connexion. Accès administrateur requis."
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "totalUsers": "Utilisateurs totaux",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "activePlans": "Plans actifs",
+      "recentSignups": "Inscriptions récentes",
+      "subscriptionsByPlan": "Abonnements par plan",
+      "recentUsers": "Utilisateurs récents",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "plan": "Plan",
+        "credits": "Crédits",
+        "joined": "Inscrit le"
+      },
+      "subscribers": "{{count}} abonné(s)",
+      "noUsers": "Aucun utilisateur pour le moment",
+      "noSubscriptionData": "Aucune donnée d'abonnement"
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "totalUsers": "{{count}} utilisateurs au total",
+      "searchPlaceholder": "Rechercher par nom ou e-mail...",
+      "allRoles": "Tous les rôles",
+      "exportSelected": "Exporter la sélection",
+      "emailSelected": "Envoyer un e-mail à la sélection",
+      "noUsersFound": "Aucun utilisateur trouvé",
+      "viewDetail": "Voir les détails",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "role": "Rôle",
+        "plan": "Plan",
+        "credits": "Crédits",
+        "joined": "Inscrit le"
+      },
+      "roles": {
+        "user": "Utilisateur",
+        "admin": "Administrateur",
+        "superAdmin": "Super administrateur"
+      }
+    },
+    "userDetail": {
+      "impersonate": "Prendre l'identité",
+      "resetPassword": "Réinitialiser le mot de passe",
+      "ban": "Bannir",
+      "unban": "Débannir",
+      "banTitle": "Bannir l'utilisateur",
+      "banDescription": "Êtes-vous sûr de vouloir bannir {{name}} ? L'accès à son compte sera immédiatement révoqué.",
+      "banConfirm": "Bannir l'utilisateur",
+      "tabs": {
+        "overview": "Aperçu",
+        "subscription": "Abonnement",
+        "flags": "Drapeaux",
+        "audit": "Audit"
+      },
+      "role": "Rôle",
+      "id": "ID",
+      "joined": "Inscrit le",
+      "grantCredits": "Attribuer",
+      "revokeCredits": "Révoquer",
+      "amount": "Montant",
+      "description": "Description",
+      "reason": "Raison...",
+      "notFound": "Utilisateur introuvable.",
+      "noPlan": "Aucun forfait",
+      "credits": "crédits",
+      "forcePlan": "Forcer le forfait",
+      "selectPlan": "Sélectionner un forfait",
+      "choosePlan": "Choisir un forfait...",
+      "applyPlan": "Appliquer le forfait",
+      "flagOverrides": "Remplacements de drapeaux",
+      "noFlags": "Aucun remplacement de drapeaux pour l'espace de travail de cet utilisateur."
+    },
+    "organizations": {
+      "title": "Organisations",
+      "totalOrgs": "{{count}} organisations",
+      "searchPlaceholder": "Rechercher par nom...",
+      "noOrgsFound": "Aucune organisation trouvée",
+      "notFound": "Organisation introuvable.",
+      "backToOrgs": "Retour aux organisations",
+      "noMembers": "Aucun membre trouvé",
+      "columns": {
+        "name": "Nom",
+        "owner": "Propriétaire",
+        "plan": "Forfait",
+        "status": "Statut",
+        "credits": "Crédits",
+        "created": "Créé"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "Aperçu",
+        "members": "Membres",
+        "subscription": "Abonnement",
+        "flags": "Drapeaux",
+        "audit": "Audit"
+      },
+      "details": "Détails de l'organisation",
+      "name": "Nom",
+      "id": "ID",
+      "owner": "Propriétaire",
+      "created": "Créé",
+      "credits": "Crédits",
+      "plan": "Forfait",
+      "status": "Statut",
+      "selectPlan": "Sélectionner un forfait...",
+      "subscriptionDetails": "Détails de l'abonnement",
+      "periodEnd": "Fin de période",
+      "trialEnd": "Fin d'essai",
+      "flagOverrides": "Remplacements de drapeaux",
+      "noFlagOverrides": "Aucun remplacement de drapeaux défini pour cette organisation."
+    },
+    "plans": {
+      "title": "Plans",
+      "newPlan": "Nouveau plan",
+      "editPlan": "Modifier le plan",
+      "createPlan": "Créer un plan",
+      "saveChanges": "Enregistrer les modifications",
+      "archivePlan": "Archiver le plan",
+      "archiveDescription": "Êtes-vous sûr de vouloir archiver « {{name}} » ? Les abonnés existants ne seront pas affectés, mais les nouveaux abonnements seront désactivés.",
+      "archive": "Archiver",
+      "restore": "Restaurer",
+      "syncStripe": "Synchroniser avec Stripe",
+      "noPlans": "Aucun plan créé pour le moment.",
+      "details": "Détails",
+      "featureFlags": "Feature flags",
+      "fields": {
+        "name": "Nom",
+        "slug": "Slug",
+        "description": "Description",
+        "price": "Prix ($)",
+        "billingInterval": "Intervalle de facturation",
+        "creditsPerPeriod": "Crédits / Période",
+        "trialDays": "Jours d'essai",
+        "sortOrder": "Ordre d'affichage",
+        "public": "Public",
+        "enterprise": "Entreprise"
+      },
+      "intervals": {
+        "monthly": "Mensuel",
+        "yearly": "Annuel",
+        "oneTime": "Unique"
+      },
+      "badges": {
+        "archived": "Archivé",
+        "hidden": "Masqué",
+        "custom": "Personnalisé"
+      }
+    },
+    "subscriptions": {
+      "title": "Abonnements",
+      "allStatuses": "Tous les statuts",
+      "noSubscriptions": "Aucun abonnement trouvé",
+      "columns": {
+        "workspace": "Espace de travail",
+        "owner": "Propriétaire",
+        "plan": "Plan",
+        "status": "Statut",
+        "credits": "Crédits",
+        "periodEnd": "Fin de période"
+      },
+      "statuses": {
+        "active": "Actif",
+        "trialing": "En essai",
+        "pastDue": "En retard de paiement",
+        "canceled": "Annulé"
+      }
+    },
+    "credits": {
+      "title": "Crédits",
+      "description": "Soldes de crédits de tous les utilisateurs",
+      "grantCredits": "Attribuer des crédits",
+      "grantDescription": "Attribuer des crédits à un espace de travail spécifique.",
+      "workspaceId": "ID de l'espace de travail",
+      "amount": "Montant",
+      "noUsers": "Aucun utilisateur trouvé",
+      "columns": {
+        "user": "Utilisateur",
+        "email": "E-mail",
+        "plan": "Plan",
+        "credits": "Crédits"
+      }
+    },
+    "analytics": {
+      "title": "Analytique",
+      "totalUsers": "Utilisateurs totaux",
+      "activeSubscriptions": "Abonnements actifs",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "signups": "Inscriptions (30 derniers jours)",
+      "revenueByPlan": "Revenus par plan",
+      "creditUsage": "Consommation de crédits (30 derniers jours)",
+      "cancellations": "Résiliations (90 derniers jours)",
+      "noCancellations": "Aucune résiliation sur cette période"
+    },
+    "auditLog": {
+      "title": "Journal d'audit",
+      "allActions": "Toutes les actions",
+      "noEntries": "Aucune entrée d'audit trouvée",
+      "columns": {
+        "time": "Date/Heure",
+        "actor": "Auteur",
+        "action": "Action",
+        "target": "Cible",
+        "details": "Détails"
+      },
+      "actions": {
+        "roleChange": "Changement de rôle",
+        "userSuspend": "Suspension d'utilisateur",
+        "userUnsuspend": "Réactivation d'utilisateur",
+        "impersonate": "Prise d'identité",
+        "creditsGrant": "Attribution de crédits",
+        "creditsRevoke": "Révocation de crédits",
+        "planArchive": "Archivage de plan",
+        "planRestore": "Restauration de plan",
+        "settingsUpdate": "Mise à jour des paramètres",
+        "announcementCreate": "Création d'annonce",
+        "announcementUpdate": "Mise à jour d'annonce",
+        "announcementDelete": "Suppression d'annonce"
+      }
+    },
+    "settings": {
+      "title": "Paramètres système",
+      "tabs": {
+        "general": "Général",
+        "credits": "Coûts en crédits",
+        "email": "E-mail",
+        "webhooks": "Webhooks",
+        "security": "Sécurité"
+      },
+      "noSettings": "Aucun paramètre dans cette catégorie.",
+      "saveFailed": "Échec de l'enregistrement"
+    },
+    "announcements": {
+      "title": "Annonces",
+      "newAnnouncement": "Nouvelle annonce",
+      "editAnnouncement": "Modifier l'annonce",
+      "deleteAnnouncement": "Supprimer l'annonce",
+      "deleteDescription": "Êtes-vous sûr de vouloir supprimer « {{title}} » ? Cette action est irréversible.",
+      "noAnnouncements": "Aucune annonce",
+      "immediate": "Immédiat",
+      "fields": {
+        "title": "Titre",
+        "body": "Contenu",
+        "type": "Type",
+        "active": "Actif",
+        "startsAt": "Début",
+        "endsAt": "Fin"
+      },
+      "types": {
+        "info": "Information",
+        "warning": "Avertissement",
+        "success": "Succès",
+        "error": "Erreur"
+      },
+      "columns": {
+        "title": "Titre",
+        "type": "Type",
+        "active": "Actif",
+        "schedule": "Planification"
+      }
+    },
+    "status": {
+      "active": "Actif",
+      "trialing": "En essai",
+      "paused": "En pause",
+      "pastDue": "En retard de paiement",
+      "canceled": "Annulé",
+      "banned": "Banni",
+      "suspended": "Suspendu",
+      "expired": "Expiré"
+    }
+  }
+}

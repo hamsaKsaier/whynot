@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { BrowserControls } from './BrowserControls';
 import { BrowserFrame } from './BrowserFrame';
 import { FrameNavigation } from './FrameNavigation';
@@ -17,7 +19,6 @@ interface BrowserPreviewProps {
   isLoading?: boolean;
   error?: string;
   onNavigate?: (direction: 'back' | 'forward' | 'refresh' | 'home') => void;
-  // Frame history and navigation props
   frameHistory?: Map<number, BrowserFrame[]>;
   currentStepIndex?: number | null;
   currentFrameIndex?: number;
@@ -52,7 +53,6 @@ export const BrowserPreview: React.FC<BrowserPreviewProps> = ({
   const [resolution, setResolution] = useState('1920x1080');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Handle frame transitions with fade effect
   React.useEffect(() => {
     if (imageUrl) {
       setIsTransitioning(true);
@@ -64,28 +64,28 @@ export const BrowserPreview: React.FC<BrowserPreviewProps> = ({
   const totalFrames = getTotalFrames ? getTotalFrames() : 0;
   const framePosition = getCurrentFramePosition ? getCurrentFramePosition() : { step: 0, frame: 0, total: 0 };
 
-  const hasNavigation = frameHistory.size > 0 && 
-    onGoToStep && 
-    onGoToNextFrame && 
-    onGoToPrevFrame && 
-    onGoToFirstFrame && 
+  const hasNavigation = frameHistory.size > 0 &&
+    onGoToStep &&
+    onGoToNextFrame &&
+    onGoToPrevFrame &&
+    onGoToFirstFrame &&
     onGoToLastFrame;
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
-      {/* Browser Controls */}
-      <BrowserControls
-        url={url}
-        onNavigate={onNavigate}
-        onZoomChange={setZoom}
-        onBrowserChange={setBrowser}
-        onResolutionChange={setResolution}
-        currentZoom={zoom}
-        currentBrowser={browser}
-        currentResolution={resolution}
-      />
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="p-0">
+        <BrowserControls
+          url={url}
+          onNavigate={onNavigate}
+          onZoomChange={setZoom}
+          onBrowserChange={setBrowser}
+          onResolutionChange={setResolution}
+          currentZoom={zoom}
+          currentBrowser={browser}
+          currentResolution={resolution}
+        />
+      </CardHeader>
 
-      {/* Frame Navigation */}
       {hasNavigation && (
         <FrameNavigation
           currentStepIndex={currentStepIndex}
@@ -101,10 +101,9 @@ export const BrowserPreview: React.FC<BrowserPreviewProps> = ({
         />
       )}
 
-      {/* Browser Frame with smooth transitions */}
-      <div className="flex-1 overflow-hidden relative" style={{ zoom: `${zoom}%` }}>
+      <CardContent className="flex-1 overflow-hidden relative p-0" style={{ zoom: `${zoom}%` }}>
         <div
-          className={`absolute inset-0 transition-opacity duration-200 ${
+          className={`absolute inset-0 transition-opacity duration-150 ${
             isTransitioning ? 'opacity-50' : 'opacity-100'
           }`}
         >
@@ -115,31 +114,16 @@ export const BrowserPreview: React.FC<BrowserPreviewProps> = ({
             url={url}
           />
         </div>
-      </div>
-    </div>
+      </CardContent>
+
+      <CardFooter className="px-3 py-1.5 border-t border-border justify-between">
+        <Badge variant={isLoading ? 'default' : error ? 'destructive' : 'secondary'} className="text-[10px]">
+          {isLoading ? 'Streaming' : error ? 'Error' : imageUrl ? 'Connected' : 'Idle'}
+        </Badge>
+        <span className="text-[10px] text-muted-foreground tabular-nums">
+          {resolution} &middot; {browser}
+        </span>
+      </CardFooter>
+    </Card>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

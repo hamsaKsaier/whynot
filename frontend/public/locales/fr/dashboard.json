@@ -1,0 +1,15 @@
+{
+  "dashboard.title": "Tableau de bord",
+  "dashboard.welcome": "Bon retour, {{name}}",
+  "dashboard.projects.title": "Projets",
+  "dashboard.projects.create": "Nouveau projet",
+  "dashboard.projects.empty": "Aucun projet pour le moment. Créez votre premier projet pour commencer.",
+  "dashboard.projects.search": "Rechercher des projets...",
+  "dashboard.recentTests": "Exécutions récentes",
+  "dashboard.recentTests.empty": "Aucune exécution de test",
+  "dashboard.recentTests.viewAll": "Tout voir",
+  "dashboard.stats.totalTests": "Total des tests",
+  "dashboard.stats.passRate": "Taux de réussite",
+  "dashboard.stats.avgDuration": "Durée moyenne",
+  "dashboard.stats.creditsUsed": "Crédits utilisés"
+}

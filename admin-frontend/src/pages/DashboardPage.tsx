@@ -1,106 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import { getAdminOverviewStats, getAdminUsers } from '../services/api';
-import { FiUsers, FiDollarSign, FiCreditCard, FiTrendingUp } from 'react-icons/fi';
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { Users, DollarSign, CreditCard, TrendingUp, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
+import { Skeleton } from '../components/ui/skeleton'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { StatusBadge } from '../components/admin/StatusBadge'
+import { formatCents } from '../lib/money'
+import { getAdminOverviewStats, getAdminUsers } from '../services/api'
 
-export const DashboardPage: React.FC = () => {
-  const [stats, setStats] = useState<any>(null);
-  const [recentUsers, setRecentUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function DashboardPage() {
+  const [stats, setStats] = useState<any>(null)
+  const [recentUsers, setRecentUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       getAdminOverviewStats().catch(() => ({ stats: {} })),
       getAdminUsers({ limit: 5 }).catch(() => ({ users: [] })),
     ]).then(([statsData, usersData]) => {
-      setStats(statsData.stats);
-      setRecentUsers(usersData.users || []);
-      setLoading(false);
-    });
-  }, []);
+      setStats(statsData.stats)
+      setRecentUsers(usersData.users || [])
+      setLoading(false)
+    })
+  }, [])
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-slate-700 rounded w-48" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-slate-700 rounded-lg" />)}
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
         </div>
+        <Skeleton className="h-64" />
       </div>
-    );
+    )
   }
 
+  const mrrCents = stats?.mrr_cents ?? 0
   const kpis = [
-    { label: 'Total Users', value: stats?.total_users ?? 0, icon: FiUsers, color: 'bg-blue-900/20 text-blue-600' },
-    { label: 'MRR', value: `$${((stats?.mrr_cents ?? 0) / 100).toFixed(0)}`, icon: FiDollarSign, color: 'bg-green-900/20 text-green-600' },
-    { label: 'Active Plans', value: stats?.subscriptions_by_plan?.length ?? 0, icon: FiCreditCard, color: 'bg-sky-900/20 text-sky-400' },
-    { label: 'ARR', value: `$${((stats?.mrr_cents ?? 0) * 12 / 100).toFixed(0)}`, icon: FiTrendingUp, color: 'bg-orange-900/20 text-orange-400' },
-  ];
+    { label: 'Total Users', value: String(stats?.total_users ?? 0), icon: Users, color: 'text-blue-600 dark:text-blue-400' },
+    { label: 'MRR', value: formatCents(mrrCents, { whole: true }), icon: DollarSign, color: 'text-green-600 dark:text-green-400' },
+    { label: 'Active Plans', value: String(stats?.subscriptions_by_plan?.length ?? 0), icon: CreditCard, color: 'text-sky-600 dark:text-sky-400' },
+    { label: 'ARR', value: formatCents(mrrCents * 12, { whole: true }), icon: TrendingUp, color: 'text-orange-600 dark:text-orange-400' },
+  ]
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+      <AdminPageHeader title="Dashboard" />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => {
-          const Icon = kpi.icon;
+          const Icon = kpi.icon
           return (
-            <div key={kpi.label} className="bg-slate-800 rounded-lg border border-slate-700 p-5">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${kpi.color}`}>
-                  <Icon className="h-5 w-5" />
+            <Card key={kpi.label}>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg bg-muted ${kpi.color}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{kpi.label}</p>
+                    <p className="text-2xl font-semibold">{kpi.value}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-400">{kpi.label}</p>
-                  <p className="text-2xl font-bold text-white">{kpi.value}</p>
-                </div>
-              </div>
-            </div>
-          );
+              </CardContent>
+            </Card>
+          )
         })}
       </div>
 
-      {/* Plan Distribution */}
-      {stats?.subscriptions_by_plan && stats.subscriptions_by_plan.length > 0 && (
-        <div className="bg-slate-800 rounded-lg border border-slate-700 p-5">
-          <h2 className="text-lg font-semibold text-white mb-4">Subscriptions by Plan</h2>
-          <div className="space-y-2">
-            {stats.subscriptions_by_plan.map((item: any) => (
-              <div key={item.plan_id} className="flex justify-between items-center py-2 border-b border-slate-700 last:border-0">
-                <span className="text-sm text-slate-200">{item.plan_id}</span>
-                <span className="text-sm font-medium text-white">{item.count} subscribers</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <Tabs defaultValue="signups">
+        <TabsList>
+          <TabsTrigger value="signups">Recent Signups</TabsTrigger>
+          <TabsTrigger value="plans">Subscriptions by Plan</TabsTrigger>
+        </TabsList>
 
-      {/* Recent Users */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-5">
-        <h2 className="text-lg font-semibold text-white mb-4">Recent Users</h2>
-        <table className="min-w-full">
-          <thead>
-            <tr className="text-left text-xs font-medium text-slate-400 uppercase">
-              <th className="pb-3">Name</th>
-              <th className="pb-3">Email</th>
-              <th className="pb-3">Plan</th>
-              <th className="pb-3">Credits</th>
-              <th className="pb-3">Joined</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700">
-            {recentUsers.map((u: any) => (
-              <tr key={u.id}>
-                <td className="py-3 text-sm font-medium text-white">{u.name}</td>
-                <td className="py-3 text-sm text-slate-400">{u.email}</td>
-                <td className="py-3 text-sm text-slate-400">{u.plan_name || '-'}</td>
-                <td className="py-3 text-sm text-slate-400">{u.credits}</td>
-                <td className="py-3 text-sm text-slate-400">{new Date(u.created_at).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <TabsContent value="signups" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Recent Users</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead className="text-end">Credits</TableHead>
+                    <TableHead>Joined</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                        No users yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    recentUsers.map((u: any) => (
+                      <TableRow key={u.id}>
+                        <TableCell>
+                          <Link to={`/users/${u.id}`} className="font-medium text-primary hover:underline">
+                            {u.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.plan_name || '-'}</TableCell>
+                        <TableCell className="text-end font-medium">{u.credits}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(u.created_at))}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="plans" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Subscriptions by Plan</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {stats?.subscriptions_by_plan && stats.subscriptions_by_plan.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.subscriptions_by_plan.map((item: any) => (
+                    <div key={item.plan_id} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <span className="text-sm">{item.plan_id}</span>
+                      <span className="text-sm font-medium">{item.count} subscribers</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">No subscription data</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
-  );
-};
+  )
+}
+
+export { DashboardPage as default }
