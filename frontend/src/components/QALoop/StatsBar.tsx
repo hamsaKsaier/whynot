@@ -3,6 +3,7 @@
  * at the top of the active-session right column (5.1).
  */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -47,37 +48,40 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   qualityThreshold,
   showQualityDashboard,
   onToggleQualityDashboard,
-}) => (
+}) => {
+  const { t } = useTranslation('runner');
+
+  return (
   <>
     {/* Four stat cards */}
-    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
       <Card className="text-center">
-        <CardContent className="p-4">
-          <Globe className="mx-auto h-6 w-6 text-blue-500 dark:text-blue-400 mb-2" />
-          <div className="text-2xl font-bold text-foreground">
+        <CardContent className="p-3 sm:p-4">
+          <Globe className="mx-auto h-5 w-5 sm:h-6 sm:w-6 text-blue-500 dark:text-blue-400 mb-1.5 sm:mb-2" />
+          <div className="text-xl sm:text-2xl font-bold text-foreground">
             {pagesExplored.length || activeSession.pages_explored}
           </div>
-          <div className="text-xs text-muted-foreground">Pages Explored</div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">{t('runner.qaLoop.stats.pagesExplored')}</div>
         </CardContent>
       </Card>
 
       <Card className="text-center">
-        <CardContent className="p-4">
-          <FileText className="mx-auto h-6 w-6 text-green-500 dark:text-green-400 mb-2" />
-          <div className="text-2xl font-bold text-foreground">
+        <CardContent className="p-3 sm:p-4">
+          <FileText className="mx-auto h-5 w-5 sm:h-6 sm:w-6 text-green-500 dark:text-green-400 mb-1.5 sm:mb-2" />
+          <div className="text-xl sm:text-2xl font-bold text-foreground">
             {testsGenerated.length || activeSession.tests_generated}
           </div>
-          <div className="text-xs text-muted-foreground">Tests Generated</div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">{t('runner.qaLoop.stats.testsGenerated')}</div>
         </CardContent>
       </Card>
 
       <Card className="text-center">
-        <CardContent className="p-4">
-          <AlertTriangle className="mx-auto h-6 w-6 text-red-500 dark:text-red-400 mb-2" />
-          <div className="text-2xl font-bold text-foreground">
+        <CardContent className="p-3 sm:p-4">
+          <AlertTriangle className="mx-auto h-5 w-5 sm:h-6 sm:w-6 text-red-500 dark:text-red-400 mb-1.5 sm:mb-2" />
+          <div className="text-xl sm:text-2xl font-bold text-foreground">
             {bugsFound.length || activeSession.bugs_found}
           </div>
-          <div className="text-xs text-muted-foreground">Bugs Found</div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">{t('runner.qaLoop.stats.bugsFound')}</div>
         </CardContent>
       </Card>
 
@@ -85,12 +89,12 @@ export const StatsBar: React.FC<StatsBarProps> = ({
         className="text-center cursor-pointer hover:bg-muted/50 transition-colors duration-150"
         onClick={onToggleQualityDashboard}
       >
-        <CardContent className="p-4">
-          <BarChart2 className="mx-auto h-6 w-6 text-sky-500 dark:text-sky-400 mb-2" />
-          <div className="text-2xl font-bold text-foreground">
+        <CardContent className="p-3 sm:p-4">
+          <BarChart2 className="mx-auto h-5 w-5 sm:h-6 sm:w-6 text-sky-500 dark:text-sky-400 mb-1.5 sm:mb-2" />
+          <div className="text-xl sm:text-2xl font-bold text-foreground">
             {qualityScore.overall}%
           </div>
-          <div className="text-xs text-muted-foreground">Quality Score</div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">{t('runner.qaLoop.stats.qualityScore')}</div>
         </CardContent>
       </Card>
     </div>
@@ -101,14 +105,14 @@ export const StatsBar: React.FC<StatsBarProps> = ({
         <CardContent className="p-4">
           <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
             <BarChart2 className="h-4 w-4 text-sky-500" />
-            Quality Dashboard
+            {t('runner.qaLoop.qualityDashboard.title')}
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleQualityDashboard}
               className="ms-auto text-sm text-muted-foreground"
             >
-              Hide
+              {t('runner.qaLoop.qualityDashboard.hide')}
             </Button>
           </h3>
           <QualityDashboard
@@ -122,4 +126,5 @@ export const StatsBar: React.FC<StatsBarProps> = ({
       </Card>
     )}
   </>
-);
+  );
+};

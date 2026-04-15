@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Minus, Ban, LogIn, Loader2, KeyRound, UserCog, Flag, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -49,12 +49,14 @@ export function UserDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [user, setUser] = useState<any>(null)
   const [workspaces, setWorkspaces] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [creditAmount, setCreditAmount] = useState('')
   const [creditDescription, setCreditDescription] = useState('')
-  const [tab, setTab] = useState('overview')
+  const initialTab = searchParams.get('tab') || 'overview'
+  const [tab, setTab] = useState(initialTab)
   const [banDialogOpen, setBanDialogOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [plans, setPlans] = useState<any[]>([])
@@ -168,6 +170,11 @@ export function UserDetailPage() {
     }
   }
 
+  const handleTabChange = useCallback((newTab: string) => {
+    setTab(newTab)
+    setSearchParams({ tab: newTab }, { replace: true })
+  }, [setSearchParams])
+
   const handleFlagToggle = async (key: string, currentlyEnabled: boolean) => {
     if (!primaryWsId) return
     if (currentlyEnabled) {
@@ -211,14 +218,14 @@ export function UserDetailPage() {
           { label: user.name },
         ]}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleImpersonate}>
               <LogIn className="h-4 w-4 me-1.5 rtl:scale-x-[-1]" />
-              {t('admin.userDetail.impersonate', 'Impersonate')}
+              <span className="hidden sm:inline">{t('admin.userDetail.impersonate', 'Impersonate')}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={handleResetPassword}>
               <KeyRound className="h-4 w-4 me-1.5" />
-              {t('admin.userDetail.resetPassword', 'Reset Password')}
+              <span className="hidden sm:inline">{t('admin.userDetail.resetPassword', 'Reset Password')}</span>
             </Button>
             {user.is_suspended ? (
               <Button variant="outline" size="sm" onClick={handleUnban}>
@@ -234,8 +241,8 @@ export function UserDetailPage() {
         }
       />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={handleTabChange}>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">{t('admin.userDetail.tabs.overview', 'Overview')}</TabsTrigger>
           <TabsTrigger value="subscription">{t('admin.userDetail.tabs.subscription', 'Subscription')}</TabsTrigger>
           <TabsTrigger value="flags">
@@ -250,10 +257,10 @@ export function UserDetailPage() {
 
         <TabsContent value="overview" className="mt-4 space-y-4">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-all">
                     {t('admin.userDetail.id', 'ID')}: <code className="text-xs">{user.id}</code>
                   </p>
                   <div className="flex gap-2 mt-2">
@@ -267,7 +274,7 @@ export function UserDetailPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t('admin.userDetail.role', 'Role')}</Label>
                   <Select value={user.role} onValueChange={handleRoleChange}>
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="w-full sm:w-[140px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -284,17 +291,19 @@ export function UserDetailPage() {
           {workspaces.map((ws: any) => (
             <Card key={ws.id}>
               <CardHeader>
-                <CardTitle className="text-base flex items-center justify-between">
-                  <Link to={`/organizations/${ws.id}`} className="hover:underline">{ws.name}</Link>
-                  <div className="flex gap-2">
-                    {ws.subscription?.status && <StatusBadge status={ws.subscription.status} />}
-                    <Badge variant="outline">{ws.plan_name || t('admin.userDetail.noPlan', 'No plan')}</Badge>
-                    <Badge variant="secondary">{ws.credits} {t('admin.userDetail.credits', 'credits')}</Badge>
+                <CardTitle className="text-base">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <Link to={`/organizations/${ws.id}`} className="hover:underline">{ws.name}</Link>
+                    <div className="flex flex-wrap gap-2">
+                      {ws.subscription?.status && <StatusBadge status={ws.subscription.status} />}
+                      <Badge variant="outline">{ws.plan_name || t('admin.userDetail.noPlan', 'No plan')}</Badge>
+                      <Badge variant="secondary">{ws.credits} {t('admin.userDetail.credits', 'credits')}</Badge>
+                    </div>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-end gap-3 pt-2 border-t">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3 pt-2 border-t">
                   <div className="space-y-1">
                     <Label className="text-xs">{t('admin.userDetail.amount', 'Amount')}</Label>
                     <Input
@@ -302,7 +311,7 @@ export function UserDetailPage() {
                       value={creditAmount}
                       onChange={(e) => setCreditAmount(e.target.value)}
                       placeholder="100"
-                      className="w-24"
+                      className="w-full sm:w-24"
                     />
                   </div>
                   <div className="flex-1 space-y-1">
@@ -313,14 +322,16 @@ export function UserDetailPage() {
                       placeholder={t('admin.userDetail.reason', 'Reason...')}
                     />
                   </div>
-                  <Button size="sm" onClick={() => handleGrant(ws.id)}>
-                    <Plus className="h-3.5 w-3.5 me-1" />
-                    {t('admin.userDetail.grantCredits', 'Grant')}
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleRevoke(ws.id)}>
-                    <Minus className="h-3.5 w-3.5 me-1" />
-                    {t('admin.userDetail.revokeCredits', 'Revoke')}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1 sm:flex-none" onClick={() => handleGrant(ws.id)}>
+                      <Plus className="h-3.5 w-3.5 me-1" />
+                      {t('admin.userDetail.grantCredits', 'Grant')}
+                    </Button>
+                    <Button variant="destructive" size="sm" className="flex-1 sm:flex-none" onClick={() => handleRevoke(ws.id)}>
+                      <Minus className="h-3.5 w-3.5 me-1" />
+                      {t('admin.userDetail.revokeCredits', 'Revoke')}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -333,7 +344,7 @@ export function UserDetailPage() {
               <CardTitle className="text-base">{t('admin.userDetail.forcePlan', 'Force Plan')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-end gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <div className="flex-1 space-y-1.5">
                   <Label className="text-xs">{t('admin.userDetail.selectPlan', 'Select Plan')}</Label>
                   <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
@@ -418,14 +429,14 @@ export function UserDetailPage() {
 
         <TabsContent value="audit" className="mt-4">
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-start">{t('admin.auditLog.columns.time', 'Time')}</TableHead>
                     <TableHead className="text-start">{t('admin.auditLog.columns.actor', 'Actor')}</TableHead>
                     <TableHead className="text-start">{t('admin.auditLog.columns.action', 'Action')}</TableHead>
-                    <TableHead className="text-start">{t('admin.auditLog.columns.details', 'Details')}</TableHead>
+                    <TableHead className="text-start hidden sm:table-cell">{t('admin.auditLog.columns.details', 'Details')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -438,12 +449,12 @@ export function UserDetailPage() {
                   ) : (
                     auditEntries.map((entry: any) => (
                       <TableRow key={entry.id}>
-                        <TableCell className="text-muted-foreground text-sm">{fmt(entry.created_at)}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">{fmt(entry.created_at)}</TableCell>
                         <TableCell className="text-sm">{entry.actor_email || '-'}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">{entry.action}</Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate hidden sm:table-cell">
                           {entry.details ? JSON.stringify(entry.details) : '-'}
                         </TableCell>
                       </TableRow>

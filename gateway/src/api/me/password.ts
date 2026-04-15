@@ -32,12 +32,12 @@ router.post(
 
     const user = await userRepo.findById(userId);
     if (!user) {
-      throw createError('User not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
     }
 
     if (!user.password_hash) {
       throw createError(
-        'Password change not available for OAuth accounts',
+        (req as any).t('errors:auth.passwordNotAvailableOAuth'),
         400,
         'NO_PASSWORD'
       );
@@ -45,7 +45,7 @@ router.post(
 
     const isValid = await bcrypt.compare(currentPassword, user.password_hash);
     if (!isValid) {
-      throw createError('Current password is incorrect', 401, 'INVALID_PASSWORD');
+      throw createError((req as any).t('errors:auth.passwordIncorrect'), 401, 'INVALID_PASSWORD');
     }
 
     const newHash = await bcrypt.hash(newPassword, 12);
@@ -68,7 +68,7 @@ router.post(
 
     logger.info('Password changed', { userId });
 
-    res.json({ success: true, message: 'Password updated successfully' });
+    res.json({ success: true, message: (req as any).t('success:password.updated') });
   })
 );
 

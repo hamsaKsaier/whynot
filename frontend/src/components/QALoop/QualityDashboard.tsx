@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +89,8 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
   targetThreshold,
   costTracking
 }) => {
+  const { t } = useTranslation('runner');
+
   // Format cost in dollars
   const formatCost = (cents: number) => `$${(cents / 100).toFixed(4)}`;
 
@@ -209,15 +212,15 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
 
         {/* Trend Info */}
         <div className="text-center">
-          <div className="text-sm text-muted-foreground">Target</div>
+          <div className="text-sm text-muted-foreground">{t('runner.qaLoop.qualityDashboard.target')}</div>
           <div className="text-2xl font-bold text-sky-500">{targetThreshold}%</div>
           <div className="text-xs text-muted-foreground">
             {qualityScore.overall >= targetThreshold ? (
               <span className="text-green-500 flex items-center gap-1">
-                <CheckCircle className="h-3 w-3" /> Reached!
+                <CheckCircle className="h-3 w-3" /> {t('runner.qaLoop.qualityDashboard.reached')}
               </span>
             ) : (
-              <span>{targetThreshold - qualityScore.overall}% to go</span>
+              <span>{t('runner.qaLoop.qualityDashboard.toGo', { value: targetThreshold - qualityScore.overall })}</span>
             )}
           </div>
         </div>
@@ -259,39 +262,39 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              Risk Summary
+              {t('runner.qaLoop.qualityDashboard.riskSummary')}
             </h4>
-            <span className="text-xs text-muted-foreground">{totalRisks} total issues</span>
+            <span className="text-xs text-muted-foreground">{t('runner.qaLoop.qualityDashboard.totalIssues', { count: totalRisks })}</span>
           </div>
           <div className="flex gap-2">
             {risks.critical > 0 && (
               <div className="flex-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-md text-center">
                 <div className="text-lg font-bold text-red-700 dark:text-red-300">{risks.critical}</div>
-                <div className="text-xs text-red-600 dark:text-red-400">Critical</div>
+                <div className="text-xs text-red-600 dark:text-red-400">{t('runner.qaLoop.qualityDashboard.critical')}</div>
               </div>
             )}
             {risks.high > 0 && (
               <div className="flex-1 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-md text-center">
                 <div className="text-lg font-bold text-orange-700 dark:text-orange-300">{risks.high}</div>
-                <div className="text-xs text-orange-600 dark:text-orange-400">High</div>
+                <div className="text-xs text-orange-600 dark:text-orange-400">{t('runner.qaLoop.qualityDashboard.high')}</div>
               </div>
             )}
             {risks.medium > 0 && (
               <div className="flex-1 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md text-center">
                 <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{risks.medium}</div>
-                <div className="text-xs text-yellow-600 dark:text-yellow-400">Medium</div>
+                <div className="text-xs text-yellow-600 dark:text-yellow-400">{t('runner.qaLoop.qualityDashboard.medium')}</div>
               </div>
             )}
             {risks.low > 0 && (
               <div className="flex-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md text-center">
                 <div className="text-lg font-bold text-blue-700 dark:text-blue-300">{risks.low}</div>
-                <div className="text-xs text-blue-600 dark:text-blue-400">Low</div>
+                <div className="text-xs text-blue-600 dark:text-blue-400">{t('runner.qaLoop.qualityDashboard.low')}</div>
               </div>
             )}
             {totalRisks === 0 && (
               <div className="flex-1 p-2 bg-green-50 dark:bg-green-900/20 rounded-md text-center">
                 <CheckCircle className="mx-auto h-4 w-4 text-green-500" />
-                <div className="text-xs text-green-600 dark:text-green-400 mt-1">No issues!</div>
+                <div className="text-xs text-green-600 dark:text-green-400 mt-1">{t('runner.qaLoop.qualityDashboard.noIssues')}</div>
               </div>
             )}
           </div>
@@ -305,13 +308,13 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-green-500" />
-                Cost Tracking
+                {t('runner.qaLoop.qualityDashboard.costTracking')}
               </h4>
               <Badge variant="outline" className={cn("text-xs", getAlertBadgeClasses(costTracking.alertLevel))}>
-                {costTracking.alertLevel === 'none' ? 'On Budget' :
-                  costTracking.alertLevel === 'info' ? '50% Used' :
-                    costTracking.alertLevel === 'warning' ? '75% Used' :
-                      costTracking.budgetExceeded ? 'Budget Exceeded!' : '90% Used'}
+                {costTracking.alertLevel === 'none' ? t('runner.qaLoop.qualityDashboard.onBudget') :
+                  costTracking.alertLevel === 'info' ? t('runner.qaLoop.qualityDashboard.fiftyUsed') :
+                    costTracking.alertLevel === 'warning' ? t('runner.qaLoop.qualityDashboard.seventyFiveUsed') :
+                      costTracking.budgetExceeded ? t('runner.qaLoop.qualityDashboard.budgetExceeded') : t('runner.qaLoop.qualityDashboard.ninetyUsed')}
               </Badge>
             </div>
 
@@ -320,7 +323,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
               <div className="mb-3">
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>{formatCost(costTracking.totalCostCents)}</span>
-                  <span>Budget: {formatCost(costTracking.maxCostCents)}</span>
+                  <span>{t('runner.qaLoop.qualityDashboard.budget')}: {formatCost(costTracking.maxCostCents)}</span>
                 </div>
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <div
@@ -340,7 +343,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
               {costTracking.costByPhase && (
                 <div>
                   <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                    <Activity className="h-3 w-3 text-sky-500" /> By Phase
+                    <Activity className="h-3 w-3 text-sky-500" /> {t('runner.qaLoop.qualityDashboard.byPhase')}
                   </div>
                   <div className="space-y-1">
                     {Object.entries(costTracking.costByPhase)
@@ -353,7 +356,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                       ))
                     }
                     {Object.values(costTracking.costByPhase).every(c => c === 0) && (
-                      <span className="text-xs text-muted-foreground">No usage yet</span>
+                      <span className="text-xs text-muted-foreground">{t('runner.qaLoop.qualityDashboard.noUsage')}</span>
                     )}
                   </div>
                 </div>
@@ -363,7 +366,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
               {costTracking.costByModel && (
                 <div>
                   <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                    <Cpu className="h-3 w-3 text-blue-500" /> By Model
+                    <Cpu className="h-3 w-3 text-blue-500" /> {t('runner.qaLoop.qualityDashboard.byModel')}
                   </div>
                   <div className="space-y-1">
                     {Object.entries(costTracking.costByModel)
@@ -376,7 +379,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                       ))
                     }
                     {Object.values(costTracking.costByModel).every(c => c === 0) && (
-                      <span className="text-xs text-muted-foreground">No usage yet</span>
+                      <span className="text-xs text-muted-foreground">{t('runner.qaLoop.qualityDashboard.noUsage')}</span>
                     )}
                   </div>
                 </div>
@@ -398,7 +401,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
               <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
                 <AlertTriangle className="inline h-3 w-3 text-red-500 me-1" />
                 <span className="text-xs text-red-700 dark:text-red-300 font-medium">
-                  Budget limit reached! Session will stop automatically.
+                  {t('runner.qaLoop.qualityDashboard.budgetLimitReached')}
                 </span>
               </div>
             )}
@@ -410,7 +413,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
       <div>
         <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <Clock className="h-4 w-4 text-blue-500" />
-          Iteration Timeline
+          {t('runner.qaLoop.qualityDashboard.iterationTimeline')}
         </h4>
         <div className="relative">
           {/* Timeline bar */}
@@ -448,16 +451,16 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-sky-500" />
           <span className="text-sm text-foreground">
-            Iteration <span className="font-bold">{currentIteration}</span>
+            {t('runner.qaLoop.qualityDashboard.iterationLabel')} <span className="font-bold">{currentIteration}</span>
           </span>
         </div>
         <div className="text-sm text-sky-600 dark:text-sky-400">
           {qualityScore.overall >= targetThreshold ? (
             <span className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" /> Quality target reached
+              <CheckCircle className="h-3 w-3" /> {t('runner.qaLoop.qualityDashboard.targetReached')}
             </span>
           ) : (
-            <span>Working towards {targetThreshold}%...</span>
+            <span>{t('runner.qaLoop.qualityDashboard.workingTowards', { value: targetThreshold })}</span>
           )}
         </div>
       </div>

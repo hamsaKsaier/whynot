@@ -1,0 +1,44 @@
+# code-review-graph ignore patterns (in addition to .gitignore + built-in defaults)
+# Defaults already cover: node_modules/**, .git/**, dist/**, build/**, .venv/**, venv/**,
+# __pycache__/**, coverage/**, .cache/**, *.min.js, *.min.css, *.map, *.lock,
+# package-lock.json, yarn.lock, *.db, *.sqlite, *.jar, vendor/**, target/**
+
+# Per-workspace artifacts
+frontend/playwright-report/**
+frontend/test-results/**
+frontend/public/**
+admin-frontend/public/**
+gateway/coverage/**
+prompt-executor/htmlcov/**
+prompt-executor/.prompt_executor_*.log
+
+# SQL migrations (not source, indexed poorly)
+services/database/migrations/**
+
+# Prompt corpora and fixtures
+prompts/**
+examples/**
+docs/**
+
+# Generated / infra
+docker/**
+scripts/**.sh
+check-services.sh
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.svg
+
+# Config-only JS (Tailwind/PostCSS/Vite/Vitest/Playwright)
+**/tailwind.config.ts
+**/postcss.config.js
+**/vite.config.ts
+**/vitest.config.ts
+**/playwright.config.ts
+stylelint.config.cjs
+
+# Editor and tooling metadata
+.claude/**
+.opencode/**
+.github/**

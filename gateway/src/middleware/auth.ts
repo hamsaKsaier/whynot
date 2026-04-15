@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
 import { createError } from './error-handler';
 import { WorkspaceRepository } from '../../shared/database/repositories/workspace-repository';
 
@@ -23,9 +24,7 @@ declare global {
 }
 
 function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET environment variable is not set');
-  return secret;
+  return env.JWT_SECRET;
 }
 
 /**

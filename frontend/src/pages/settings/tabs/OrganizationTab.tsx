@@ -129,33 +129,33 @@ export const OrganizationTab: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">{t('settings.org.title', { defaultValue: 'Organization' })}</CardTitle>
-          <CardDescription className="text-slate-400">{t('settings.org.description', { defaultValue: 'Manage your organization name and settings' })}</CardDescription>
+          <CardTitle className="text-foreground">{t('settings.org.title', { defaultValue: 'Organization' })}</CardTitle>
+          <CardDescription className="text-muted-foreground">{t('settings.org.description', { defaultValue: 'Manage your organization name and settings' })}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSaveOrg} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {t('settings.org.name', { defaultValue: 'Organization name' })}
               </label>
               <input
                 type="text"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                 required
               />
             </div>
-            <Button type="submit" disabled={saving} className="gap-2">
+            <Button type="submit" disabled={saving} className="gap-2 w-full sm:w-auto">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiSave className="h-4 w-4" />}
               {t('settings.org.save', { defaultValue: 'Save' })}
             </Button>
@@ -163,78 +163,121 @@ export const OrganizationTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="bg-card border-border">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-white">{t('settings.org.members', { defaultValue: 'Members' })}</CardTitle>
-            <CardDescription className="text-slate-400">{t('settings.org.membersDesc', { defaultValue: 'People in your organization' })}</CardDescription>
+            <CardTitle className="text-foreground">{t('settings.org.members', { defaultValue: 'Members' })}</CardTitle>
+            <CardDescription className="text-muted-foreground">{t('settings.org.membersDesc', { defaultValue: 'People in your organization' })}</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowInviteDialog(true)} className="gap-2 w-full sm:w-auto">
             <FiUserPlus className="h-4 w-4" />
             {t('settings.org.invite', { defaultValue: 'Invite member' })}
           </Button>
         </CardHeader>
         <CardContent>
           {members.length === 0 ? (
-            <p className="text-slate-400 text-sm">{t('settings.org.noMembers', { defaultValue: 'No members yet' })}</p>
+            <p className="text-muted-foreground text-sm">{t('settings.org.noMembers', { defaultValue: 'No members yet' })}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-700">
-                  <TableHead className="text-start text-slate-400">{t('settings.org.memberName', { defaultValue: 'Name' })}</TableHead>
-                  <TableHead className="text-start text-slate-400">{t('settings.org.memberEmail', { defaultValue: 'Email' })}</TableHead>
-                  <TableHead className="text-start text-slate-400">{t('settings.org.memberRole', { defaultValue: 'Role' })}</TableHead>
-                  <TableHead className="text-end text-slate-400">{t('settings.org.actions', { defaultValue: 'Actions' })}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop: table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border">
+                      <TableHead className="text-start text-muted-foreground">{t('settings.org.memberName', { defaultValue: 'Name' })}</TableHead>
+                      <TableHead className="text-start text-muted-foreground">{t('settings.org.memberEmail', { defaultValue: 'Email' })}</TableHead>
+                      <TableHead className="text-start text-muted-foreground">{t('settings.org.memberRole', { defaultValue: 'Role' })}</TableHead>
+                      <TableHead className="text-end text-muted-foreground">{t('settings.org.actions', { defaultValue: 'Actions' })}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {members.map((member) => (
+                      <TableRow key={member.id} className="border-border">
+                        <TableCell className="text-start text-foreground">{member.name}</TableCell>
+                        <TableCell className="text-start text-muted-foreground">{member.email}</TableCell>
+                        <TableCell className="text-start">
+                          <Badge variant="outline" className="text-muted-foreground border-border">
+                            {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-end">
+                          {member.userId !== user?.id && member.role !== 'owner' && (
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setTransferTargetId(member.userId); setShowTransferDialog(true); }}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <FiArrowRight className="h-4 w-4 rtl:scale-x-[-1]" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveMember(member.id)}
+                                disabled={removingId === member.id}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                {removingId === member.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiTrash2 className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile: cards */}
+              <div className="sm:hidden space-y-3">
                 {members.map((member) => (
-                  <TableRow key={member.id} className="border-slate-700">
-                    <TableCell className="text-start text-white">{member.name}</TableCell>
-                    <TableCell className="text-start text-slate-300">{member.email}</TableCell>
-                    <TableCell className="text-start">
-                      <Badge variant="outline" className="text-slate-300 border-slate-600">
+                  <div key={member.id} className="rounded-lg border border-border p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{member.name}</span>
+                      <Badge variant="outline" className="text-muted-foreground border-border text-xs">
                         {member.role}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-end">
-                      {member.userId !== user?.id && member.role !== 'owner' && (
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => { setTransferTargetId(member.userId); setShowTransferDialog(true); }}
-                            className="text-slate-400 hover:text-white"
-                          >
-                            <FiArrowRight className="h-4 w-4 rtl:scale-x-[-1]" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveMember(member.id)}
-                            disabled={removingId === member.id}
-                            className="text-red-400 hover:text-red-300"
-                          >
-                            {removingId === member.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiTrash2 className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">{member.email}</p>
+                    {member.userId !== user?.id && member.role !== 'owner' && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setTransferTargetId(member.userId); setShowTransferDialog(true); }}
+                          className="text-muted-foreground hover:text-foreground flex-1"
+                        >
+                          <FiArrowRight className="h-4 w-4 me-1 rtl:scale-x-[-1]" />
+                          {t('settings.org.transfer', { defaultValue: 'Transfer' })}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveMember(member.id)}
+                          disabled={removingId === member.id}
+                          className="text-red-400 hover:text-red-300 flex-1"
+                        >
+                          {removingId === member.id ? <Loader2 className="h-4 w-4 animate-spin me-1" /> : <FiTrash2 className="h-4 w-4 me-1" />}
+                          {t('settings.org.remove', { defaultValue: 'Remove' })}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
 
           {invitations.length > 0 && (
             <div className="mt-6">
-              <h4 className="text-sm font-medium text-slate-300 mb-2">{t('settings.org.pendingInvitations', { defaultValue: 'Pending Invitations' })}</h4>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('settings.org.pendingInvitations', { defaultValue: 'Pending Invitations' })}</h4>
               {invitations.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between py-2 border-b border-slate-700 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <FiMail className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-300">{inv.email}</span>
-                    <Badge variant="outline" className="text-slate-400 border-slate-600">{inv.status}</Badge>
+                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-border last:border-0 gap-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FiMail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground text-sm truncate">{inv.email}</span>
+                    <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">{inv.status}</Badge>
                   </div>
                 </div>
               ))}
@@ -244,37 +287,37 @@ export const OrganizationTab: React.FC = () => {
       </Card>
 
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-card border-border sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">{t('settings.org.inviteTitle', { defaultValue: 'Invite a member' })}</DialogTitle>
+            <DialogTitle className="text-foreground">{t('settings.org.inviteTitle', { defaultValue: 'Invite a member' })}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleInvite} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">{t('settings.org.inviteEmail', { defaultValue: 'Email address' })}</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">{t('settings.org.inviteEmail', { defaultValue: 'Email address' })}</label>
               <input
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">{t('settings.org.inviteRole', { defaultValue: 'Role' })}</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">{t('settings.org.inviteRole', { defaultValue: 'Role' })}</label>
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground focus:outline-none focus:border-primary"
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <DialogClose asChild>
-                <Button variant="outline">{t('settings.org.cancel', { defaultValue: 'Cancel' })}</Button>
+                <Button variant="outline" className="w-full sm:w-auto">{t('settings.org.cancel', { defaultValue: 'Cancel' })}</Button>
               </DialogClose>
-              <Button type="submit" disabled={inviting} className="gap-2">
+              <Button type="submit" disabled={inviting} className="gap-2 w-full sm:w-auto">
                 {inviting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {t('settings.org.sendInvite', { defaultValue: 'Send invitation' })}
               </Button>
@@ -284,11 +327,11 @@ export const OrganizationTab: React.FC = () => {
       </Dialog>
 
       <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-card border-border sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">{t('settings.org.transferTitle', { defaultValue: 'Transfer Ownership' })}</DialogTitle>
+            <DialogTitle className="text-foreground">{t('settings.org.transferTitle', { defaultValue: 'Transfer Ownership' })}</DialogTitle>
           </DialogHeader>
-          <p className="text-slate-400 text-sm">
+          <p className="text-muted-foreground text-sm">
             {t('settings.org.transferWarning', { defaultValue: 'This will transfer organization ownership. Type TRANSFER to confirm.' })}
           </p>
           <input
@@ -296,16 +339,17 @@ export const OrganizationTab: React.FC = () => {
             value={transferConfirm}
             onChange={(e) => setTransferConfirm(e.target.value)}
             placeholder="TRANSFER"
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
           />
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <DialogClose asChild>
-              <Button variant="outline">{t('settings.org.cancel', { defaultValue: 'Cancel' })}</Button>
+              <Button variant="outline" className="w-full sm:w-auto">{t('settings.org.cancel', { defaultValue: 'Cancel' })}</Button>
             </DialogClose>
             <Button
               variant="destructive"
               onClick={handleTransferOwnership}
               disabled={transferConfirm !== 'TRANSFER'}
+              className="w-full sm:w-auto"
             >
               {t('settings.org.confirmTransfer', { defaultValue: 'Transfer ownership' })}
             </Button>

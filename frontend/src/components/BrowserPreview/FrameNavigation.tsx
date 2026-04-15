@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -51,6 +52,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
   onGoToLastFrame,
   onFrameIndexChange,
 }) => {
+  const { t } = useTranslation('runner');
   const sortedSteps = Array.from(frameHistory.keys()).sort((a, b) => a - b);
   const currentStepFrames = currentStepIndex !== null ? frameHistory.get(currentStepIndex) || [] : [];
   const canGoPrev = currentStepIndex !== null && (currentFrameIndex > 0 || sortedSteps.indexOf(currentStepIndex) > 0);
@@ -100,7 +102,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
                 <SkipBack className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>First frame</TooltipContent>
+            <TooltipContent>{t('runner.browser.firstFrame')}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -108,7 +110,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
                 <ChevronLeft className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Previous frame</TooltipContent>
+            <TooltipContent>{t('runner.browser.previousFrame')}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -116,7 +118,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
                 <ChevronRight className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Next frame</TooltipContent>
+            <TooltipContent>{t('runner.browser.nextFrame')}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -124,7 +126,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
                 <SkipForward className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Last frame</TooltipContent>
+            <TooltipContent>{t('runner.browser.lastFrame')}</TooltipContent>
           </Tooltip>
         </div>
 
@@ -138,12 +140,12 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
             }}
           >
             <SelectTrigger className="h-7 w-[160px] text-xs">
-              <SelectValue placeholder="Select step" />
+              <SelectValue placeholder={t('runner.browser.selectStep')} />
             </SelectTrigger>
             <SelectContent>
               {sortedSteps.map((stepIdx) => (
                 <SelectItem key={stepIdx} value={stepIdx.toString()} className="text-xs">
-                  Step {stepIdx + 1} ({frameHistory.get(stepIdx)?.length || 0} frames)
+                  {t('runner.browser.stepWithFrames', { step: stepIdx + 1, frames: frameHistory.get(stepIdx)?.length || 0 })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -154,15 +156,15 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
         <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
           {framePosition.total > 0 ? (
             <>
-              Frame {getTimelineValue() + 1} of {framePosition.total}
+              {t('runner.browser.frameOf', { current: getTimelineValue() + 1, total: framePosition.total })}
               {framePosition.step > 0 && (
                 <span className="text-muted-foreground/60 ms-1.5">
-                  (Step {framePosition.step}, Frame {framePosition.frame})
+                  ({t('runner.browser.stepFrame', { step: framePosition.step, frame: framePosition.frame })})
                 </span>
               )}
             </>
           ) : (
-            'No frames'
+            t('runner.browser.noFrames')
           )}
         </span>
 

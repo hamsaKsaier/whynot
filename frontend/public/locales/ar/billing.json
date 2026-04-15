@@ -1,5 +1,6 @@
 {
   "billing.title": "الفواتير",
+  "billing.subtitle": "إدارة اشتراكك وأرصدتك وفواتيرك",
   "billing.currentPlan": "الخطة الحالية",
   "billing.credits.title": "الأرصدة",
   "billing.credits.balance": "الرصيد الحالي",
@@ -12,7 +13,12 @@
   "billing.plans.current": "الخطة الحالية",
   "billing.plans.perMonth": "/شهريًا",
   "billing.plans.perYear": "/سنويًا",
+  "billing.plans.contactSales": "تواصل مع المبيعات",
+  "billing.plans.creditsPerPeriod": "{{credits}} رصيد / {{interval}}",
+  "billing.plans.custom": "مخصص",
+  "billing.plans.customCredits": "أرصدة مخصصة",
   "billing.plans.features": "الميزات",
+  "billing.plans.freeTrial": "تجربة مجانية",
   "billing.invoices.title": "الفواتير",
   "billing.invoices.date": "التاريخ",
   "billing.invoices.amount": "المبلغ",
@@ -93,5 +99,6 @@
   "billingTab.txnType.admin_grant": "ممنوح",
   "billingTab.txnType.admin_revoke": "مسحوب",
   "billingTab.txnType.rollover": "ترحيل",
-  "billingTab.txnType.expiry": "منتهي"
+  "billingTab.txnType.expiry": "منتهي",
+  "billingTab.creditHistory.empty": "لا توجد معاملات أرصدة بعد"
 }

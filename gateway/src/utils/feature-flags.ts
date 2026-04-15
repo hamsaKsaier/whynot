@@ -1,5 +1,5 @@
-import { FeatureFlagRepository } from '../../../shared/database/repositories/feature-flag-repository';
-import { type PlatformFeatureKey, isValidFeatureKey } from '../../../shared/constants/platform-features';
+import { FeatureFlagRepository } from '../../shared/database/repositories/feature-flag-repository';
+import { type PlatformFeatureKey, isValidFeatureKey } from '../../shared/constants/platform-features';
 import crypto from 'crypto';
 
 const featureFlagRepository = new FeatureFlagRepository();

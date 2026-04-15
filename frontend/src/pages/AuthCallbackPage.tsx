@@ -24,11 +24,11 @@ export const AuthCallbackPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
       <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-600 rounded-xl">
-        <FiZap className="h-6 w-6 text-white" />
+        <FiZap className="h-6 w-6 text-foreground" />
       </div>
-      <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex items-center gap-2 text-muted-foreground">
         <FiLoader className="h-5 w-5 animate-spin" />
         <span>Completing sign-in…</span>
       </div>

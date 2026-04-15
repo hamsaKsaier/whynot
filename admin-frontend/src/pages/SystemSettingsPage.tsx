@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Save, Check, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
@@ -10,12 +11,19 @@ import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { getSystemSettings, updateSystemSetting } from '../services/api'
 
 export function SystemSettingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [settings, setSettings] = useState<any[]>([])
   const [editValues, setEditValues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('general')
+  const initialTab = searchParams.get('tab') || 'general'
+  const [tab, setTab] = useState(initialTab)
+
+  const handleTabChange = useCallback((newTab: string) => {
+    setTab(newTab)
+    setSearchParams({ tab: newTab }, { replace: true })
+  }, [setSearchParams])
 
   useEffect(() => {
     getSystemSettings()
@@ -58,7 +66,7 @@ export function SystemSettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64" />
       </div>
@@ -74,33 +82,36 @@ export function SystemSettingsPage() {
           </div>
         ) : (
           items.map((setting: any) => (
-            <div key={setting.key} className="px-6 py-4 flex items-center gap-4">
+            <div key={setting.key} className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium font-mono">{setting.key}</p>
+                <p className="text-sm font-medium font-mono break-all">{setting.key}</p>
                 {setting.description && (
                   <p className="text-xs text-muted-foreground mt-0.5">{setting.description}</p>
                 )}
               </div>
-              <Input
-                value={editValues[setting.key] || ''}
-                onChange={(e) => setEditValues((prev) => ({ ...prev, [setting.key]: e.target.value }))}
-                className="w-48"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleSave(setting.key)}
-                disabled={saving === setting.key || editValues[setting.key] === setting.value}
-                title="Save"
-              >
-                {saving === setting.key ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : saved === setting.key ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editValues[setting.key] || ''}
+                  onChange={(e) => setEditValues((prev) => ({ ...prev, [setting.key]: e.target.value }))}
+                  className="w-full sm:w-48"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0"
+                  onClick={() => handleSave(setting.key)}
+                  disabled={saving === setting.key || editValues[setting.key] === setting.value}
+                  title="Save"
+                >
+                  {saving === setting.key ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : saved === setting.key ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           ))
         )}
@@ -109,11 +120,11 @@ export function SystemSettingsPage() {
   )
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <AdminPageHeader title="System Settings" />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={handleTabChange}>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="credits">Credit Costs</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>

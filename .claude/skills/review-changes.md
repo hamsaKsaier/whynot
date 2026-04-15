@@ -1,5 +1,3 @@
-> **Single source of truth**: Before proposing any change, read [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (adjust relative path to the file's depth). When this document conflicts with `ARCHITECTURE.md`, `ARCHITECTURE.md` wins.
-
 ---
 name: Review Changes
 description: Perform a structured code review using change detection and impact

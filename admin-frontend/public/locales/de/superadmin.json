@@ -1,0 +1,89 @@
+{
+  "plans": {
+    "title": "Tarife",
+    "newPlan": "Neuer Tarif",
+    "editPlan": "Tarif bearbeiten",
+    "createPlan": "Tarif erstellen",
+    "saveChanges": "Änderungen speichern",
+    "archivePlan": "Tarif archivieren",
+    "archiveDescription": "Möchten Sie \"{{name}}\" wirklich archivieren? Bestehende Abonnenten sind nicht betroffen, aber neue Abonnements werden deaktiviert.",
+    "archive": "Archivieren",
+    "restore": "Wiederherstellen",
+    "syncStripe": "Mit Stripe synchronisieren",
+    "syncStripeFailed": "Stripe-Synchronisierung fehlgeschlagen: {{error}}",
+    "noPlans": "Noch keine Tarife erstellt.",
+    "details": "Details",
+    "featureFlags": "Feature-Flags",
+    "free": "Kostenlos",
+    "priceInterval": "{{price}}/{{interval}}",
+    "creditsCount": "{{count}} Credits",
+    "trialDays": "{{days}} Tage Testphase",
+    "subscriberCount": "{{count}} Abonnenten",
+    "breadcrumbs": {
+      "plans": "Tarife",
+      "new": "Neu"
+    },
+    "fields": {
+      "name": "Name",
+      "slug": "Slug",
+      "description": "Beschreibung",
+      "price": "Preis ($)",
+      "billingInterval": "Abrechnungsintervall",
+      "creditsPerPeriod": "Credits / Zeitraum",
+      "trialDays": "Testzeitraum (Tage)",
+      "sortOrder": "Sortierreihenfolge",
+      "public": "Öffentlich",
+      "enterprise": "Enterprise",
+      "featureKey": "Schlüssel",
+      "featureValue": "Wert"
+    },
+    "intervals": {
+      "monthly": "Monatlich",
+      "yearly": "Jährlich",
+      "oneTime": "Einmalig"
+    },
+    "badges": {
+      "archived": "Archiviert",
+      "hidden": "Verborgen",
+      "custom": "Individuell"
+    }
+  },
+  "subscriptions": {
+    "title": "Abonnements",
+    "totalCount": "{{count}} gesamt",
+    "allStatuses": "Alle Status",
+    "noSubscriptions": "Keine Abonnements gefunden",
+    "columns": {
+      "workspace": "Arbeitsbereich",
+      "owner": "Inhaber",
+      "plan": "Tarif",
+      "status": "Status",
+      "credits": "Guthaben",
+      "periodEnd": "Periodenende"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "trialing": "Testzeitraum",
+      "pastDue": "Überfällig",
+      "canceled": "Gekündigt"
+    }
+  },
+  "credits": {
+    "title": "Guthaben",
+    "description": "Guthabenstand aller Benutzer",
+    "grantCredits": "Guthaben gewähren",
+    "grantDescription": "Gewähren Sie einem bestimmten Arbeitsbereich Guthaben.",
+    "grant": "Gewähren",
+    "defaultGrantDescription": "Admin-Sammelzuweisung",
+    "workspaceId": "Arbeitsbereich-ID",
+    "amount": "Betrag",
+    "descriptionLabel": "Beschreibung",
+    "noUsers": "Keine Benutzer gefunden",
+    "columns": {
+      "user": "Benutzer",
+      "email": "E-Mail",
+      "plan": "Tarif",
+      "credits": "Guthaben"
+    }
+  }
+}

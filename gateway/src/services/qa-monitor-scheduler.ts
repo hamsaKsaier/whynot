@@ -7,14 +7,14 @@
 
 import axios from 'axios';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 import { QAMonitorRepository, QAMonitorEntity } from '../../shared/database/repositories/qa-monitor-repository';
 import { sendMonitorAlertEmail, sendScanCompleteEmail } from './email-service';
 import { query as dbQuery } from '../../shared/database/connection';
 
 const logger = createLogger('qa-monitor-scheduler');
 
-const qaLoopExecutorUrl =
-  process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+const qaLoopExecutorUrl = env.QA_LOOP_EXECUTOR_URL;
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -225,7 +225,7 @@ async function pollSessionCompletion(
 
         // Send email notifications to workspace members
         try {
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          const frontendUrl = env.FRONTEND_URL;
           if (monitor?.workspace_id) {
             // Find workspace members to notify
             const members = await dbQuery<{ user_id: string }>(

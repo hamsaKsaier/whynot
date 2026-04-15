@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Search, X } from 'lucide-react'
 import { Input } from '../ui/input'
 import {
@@ -36,12 +37,14 @@ interface FilterBarProps {
 export function FilterBar({
   search,
   onSearchChange,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
   filters,
   activeFilters,
   children,
   className,
 }: FilterBarProps) {
+  const { t } = useTranslation('common')
+  const resolvedPlaceholder = searchPlaceholder ?? t('admin.common.search')
   return (
     <div className={cn('space-y-3', className)}>
       <div className="flex flex-col sm:flex-row gap-3">
@@ -50,7 +53,7 @@ export function FilterBar({
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder={searchPlaceholder}
+              placeholder={resolvedPlaceholder}
               value={search ?? ''}
               onChange={(e) => onSearchChange(e.target.value)}
               className="ps-9"

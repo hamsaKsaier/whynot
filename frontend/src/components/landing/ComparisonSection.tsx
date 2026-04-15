@@ -97,62 +97,91 @@ export function ComparisonSection() {
           </p>
         </div>
 
-        <div className="max-w-6xl mx-auto">
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <div className="min-w-[700px] px-4 sm:px-0">
-              <div className="rounded-lg border overflow-hidden">
+        {/* Mobile: stacked cards */}
+        <div className="md:hidden space-y-4 max-w-lg mx-auto">
+          {COMPETITORS.map((competitor) => (
+            <div
+              key={competitor}
+              className={cn(
+                'rounded-lg border bg-card p-4',
+                competitor === 'whynot' && 'border-primary ring-1 ring-primary'
+              )}
+            >
+              <h3
+                className={cn(
+                  'text-base font-semibold mb-3',
+                  competitor === 'whynot' ? 'text-primary' : 'text-foreground'
+                )}
+              >
+                {t(`comparison.competitors.${competitor}`)}
+              </h3>
+              <ul className="space-y-2">
+                {COMPARISON_ROWS.map((row) => (
+                  <li key={row.key} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {t(`comparison.features.${row.key}`)}
+                    </span>
+                    <ComparisonCellValue value={row.values[competitor]} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block max-w-6xl mx-auto">
+          <div className="rounded-lg border overflow-hidden">
+            <div
+              className={cn(
+                'grid gap-0 bg-muted/50 border-b border-border',
+                'grid-cols-[minmax(160px,1.5fr)_repeat(6,1fr)]'
+              )}
+            >
+              <div className="p-4 text-sm font-medium text-muted-foreground text-start">
+                {t('comparison.featureColumn')}
+              </div>
+              {COMPETITORS.map((competitor) => (
                 <div
+                  key={competitor}
                   className={cn(
-                    'grid gap-0 bg-muted/50 border-b border-border',
-                    'grid-cols-[minmax(160px,1.5fr)_repeat(6,1fr)]'
+                    'p-4 text-sm font-medium text-center',
+                    competitor === 'whynot'
+                      ? 'font-bold text-primary'
+                      : 'text-muted-foreground'
                   )}
                 >
-                  <div className="p-3 sm:p-4 text-sm font-medium text-muted-foreground text-start">
-                    {t('comparison.featureColumn')}
-                  </div>
-                  {COMPETITORS.map((competitor) => (
-                    <div
-                      key={competitor}
-                      className={cn(
-                        'p-3 sm:p-4 text-sm font-medium text-center',
-                        competitor === 'whynot'
-                          ? 'font-bold text-primary'
-                          : 'text-muted-foreground'
-                      )}
-                    >
-                      {t(`comparison.competitors.${competitor}`)}
-                    </div>
-                  ))}
+                  {t(`comparison.competitors.${competitor}`)}
                 </div>
+              ))}
+            </div>
 
-                {COMPARISON_ROWS.map((row, i) => (
+            {COMPARISON_ROWS.map((row, i) => (
+              <div
+                key={row.key}
+                className={cn(
+                  'grid gap-0',
+                  'grid-cols-[minmax(160px,1.5fr)_repeat(6,1fr)]',
+                  i < COMPARISON_ROWS.length - 1 && 'border-b border-border/50',
+                  i % 2 === 1 && 'bg-muted/20'
+                )}
+              >
+                <div className="p-4 text-sm font-medium text-start">
+                  {t(`comparison.features.${row.key}`)}
+                </div>
+                {COMPETITORS.map((competitor) => (
                   <div
-                    key={row.key}
+                    key={competitor}
                     className={cn(
-                      'grid gap-0',
-                      'grid-cols-[minmax(160px,1.5fr)_repeat(6,1fr)]',
-                      i < COMPARISON_ROWS.length - 1 && 'border-b border-border/50',
-                      i % 2 === 1 && 'bg-muted/20'
+                      'p-4 text-center',
+                      competitor === 'whynot' && 'bg-primary/5'
                     )}
                   >
-                    <div className="p-3 sm:p-4 text-sm font-medium text-start">
-                      {t(`comparison.features.${row.key}`)}
-                    </div>
-                    {COMPETITORS.map((competitor) => (
-                      <div
-                        key={competitor}
-                        className={cn(
-                          'p-3 sm:p-4 text-center',
-                          competitor === 'whynot' && 'bg-primary/5'
-                        )}
-                      >
-                        <ComparisonCellValue value={row.values[competitor]} />
-                      </div>
-                    ))}
+                    <ComparisonCellValue value={row.values[competitor]} />
                   </div>
                 ))}
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

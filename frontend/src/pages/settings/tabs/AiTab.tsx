@@ -132,26 +132,26 @@ export const AiContent: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <FiLoader className="h-5 w-5 animate-spin text-slate-400" />
+        <FiLoader className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             {t('settings.ai.title', 'AI Providers')}
           </h2>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {t('settings.ai.description', 'Configure your own AI provider keys for test generation.')}
           </p>
         </div>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 transition-colors duration-150"
+            className="flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-foreground hover:bg-primary/90 transition-colors duration-150 w-full sm:w-auto"
           >
             <FiPlus className="h-4 w-4" />
             {t('settings.ai.addProvider', 'Add provider')}
@@ -162,17 +162,17 @@ export const AiContent: React.FC = () => {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg border border-slate-700 bg-slate-800/50 p-5 space-y-4"
+          className="rounded-lg border border-border bg-card p-5 space-y-4"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {t('settings.ai.providerLabel', 'Provider')}
               </label>
               <select
                 value={formProvider}
                 onChange={(e) => handleProviderChange(e.target.value as ProviderName)}
-                className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-none"
+                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
               >
                 {(Object.keys(PROVIDER_LABELS) as ProviderName[]).map((p) => (
                   <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>
@@ -181,14 +181,14 @@ export const AiContent: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {t('settings.ai.modelLabel', 'Model')}
               </label>
               {PROVIDER_MODELS[formProvider].length > 0 ? (
                 <select
                   value={formModel}
                   onChange={(e) => setFormModel(e.target.value)}
-                  className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
                 >
                   {PROVIDER_MODELS[formProvider].map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -200,7 +200,7 @@ export const AiContent: React.FC = () => {
                   value={formModel}
                   onChange={(e) => setFormModel(e.target.value)}
                   placeholder="e.g. my-model-v1"
-                  className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                 />
               )}
             </div>
@@ -208,7 +208,7 @@ export const AiContent: React.FC = () => {
 
           {formProvider === 'custom' && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Base URL
               </label>
               <input
@@ -216,13 +216,13 @@ export const AiContent: React.FC = () => {
                 value={formBaseUrl}
                 onChange={(e) => setFormBaseUrl(e.target.value)}
                 placeholder="https://my-api.example.com/v1"
-                className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none"
+                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               {t('settings.ai.apiKeyLabel', 'API Key')}
             </label>
             <div className="relative">
@@ -232,12 +232,12 @@ export const AiContent: React.FC = () => {
                 onChange={(e) => setFormApiKey(e.target.value)}
                 placeholder="sk-..."
                 required
-                className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 pe-10 text-sm text-white placeholder:text-slate-500 focus:border-primary-500 focus:outline-none"
+                className="w-full rounded-md border border-border bg-muted px-3 py-2 pe-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute end-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showApiKey ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
               </button>
@@ -248,14 +248,14 @@ export const AiContent: React.FC = () => {
             <button
               type="button"
               onClick={() => { setShowForm(false); setFormApiKey(''); setShowApiKey(false); }}
-              className="rounded-md px-3 py-1.5 text-sm text-slate-300 hover:text-white transition-colors duration-150"
+              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || !formModel || !formApiKey}
-              className="rounded-md bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50 transition-colors duration-150"
+              className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors duration-150"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -264,8 +264,8 @@ export const AiContent: React.FC = () => {
       )}
 
       {configs.length === 0 && !showForm && (
-        <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-8 text-center">
-          <p className="text-slate-400 text-sm">
+        <div className="rounded-lg border border-border bg-card p-8 text-center">
+          <p className="text-muted-foreground text-sm">
             No AI providers configured yet. Add one to use your own API keys.
           </p>
         </div>
@@ -276,20 +276,20 @@ export const AiContent: React.FC = () => {
           {configs.map((config) => (
             <div
               key={config.id}
-              className="rounded-lg border border-slate-700 bg-slate-800/50 p-4 flex items-center justify-between gap-4"
+              className="rounded-lg border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-white text-sm">
+                  <span className="font-medium text-foreground text-sm">
                     {PROVIDER_LABELS[config.provider as ProviderName] || config.provider}
                   </span>
                   {config.isDefault && (
-                    <span className="inline-flex items-center rounded-md bg-primary-600/20 px-1.5 py-0.5 text-xs font-medium text-primary-400 border border-primary-600/30">
+                    <span className="inline-flex items-center rounded-md bg-primary/20 px-1.5 py-0.5 text-xs font-medium text-primary border border-primary/30">
                       Default
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {config.model} &middot; {config.apiKey}
                 </p>
                 {testResult && testResult.id === config.id && (
@@ -306,7 +306,7 @@ export const AiContent: React.FC = () => {
                   onClick={() => handleTest(config.id)}
                   disabled={testingId === config.id}
                   title={t('settings.ai.testButton', 'Test connection')}
-                  className="rounded-md p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors duration-150 disabled:opacity-50"
+                  className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 disabled:opacity-50"
                 >
                   {testingId === config.id ? (
                     <FiLoader className="h-4 w-4 animate-spin" />
@@ -318,7 +318,7 @@ export const AiContent: React.FC = () => {
                   <button
                     onClick={() => handleSetDefault(config.id)}
                     title={t('settings.ai.setDefault', 'Set as default')}
-                    className="rounded-md p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors duration-150"
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
                   >
                     <FiCheck className="h-4 w-4" />
                   </button>
@@ -327,7 +327,7 @@ export const AiContent: React.FC = () => {
                   onClick={() => handleDelete(config.id)}
                   disabled={deletingId === config.id}
                   title={t('settings.ai.delete', 'Delete')}
-                  className="rounded-md p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors duration-150 disabled:opacity-50"
+                  className="rounded-md p-1.5 text-muted-foreground hover:text-red-400 hover:bg-muted transition-colors duration-150 disabled:opacity-50"
                 >
                   <FiTrash2 className="h-4 w-4" />
                 </button>

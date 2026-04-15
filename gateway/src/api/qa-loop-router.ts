@@ -22,13 +22,13 @@ import { requireFeature } from '../middleware/feature-gate';
 import { requireActiveSubscription } from '../middleware/subscription-check';
 import { createLogger } from '../../shared/logger/logger';
 import { ProjectRepository } from '../../shared/database/repositories/project-repository';
+import { env } from '../config/env';
 
 const router  = express.Router();
 const logger  = createLogger('qa-loop-router');
 const projectRepository = new ProjectRepository();
 
-const qaLoopExecutorUrl =
-  process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+const qaLoopExecutorUrl = env.QA_LOOP_EXECUTOR_URL;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ function validateTargetUrl(url: string): void {
   }
 }
 
-function forwardQALoopError(error: any, label: string, res: express.Response): void {
+function forwardQALoopError(error: any, label: string, req: express.Request, res: express.Response): void {
   logger.error(`QA Loop proxy error: ${label}`, {
     message: error.message,
     status: error.response?.status,
@@ -97,7 +97,7 @@ function forwardQALoopError(error: any, label: string, res: express.Response): v
   if (error.response) {
     res.status(error.response.status).json(error.response.data);
   } else {
-    res.status(500).json({ error: label, details: 'Service unavailable' });
+    res.status(500).json({ error: label, details: (req as any).t('errors:service.unavailable') });
   }
 }
 
@@ -163,6 +163,7 @@ class CircuitBreaker {
 const qaLoopBreaker = new CircuitBreaker('qa-loop-executor');
 
 async function withQALoopBreaker<T>(
+  req: express.Request,
   res: express.Response,
   label: string,
   fn: () => Promise<T>,
@@ -172,12 +173,12 @@ async function withQALoopBreaker<T>(
   } catch (error: any) {
     if (error.isCircuitOpen) {
       res.status(503).json({
-        error:   'QA Loop service temporarily unavailable — circuit open',
+        error:   (req as any).t('errors:service.qaLoopCircuitOpen'),
         details: label,
       });
       return;
     }
-    forwardQALoopError(error, label, res);
+    forwardQALoopError(error, label, req, res);
   }
 }
 
@@ -279,7 +280,7 @@ function createProxy(
     const url = `${qaLoopExecutorUrl}/api${targetPath}`;
     const headers = qaLoopHeaders(req);
 
-    await withQALoopBreaker(res, label, async () => {
+    await withQALoopBreaker(req, res, label, async () => {
       let response: any;
 
       if (method === 'get') {
@@ -363,7 +364,7 @@ router.post(
       }
     }
 
-    await withQALoopBreaker(res, 'Failed to start QA Loop session', async () => {
+    await withQALoopBreaker(req, res, 'Failed to start QA Loop session', async () => {
       const response = await axios.post(
         `${qaLoopExecutorUrl}/api/sessions`,
         { ...req.body, workspaceId: req.workspaceId },
@@ -393,7 +394,7 @@ router.get(
     if (baseUrl) {
       validateTargetUrl(baseUrl);
     }
-    await withQALoopBreaker(res, 'Failed to check existing session', async () => {
+    await withQALoopBreaker(req, res, 'Failed to check existing session', async () => {
       const params: Record<string, any> = { ...req.query };
       if (req.workspaceId) params.workspaceId = req.workspaceId;
       const response = await axios.get(
@@ -424,7 +425,7 @@ router.post(
   requireAuth,
   validate(qaLoopSchemas.retest),
   asyncHandler(async (req, res) => {
-    await withQALoopBreaker(res, 'Failed to start retest', async () => {
+    await withQALoopBreaker(req, res, 'Failed to start retest', async () => {
       const response = await axios.post(
         `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/retest`,
         req.body,
@@ -454,7 +455,7 @@ router.post(
   requireAuth,
   validate(qaLoopSchemas.uploadDocument),
   asyncHandler(async (req, res) => {
-    await withQALoopBreaker(res, 'Failed to upload document', async () => {
+    await withQALoopBreaker(req, res, 'Failed to upload document', async () => {
       const response = await axios.post(
         `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents`,
         req.body,
@@ -473,7 +474,7 @@ router.patch(
   requireAuth,
   validate(qaLoopSchemas.toggleDocument),
   asyncHandler(async (req, res) => {
-    await withQALoopBreaker(res, 'Failed to update document', async () => {
+    await withQALoopBreaker(req, res, 'Failed to update document', async () => {
       const response = await axios.patch(
         `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/documents/${req.params.docId}`,
         req.body,

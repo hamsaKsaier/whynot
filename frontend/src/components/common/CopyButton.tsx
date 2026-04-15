@@ -52,12 +52,12 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
     >
       {copied ? (
         <>
-          <FiCheck className="mr-2" />
+          <FiCheck className="me-2" />
           Copied!
         </>
       ) : (
         <>
-          <FiCopy className="mr-2" />
+          <FiCopy className="me-2" />
           Copy
         </>
       )}

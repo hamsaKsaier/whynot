@@ -1,5 +1,6 @@
 {
   "admin.nav.title": "الإدارة",
+  "admin.nav.superadminTitle": "المسؤول الأعلى",
   "admin.nav.dashboard": "لوحة التحكم",
   "admin.nav.users": "المستخدمون",
   "admin.nav.organizations": "المؤسسات",
@@ -125,7 +126,6 @@
   "admin.aiProviders.providerDesc.anthropic": "نماذج Claude Opus وSonnet وHaiku.",
   "admin.aiProviders.providerDesc.google": "Gemini Pro ونماذج Google AI الأخرى.",
   "admin.aiProviders.providerDesc.openrouter": "بوابة متعددة المزودين لنماذج متنوعة.",
-
   "admin.audit.title": "سجل التدقيق",
   "admin.audit.time": "الوقت",
   "admin.audit.actor": "المنفّذ",
@@ -135,7 +135,6 @@
   "admin.audit.allActions": "جميع الإجراءات",
   "admin.audit.empty": "لا توجد إدخالات تدقيق",
   "admin.audit.page": "صفحة",
-
   "admin.analytics.title": "التحليلات",
   "admin.analytics.dau": "المستخدمون النشطون يومياً",
   "admin.analytics.mau": "المستخدمون النشطون شهرياً",
@@ -149,7 +148,6 @@
   "admin.analytics.creditUsage": "استخدام الأرصدة (آخر 30 يوم)",
   "admin.analytics.cancellations": "الإلغاءات (آخر 90 يوم)",
   "admin.analytics.noCancellations": "لا توجد إلغاءات في هذه الفترة",
-
   "admin.announcements.pageTitle": "الإعلانات",
   "admin.announcements.title": "العنوان",
   "admin.announcements.type": "النوع",
@@ -175,7 +173,6 @@
   "admin.announcements.deleteTitle": "حذف الإعلان",
   "admin.announcements.deleteConfirm": "هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع.",
   "admin.announcements.deleteBtn": "حذف",
-
   "admin.usage.title": "تتبع الاستخدام",
   "admin.usage.noData": "لا تتوفر بيانات استخدام بعد",
   "admin.usage.overviewTab": "نظرة عامة",

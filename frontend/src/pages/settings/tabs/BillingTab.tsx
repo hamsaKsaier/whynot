@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Progress } from '../../../components/ui/progress';
-import { Separator } from '../../../components/ui/separator';
 import { Skeleton } from '../../../components/ui/skeleton';
 import {
   Dialog,
@@ -99,6 +98,11 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 
   canceled: 'destructive',
   paused: 'outline',
   incomplete: 'outline',
+};
+
+const INVOICE_STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline'> = {
+  paid: 'default',
+  open: 'secondary',
 };
 
 export const BillingTab: React.FC = () => {
@@ -216,10 +220,10 @@ export const BillingTab: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
             <Card key={i}>
-              <CardContent className="p-5">
+              <CardContent className="p-4 sm:p-5">
                 <Skeleton className="h-4 w-24 mb-3" />
                 <Skeleton className="h-6 w-32 mb-2" />
                 <Skeleton className="h-4 w-20" />
@@ -241,9 +245,9 @@ export const BillingTab: React.FC = () => {
       {/* Trial Banner */}
       {isTrialing && (
         <Card className="border-yellow-500/30 bg-yellow-500/5">
-          <CardContent className="flex items-center justify-between p-4">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-yellow-600" />
+              <Clock className="h-5 w-5 text-yellow-600 flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {t('billingTab.trial.active', { days: trialDaysRemaining })}
@@ -255,7 +259,7 @@ export const BillingTab: React.FC = () => {
                 </p>
               </div>
             </div>
-            <Button size="sm" onClick={handleUpgrade}>
+            <Button size="sm" onClick={handleUpgrade} className="w-full sm:w-auto">
               {t('billingTab.trial.upgrade')}
               <ArrowRight className="h-4 w-4 ms-1 rtl:scale-x-[-1]" />
             </Button>
@@ -264,15 +268,15 @@ export const BillingTab: React.FC = () => {
       )}
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {/* Current Plan */}
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex items-center gap-3 mb-3">
-              <Zap className="h-5 w-5 text-muted-foreground" />
-              <div>
+              <Zap className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{t('billing.currentPlan')}</p>
-                <p className="text-base font-semibold text-foreground">{plan?.name || t('billingTab.noPlan')}</p>
+                <p className="text-base font-semibold text-foreground truncate">{plan?.name || t('billingTab.noPlan')}</p>
               </div>
             </div>
             {subscription && (
@@ -290,10 +294,10 @@ export const BillingTab: React.FC = () => {
 
         {/* Credits */}
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex items-center gap-3 mb-3">
-              <TrendingUp className="h-5 w-5 text-muted-foreground" />
-              <div>
+              <TrendingUp className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{t('billing.credits.remaining')}</p>
                 <p className="text-base font-semibold text-foreground">{balance?.balance ?? 0}</p>
               </div>
@@ -308,10 +312,10 @@ export const BillingTab: React.FC = () => {
 
         {/* Billing Period */}
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex items-center gap-3 mb-3">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <div>
+              <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{t('billingTab.period')}</p>
                 <p className="text-sm font-medium text-foreground">
                   {subscription?.current_period_end
@@ -320,7 +324,7 @@ export const BillingTab: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-wrap gap-2 mt-1">
               {subscription?.cancel_at_period_end ? (
                 <Button size="sm" variant="outline" onClick={handleReactivate} disabled={actionLoading}>
                   {t('billingTab.reactivate')}
@@ -368,12 +372,12 @@ export const BillingTab: React.FC = () => {
       {isManagedPayg && (
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <AlertTriangle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <CardTitle className="text-base">{t('billingTab.topUp.title')}</CardTitle>
               </div>
-              <Button size="sm" variant="outline" onClick={handleTopUp} disabled={actionLoading}>
+              <Button size="sm" variant="outline" onClick={handleTopUp} disabled={actionLoading} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 me-1" />
                 {t('billingTab.topUp.action')}
               </Button>
@@ -390,44 +394,29 @@ export const BillingTab: React.FC = () => {
         </CardHeader>
         <CardContent className="p-0">
           {invoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-6 pb-6">{t('billing.invoices.empty')}</p>
+            <p className="text-sm text-muted-foreground px-4 pb-4 sm:px-6 sm:pb-6">{t('billing.invoices.empty')}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-start">{t('billing.invoices.date')}</TableHead>
-                  <TableHead className="text-start">{t('billingTab.invoicePeriod')}</TableHead>
-                  <TableHead className="text-end">{t('billing.invoices.amount')}</TableHead>
-                  <TableHead className="text-start">{t('billing.invoices.status')}</TableHead>
-                  <TableHead className="text-end">{t('billingTab.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: card stack */}
+              <div className="space-y-3 px-4 pb-4 md:hidden">
                 {invoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="text-start">{formatDate(inv.created_at)}</TableCell>
-                    <TableCell className="text-start text-muted-foreground">
-                      {inv.period_start && inv.period_end
-                        ? `${formatDate(inv.period_start)} – ${formatDate(inv.period_end)}`
-                        : '—'}
-                    </TableCell>
-                    <TableCell className="text-end font-medium">
-                      {formatCurrency(inv.amount_cents, inv.currency)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={inv.status === 'paid' ? 'default' : inv.status === 'open' ? 'secondary' : 'outline'}>
+                  <div key={inv.id} className="rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">{formatDate(inv.created_at)}</span>
+                      <Badge variant={INVOICE_STATUS_VARIANTS[inv.status] || 'outline'}>
                         {inv.status}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <div className="flex items-center justify-end gap-1">
-                        {inv.invoice_url && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <a href={inv.invoice_url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
+                    </div>
+                    {inv.period_start && inv.period_end && (
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {formatDate(inv.period_start)} – {formatDate(inv.period_end)}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">
+                        {formatCurrency(inv.amount_cents, inv.currency)}
+                      </span>
+                      <div className="flex items-center gap-1">
                         {inv.invoice_pdf && (
                           <Button variant="ghost" size="sm" asChild>
                             <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer">
@@ -435,12 +424,72 @@ export const BillingTab: React.FC = () => {
                             </a>
                           </Button>
                         )}
+                        {inv.invoice_url && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={inv.invoice_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4 rtl:scale-x-[-1]" />
+                            </a>
+                          </Button>
+                        )}
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-start">{t('billing.invoices.date')}</TableHead>
+                      <TableHead className="text-start">{t('billingTab.invoicePeriod')}</TableHead>
+                      <TableHead className="text-end">{t('billing.invoices.amount')}</TableHead>
+                      <TableHead className="text-start">{t('billing.invoices.status')}</TableHead>
+                      <TableHead className="text-end">{t('billingTab.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="text-start">{formatDate(inv.created_at)}</TableCell>
+                        <TableCell className="text-start text-muted-foreground">
+                          {inv.period_start && inv.period_end
+                            ? `${formatDate(inv.period_start)} – ${formatDate(inv.period_end)}`
+                            : '—'}
+                        </TableCell>
+                        <TableCell className="text-end font-medium">
+                          {formatCurrency(inv.amount_cents, inv.currency)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={INVOICE_STATUS_VARIANTS[inv.status] || 'outline'}>
+                            {inv.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-end">
+                          <div className="flex items-center justify-end gap-1">
+                            {inv.invoice_url && (
+                              <Button variant="ghost" size="sm" asChild>
+                                <a href={inv.invoice_url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-4 w-4 rtl:scale-x-[-1]" />
+                                </a>
+                              </Button>
+                            )}
+                            {inv.invoice_pdf && (
+                              <Button variant="ghost" size="sm" asChild>
+                                <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -452,38 +501,66 @@ export const BillingTab: React.FC = () => {
             <CardTitle className="text-base">{t('billingTab.creditHistory')}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-start">{t('billing.invoices.date')}</TableHead>
-                  <TableHead className="text-start">{t('billingTab.type')}</TableHead>
-                  <TableHead className="text-start">{t('billingTab.description')}</TableHead>
-                  <TableHead className="text-end">{t('billing.invoices.amount')}</TableHead>
-                  <TableHead className="text-end">{t('billingTab.balanceAfter')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((txn) => (
-                  <TableRow key={txn.id}>
-                    <TableCell className="text-start">{formatDate(txn.created_at)}</TableCell>
-                    <TableCell>
-                      <Badge variant={txn.amount > 0 ? 'default' : 'secondary'}>
-                        {t(`billingTab.txnType.${txn.type}`, txn.type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                      {txn.description || '—'}
-                    </TableCell>
-                    <TableCell className={`text-end font-medium ${txn.amount > 0 ? 'text-green-600' : 'text-destructive'}`}>
+            {/* Mobile: card stack */}
+            <div className="space-y-3 px-4 pb-4 md:hidden">
+              {transactions.map((txn) => (
+                <div key={txn.id} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">{formatDate(txn.created_at)}</span>
+                    <Badge variant={txn.amount > 0 ? 'default' : 'secondary'}>
+                      {t(`billingTab.txnType.${txn.type}`, txn.type)}
+                    </Badge>
+                  </div>
+                  {txn.description && (
+                    <p className="text-sm text-foreground mb-2">{txn.description}</p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-medium ${txn.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
                       {txn.amount > 0 ? '+' : ''}{txn.amount}
-                    </TableCell>
-                    <TableCell className="text-end text-muted-foreground">
-                      {txn.balance_after}
-                    </TableCell>
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t('billingTab.balanceAfter')}: {txn.balance_after}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-start">{t('billing.invoices.date')}</TableHead>
+                    <TableHead className="text-start">{t('billingTab.type')}</TableHead>
+                    <TableHead className="text-start">{t('billingTab.description')}</TableHead>
+                    <TableHead className="text-end">{t('billing.invoices.amount')}</TableHead>
+                    <TableHead className="text-end">{t('billingTab.balanceAfter')}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((txn) => (
+                    <TableRow key={txn.id}>
+                      <TableCell className="text-start">{formatDate(txn.created_at)}</TableCell>
+                      <TableCell>
+                        <Badge variant={txn.amount > 0 ? 'default' : 'secondary'}>
+                          {t(`billingTab.txnType.${txn.type}`, txn.type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                        {txn.description || '—'}
+                      </TableCell>
+                      <TableCell className={`text-end font-medium ${txn.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                        {txn.amount > 0 ? '+' : ''}{txn.amount}
+                      </TableCell>
+                      <TableCell className="text-end text-muted-foreground">
+                        {txn.balance_after}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

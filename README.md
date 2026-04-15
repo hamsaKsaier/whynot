@@ -49,7 +49,7 @@ This project implements a **clean architecture** with microservices:
 
 3. **Start all services:**
    ```bash
-   docker-compose up --build
+   make start-build
    ```
 
 4. **Test the API:**
@@ -193,7 +193,9 @@ whynot/
 ├── shared/                  # Shared types
 │   └── types/
 │
-└── docker-compose.yml
+├── docker/                  # Docker orchestration
+│   └── compose/             # docker-compose.yml + docker-compose.test.yml
+└── Makefile                 # make start, make logs, make test, ...
 ```
 
 ## How It Works
@@ -337,8 +339,8 @@ See the [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) for detailed solution
 
 Quick fixes:
 
-- **Services not starting**: Check Docker logs: `docker compose logs [service-name]`
-- **Database connection issues**: Verify DATABASE_URL in `.env` matches docker-compose.yml
+- **Services not starting**: Check Docker logs: `make logs` (or `make logs-<service>`)
+- **Database connection issues**: Verify DATABASE_URL in `.env` matches `docker/compose/docker-compose.yml`
 - **Test execution fails**: Check browser installation and website accessibility
 - **Rate limiting**: Adjust limits in `.env` or wait for reset window
 

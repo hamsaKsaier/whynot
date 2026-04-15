@@ -16,7 +16,7 @@ export function HeroSection() {
   return (
     <section className="px-4 pb-20 pt-20 sm:px-6 sm:pt-28">
       <div className="mx-auto max-w-4xl text-center">
-        <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl">
+        <h1 className="mb-6 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
           <Trans
             i18nKey="hero.title"
             ns="landing"
@@ -24,7 +24,7 @@ export function HeroSection() {
           />
         </h1>
 
-        <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+        <p className="mx-auto mb-10 max-w-2xl text-base text-muted-foreground sm:text-lg">
           {t('hero.subtitle')}
         </p>
 
@@ -60,20 +60,19 @@ export function HeroSection() {
           </p>
         </div>
 
-        {/* Hero illustration placeholder */}
-        <div className="mx-auto mt-16 max-w-3xl overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+        <div className="mx-auto mt-16 max-w-full overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:max-w-3xl">
           <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-3">
             <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
             <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
             <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
-            <div className="mx-auto h-4 w-48 rounded-md bg-muted-foreground/10" />
+            <div className="mx-auto h-4 w-32 rounded-md bg-muted-foreground/10 sm:w-48" />
           </div>
-          <div className="p-8">
-            <div className="space-y-3">
+          <div className="aspect-video p-4 sm:p-8">
+            <div className="flex h-full flex-col justify-center space-y-3">
               <div className="h-4 w-3/4 rounded bg-muted-foreground/10" />
               <div className="h-4 w-1/2 rounded bg-muted-foreground/10" />
               <div className="h-4 w-5/6 rounded bg-muted-foreground/10" />
-              <div className="mt-6 h-32 w-full rounded-lg border border-primary/10 bg-primary/5" />
+              <div className="mt-4 flex-1 rounded-lg border border-primary/10 bg-primary/5 sm:mt-6" />
             </div>
           </div>
         </div>

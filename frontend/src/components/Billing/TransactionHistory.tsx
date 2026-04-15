@@ -1,5 +1,15 @@
 import React from 'react';
-import { Card } from '../common/Card';
+import { useTranslation } from 'react-i18next';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../ui/table';
 
 interface Transaction {
   id: string;
@@ -14,66 +24,95 @@ interface TransactionHistoryProps {
   transactions: Transaction[];
 }
 
-const typeLabels: Record<string, string> = {
-  subscription_refill: 'Refill',
-  purchase: 'Purchase',
-  usage: 'Usage',
-  refund: 'Refund',
-  admin_grant: 'Granted',
-  admin_revoke: 'Revoked',
-  rollover: 'Rollover',
-  expiry: 'Expired',
-};
-
 export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transactions }) => {
+  const { t, i18n } = useTranslation('billing');
+
+  const formatDate = (dateStr: string) => {
+    return new Intl.DateTimeFormat(i18n.language, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(dateStr));
+  };
+
   if (transactions.length === 0) {
     return (
-      <Card className="p-6 text-center text-slate-400">
-        No credit transactions yet
+      <Card>
+        <CardContent className="p-6 text-center text-muted-foreground">
+          {t('billingTab.creditHistory.empty', 'No credit transactions yet')}
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="overflow-hidden">
-      <table className="min-w-full divide-y divide-slate-700">
-        <thead className="bg-slate-900">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Date</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Type</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Description</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Amount</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase">Balance</th>
-          </tr>
-        </thead>
-        <tbody className="bg-slate-800 divide-y divide-slate-700">
-          {transactions.map((txn) => (
-            <tr key={txn.id}>
-              <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">
-                {new Date(txn.created_at).toLocaleDateString()}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                  txn.amount > 0 ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'
-                }`}>
-                  {typeLabels[txn.type] || txn.type}
+    <>
+      {/* Mobile: card stack */}
+      <div className="space-y-3 md:hidden">
+        {transactions.map((txn) => (
+          <Card key={txn.id}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground">{formatDate(txn.created_at)}</span>
+                <Badge variant={txn.amount > 0 ? 'default' : 'secondary'}>
+                  {t(`billingTab.txnType.${txn.type}`, txn.type)}
+                </Badge>
+              </div>
+              {txn.description && (
+                <p className="text-sm text-foreground mb-2">{txn.description}</p>
+              )}
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${txn.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                  {txn.amount > 0 ? '+' : ''}{txn.amount}
                 </span>
-              </td>
-              <td className="px-4 py-3 text-sm text-slate-200 max-w-xs truncate">
-                {txn.description || '-'}
-              </td>
-              <td className={`px-4 py-3 text-sm text-right font-medium ${
-                txn.amount > 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {txn.amount > 0 ? '+' : ''}{txn.amount}
-              </td>
-              <td className="px-4 py-3 text-sm text-right text-slate-400">
-                {txn.balance_after}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
+                <span className="text-xs text-muted-foreground">
+                  {t('billingTab.balanceAfter')}: {txn.balance_after}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <Card className="hidden md:block">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-start">{t('billing.invoices.date')}</TableHead>
+                  <TableHead className="text-start">{t('billingTab.type')}</TableHead>
+                  <TableHead className="text-start">{t('billingTab.description')}</TableHead>
+                  <TableHead className="text-end">{t('billing.invoices.amount')}</TableHead>
+                  <TableHead className="text-end">{t('billingTab.balanceAfter')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((txn) => (
+                  <TableRow key={txn.id}>
+                    <TableCell className="text-start">{formatDate(txn.created_at)}</TableCell>
+                    <TableCell>
+                      <Badge variant={txn.amount > 0 ? 'default' : 'secondary'}>
+                        {t(`billingTab.txnType.${txn.type}`, txn.type)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                      {txn.description || '—'}
+                    </TableCell>
+                    <TableCell className={`text-end font-medium ${txn.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                      {txn.amount > 0 ? '+' : ''}{txn.amount}
+                    </TableCell>
+                    <TableCell className="text-end text-muted-foreground">
+                      {txn.balance_after}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 };

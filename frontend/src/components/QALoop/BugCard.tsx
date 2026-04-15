@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -17,6 +18,7 @@ export interface BugCardProps {
 
 /** Expandable bug card with reproduction steps and action buttons */
 export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathname }) => {
+  const { t } = useTranslation('runner');
   const [expanded, setExpanded] = useState(false);
 
   const reproSteps = Array.isArray(bug.reproduction_steps) ? bug.reproduction_steps : [];
@@ -43,12 +45,12 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
             {bug.status === 'confirmed' ? (
               <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800">
                 <CheckCircle className="h-3 w-3" />
-                Verified
+                {t('runner.qaLoop.bugs.verified')}
               </Badge>
             ) : (
               <Badge variant="outline" className="gap-1 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800">
                 <AlertCircle className="h-3 w-3" />
-                AI Observed
+                {t('runner.qaLoop.bugs.aiObserved')}
               </Badge>
             )}
             <Badge variant="outline" className={severityColor(bug.severity)}>
@@ -75,7 +77,7 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
           <Separator />
           {reproSteps.length > 0 && (
             <div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Reproduction Steps</div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">{t('runner.qaLoop.bugs.reproductionSteps')}</div>
               <ol className="list-decimal list-inside space-y-1">
                 {reproSteps.map((step: any, i: number) => (
                   <li key={i} className="text-sm text-foreground">
@@ -88,7 +90,7 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
 
           {bug.page_url && (
             <div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Page URL</div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">{t('runner.qaLoop.bugs.pageUrl')}</div>
               <a
                 href={bug.page_url}
                 target="_blank"
@@ -102,14 +104,14 @@ export const BugCard: React.FC<BugCardProps> = ({ bug, severityColor, safePathna
 
           {bug.video_path && (
             <div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Session Recording</div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">{t('runner.qaLoop.bugs.sessionRecording')}</div>
               <video
                 controls
                 preload="metadata"
                 className="w-full rounded-lg max-h-64 bg-black"
                 src={`/api/videos/${bug.video_path}`}
               >
-                Your browser does not support the video tag.
+                {t('runner.qaLoop.bugs.videoNotSupported')}
               </video>
             </div>
           )}

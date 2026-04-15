@@ -46,7 +46,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">
+      <div className="absolute start-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
         <FiSearch className="h-5 w-5" />
       </div>
       <input
@@ -54,13 +54,13 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         placeholder={placeholder}
-        className={`w-full pl-10 pr-10 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${className}`}
+        className={`w-full ps-10 pe-10 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${className}`}
         aria-label="Search"
       />
       {localValue && (
         <button
           onClick={handleClear}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-400"
+          className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
           aria-label="Clear search"
         >
           <FiX className="h-5 w-5" />

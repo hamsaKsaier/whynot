@@ -1,20 +1,24 @@
 FROM node:20-slim
 
-WORKDIR /app
+WORKDIR /app/gateway
 
 # Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY gateway/package*.json ./
+COPY gateway/tsconfig.json ./
 
 # Install dependencies
 RUN npm install
 
 # Copy source code
-COPY src/ ./src/
-# Copy shared types (needed for build)
-COPY shared/ ./shared/
+COPY gateway/src/ ./src/
 
-# Build TypeScript
+# Copy shared into /app/gateway/shared. All gateway src imports resolve
+# to this one location (see tsconfig.json include), so no symlinks are
+# needed. Module resolution from shared/*.ts walks up to
+# /app/gateway/node_modules/.
+COPY shared/ /app/gateway/shared/
+
+# Build TypeScript (excludes tests via gateway/tsconfig.json)
 RUN npm run build
 
 # Expose port

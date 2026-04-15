@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { useAuth } from '../contexts/AuthContext'
+import { isSuperadminHostname } from '../lib/hostname'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -24,7 +25,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/')
+      navigate(isSuperadminHostname() ? '/users' : '/')
     } catch (err: any) {
       if (err.message === 'superadmin_required') {
         setError(t('auth.login.accessDenied'))
@@ -37,16 +38,16 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center space-y-2 p-4 sm:p-6">
           <div className="flex items-center justify-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-semibold">{t('auth.login.title')}</h1>
+            <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            <h1 className="text-xl sm:text-2xl font-semibold">{t('auth.login.title')}</h1>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>{error}</AlertDescription>
@@ -59,6 +60,9 @@ export function LoginPage() {
               <Input
                 id="email"
                 type="email"
+                inputMode="email"
+                enterKeyHint="next"
+                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -71,6 +75,7 @@ export function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                enterKeyHint="done"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -78,14 +83,14 @@ export function LoginPage() {
                 placeholder={t('auth.login.passwordPlaceholder')}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full sm:w-auto" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 me-1.5 animate-spin" />}
               {loading ? t('auth.login.submitting') : t('auth.login.submit')}
             </Button>
           </form>
         </CardContent>
 
-        <CardFooter className="justify-center">
+        <CardFooter className="justify-center p-4 sm:p-6 pt-0 sm:pt-0">
           <p className="text-xs text-muted-foreground">
             {t('auth.login.superadminOnly')}
           </p>

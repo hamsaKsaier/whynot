@@ -4,6 +4,7 @@ import { BillingHistoryRepository } from '../../shared/database/repositories/bil
 import { StripeProvider } from './stripe-provider';
 import { auditedOperation } from './audit-logger';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 import { DEFAULT_PAYG_RATES } from '../../shared/constants/pricing';
 import { SubscriptionManager } from './subscription-manager';
 import { resolveWorkspaceRecipient } from '../emails/notification-helper';
@@ -60,7 +61,7 @@ export class BillingService {
             recipient,
             currentBalance: currentBalance.toString(),
             threshold: lowThreshold.toString(),
-            topUpUrl: `${process.env.APP_URL || ''}/settings?tab=billing`,
+            topUpUrl: `${env.APP_URL}/settings?tab=billing`,
           }).catch(() => {});
         }
       }

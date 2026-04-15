@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -44,7 +45,13 @@ const fmt = (iso: string) =>
 
 export function UsageTrackingPage() {
   const { t } = useTranslation('admin')
-  const [tab, setTab] = useState('overview')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab') || 'overview'
+  const [tab, setTabState] = useState(initialTab)
+  const setTab = useCallback((newTab: string) => {
+    setTabState(newTab)
+    setSearchParams({ tab: newTab }, { replace: true })
+  }, [setSearchParams])
 
   const [byOrg, setByOrg] = useState<OrgUsage[]>([])
   const [byType, setByType] = useState<TypeUsage[]>([])
@@ -158,6 +165,7 @@ export function UsageTrackingPage() {
     {
       key: 'workspace',
       header: t('admin.usage.workspace', 'Workspace'),
+      hideOnMobile: true,
       render: (r) => <code className="text-xs">{r.workspace_id?.slice(0, 8)}</code>,
     },
     {
@@ -213,7 +221,7 @@ export function UsageTrackingPage() {
         <TabsContent value="overview" className="space-y-6 mt-4">
           {summaryLoading ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Skeleton className="h-24" />
                 <Skeleton className="h-24" />
               </div>
@@ -229,7 +237,7 @@ export function UsageTrackingPage() {
             </Card>
           ) : (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-5">
                     <p className="text-sm text-muted-foreground">{t('admin.usage.totalEvents', 'Total Events')}</p>

@@ -2,6 +2,7 @@ import { StripeProvider } from './stripe-provider';
 import { PaymentServiceError } from './payment-error';
 import { generateIdempotencyKey, checkIdempotencyKey, storeIdempotencyResult } from './idempotency';
 import { writePaymentAuditLog } from './audit-logger';
+import { env } from '../config/env';
 import { PaymentTransactionRepository } from '../../shared/database/repositories/payment-transaction-repository';
 import { PaygCreditsLedgerRepository } from '../../shared/database/repositories/payg-credits-ledger-repository';
 import { BillingConfigRepository } from '../../shared/database/repositories/billing-config-repository';
@@ -382,7 +383,7 @@ export class PaymentService {
       sendSubscriptionCreatedEmail({
         recipient,
         plan: plan?.name || planId,
-        dashboardUrl: `${process.env.APP_URL || ''}/settings?tab=billing`,
+        dashboardUrl: `${env.APP_URL}/settings?tab=billing`,
       }).catch(() => {});
     }
   }
@@ -478,7 +479,7 @@ export class PaymentService {
       sendPaymentFailedEmail({
         recipient,
         amount: `$${(invoice.amount_due / 100).toFixed(2)}`,
-        updatePaymentUrl: invoice.hosted_invoice_url || `${process.env.APP_URL || ''}/settings?tab=billing`,
+        updatePaymentUrl: invoice.hosted_invoice_url || `${env.APP_URL}/settings?tab=billing`,
       }).catch(() => {});
     }
   }
@@ -914,7 +915,7 @@ export class PaymentService {
       });
     }
 
-    const returnUrl = process.env.STRIPE_SUCCESS_URL || 'http://localhost:5183/billing';
+    const returnUrl = env.STRIPE_SUCCESS_URL || 'http://localhost:5183/billing';
     return stripe.createPortalSession(customerId, returnUrl);
   }
 

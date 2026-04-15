@@ -112,6 +112,14 @@
     @apply bg-muted-foreground/50;
   }
 
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Focus styles */
   *:focus-visible {
     @apply outline-2 outline-offset-2 outline-ring;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { CheckCircle, Loader2, XCircle } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { AuthShell } from "@/components/layout/AuthShell"
 import apiClient from "@/services/api"
@@ -8,11 +9,12 @@ import apiClient from "@/services/api"
 type VerifyState = "verifying" | "success" | "error"
 
 export function VerifyEmailPage() {
+  const { t } = useTranslation("common")
   const [searchParams] = useSearchParams()
   const token = searchParams.get("token") || ""
   const [state, setState] = useState<VerifyState>(token ? "verifying" : "error")
   const [errorMessage, setErrorMessage] = useState(
-    token ? "" : "Invalid verification link."
+    token ? "" : t("auth.verifyEmail.error.invalidLink")
   )
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function VerifyEmailPage() {
           setErrorMessage(
             err?.response?.data?.error ||
               err?.message ||
-              "Verification failed. The link may have expired."
+              t("auth.verifyEmail.error.expired")
           )
         }
       })
@@ -44,10 +46,10 @@ export function VerifyEmailPage() {
   return (
     <AuthShell>
       {state === "verifying" && (
-        <div className="flex flex-col items-center gap-4 py-8">
+        <div className="flex flex-col items-center gap-4 px-2 py-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">
-            Verifying your email…
+            {t("auth.verifyEmail.verifying")}
           </p>
         </div>
       )}
@@ -59,14 +61,14 @@ export function VerifyEmailPage() {
           </div>
           <div className="text-center">
             <h2 className="text-lg font-semibold text-foreground">
-              Email verified
+              {t("auth.verifyEmail.success.title")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your email has been verified successfully. You can now sign in.
+              {t("auth.verifyEmail.success.description")}
             </p>
           </div>
           <Button asChild className="w-full">
-            <Link to="/login">Sign in</Link>
+            <Link to="/login">{t("auth.verifyEmail.success.loginLink")}</Link>
           </Button>
         </div>
       )}
@@ -78,14 +80,14 @@ export function VerifyEmailPage() {
           </div>
           <div className="text-center">
             <h2 className="text-lg font-semibold text-foreground">
-              Verification failed
+              {t("auth.verifyEmail.error.title")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {errorMessage}
             </p>
           </div>
           <Button variant="outline" asChild className="w-full">
-            <Link to="/login">Back to Login</Link>
+            <Link to="/login">{t("auth.verifyEmail.error.backToLogin")}</Link>
           </Button>
         </div>
       )}

@@ -217,7 +217,7 @@ export function FeatureFlagsPage() {
         <h1 className="text-2xl font-semibold">{t('admin.featureFlags.title')}</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Flag list */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
@@ -317,6 +317,7 @@ export function FeatureFlagsPage() {
                   </div>
 
                   {orgFlags !== null && (
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -413,6 +414,7 @@ export function FeatureFlagsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
                   )}
                 </div>
 
@@ -439,6 +441,7 @@ export function FeatureFlagsPage() {
                       {t('admin.featureFlags.noAuditEntries')}
                     </p>
                   ) : (
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -479,6 +482,7 @@ export function FeatureFlagsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
                   )}
                 </div>
               </CardContent>

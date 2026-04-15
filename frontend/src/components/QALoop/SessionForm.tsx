@@ -1,8 +1,10 @@
 /**
  * SessionForm — "Start New Exploration" card extracted from QALoopPage (5.1).
  * Owns the start-form UI: URL input, advanced options, login credentials, documents.
+ * Mobile: multi-step wizard (one step per screen). lg+: single form.
  */
-import React from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -42,6 +44,8 @@ import {
   RefreshCw,
   Info,
   Settings,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { QALoopSession, QALoopDocument, LoginCredentials } from '../../services/qa-loop-api';
@@ -130,173 +134,429 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   useProjectContext, setUseProjectContext, projectContextInfo,
   scanMode, setScanMode,
   isStarting, onStart,
-}) => (
-  <Card>
-    <CardContent className="p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-        <Play className="h-4 w-4 text-green-500 dark:text-green-400" />
-        Start New Scan
-      </h2>
+}) => {
+  const { t } = useTranslation('runner');
+  const [mobileStep, setMobileStep] = useState(0);
+  const totalMobileSteps = 3;
 
-      <div className="space-y-4">
-        {/* URL input -- large and prominent */}
+  const stepUrlAndProject = (
+    <>
+      {/* URL input -- large and prominent */}
+      <div>
+        <Input
+          id="target-url-input"
+          type="url"
+          inputMode="url"
+          autoComplete="url"
+          placeholder={t('runner.qaLoop.sessionForm.urlPlaceholder')}
+          value={targetUrl}
+          onChange={e => setTargetUrl(e.target.value)}
+          className="text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 h-10 sm:h-12"
+        />
+      </div>
+
+      {/* Project selector */}
+      {projects && setSelectedProjectId && (
         <div>
-          <Input
-            id="target-url-input"
-            type="url"
-            placeholder="Enter your website URL -- e.g. https://myapp.com"
-            value={targetUrl}
-            onChange={e => setTargetUrl(e.target.value)}
-            className="text-base py-3 px-4 h-12"
+          <Select
+            value={selectedProjectId || ''}
+            onValueChange={v => setSelectedProjectId(v)}
+          >
+            <SelectTrigger>
+              <SelectValue
+                placeholder={
+                  projects.length === 0
+                    ? t('runner.qaLoop.sessionForm.autoCreateProject')
+                    : t('runner.qaLoop.sessionForm.autoSelectProject')
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}{p.website_url ? ` -- ${p.website_url}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Environment selector (only if environments exist) */}
+      {environments && environments.length > 0 && (
+        <div>
+          <Select
+            value=""
+            onValueChange={v => {
+              if (v) setTargetUrl(v);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={t('runner.qaLoop.sessionForm.pickEnvironment')} />
+            </SelectTrigger>
+            <SelectContent>
+              {environments.map(env => (
+                <SelectItem key={env.id} value={env.url}>
+                  {env.name} -- {env.url}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Use project context checkbox */}
+      {setUseProjectContext && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="use-project-context"
+            checked={useProjectContext ?? true}
+            onCheckedChange={checked => setUseProjectContext(checked === true)}
+          />
+          <Label htmlFor="use-project-context" className="cursor-pointer text-sm text-muted-foreground">
+            {t('runner.qaLoop.sessionForm.useProjectContext')}
+          </Label>
+          {projectContextInfo && (
+            <span className="text-xs text-primary flex items-center gap-1 ms-auto min-w-0">
+              <Info className="h-3 w-3 shrink-0" />
+              <span className="truncate">{projectContextInfo}</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Existing session prompt (Phase 3) */}
+      {existingSession && (
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-lg">
+          <div className="flex items-start gap-3">
+            <RefreshCw className="h-4 w-4 text-blue-500 dark:text-blue-400 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                {t('runner.qaLoop.sessionForm.previousRunFound')}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                {t('runner.qaLoop.sessionForm.previousRunStats', { testCases: existingSession.testCaseCount, bugs: existingSession.bugsFound, date: new Date(existingSession.completedAt).toLocaleDateString() })}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                <Button
+                  type="button"
+                  variant={useExisting ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setUseExisting(true)}
+                  className="text-xs flex-1 sm:flex-initial"
+                >
+                  {t('runner.qaLoop.sessionForm.continueFromLastRun')}
+                </Button>
+                <Button
+                  type="button"
+                  variant={!useExisting ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setUseExisting(false)}
+                  className="text-xs flex-1 sm:flex-initial"
+                >
+                  {t('runner.qaLoop.sessionForm.startFresh')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const stepScanMode = (
+    <>
+      {/* Scan Mode Toggle -- v1 (Single Agent) vs v2 (QA Team) */}
+      {setScanMode && (
+        <div className="p-3 bg-muted/50 border border-border rounded-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <span className="text-sm text-muted-foreground">{t('runner.qaLoop.sessionForm.scanMode')}:</span>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={scanMode !== 'v2' ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => setScanMode('v1')}
+                className="text-xs"
+              >
+                {t('runner.qaLoop.sessionForm.singleAgent')}
+              </Button>
+              <Button
+                type="button"
+                variant={scanMode === 'v2' ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => setScanMode('v2')}
+                className={cn('text-xs', scanMode === 'v2' && 'bg-purple-600 hover:bg-purple-700 text-primary-foreground')}
+              >
+                {t('runner.qaLoop.sessionForm.qaTeam')}
+              </Button>
+            </div>
+          </div>
+          {scanMode === 'v2' && (
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-purple-600 dark:text-purple-300">
+                {t('runner.qaLoop.sessionForm.qaTeamDescription')}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {t('runner.qaLoop.sessionForm.qaTeamPoweredBy')}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Test Priority */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Label>{t('runner.qaLoop.sessionForm.testPriority')}</Label>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-64">
+                <p className="text-xs">
+                  <strong>{t('runner.qaLoop.sessionForm.functionalFirst')}:</strong> {t('runner.qaLoop.sessionForm.functionalFirstDesc')}<br />
+                  <strong>{t('runner.qaLoop.sessionForm.balanced')}:</strong> {t('runner.qaLoop.sessionForm.balancedDesc')}<br />
+                  <strong>{t('runner.qaLoop.sessionForm.securityFirst')}:</strong> {t('runner.qaLoop.sessionForm.securityFirstDesc')}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <Select
+          value={testPriority}
+          onValueChange={v => setTestPriority(v as 'functional_first' | 'balanced' | 'security_first')}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="functional_first">{t('runner.qaLoop.sessionForm.functionalFirstOption')}</SelectItem>
+            <SelectItem value="balanced">{t('runner.qaLoop.sessionForm.balanced')}</SelectItem>
+            <SelectItem value="security_first">{t('runner.qaLoop.sessionForm.securityFirst')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Quality Threshold */}
+      <div className="space-y-1.5">
+        <Label>{t('runner.qaLoop.sessionForm.qualityThreshold', { value: qualityThreshold })}</Label>
+        <Slider
+          min={50}
+          max={100}
+          step={1}
+          value={[qualityThreshold]}
+          onValueChange={v => setQualityThreshold(v[0])}
+        />
+      </div>
+
+      {/* Max Iterations */}
+      <div className="space-y-1.5">
+        <Label>{t('runner.qaLoop.sessionForm.maxIterations')}</Label>
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={1000}
+          value={maxIterations}
+          onChange={e => setMaxIterations(Number(e.target.value))}
+        />
+      </div>
+    </>
+  );
+
+  const stepAdvanced = (
+    <>
+      {/* Login Credentials */}
+      <div className="border border-border rounded-lg p-3">
+        <div className="flex items-center justify-between min-h-[44px]">
+          <div className="flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+            <Label htmlFor="use-login-switch" className="cursor-pointer">
+              {t('runner.qaLoop.sessionForm.testCredentials')}
+            </Label>
+          </div>
+          <Switch
+            id="use-login-switch"
+            checked={useLogin}
+            onCheckedChange={setUseLogin}
           />
         </div>
 
-        {/* Project selector */}
-        {projects && setSelectedProjectId && (
-          <div>
-            <Select
-              value={selectedProjectId || ''}
-              onValueChange={v => setSelectedProjectId(v)}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    projects.length === 0
-                      ? 'Auto-create project from URL'
-                      : 'Auto-select most recent project'
-                  }
+        {useLogin && (
+          <div className="mt-3 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              {t('runner.qaLoop.sessionForm.credentialsHint')}
+            </p>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('runner.qaLoop.sessionForm.emailUsername')}</Label>
+              <div className="relative">
+                <User className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  placeholder="test@example.com"
+                  value={loginCredentials.email}
+                  onChange={e => setLoginCredentials(prev => ({ ...prev, email: e.target.value }))}
+                  className="ps-9"
                 />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}{p.website_url ? ` -- ${p.website_url}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('runner.qaLoop.sessionForm.password')}</Label>
+              <div className="relative">
+                <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={loginCredentials.password}
+                  onChange={e => setLoginCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  className="ps-9 pe-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute end-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('runner.qaLoop.sessionForm.loginUrl')}</Label>
+              <Input
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                placeholder={t('runner.qaLoop.sessionForm.loginUrlPlaceholder')}
+                value={loginCredentials.loginUrl}
+                onChange={e => setLoginCredentials(prev => ({ ...prev, loginUrl: e.target.value }))}
+              />
+            </div>
+
+            <Accordion type="single" collapsible>
+              <AccordionItem value="selectors" className="border-none">
+                <AccordionTrigger className="py-1 text-xs text-muted-foreground hover:text-foreground hover:no-underline">
+                  {t('runner.qaLoop.sessionForm.customSelectors')}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-2 pt-1">
+                    <Input
+                      type="text"
+                      placeholder={t('runner.qaLoop.sessionForm.emailSelectorPlaceholder')}
+                      value={loginCredentials.emailSelector}
+                      onChange={e => setLoginCredentials(prev => ({ ...prev, emailSelector: e.target.value }))}
+                      className="text-xs h-8"
+                    />
+                    <Input
+                      type="text"
+                      placeholder={t('runner.qaLoop.sessionForm.passwordSelectorPlaceholder')}
+                      value={loginCredentials.passwordSelector}
+                      onChange={e => setLoginCredentials(prev => ({ ...prev, passwordSelector: e.target.value }))}
+                      className="text-xs h-8"
+                    />
+                    <Input
+                      type="text"
+                      placeholder={t('runner.qaLoop.sessionForm.submitSelectorPlaceholder')}
+                      value={loginCredentials.submitSelector}
+                      onChange={e => setLoginCredentials(prev => ({ ...prev, submitSelector: e.target.value }))}
+                      className="text-xs h-8"
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         )}
+      </div>
 
-        {/* Environment selector (only if environments exist) */}
-        {environments && environments.length > 0 && (
-          <div>
-            <Select
-              value=""
-              onValueChange={v => {
-                if (v) setTargetUrl(v);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Or pick a saved environment..." />
-              </SelectTrigger>
-              <SelectContent>
-                {environments.map(env => (
-                  <SelectItem key={env.id} value={env.url}>
-                    {env.name} -- {env.url}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Quick context paste */}
+      <div className="space-y-1.5">
+        <Label>{t('runner.qaLoop.sessionForm.quickContext')}</Label>
+        <Textarea
+          placeholder={t('runner.qaLoop.sessionForm.quickContextPlaceholder')}
+          value={documentContext}
+          onChange={e => setDocumentContext(e.target.value)}
+          rows={4}
+        />
+      </div>
+
+      {/* Document upload */}
+      <div className="space-y-1.5">
+        <Label>{t('runner.qaLoop.sessionForm.documentsLabel')}</Label>
+        <DocumentUpload
+          sessionId={activeSession?.id}
+          documents={documents as any}
+          onUpload={onUpload}
+          onDelete={onDelete}
+          onToggle={onToggle}
+          disabled={!activeSession}
+        />
+        {!activeSession && (
+          <p className="text-xs text-muted-foreground mt-1">{t('runner.qaLoop.sessionForm.startSessionToUpload')}</p>
         )}
+        <p className="text-xs text-muted-foreground mt-2">
+          {t('runner.qaLoop.sessionForm.documentsHint')}
+        </p>
+      </div>
+    </>
+  );
 
-        {/* Use project context checkbox */}
-        {setUseProjectContext && (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="use-project-context"
-              checked={useProjectContext ?? true}
-              onCheckedChange={checked => setUseProjectContext(checked === true)}
-            />
-            <Label htmlFor="use-project-context" className="cursor-pointer text-sm text-muted-foreground">
-              Use project context (recommended)
-            </Label>
-            {projectContextInfo && (
-              <span className="text-xs text-primary flex items-center gap-1 ms-auto">
-                <Info className="h-3 w-3" />
-                {projectContextInfo}
+  const mobileStepLabels = [
+    t('runner.qaLoop.sessionForm.stepTarget', { defaultValue: 'Target' }),
+    t('runner.qaLoop.sessionForm.stepConfig', { defaultValue: 'Config' }),
+    t('runner.qaLoop.sessionForm.stepAdvanced', { defaultValue: 'Advanced' }),
+  ];
+
+  const mobileStepContent = [stepUrlAndProject, stepScanMode, stepAdvanced];
+
+  return (
+  <Card>
+    <CardContent className="p-4 sm:p-6">
+      <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+        <Play className="h-4 w-4 text-green-500 dark:text-green-400 shrink-0" />
+        {t('runner.qaLoop.sessionForm.startNewScan')}
+      </h2>
+
+      {/* ── Desktop: all sections visible ── */}
+      <div className="hidden lg:block space-y-4">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-4">
+            {stepUrlAndProject}
+          </div>
+          <div className="space-y-4">
+            {stepScanMode}
+          </div>
+        </div>
+
+        <Accordion
+          type="single"
+          collapsible
+          value={showAdvanced ? 'advanced' : ''}
+          onValueChange={v => setShowAdvanced(v === 'advanced')}
+        >
+          <AccordionItem value="advanced" className="border rounded-lg">
+            <AccordionTrigger className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:no-underline">
+              <span className="flex items-center gap-2">
+                <Settings className="h-3.5 w-3.5" />
+                {t('runner.qaLoop.sessionForm.advancedOptions')}
               </span>
-            )}
-          </div>
-        )}
-
-        {/* Scan Mode Toggle -- v1 (Single Agent) vs v2 (QA Team) */}
-        {setScanMode && (
-          <div className="p-3 bg-muted/50 border border-border rounded-lg">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Scan Mode:</span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={scanMode !== 'v2' ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => setScanMode('v1')}
-                  className="text-xs"
-                >
-                  Single Agent
-                </Button>
-                <Button
-                  type="button"
-                  variant={scanMode === 'v2' ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => setScanMode('v2')}
-                  className={cn('text-xs', scanMode === 'v2' && 'bg-purple-600 hover:bg-purple-700 text-white')}
-                >
-                  QA Team (5 agents)
-                </Button>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="space-y-4 pt-2">
+                {stepAdvanced}
               </div>
-            </div>
-            {scanMode === 'v2' && (
-              <div className="mt-2 space-y-1">
-                <p className="text-xs text-purple-600 dark:text-purple-300">
-                  5 specialized QA agents analyze your app -- Exploratory, Security, API, and Automation testing
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Powered by Gemini 2.5 Flash (1M context, native tool calling)
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Existing session prompt (Phase 3) */}
-        {existingSession && (
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-lg">
-            <div className="flex items-start gap-3">
-              <RefreshCw className="h-4 w-4 text-blue-500 dark:text-blue-400 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
-                  Previous run found for this URL
-                </p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  {existingSession.testCaseCount} test cases | {existingSession.bugsFound} bugs |{' '}
-                  Last run: {new Date(existingSession.completedAt).toLocaleDateString()}
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <Button
-                    type="button"
-                    variant={useExisting ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setUseExisting(true)}
-                    className="text-xs"
-                  >
-                    Continue from last run
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={!useExisting ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setUseExisting(false)}
-                    className="text-xs"
-                  >
-                    Start fresh
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         {/* Start Scan button */}
         <Button
@@ -308,229 +568,95 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           {isStarting ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Starting...
+              {t('runner.qaLoop.sessionForm.starting')}
             </span>
           ) : (
             <span className="flex items-center justify-center gap-2">
               <Play className="h-4 w-4" />
-              Start Scan
+              {t('runner.qaLoop.sessionForm.startScan')}
             </span>
           )}
         </Button>
+      </div>
 
-        {/* Advanced Options -- accordion */}
-        <Accordion
-          type="single"
-          collapsible
-          value={showAdvanced ? 'advanced' : ''}
-          onValueChange={v => setShowAdvanced(v === 'advanced')}
-        >
-          <AccordionItem value="advanced" className="border rounded-lg">
-            <AccordionTrigger className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:no-underline">
-              <span className="flex items-center gap-2">
-                <Settings className="h-3.5 w-3.5" />
-                Advanced Options
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              <div className="space-y-4 pt-2">
-                {/* Test Priority */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Label>Test Priority</Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-64">
-                          <p className="text-xs">
-                            <strong>Functional First:</strong> Explore functionality before security testing<br />
-                            <strong>Balanced:</strong> Mix of exploration, security, and stability<br />
-                            <strong>Security First:</strong> Start security testing earlier
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <Select
-                    value={testPriority}
-                    onValueChange={v => setTestPriority(v as 'functional_first' | 'balanced' | 'security_first')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="functional_first">Functional First (recommended)</SelectItem>
-                      <SelectItem value="balanced">Balanced</SelectItem>
-                      <SelectItem value="security_first">Security First</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      {/* ── Mobile: multi-step wizard ── */}
+      <div className="lg:hidden space-y-4">
+        {/* Step indicator */}
+        <div className="flex items-center gap-1" role="tablist" aria-label={t('runner.qaLoop.sessionForm.wizardSteps', { defaultValue: 'Form steps' })}>
+          {mobileStepLabels.map((label, i) => (
+            <button
+              key={i}
+              type="button"
+              role="tab"
+              aria-selected={i === mobileStep}
+              onClick={() => setMobileStep(i)}
+              className={cn(
+                'flex-1 text-center py-2 text-xs font-medium rounded-md transition-colors duration-150',
+                i === mobileStep
+                  ? 'bg-primary text-primary-foreground'
+                  : i < mobileStep
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-                {/* Quality Threshold */}
-                <div className="space-y-1.5">
-                  <Label>Quality Threshold ({qualityThreshold}%)</Label>
-                  <Slider
-                    min={50}
-                    max={100}
-                    step={1}
-                    value={[qualityThreshold]}
-                    onValueChange={v => setQualityThreshold(v[0])}
-                  />
-                </div>
+        {/* Step content */}
+        <div className="space-y-3">
+          {mobileStepContent[mobileStep]}
+        </div>
 
-                {/* Max Iterations */}
-                <div className="space-y-1.5">
-                  <Label>Max Iterations</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={1000}
-                    value={maxIterations}
-                    onChange={e => setMaxIterations(Number(e.target.value))}
-                  />
-                </div>
-
-                {/* Login Credentials */}
-                <div className="border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between min-h-[44px]">
-                    <div className="flex items-center gap-2">
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                      <Label htmlFor="use-login-switch" className="cursor-pointer">
-                        Test Credentials (optional)
-                      </Label>
-                    </div>
-                    <Switch
-                      id="use-login-switch"
-                      checked={useLogin}
-                      onCheckedChange={setUseLogin}
-                    />
-                  </div>
-
-                  {useLogin && (
-                    <div className="mt-3 space-y-3">
-                      <p className="text-xs text-muted-foreground">
-                        Use a test account only. Credentials are sent securely to the test runner.
-                      </p>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Email / Username</Label>
-                        <div className="relative">
-                          <User className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            type="text"
-                            placeholder="test@example.com"
-                            value={loginCredentials.email}
-                            onChange={e => setLoginCredentials(prev => ({ ...prev, email: e.target.value }))}
-                            className="ps-9"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Password</Label>
-                        <div className="relative">
-                          <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
-                            value={loginCredentials.password}
-                            onChange={e => setLoginCredentials(prev => ({ ...prev, password: e.target.value }))}
-                            className="ps-9 pe-10"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute end-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
-                          >
-                            {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Login URL (optional)</Label>
-                        <Input
-                          type="text"
-                          placeholder="Leave empty to use target URL"
-                          value={loginCredentials.loginUrl}
-                          onChange={e => setLoginCredentials(prev => ({ ...prev, loginUrl: e.target.value }))}
-                        />
-                      </div>
-
-                      <Accordion type="single" collapsible>
-                        <AccordionItem value="selectors" className="border-none">
-                          <AccordionTrigger className="py-1 text-xs text-muted-foreground hover:text-foreground hover:no-underline">
-                            Custom selectors (advanced)
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-2 pt-1">
-                              <Input
-                                type="text"
-                                placeholder="Email selector (e.g., input[name='email'])"
-                                value={loginCredentials.emailSelector}
-                                onChange={e => setLoginCredentials(prev => ({ ...prev, emailSelector: e.target.value }))}
-                                className="text-xs h-8"
-                              />
-                              <Input
-                                type="text"
-                                placeholder="Password selector"
-                                value={loginCredentials.passwordSelector}
-                                onChange={e => setLoginCredentials(prev => ({ ...prev, passwordSelector: e.target.value }))}
-                                className="text-xs h-8"
-                              />
-                              <Input
-                                type="text"
-                                placeholder="Submit button selector"
-                                value={loginCredentials.submitSelector}
-                                onChange={e => setLoginCredentials(prev => ({ ...prev, submitSelector: e.target.value }))}
-                                className="text-xs h-8"
-                              />
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick context paste */}
-                <div className="space-y-1.5">
-                  <Label>Quick Context (paste)</Label>
-                  <Textarea
-                    placeholder="Paste API docs, user stories, or business rules here..."
-                    value={documentContext}
-                    onChange={e => setDocumentContext(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-
-                {/* Document upload */}
-                <div className="space-y-1.5">
-                  <Label>Documents (upload files)</Label>
-                  <DocumentUpload
-                    sessionId={activeSession?.id}
-                    documents={documents as any}
-                    onUpload={onUpload}
-                    onDelete={onDelete}
-                    onToggle={onToggle}
-                    disabled={!activeSession}
-                  />
-                  {!activeSession && (
-                    <p className="text-xs text-muted-foreground mt-1">Start a session to upload documents</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Upload PRDs, specs, or documentation to help the AI understand your application.
-                  </p>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+        {/* Navigation + start */}
+        <div className="flex items-center gap-2">
+          {mobileStep > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-[44px]"
+              onClick={() => setMobileStep(mobileStep - 1)}
+            >
+              <ChevronLeft className="h-4 w-4 me-1 rtl:scale-x-[-1]" />
+              {t('common.back', { defaultValue: 'Back' })}
+            </Button>
+          )}
+          {mobileStep < totalMobileSteps - 1 ? (
+            <Button
+              type="button"
+              variant="default"
+              className="flex-1 min-h-[44px]"
+              onClick={() => setMobileStep(mobileStep + 1)}
+              disabled={mobileStep === 0 && !targetUrl}
+            >
+              {t('common.next', { defaultValue: 'Next' })}
+              <ChevronRight className="h-4 w-4 ms-1 rtl:scale-x-[-1]" />
+            </Button>
+          ) : (
+            <Button
+              onClick={onStart}
+              disabled={isStarting || !targetUrl}
+              className="flex-1 min-h-[44px] text-base font-semibold"
+              size="lg"
+            >
+              {isStarting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('runner.qaLoop.sessionForm.starting')}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Play className="h-4 w-4" />
+                  {t('runner.qaLoop.sessionForm.startScan')}
+                </span>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     </CardContent>
   </Card>
-);
+  );
+};

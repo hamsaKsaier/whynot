@@ -1,0 +1,89 @@
+{
+  "plans": {
+    "title": "Planes",
+    "newPlan": "Nuevo plan",
+    "editPlan": "Editar plan",
+    "createPlan": "Crear plan",
+    "saveChanges": "Guardar cambios",
+    "archivePlan": "Archivar plan",
+    "archiveDescription": "¿Está seguro de que desea archivar \"{{name}}\"? Los suscriptores actuales no se verán afectados, pero las nuevas suscripciones se deshabilitarán.",
+    "archive": "Archivar",
+    "restore": "Restaurar",
+    "syncStripe": "Sincronizar con Stripe",
+    "syncStripeFailed": "Error de sincronización con Stripe: {{error}}",
+    "noPlans": "Aún no se han creado planes.",
+    "details": "Detalles",
+    "featureFlags": "Feature flags",
+    "free": "Gratis",
+    "priceInterval": "{{price}}/{{interval}}",
+    "creditsCount": "{{count}} créditos",
+    "trialDays": "Prueba de {{days}} días",
+    "subscriberCount": "{{count}} suscriptores",
+    "breadcrumbs": {
+      "plans": "Planes",
+      "new": "Nuevo"
+    },
+    "fields": {
+      "name": "Nombre",
+      "slug": "Slug",
+      "description": "Descripción",
+      "price": "Precio ($)",
+      "billingInterval": "Intervalo de facturación",
+      "creditsPerPeriod": "Créditos / Período",
+      "trialDays": "Días de prueba",
+      "sortOrder": "Orden de clasificación",
+      "public": "Público",
+      "enterprise": "Empresarial",
+      "featureKey": "Clave",
+      "featureValue": "Valor"
+    },
+    "intervals": {
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "oneTime": "Único"
+    },
+    "badges": {
+      "archived": "Archivado",
+      "hidden": "Oculto",
+      "custom": "Personalizado"
+    }
+  },
+  "subscriptions": {
+    "title": "Suscripciones",
+    "totalCount": "{{count}} en total",
+    "allStatuses": "Todos los estados",
+    "noSubscriptions": "No se encontraron suscripciones",
+    "columns": {
+      "workspace": "Espacio de trabajo",
+      "owner": "Propietario",
+      "plan": "Plan",
+      "status": "Estado",
+      "credits": "Créditos",
+      "periodEnd": "Fin del período"
+    },
+    "statuses": {
+      "active": "Activa",
+      "trialing": "En prueba",
+      "pastDue": "Vencida",
+      "canceled": "Cancelada"
+    }
+  },
+  "credits": {
+    "title": "Créditos",
+    "description": "Saldos de créditos de todos los usuarios",
+    "grantCredits": "Otorgar créditos",
+    "grantDescription": "Otorgar créditos a un espacio de trabajo específico.",
+    "grant": "Otorgar",
+    "defaultGrantDescription": "Otorgamiento masivo del administrador",
+    "workspaceId": "ID del espacio de trabajo",
+    "amount": "Monto",
+    "descriptionLabel": "Descripción",
+    "noUsers": "No se encontraron usuarios",
+    "columns": {
+      "user": "Usuario",
+      "email": "Correo electrónico",
+      "plan": "Plan",
+      "credits": "Créditos"
+    }
+  }
+}

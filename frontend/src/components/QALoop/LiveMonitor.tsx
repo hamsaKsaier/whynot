@@ -22,6 +22,7 @@
  *  └──────────────────────────────────────────────────────┘
  */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TestRunActivity } from '../../hooks/useSessionManager';
 import { CostInfo } from '../../hooks/useQALoopStream';
 
@@ -286,7 +287,7 @@ function safePathname(url: string | null): string {
 /** Animated "live" dot */
 const LiveDot: React.FC<{ active?: boolean }> = ({ active = true }) => (
   <span className="relative flex h-2.5 w-2.5">
-    {active && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />}
+    {active && <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />}
     <span className={cn("relative inline-flex rounded-full h-2.5 w-2.5", active ? 'bg-green-400' : 'bg-muted-foreground')} />
   </span>
 );
@@ -298,13 +299,13 @@ const StatTile: React.FC<{
   color: string;
   icon: React.ReactNode;
 }> = ({ value, label, color, icon }) => (
-  <Card className="shadow-none">
-    <CardContent className="flex flex-col items-center justify-center px-4 py-3 min-w-[90px] gap-1">
-      <div className="flex items-center gap-1.5" style={{ color }}>
+  <Card className="shadow-none flex-1 min-w-[72px]">
+    <CardContent className="flex flex-col items-center justify-center px-2 sm:px-4 py-2 sm:py-3 gap-0.5 sm:gap-1">
+      <div className="flex items-center gap-1 sm:gap-1.5" style={{ color }}>
         {icon}
-        <span className="text-2xl font-bold tabular-nums">{value}</span>
+        <span className="text-lg sm:text-2xl font-bold tabular-nums">{value}</span>
       </div>
-      <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">{label}</span>
+      <span className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide uppercase">{label}</span>
     </CardContent>
   </Card>
 );
@@ -327,17 +328,17 @@ const ActionRow: React.FC<{
 
   return (
     <div
-      className="flex items-center gap-2.5 px-3 py-2 rounded-lg border text-xs"
+      className="flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border text-xs"
       style={{ background: cfg.bg, borderColor: cfg.color + '30' }}
     >
       <span style={{ color: cfg.color }} className="shrink-0 flex items-center">
         <IconComp />
       </span>
-      <span className="font-semibold shrink-0" style={{ color: cfg.color, minWidth: '88px' }}>
+      <span className="font-semibold shrink-0 hidden sm:inline" style={{ color: cfg.color, minWidth: '88px' }}>
         {cfg.label}
       </span>
       {hint && (
-        <span className="text-muted-foreground truncate flex-1 font-mono text-[11px]" title={hint}>
+        <span className="text-muted-foreground truncate sm:break-all flex-1 font-mono text-[10px] sm:text-[11px] min-w-0" title={hint}>
           {hint}
         </span>
       )}
@@ -346,7 +347,7 @@ const ActionRow: React.FC<{
           ? <span className="text-green-500">&#10003;</span>
           : <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
         }
-        {formatTimestamp(call.timestamp)}
+        <span className="hidden sm:inline">{formatTimestamp(call.timestamp)}</span>
       </span>
     </div>
   );
@@ -482,6 +483,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   testsGenerated = 0,
   bugsFound = 0,
 }) => {
+  const { t } = useTranslation('runner');
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const thinkingContainerRef = useRef<HTMLDivElement>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -548,7 +550,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             )}
             {!currentMessage && !phaseConfig && isRunning && (
               <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" /> AI is working...
+                <Loader2 className="h-3 w-3 animate-spin" /> {t('runner.qaLoop.liveMonitor.aiWorking')}
               </span>
             )}
             {elapsedMs > 0 && (
@@ -567,7 +569,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             <div className="flex items-center gap-3">
               <LiveDot active />
               <span className="text-foreground text-sm">
-                AI is scanning... {pagesExplored} pages found, {testsGenerated} test cases generated
+                {t('runner.qaLoop.liveMonitor.scanningStatus', { pages: pagesExplored, tests: testsGenerated })}
               </span>
             </div>
             <Button
@@ -576,7 +578,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
               onClick={() => setShowPreview(true)}
               className="text-sky-500 hover:text-sky-400"
             >
-              Show AI Preview
+              {t('runner.qaLoop.liveMonitor.showAiPreview')}
             </Button>
           </CardContent>
         </Card>
@@ -611,11 +613,11 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             </Button>
           </div>
           {/* Screenshot area with loading states */}
-          <div className={cn("relative bg-background flex items-center justify-center", expandedPreview ? 'h-[520px]' : 'h-64 lg:h-80')}>
+          <div className={cn("relative bg-background flex items-center justify-center", expandedPreview ? 'h-[50vh] lg:h-[600px]' : 'h-[50vh] lg:h-[600px]')}>
             {currentScreenshot ? (
               <img
                 src={currentScreenshot}
-                alt="Live browser view"
+                alt={t('runner.qaLoop.liveMonitor.liveBrowserView')}
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   console.warn('Screenshot image failed to load, clearing');
@@ -632,7 +634,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                     /* Phase 2: AI is working but no screenshot yet */
                     <>
                       <Loader2 className="h-10 w-10 animate-spin text-sky-500" />
-                      <span className="text-sm text-sky-500">AI is exploring your website...</span>
+                      <span className="text-sm text-sky-500">{t('runner.qaLoop.liveMonitor.aiExploring')}</span>
                       <div className="flex gap-1">
                         {[0, 1, 2, 3, 4].map(i => (
                           <Skeleton key={i} className="w-8 h-1 rounded-full" />
@@ -643,7 +645,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                     /* Phase 1: Just started, connecting */
                     <>
                       <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
-                      <span className="text-sm text-muted-foreground">Connecting to AI agent...</span>
+                      <span className="text-sm text-muted-foreground">{t('runner.qaLoop.liveMonitor.connecting')}</span>
                       {/* Loading skeleton */}
                       <div className="w-48 space-y-2 mt-2">
                         <Skeleton className="h-2 w-full" />
@@ -655,7 +657,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 ) : (
                   <>
                     <Icons.monitor />
-                    <span className="text-sm">No preview available</span>
+                    <span className="text-sm">{t('runner.qaLoop.liveMonitor.noPreview')}</span>
                   </>
                 )}
               </div>
@@ -676,7 +678,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             {/* Header */}
             <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50 border-b border-border">
               <span className="text-green-500"><Icons.brain /></span>
-              <span className="text-sm font-semibold text-foreground">AI Thinking</span>
+              <span className="text-sm font-semibold text-foreground">{t('runner.qaLoop.liveMonitor.aiThinking')}</span>
               {thinkingText && isRunning && (
                 <Loader2 className="h-3 w-3 animate-spin text-green-500 ms-1" />
               )}
@@ -686,23 +688,22 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 onClick={() => setShowThinking(!showThinking)}
                 className="ms-auto text-xs text-muted-foreground"
               >
-                {showThinking ? 'Hide' : 'Show'}
+                {showThinking ? t('runner.qaLoop.liveMonitor.hide') : t('runner.qaLoop.liveMonitor.show')}
               </Button>
             </div>
             {/* Structured Content */}
             {showThinking ? (
-              <div ref={thinkingContainerRef} className="flex-1 overflow-y-auto font-mono text-sm"
-                aria-live="polite"
-                style={{ minHeight: '200px', maxHeight: '400px' }}>
+              <div ref={thinkingContainerRef} className="flex-1 overflow-y-auto font-mono text-xs sm:text-sm h-[40vh] md:h-[50vh] lg:h-[500px]"
+                aria-live="polite">
                 {thinkingLines.length === 0 ? (
                   <div className="p-4">
                     {isRunning ? (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span className="text-[13px] italic">Waiting for AI response...</span>
+                        <span className="text-[13px] italic">{t('runner.qaLoop.liveMonitor.waitingForAi')}</span>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground italic text-[13px]">Session is paused or stopped.</span>
+                      <span className="text-muted-foreground italic text-[13px]">{t('runner.qaLoop.liveMonitor.sessionPaused')}</span>
                     )}
                   </div>
                 ) : (
@@ -728,13 +729,13 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 {/* Blinking cursor while streaming */}
                 {isRunning && thinkingText && (
                   <div className="px-4 py-1">
-                    <span className="inline-block w-2 h-3 bg-green-500 animate-pulse" />
+                    <span className="inline-block w-2 h-3 bg-green-500" />
                   </div>
                 )}
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground p-4">
-                Click "Show" to see AI reasoning
+                {t('runner.qaLoop.liveMonitor.clickShowReasoning')}
               </div>
             )}
           </Card>
@@ -748,20 +749,20 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             onClick={() => setShowPreview(false)}
             className="text-muted-foreground text-xs"
           >
-            Hide Preview
+            {t('runner.qaLoop.liveMonitor.hidePreview')}
           </Button>
         </div>
       </div>)}
 
       {/* ── Stats Bar ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3 justify-start">
-        <StatTile value={iteration || 0} label="Iteration" color="#818cf8"
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-wrap gap-2 sm:gap-3 justify-start">
+        <StatTile value={iteration || 0} label={t('runner.qaLoop.liveMonitor.iteration')} color="#818cf8"
           icon={<Icons.spark />} />
-        <StatTile value={pagesExplored} label="Pages" color="#60a5fa"
+        <StatTile value={pagesExplored} label={t('runner.qaLoop.liveMonitor.pages')} color="#60a5fa"
           icon={<Icons.navigate />} />
-        <StatTile value={testsGenerated} label="Tests" color="#4ade80"
+        <StatTile value={testsGenerated} label={t('runner.qaLoop.liveMonitor.tests')} color="#4ade80"
           icon={<Icons.test />} />
-        <StatTile value={bugsFound} label="Bugs" color="#f87171"
+        <StatTile value={bugsFound} label={t('runner.qaLoop.liveMonitor.bugs')} color="#f87171"
           icon={<Icons.bug />} />
         {testRunActivity.length > 0 && (() => {
           const passedCount = testRunActivity.filter(a => getDisplayStatus(a) === 'passed').length;
@@ -770,13 +771,13 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
           return (
             <>
               {passedCount > 0 && (
-                <StatTile value={passedCount} label="Passed" color="#4ade80" icon={<Icons.test />} />
+                <StatTile value={passedCount} label={t('runner.qaLoop.liveMonitor.passed')} color="#4ade80" icon={<Icons.test />} />
               )}
               {failedCount > 0 && (
-                <StatTile value={failedCount} label="Failed" color="#f87171" icon={<Icons.bug />} />
+                <StatTile value={failedCount} label={t('runner.qaLoop.liveMonitor.failed')} color="#f87171" icon={<Icons.bug />} />
               )}
               {reviewCount > 0 && (
-                <StatTile value={reviewCount} label="Review" color="#f59e0b" icon={<Icons.explore />} />
+                <StatTile value={reviewCount} label={t('runner.qaLoop.liveMonitor.review')} color="#f59e0b" icon={<Icons.explore />} />
               )}
             </>
           );
@@ -789,21 +790,21 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
         <Card className="overflow-hidden shadow-sm">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 border-b border-border flex-wrap">
             <span className="text-indigo-500"><Icons.test /></span>
-            <span className="text-sm font-semibold text-foreground">Test Execution</span>
+            <span className="text-sm font-semibold text-foreground">{t('runner.qaLoop.liveMonitor.testExecution')}</span>
             {(() => {
               const p = testRunActivity.filter(a => getDisplayStatus(a) === 'passed').length;
               const f = testRunActivity.filter(a => getDisplayStatus(a) === 'failed').length;
               const r = testRunActivity.filter(a => getDisplayStatus(a) === 'needsReview').length;
               return (
                 <>
-                  {p > 0 && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800">{p} passed</Badge>}
-                  {f > 0 && <Badge variant="outline" className="text-xs bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800">{f} failed</Badge>}
-                  {r > 0 && <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-800">{r} needs review</Badge>}
+                  {p > 0 && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800">{t('runner.qaLoop.results.passedCount', { count: p })}</Badge>}
+                  {f > 0 && <Badge variant="outline" className="text-xs bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800">{t('runner.qaLoop.results.failedCount', { count: f })}</Badge>}
+                  {r > 0 && <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-800">{t('runner.qaLoop.liveMonitor.needsReviewCount', { count: r })}</Badge>}
                 </>
               );
             })()}
           </div>
-          <div className="p-3 space-y-1.5 max-h-48 overflow-y-auto" aria-live="polite">
+          <div className="p-2 sm:p-3 space-y-1.5 max-h-36 sm:max-h-48 overflow-y-auto" aria-live="polite">
             {[...testRunActivity].reverse().map(activity => (
               <TestResultBadge key={activity.testCaseId} activity={activity} />
             ))}
@@ -820,7 +821,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       <Card className="overflow-hidden shadow-sm">
         <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 border-b border-border">
           <span className="text-sky-500"><Icons.spark /></span>
-          <span className="text-sm font-semibold text-foreground">Action Feed</span>
+          <span className="text-sm font-semibold text-foreground">{t('runner.qaLoop.liveMonitor.actionFeed')}</span>
           {toolCalls.length > 0 && (
             <Badge variant="outline" className="ms-1 text-xs bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300 border-sky-200 dark:border-sky-800">
               {toolCalls.length}
@@ -832,14 +833,14 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             onClick={() => setShowToolCalls(!showToolCalls)}
             className="ms-auto text-xs text-muted-foreground"
           >
-            {showToolCalls ? 'Hide' : 'Show'}
+            {showToolCalls ? t('runner.qaLoop.liveMonitor.hide') : t('runner.qaLoop.liveMonitor.show')}
           </Button>
         </div>
         {showToolCalls && (
-          <div ref={feedContainerRef} className="p-3 space-y-1.5 max-h-72 overflow-y-auto" aria-live="polite">
+          <div ref={feedContainerRef} className="p-2 sm:p-3 space-y-1 sm:space-y-1.5 max-h-[40vh] sm:max-h-72 lg:max-h-96 overflow-y-auto" aria-live="polite">
             {displayCalls.length === 0 ? (
               <div className="text-muted-foreground text-sm py-3 text-center italic">
-                {isRunning ? 'Waiting for first action...' : 'No actions recorded'}
+                {isRunning ? t('runner.qaLoop.liveMonitor.waitingForAction') : t('runner.qaLoop.liveMonitor.noActions')}
               </div>
             ) : (
               displayCalls.map((call, idx) => (

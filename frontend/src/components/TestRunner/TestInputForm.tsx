@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { Button } from '../common/Button';
@@ -40,8 +41,6 @@ interface TestInputFormProps {
   initialWebsiteUrl?: string;
 }
 
-const STEPS = ['Select Project', 'Select User Story', 'Review & Execute'];
-
 export const TestInputForm: React.FC<TestInputFormProps> = ({
   onGenerateTests,
   onRunTest,
@@ -50,7 +49,10 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
   initialUserStoryId,
   initialWebsiteUrl,
 }) => {
+  const { t } = useTranslation('runner');
   const navigate = useNavigate();
+
+  const STEPS = [t('runner.steps.selectProject'), t('runner.steps.selectUserStory'), t('runner.steps.reviewExecute')];
 
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
@@ -173,26 +175,26 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
 
     if (step === 0) {
       if (!selectedProjectId) {
-        newErrors.project = 'Please select a project';
+        newErrors.project = t('runner.validation.selectProject');
       }
     } else if (step === 1) {
       if (!selectedProjectId) {
-        newErrors.project = 'Please select a project';
+        newErrors.project = t('runner.validation.selectProject');
       }
       if (!selectedUserStoryId) {
-        newErrors.userStory = 'Please select a user story';
+        newErrors.userStory = t('runner.validation.selectUserStory');
       }
     } else if (step === 2) {
       if (!selectedProjectId) {
-        newErrors.project = 'Please select a project';
+        newErrors.project = t('runner.validation.selectProject');
       }
       if (!selectedUserStoryId) {
-        newErrors.userStory = 'Please select a user story';
+        newErrors.userStory = t('runner.validation.selectUserStory');
       }
       if (!websiteUrl.trim()) {
-        newErrors.websiteUrl = 'Website URL is required';
+        newErrors.websiteUrl = t('runner.validation.urlRequired');
       } else if (!isValidUrl(websiteUrl)) {
-        newErrors.websiteUrl = 'Please enter a valid URL';
+        newErrors.websiteUrl = t('runner.validation.urlInvalid');
       }
     }
 
@@ -289,12 +291,12 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
       <Modal
         isOpen={showDraftRestore}
         onClose={handleDiscardDraft}
-        title="Restore Draft?"
+        title={t("runner.draft.restoreTitle")}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-400">
-            We found a saved draft of your test form. Would you like to restore it?
+            {t("runner.draft.restoreMessage")}
           </p>
           <div className="flex gap-3">
             <Button
@@ -302,19 +304,19 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
               onClick={handleDiscardDraft}
               className="flex-1"
             >
-              Discard
+              {t("runner.draft.discard")}
             </Button>
             <Button
               onClick={handleRestoreDraft}
               className="flex-1"
             >
-              Restore Draft
+              {t("runner.draft.restore")}
             </Button>
           </div>
         </div>
       </Modal>
 
-      <Card title="Create Test" className="mb-6">
+      <Card title={t("runner.createTest")} className="mb-6">
         {/* Step Indicator */}
         <div className="mb-6">
           <StepIndicator steps={STEPS} currentStep={currentStep} />
@@ -383,14 +385,14 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
             onClick={handlePrevious}
             disabled={currentStep === 0 || isLoading}
           >
-            <FiChevronLeft className="mr-1" />
-            Previous
+            <FiChevronLeft className="me-1 rtl:scale-x-[-1]" />
+            {t("runner.nav.previous")}
           </Button>
 
           {currentStep < STEPS.length - 1 ? (
             <Button onClick={handleNext} disabled={isLoading}>
-              Next
-              <FiChevronRight className="ml-1" />
+              {t("runner.nav.next")}
+              <FiChevronRight className="ms-1 rtl:scale-x-[-1]" />
             </Button>
           ) : (
             <div className="flex gap-3">
@@ -399,10 +401,10 @@ export const TestInputForm: React.FC<TestInputFormProps> = ({
                 disabled={isLoading}
                 variant="secondary"
               >
-                Generate Tests
+                {t("runner.generateTests")}
               </Button>
               <Button onClick={handleRunTest} disabled={isLoading} isLoading={isLoading}>
-                Run Test
+                {t("runner.runTest")}
               </Button>
             </div>
           )}

@@ -1,5 +1,6 @@
 {
   "billing.title": "Abrechnung",
+  "billing.subtitle": "Verwalten Sie Ihr Abonnement, Guthaben und Rechnungen",
   "billing.currentPlan": "Aktueller Tarif",
   "billing.credits.title": "Guthaben",
   "billing.credits.balance": "Aktuelles Guthaben",
@@ -7,12 +8,17 @@
   "billing.credits.remaining": "Verbleibend",
   "billing.credits.buy": "Guthaben kaufen",
   "billing.plans.title": "Tarife",
-  "billing.plans.upgrade": "Upgrade",
-  "billing.plans.downgrade": "Downgrade",
+  "billing.plans.upgrade": "Hochstufen",
+  "billing.plans.downgrade": "Herabstufen",
   "billing.plans.current": "Aktueller Tarif",
   "billing.plans.perMonth": "/Monat",
   "billing.plans.perYear": "/Jahr",
+  "billing.plans.contactSales": "Vertrieb kontaktieren",
+  "billing.plans.creditsPerPeriod": "{{credits}} Credits / {{interval}}",
+  "billing.plans.custom": "Individuell",
+  "billing.plans.customCredits": "Individuelles Guthaben",
   "billing.plans.features": "Funktionen",
+  "billing.plans.freeTrial": "Kostenlose Testphase",
   "billing.invoices.title": "Rechnungen",
   "billing.invoices.date": "Datum",
   "billing.invoices.amount": "Betrag",
@@ -93,5 +99,6 @@
   "billingTab.txnType.admin_grant": "Gewährt",
   "billingTab.txnType.admin_revoke": "Widerrufen",
   "billingTab.txnType.rollover": "Übertrag",
-  "billingTab.txnType.expiry": "Abgelaufen"
+  "billingTab.txnType.expiry": "Abgelaufen",
+  "billingTab.creditHistory.empty": "Noch keine Guthaben-Transaktionen"
 }

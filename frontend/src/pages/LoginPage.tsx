@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Github, Loader2, Mail, Lock } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,21 +13,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { AuthShell } from "@/components/layout/AuthShell"
 import { useAuth } from "@/contexts/AuthContext"
+import { config } from "@/config"
 
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-})
+function createLoginSchema(t: (key: string) => string) {
+  return z.object({
+    email: z.string().email(t("auth.common.emailValidation")),
+    password: z.string().min(8, t("auth.common.passwordMinLength")),
+  })
+}
 
-type LoginFormData = z.infer<typeof loginSchema>
-
-const apiBase = import.meta.env.VITE_API_URL || "/api"
+type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>
 
 export function LoginPage() {
+  const { t } = useTranslation("common")
   const { login } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState<string | null>(null)
   const [rememberMe, setRememberMe] = useState(false)
+
+  const loginSchema = createLoginSchema(t)
 
   const {
     register,
@@ -46,7 +51,7 @@ export function LoginPage() {
         err?.response?.data?.error ||
         err?.response?.data?.message ||
         err?.message ||
-        "Invalid credentials. Please try again."
+        t("auth.login.error.invalidCredentials")
       setServerError(msg)
     }
   }
@@ -54,18 +59,18 @@ export function LoginPage() {
   return (
     <AuthShell>
       <h2 className="mb-6 text-lg font-semibold text-foreground">
-        Sign in to your account
+        {t("auth.login.title")}
       </h2>
 
       <div className="space-y-3">
         <Button variant="outline" className="w-full" asChild>
-          <a href={`${apiBase}/auth/github`}>
+          <a href={`${config.apiUrl}/auth/github`}>
             <Github className="me-2 h-4 w-4" />
-            Continue with GitHub
+            {t("auth.login.oauth.github")}
           </a>
         </Button>
         <Button variant="outline" className="w-full" asChild>
-          <a href={`${apiBase}/auth/google`}>
+          <a href={`${config.apiUrl}/auth/google`}>
             <svg className="me-2 h-4 w-4" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -84,26 +89,30 @@ export function LoginPage() {
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            {t("auth.login.oauth.google")}
           </a>
         </Button>
       </div>
 
       <div className="my-6 flex items-center gap-3">
         <Separator className="flex-1" />
-        <span className="text-xs text-muted-foreground">or</span>
+        <span className="text-xs text-muted-foreground">{t("auth.login.divider")}</span>
         <Separator className="flex-1" />
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email address</Label>
+          <Label htmlFor="email">{t("auth.login.emailLabel")}</Label>
           <div className="relative">
             <Mail className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              inputMode="email"
+              autoComplete="email"
+              enterKeyHint="next"
+              autoFocus
+              placeholder={t("auth.common.emailPlaceholder")}
               className="ps-10"
               {...register("email")}
             />
@@ -114,13 +123,15 @@ export function LoginPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("auth.login.passwordLabel")}</Label>
           <div className="relative">
             <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="password"
               type="password"
-              placeholder="••••••••"
+              autoComplete="current-password"
+              enterKeyHint="done"
+              placeholder={t("auth.common.passwordPlaceholder")}
               className="ps-10"
               {...register("password")}
             />
@@ -130,22 +141,22 @@ export function LoginPage() {
           )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex min-h-[44px] items-center justify-between">
+          <div className="flex min-h-[44px] items-center gap-2">
             <Switch
               id="remember-me"
               checked={rememberMe}
               onCheckedChange={setRememberMe}
             />
-            <Label htmlFor="remember-me" className="text-sm font-normal">
-              Remember me
+            <Label htmlFor="remember-me" className="cursor-pointer text-sm font-normal">
+              {t("auth.login.rememberMe")}
             </Label>
           </div>
           <Link
             to="/forgot-password"
-            className="text-sm text-primary transition-colors duration-150 hover:text-primary/80"
+            className="min-h-[44px] inline-flex items-center text-sm text-primary transition-colors duration-150 hover:text-primary/80"
           >
-            Forgot password?
+            {t("auth.login.forgot")}
           </Link>
         </div>
 
@@ -155,25 +166,25 @@ export function LoginPage() {
           </Alert>
         )}
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              Signing in…
+              {t("auth.login.submitting")}
             </>
           ) : (
-            "Sign in"
+            t("auth.login.submit")
           )}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Don't have an account?{" "}
+        {t("auth.login.signupPrompt")}{" "}
         <Link
           to="/signup"
           className="font-medium text-primary transition-colors duration-150 hover:text-primary/80"
         >
-          Create account
+          {t("auth.login.signupLink")}
         </Link>
       </p>
     </AuthShell>

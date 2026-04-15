@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { type PlatformFeatureKey } from '../../../shared/constants/platform-features';
+import { type PlatformFeatureKey } from '../../shared/constants/platform-features';
 import { isFlagEnabled } from '../utils/feature-flags';
 
 export function requireFlag(key: PlatformFeatureKey) {

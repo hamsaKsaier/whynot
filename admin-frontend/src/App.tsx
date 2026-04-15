@@ -22,6 +22,11 @@ import { AIProvidersPage } from './pages/AIProvidersPage'
 import { OrganizationsPage } from './pages/OrganizationsPage'
 import { OrganizationDetailPage } from './pages/OrganizationDetailPage'
 import { UsageTrackingPage } from './pages/UsageTrackingPage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { ServerErrorPage } from './pages/ServerErrorPage'
+import { ForbiddenPage } from './pages/ForbiddenPage'
+import { AccessDeniedPage } from './pages/AccessDeniedPage'
+import { isSuperadminHostname } from './lib/hostname'
 import { Loader2 } from 'lucide-react'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -35,7 +40,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!user || !isSuperadmin) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace />
+  if (isSuperadminHostname() && !isSuperadmin) return <AccessDeniedPage />
+  if (!isSuperadmin) return <ForbiddenPage />
   return <>{children}</>
 }
 
@@ -83,7 +90,9 @@ function AppRoutes() {
         <Route path="ai-providers" element={<AIProvidersPage />} />
         <Route path="settings" element={<SystemSettingsPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/forbidden" element={<ForbiddenPage />} />
+      <Route path="/error" element={<ServerErrorPage />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

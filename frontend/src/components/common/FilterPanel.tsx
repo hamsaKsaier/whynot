@@ -39,12 +39,12 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className={`bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-4 ${className}`}>
+    <div className={`bg-card border border-border rounded-lg shadow-sm p-4 ${className}`}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-white">Filters</h3>
+        <h3 className="text-sm font-semibold text-foreground">Filters</h3>
         <button
           onClick={onClose}
-          className="text-slate-500 hover:text-slate-400"
+          className="text-muted-foreground hover:text-foreground"
           aria-label="Close filters"
         >
           <FiX className="h-5 w-5" />
@@ -54,7 +54,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       <div className="space-y-4">
         {filters.map((filter) => (
           <div key={filter.key}>
-            <label className="block text-sm font-medium text-slate-200 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               {filter.label}
             </label>
             {filter.type === 'select' && filter.options && (
@@ -70,7 +70,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 type="text"
                 value={filter.value || ''}
                 onChange={(e) => filter.onChange(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder={`Filter by ${filter.label.toLowerCase()}`}
               />
             )}
@@ -79,7 +79,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 type="date"
                 value={filter.value || ''}
                 onChange={(e) => filter.onChange(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             )}
           </div>
@@ -87,9 +87,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       </div>
 
       {activeFilters.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-slate-700">
+        <div className="mt-4 pt-4 border-t border-border">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">Active Filters</span>
+            <span className="text-xs font-medium text-muted-foreground">Active Filters</span>
             <Button
               variant="secondary"
               size="sm"
@@ -109,7 +109,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 <span>{filter.value}</span>
                 <button
                   onClick={() => onFilterRemove(filter.key)}
-                  className="ml-1 hover:text-primary-900"
+                  className="ms-1 hover:text-primary-900"
                   aria-label={`Remove ${filter.label} filter`}
                 >
                   <FiX className="h-3 w-3" />

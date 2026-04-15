@@ -115,22 +115,22 @@ export const ApiKeysTab: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="bg-card border-border">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-white">{t('settings.apiKeys.title', { defaultValue: 'API Keys' })}</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-foreground">{t('settings.apiKeys.title', { defaultValue: 'API Keys' })}</CardTitle>
+            <CardDescription className="text-muted-foreground">
               {t('settings.apiKeys.description', { defaultValue: 'Manage API keys for programmatic access. Keys are hashed at rest and shown only once upon creation.' })}
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(true)} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(true)} className="gap-2 w-full sm:w-auto">
             <FiPlus className="h-4 w-4" />
             {t('settings.apiKeys.create', { defaultValue: 'Create key' })}
           </Button>
@@ -138,69 +138,114 @@ export const ApiKeysTab: React.FC = () => {
         <CardContent>
           {keys.length === 0 ? (
             <div className="text-center py-8">
-              <Key className="h-8 w-8 text-slate-500 mx-auto mb-2" />
-              <p className="text-slate-400 text-sm">{t('settings.apiKeys.empty', { defaultValue: 'No API keys yet. Create one to get started.' })}</p>
+              <Key className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground text-sm">{t('settings.apiKeys.empty', { defaultValue: 'No API keys yet. Create one to get started.' })}</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-700">
-                  <TableHead className="text-start text-slate-400">{t('settings.apiKeys.label', { defaultValue: 'Label' })}</TableHead>
-                  <TableHead className="text-start text-slate-400">{t('settings.apiKeys.key', { defaultValue: 'Key' })}</TableHead>
-                  <TableHead className="text-start text-slate-400">{t('settings.apiKeys.created', { defaultValue: 'Created' })}</TableHead>
-                  <TableHead className="text-start text-slate-400">{t('settings.apiKeys.lastUsed', { defaultValue: 'Last used' })}</TableHead>
-                  <TableHead className="text-end text-slate-400">{t('settings.apiKeys.actions', { defaultValue: 'Actions' })}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop: table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border">
+                      <TableHead className="text-start text-muted-foreground">{t('settings.apiKeys.label', { defaultValue: 'Label' })}</TableHead>
+                      <TableHead className="text-start text-muted-foreground">{t('settings.apiKeys.key', { defaultValue: 'Key' })}</TableHead>
+                      <TableHead className="text-start text-muted-foreground">{t('settings.apiKeys.created', { defaultValue: 'Created' })}</TableHead>
+                      <TableHead className="text-start text-muted-foreground">{t('settings.apiKeys.lastUsed', { defaultValue: 'Last used' })}</TableHead>
+                      <TableHead className="text-end text-muted-foreground">{t('settings.apiKeys.actions', { defaultValue: 'Actions' })}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {keys.map((key) => (
+                      <TableRow key={key.id} className="border-border">
+                        <TableCell className="text-start text-foreground font-medium">{key.label}</TableCell>
+                        <TableCell className="text-start">
+                          <code className="text-muted-foreground text-sm bg-muted/50 px-2 py-0.5 rounded">
+                            {'••••••••' + key.lastFour}
+                          </code>
+                        </TableCell>
+                        <TableCell className="text-start text-muted-foreground text-sm">{formatDate(key.createdAt)}</TableCell>
+                        <TableCell className="text-start text-muted-foreground text-sm">
+                          {key.lastUsedAt ? formatDate(key.lastUsedAt) : t('settings.apiKeys.never', { defaultValue: 'Never' })}
+                        </TableCell>
+                        <TableCell className="text-end">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRotate(key.id)}
+                              disabled={rotatingId === key.id}
+                              className="text-muted-foreground hover:text-foreground"
+                              title={t('settings.apiKeys.rotate', { defaultValue: 'Rotate' })}
+                            >
+                              {rotatingId === key.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiRefreshCw className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRevoke(key.id)}
+                              disabled={revokingId === key.id}
+                              className="text-red-400 hover:text-red-300"
+                              title={t('settings.apiKeys.revoke', { defaultValue: 'Revoke' })}
+                            >
+                              {revokingId === key.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiTrash2 className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile: cards */}
+              <div className="sm:hidden space-y-3">
                 {keys.map((key) => (
-                  <TableRow key={key.id} className="border-slate-700">
-                    <TableCell className="text-start text-white font-medium">{key.label}</TableCell>
-                    <TableCell className="text-start">
-                      <code className="text-slate-400 text-sm bg-slate-700/50 px-2 py-0.5 rounded">
-                        {'••••••••' + key.lastFour}
+                  <div key={key.id} className="rounded-lg border border-border p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{key.label}</span>
+                      <code className="text-muted-foreground text-xs bg-muted/50 px-2 py-0.5 rounded">
+                        {'••••' + key.lastFour}
                       </code>
-                    </TableCell>
-                    <TableCell className="text-start text-slate-300 text-sm">{formatDate(key.createdAt)}</TableCell>
-                    <TableCell className="text-start text-slate-400 text-sm">
-                      {key.lastUsedAt ? formatDate(key.lastUsedAt) : t('settings.apiKeys.never', { defaultValue: 'Never' })}
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRotate(key.id)}
-                          disabled={rotatingId === key.id}
-                          className="text-slate-400 hover:text-white"
-                          title={t('settings.apiKeys.rotate', { defaultValue: 'Rotate' })}
-                        >
-                          {rotatingId === key.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiRefreshCw className="h-4 w-4" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRevoke(key.id)}
-                          disabled={revokingId === key.id}
-                          className="text-red-400 hover:text-red-300"
-                          title={t('settings.apiKeys.revoke', { defaultValue: 'Revoke' })}
-                        >
-                          {revokingId === key.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiTrash2 className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t('settings.apiKeys.created', { defaultValue: 'Created' })}: {formatDate(key.createdAt)}</span>
+                      <span>{key.lastUsedAt ? formatDate(key.lastUsedAt) : t('settings.apiKeys.never', { defaultValue: 'Never' })}</span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRotate(key.id)}
+                        disabled={rotatingId === key.id}
+                        className="flex-1 text-muted-foreground hover:text-foreground"
+                      >
+                        {rotatingId === key.id ? <Loader2 className="h-4 w-4 animate-spin me-1" /> : <FiRefreshCw className="h-4 w-4 me-1" />}
+                        {t('settings.apiKeys.rotate', { defaultValue: 'Rotate' })}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevoke(key.id)}
+                        disabled={revokingId === key.id}
+                        className="flex-1 text-red-400 hover:text-red-300"
+                      >
+                        {revokingId === key.id ? <Loader2 className="h-4 w-4 animate-spin me-1" /> : <FiTrash2 className="h-4 w-4 me-1" />}
+                        {t('settings.apiKeys.revoke', { defaultValue: 'Revoke' })}
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={showCreateDialog} onOpenChange={(open) => { if (!open) handleCloseCreatedKey(); else setShowCreateDialog(true); }}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-card border-border sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-foreground">
               {createdKey
                 ? t('settings.apiKeys.keyCreated', { defaultValue: 'API Key Created' })
                 : t('settings.apiKeys.createTitle', { defaultValue: 'Create API Key' })}
@@ -213,7 +258,7 @@ export const ApiKeysTab: React.FC = () => {
                 {t('settings.apiKeys.copyWarning', { defaultValue: 'Copy this key now. You will not be able to see it again.' })}
               </p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-green-400 text-sm break-all">
+                <code className="flex-1 px-3 py-2 bg-background border border-border rounded-md text-green-400 text-sm break-all">
                   {createdKey}
                 </code>
                 <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1 flex-shrink-0">
@@ -221,7 +266,7 @@ export const ApiKeysTab: React.FC = () => {
                 </Button>
               </div>
               <DialogFooter>
-                <Button onClick={handleCloseCreatedKey}>
+                <Button onClick={handleCloseCreatedKey} className="w-full sm:w-auto">
                   {t('settings.apiKeys.done', { defaultValue: 'Done' })}
                 </Button>
               </DialogFooter>
@@ -229,7 +274,7 @@ export const ApiKeysTab: React.FC = () => {
           ) : (
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   {t('settings.apiKeys.labelField', { defaultValue: 'Label' })}
                 </label>
                 <input
@@ -237,15 +282,15 @@ export const ApiKeysTab: React.FC = () => {
                   value={newKeyLabel}
                   onChange={(e) => setNewKeyLabel(e.target.value)}
                   placeholder={t('settings.apiKeys.labelPlaceholder', { defaultValue: 'e.g. CI/CD Pipeline' })}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                   required
                 />
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
                 <DialogClose asChild>
-                  <Button variant="outline">{t('settings.apiKeys.cancel', { defaultValue: 'Cancel' })}</Button>
+                  <Button variant="outline" className="w-full sm:w-auto">{t('settings.apiKeys.cancel', { defaultValue: 'Cancel' })}</Button>
                 </DialogClose>
-                <Button type="submit" disabled={creating} className="gap-2">
+                <Button type="submit" disabled={creating} className="gap-2 w-full sm:w-auto">
                   {creating && <Loader2 className="h-4 w-4 animate-spin" />}
                   {t('settings.apiKeys.createBtn', { defaultValue: 'Create' })}
                 </Button>

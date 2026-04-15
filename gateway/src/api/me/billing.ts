@@ -4,6 +4,7 @@ import { SubscriptionManager } from '../../payments/subscription-manager';
 import { BillingService } from '../../payments/billing-service';
 import { PaymentService } from '../../payments/payment-service';
 import { isPlanSlug, type PlanSlug } from '../../../shared/constants/pricing';
+import { env } from '../../config/env';
 
 const router = Router();
 
@@ -37,8 +38,8 @@ router.post('/checkout', asyncHandler(async (req: any, res) => {
       orgId: req.workspaceId,
       plan,
       tier: plan,
-      successUrl: process.env.STRIPE_SUCCESS_URL || 'http://localhost:5183/billing?success=true',
-      cancelUrl: process.env.STRIPE_CANCEL_URL || 'http://localhost:5183/billing?canceled=true',
+      successUrl: env.STRIPE_SUCCESS_URL,
+      cancelUrl: env.STRIPE_CANCEL_URL,
     },
     { userId: req.user!.id, orgId: req.workspaceId },
   );

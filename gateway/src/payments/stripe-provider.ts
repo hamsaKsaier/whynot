@@ -3,6 +3,7 @@ import { createLogger } from '../../shared/logger/logger';
 import { PaymentServiceError } from './payment-error';
 import { withRetry } from './retry-engine';
 import { generateIdempotencyKey } from './idempotency';
+import { env } from '../config/env';
 
 const logger = createLogger('stripe-provider');
 
@@ -10,7 +11,7 @@ let stripeInstance: Stripe | null = null;
 
 function getStripe(): Stripe {
   if (!stripeInstance) {
-    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const secretKey = env.STRIPE_SECRET_KEY;
     if (!secretKey) {
       throw new PaymentServiceError({
         code: 'PROVIDER_ERROR',
@@ -25,7 +26,7 @@ function getStripe(): Stripe {
 }
 
 function getWebhookSecret(): string {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const secret = env.STRIPE_WEBHOOK_SECRET;
   if (!secret) {
     throw new PaymentServiceError({
       code: 'PROVIDER_ERROR',

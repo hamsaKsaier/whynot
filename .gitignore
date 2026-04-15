@@ -42,3 +42,4 @@ Thumbs.db
 # Docker
 # .dockerignore must be tracked for Railway builds
 
+.code-review-graph/

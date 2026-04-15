@@ -48,7 +48,7 @@ export const Alert: React.FC<AlertProps> = ({
   return (
     <div className={`border rounded-lg p-4 ${typeStyles[type]} ${className}`.trim()}>
       <div className="flex items-start">
-        <Icon className="h-5 w-5 mt-0.5 mr-3 flex-shrink-0" />
+        <Icon className="h-5 w-5 mt-0.5 me-3 flex-shrink-0" />
         <div className="flex-1 min-w-0">
           {title && (
             <h3 className="font-semibold mb-1 text-base">{title}</h3>
@@ -83,7 +83,7 @@ export const Alert: React.FC<AlertProps> = ({
         {dismissible && onClose && (
           <button
             onClick={onClose}
-            className="ml-4 flex-shrink-0 text-current opacity-50 hover:opacity-75 transition-opacity"
+            className="ms-4 flex-shrink-0 text-current opacity-50 hover:opacity-75 transition-opacity"
             aria-label="Close"
           >
             <FiX className="h-5 w-5" />

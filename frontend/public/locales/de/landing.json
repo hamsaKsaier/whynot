@@ -260,7 +260,14 @@
         "example": "5 Scans = 1.000 Guthaben"
       }
     },
+    "creditsUnit": "Guthaben",
     "creditPack": "Guthaben-Pakete ab 10 $ für 1.000 Guthaben.",
+    "calculator": {
+      "heading": "Guthaben-Rechner",
+      "description": "Schätzen Sie Ihren monatlichen Guthabenverbrauch und die Kosten.",
+      "totalCredits": "Gesamtguthaben:",
+      "estimatedCost": "Geschätzte Kosten:"
+    },
     "workedExample": {
       "heading": "Rechenbeispiel",
       "description": "Ein typisches mittelgroßes Team mit 50 Testgenerierungen und 200 Testausführungen pro Monat:",
@@ -274,7 +281,7 @@
     }
   },
   "footer": {
-    "description": "Autonome QA-Tests powered by KI-Agenten.",
+    "description": "Autonome QA-Tests, betrieben von KI-Agenten.",
     "product": "Produkt",
     "features": "Funktionen",
     "pricing": "Preise",
@@ -283,9 +290,18 @@
     "about": "Über uns",
     "blog": "Blog",
     "contact": "Kontakt",
+    "resources": "Ressourcen",
+    "docs": "Dokumentation",
+    "status": "Status",
+    "api": "API",
     "legal": "Rechtliches",
     "privacy": "Datenschutzrichtlinie",
     "terms": "Nutzungsbedingungen",
     "copyright": "© {{year}} WhyNot. Alle Rechte vorbehalten."
+  },
+  "seo": {
+    "title": "WhyNot — Autonomes KI-gestütztes QA-Testing",
+    "description": "Finden Sie Fehler, bevor Ihre Nutzer es tun. Autonome KI-Agenten erkunden Ihre Web-App, erkennen Bugs und generieren Playwright-Testcode.",
+    "keywords": "KI-Tests, autonomes QA, Fehlererkennung, Playwright, visuelle Regression, Testautomatisierung"
   }
 }

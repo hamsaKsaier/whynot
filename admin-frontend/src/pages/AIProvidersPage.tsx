@@ -117,7 +117,7 @@ export function AIProvidersPage() {
           return (
             <Card key={provider.provider}>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <CardTitle className="text-base">{display.label}</CardTitle>
                     <Badge
@@ -142,8 +142,8 @@ export function AIProvidersPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-end gap-4">
-                  <div className="w-48 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+                  <div className="w-full sm:w-48 space-y-2">
                     <Label htmlFor={`rate-${provider.provider}`}>
                       {t('admin.aiProviders.rateLimit')}
                     </Label>
@@ -158,7 +158,7 @@ export function AIProvidersPage() {
                       disabled={!provider.enabled}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground pb-2">
+                  <p className="text-xs text-muted-foreground sm:pb-2">
                     {t('admin.aiProviders.rateLimitHint')}
                   </p>
                 </div>

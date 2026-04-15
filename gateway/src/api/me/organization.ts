@@ -57,7 +57,7 @@ router.get(
 
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) {
-      throw createError('Workspace not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
     }
 
     const members = await query<WorkspaceMemberRow>(
@@ -101,11 +101,11 @@ router.patch(
 
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) {
-      throw createError('Workspace not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
     }
 
     if (workspace.owner_id !== userId) {
-      throw createError('Only the workspace owner can rename it', 403, 'FORBIDDEN');
+      throw createError((req as any).t('errors:organization.onlyOwnerCanRename'), 403, 'FORBIDDEN');
     }
 
     const updated = await workspaceRepo.update(workspaceId, name);
@@ -175,11 +175,11 @@ router.post(
 
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) {
-      throw createError('Workspace not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
     }
 
     if (workspace.owner_id !== userId) {
-      throw createError('Only the workspace owner can invite members', 403, 'FORBIDDEN');
+      throw createError((req as any).t('errors:organization.onlyOwnerCanInvite'), 403, 'FORBIDDEN');
     }
 
     // Check if already a member
@@ -191,7 +191,7 @@ router.post(
     );
 
     if (existingMember.length > 0) {
-      throw createError('User is already a member of this workspace', 409, 'ALREADY_MEMBER');
+      throw createError((req as any).t('errors:organization.alreadyMember'), 409, 'ALREADY_MEMBER');
     }
 
     // Check for existing pending invitation
@@ -203,7 +203,7 @@ router.post(
     );
 
     if (existingInvite.length > 0) {
-      throw createError('An invitation has already been sent to this email', 409, 'ALREADY_INVITED');
+      throw createError((req as any).t('errors:organization.alreadyInvited'), 409, 'ALREADY_INVITED');
     }
 
     const rows = await query<InvitationRow>(
@@ -279,11 +279,11 @@ router.delete(
 
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) {
-      throw createError('Workspace not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
     }
 
     if (workspace.owner_id !== userId) {
-      throw createError('Only the workspace owner can remove members', 403, 'FORBIDDEN');
+      throw createError((req as any).t('errors:organization.onlyOwnerCanRemove'), 403, 'FORBIDDEN');
     }
 
     // Find the member record
@@ -293,13 +293,13 @@ router.delete(
     );
 
     if (memberRows.length === 0) {
-      throw createError('Member not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.memberNotFound'), 404, 'NOT_FOUND');
     }
 
     const member = memberRows[0];
 
     if (member.user_id === workspace.owner_id) {
-      throw createError('Cannot remove the workspace owner', 400, 'CANNOT_REMOVE_OWNER');
+      throw createError((req as any).t('errors:organization.cannotRemoveOwner'), 400, 'CANNOT_REMOVE_OWNER');
     }
 
     await query(
@@ -336,15 +336,15 @@ router.post(
 
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) {
-      throw createError('Workspace not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
     }
 
     if (workspace.owner_id !== userId) {
-      throw createError('Only the workspace owner can transfer ownership', 403, 'FORBIDDEN');
+      throw createError((req as any).t('errors:organization.onlyOwnerCanTransfer'), 403, 'FORBIDDEN');
     }
 
     if (newOwnerId === userId) {
-      throw createError('You are already the owner', 400, 'ALREADY_OWNER');
+      throw createError((req as any).t('errors:organization.alreadyOwner'), 400, 'ALREADY_OWNER');
     }
 
     // Verify the new owner is a member of the workspace
@@ -354,7 +354,7 @@ router.post(
     );
 
     if (memberRows.length === 0) {
-      throw createError('New owner must be a member of the workspace', 400, 'NOT_A_MEMBER');
+      throw createError((req as any).t('errors:organization.newOwnerMustBeMember'), 400, 'NOT_A_MEMBER');
     }
 
     await query(
@@ -375,7 +375,7 @@ router.post(
 
     logger.info('Workspace ownership transferred', { userId, workspaceId, newOwnerId });
 
-    res.json({ success: true, message: 'Ownership transferred successfully' });
+    res.json({ success: true, message: (req as any).t('success:organization.ownershipTransferred') });
   })
 );
 

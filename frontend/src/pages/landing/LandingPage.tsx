@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Header } from '@/components/landing/Header'
 import { HeroSection } from '@/components/landing/HeroSection'
 import { TrustBar } from '@/components/landing/TrustBar'
+import { SEOHead } from '@/components/landing/SEOHead'
 
 const FeaturesSection = lazy(() =>
   import('@/components/landing/FeaturesSection').then((m) => ({ default: m.FeaturesSection }))
@@ -37,6 +38,7 @@ const Footer = lazy(() =>
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEOHead />
       <Header />
       <main id="main-content">
         <HeroSection />

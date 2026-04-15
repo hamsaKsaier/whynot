@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler, createError } from '../../middleware/error-handler';
-import { UsageEventRepository } from '../../../../shared/database/repositories/usage-event-repository';
+import { UsageEventRepository } from '../../../shared/database/repositories/usage-event-repository';
 import { BillingService } from '../../payments/billing-service';
 
 const router = Router();
@@ -50,7 +50,7 @@ router.get('/by-day', asyncHandler(async (req: any, res) => {
 
   res.json({
     success: true,
-    days: rows.map((r) => ({
+    days: rows.map((r: any) => ({
       day: r.day,
       eventType: r.event_type,
       totalEvents: r.total_events,
@@ -69,7 +69,7 @@ router.get('/recent', asyncHandler(async (req: any, res) => {
 
   res.json({
     success: true,
-    entries: result.entries.map((e) => ({
+    entries: result.entries.map((e: any) => ({
       id: e.id,
       eventType: e.event_type,
       quantity: e.quantity,

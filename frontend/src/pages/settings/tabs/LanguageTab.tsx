@@ -43,10 +43,10 @@ export const LanguageTab: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">{t('settings.language.title', { defaultValue: 'Language' })}</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-foreground">{t('settings.language.title', { defaultValue: 'Language' })}</CardTitle>
+          <CardDescription className="text-muted-foreground">
             {t('settings.language.description', { defaultValue: 'Choose your preferred language. The interface will update immediately.' })}
           </CardDescription>
         </CardHeader>
@@ -61,17 +61,17 @@ export const LanguageTab: React.FC = () => {
                   disabled={saving}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-md text-start transition-colors ${
                     isActive
-                      ? 'bg-primary-600/20 border border-primary-500/50 text-white'
-                      : 'hover:bg-slate-700/50 text-slate-300 border border-transparent'
+                      ? 'bg-primary/20 border border-primary/50 text-foreground'
+                      : 'hover:bg-muted/50 text-muted-foreground border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">{lang.nativeLabel}</span>
-                    <span className="text-sm text-slate-400">{lang.label}</span>
+                    <span className="text-sm text-muted-foreground">{lang.label}</span>
                   </div>
-                  {isActive && <FiCheck className="h-4 w-4 text-primary-400" />}
+                  {isActive && <FiCheck className="h-4 w-4 text-primary" />}
                   {saving && currentLang !== lang.code && (
-                    <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   )}
                 </button>
               );

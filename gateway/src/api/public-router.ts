@@ -17,12 +17,12 @@ import { validate } from '../middleware/validation';
 import { createLogger } from '../../shared/logger/logger';
 import { query } from '../../shared/database/connection';
 import { PlanRepository } from '../../shared/database/repositories/plan-repository';
+import { env } from '../config/env';
 
 const router = express.Router();
 const logger = createLogger('public-router');
 
-const qaLoopExecutorUrl =
-  process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+const qaLoopExecutorUrl = env.QA_LOOP_EXECUTOR_URL;
 
 const planRepository = new PlanRepository();
 
@@ -63,8 +63,8 @@ setInterval(() => {
 // ── SSRF Protection ──────────────────────────────────────────────────────────
 
 // In development, allow Docker-internal hostnames (e.g. http://test-app:4000)
-const ALLOW_INTERNAL = process.env.NODE_ENV !== 'production' ||
-  process.env.ALLOW_INTERNAL_SCAN === 'true';
+const ALLOW_INTERNAL = env.NODE_ENV !== 'production' ||
+  env.ALLOW_INTERNAL_SCAN;
 
 function validatePublicUrl(url: string): void {
   let parsed: URL;
@@ -153,7 +153,7 @@ router.post('/scan', validate(publicScanSchema), asyncHandler(async (req, res) =
 
     res.status(201).json({
       sessionId,
-      message: 'Scan started! Results will be available shortly.',
+      message: (req as any).t('success:scan.started'),
     });
   } catch (error: any) {
     logger.error('Failed to start public scan', {
@@ -163,12 +163,12 @@ router.post('/scan', validate(publicScanSchema), asyncHandler(async (req, res) =
 
     if (error.response) {
       res.status(error.response.status).json({
-        error: 'Failed to start scan',
-        details: error.response.data?.error || 'QA service unavailable',
+        error: (req as any).t('errors:service.scanStartFailed'),
+        details: error.response.data?.error || (req as any).t('errors:service.unavailable'),
       });
     } else {
       res.status(503).json({
-        error: 'QA service is temporarily unavailable. Please try again later.',
+        error: (req as any).t('errors:service.scanUnavailable'),
       });
     }
   }
@@ -236,13 +236,13 @@ router.get('/scan/:sessionId', asyncHandler(async (req, res) => {
     });
   } catch (error: any) {
     if (error.response?.status === 404) {
-      res.status(404).json({ error: 'Scan not found' });
+      res.status(404).json({ error: (req as any).t('errors:resource.scanNotFound') });
     } else {
       logger.error('Failed to get public scan results', {
         sessionId,
         error: error.message,
       });
-      res.status(500).json({ error: 'Failed to load scan results' });
+      res.status(500).json({ error: (req as any).t('errors:service.scanResultsFailed') });
     }
   }
 }));

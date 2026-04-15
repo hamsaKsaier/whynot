@@ -1,5 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 import { createLogger } from '../logger/logger';
+import { env, getDatabaseUrl } from '../../src/config/env';
 
 const logger = createLogger('database');
 
@@ -10,8 +11,7 @@ let pool: Pool | null = null;
  */
 export function getPool(): Pool {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL || 
-      `postgresql://${process.env.POSTGRES_USER || 'whynot'}:${process.env.POSTGRES_PASSWORD || 'whynot'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'whynot'}`;
+    const connectionString = getDatabaseUrl();
     
     pool = new Pool({
       connectionString,

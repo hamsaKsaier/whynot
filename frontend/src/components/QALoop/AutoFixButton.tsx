@@ -395,7 +395,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           )}
                         </div>
                         {currentAttempt.pr_url && (
-                          <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                          <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
                             <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
                               View PR #{currentAttempt.pr_number} on GitHub
@@ -419,7 +419,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           Pull Request Created!
                         </div>
                         {currentAttempt.pr_url && (
-                          <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                          <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
                             <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
                               View PR #{currentAttempt.pr_number} on GitHub
@@ -472,7 +472,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           )}
                         </div>
                         {currentAttempt.pr_url && (
-                          <Button asChild variant="default" className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                          <Button asChild variant="default" className="bg-yellow-600 hover:bg-yellow-700 text-primary-foreground">
                             <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
                               Review PR #{currentAttempt.pr_number} on GitHub

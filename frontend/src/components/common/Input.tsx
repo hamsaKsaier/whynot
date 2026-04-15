@@ -81,13 +81,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
   const stateClasses = {
     error: 'border-red-500 focus:ring-red-500 focus:border-red-500',
     success: 'border-green-500 focus:ring-green-500 focus:border-green-500',
-    default: 'border-slate-600 focus:ring-primary-500 focus:border-primary-500',
+    default: 'border-border focus:ring-primary-500 focus:border-primary-500',
   };
 
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-slate-200 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-foreground mb-1">
           {label}
         </label>
       )}
@@ -105,12 +105,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
           {...props}
         />
         {validationState === 'success' && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+          <div className="absolute end-3 top-1/2 transform -translate-y-1/2">
             <FiCheckCircle className="h-5 w-5 text-green-500" />
           </div>
         )}
         {validationState === 'error' && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+          <div className="absolute end-3 top-1/2 transform -translate-y-1/2">
             <FiXCircle className="h-5 w-5 text-red-500" />
           </div>
         )}
@@ -123,7 +123,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
           </p>
         )}
         {maxLength && showCharCount && (
-          <span className={`text-xs ml-auto ${error ? 'text-red-600' : 'text-slate-400'}`}>
+          <span className={`text-xs ms-auto ${error ? 'text-red-600' : 'text-muted-foreground'}`}>
             {(value?.toString().length || 0)} / {maxLength}
           </span>
         )}

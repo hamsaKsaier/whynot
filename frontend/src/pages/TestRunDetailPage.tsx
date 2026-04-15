@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, Square } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -21,6 +22,7 @@ const formatDuration = (ms: number): string => {
 };
 
 export const TestRunDetailPage: React.FC = () => {
+  const { t } = useTranslation('results');
   const { executionId } = useParams<{ executionId: string }>();
   const navigate = useNavigate();
   const { success, error: showError } = useToastContext();
@@ -33,12 +35,12 @@ export const TestRunDetailPage: React.FC = () => {
     if (!executionId) return;
     try {
       await stopExecution(executionId);
-      success('Test execution stopped successfully');
+      success(t('results.testRuns.stopped'));
       // Refresh execution data
       const updated = await getExecutionById(executionId);
       setExecution(updated);
     } catch (err: any) {
-      showError(err.response?.data?.error || err.message || 'Failed to stop execution');
+      showError(err.response?.data?.error || err.message || t('results.testRuns.stopError'));
     }
   };
 
@@ -106,16 +108,16 @@ export const TestRunDetailPage: React.FC = () => {
             className="inline-flex items-center text-primary hover:text-primary/80 mb-4 transition-colors duration-150"
           >
             <ArrowLeft className="me-2 h-4 w-4 rtl:scale-x-[-1]" />
-            Back to Test Runs
+            {t('results.testRunDetail.backToTestRuns')}
           </Link>
         </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t('results.testRunDetail.error')}</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
-            <span>{error || 'Execution not found'}</span>
+            <span>{error || t('results.testRunDetail.notFound')}</span>
             <Button variant="outline" size="sm" onClick={() => navigate('/test-runs')}>
-              Go Back
+              {t('results.testRunDetail.goBack')}
             </Button>
           </AlertDescription>
         </Alert>
@@ -147,103 +149,103 @@ export const TestRunDetailPage: React.FC = () => {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <Link
           to="/test-runs"
-          className="inline-flex items-center text-primary hover:text-primary/80 mb-4 transition-colors duration-150"
+          className="inline-flex items-center text-primary hover:text-primary/80 mb-3 sm:mb-4 transition-colors duration-150 text-sm"
         >
-          <ArrowLeft className="me-2 h-4 w-4 rtl:scale-x-[-1]" />
-          Back to Test Runs
+          <ArrowLeft className="me-1.5 sm:me-2 h-4 w-4 rtl:scale-x-[-1]" />
+          {t('results.testRunDetail.backToTestRuns')}
         </Link>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Execution Details</h1>
-            <p className="text-muted-foreground mt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{t('results.testRunDetail.title')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1 truncate">
               {testCase ? testCase.name : `Execution ${execution.execution_id.substring(0, 8)}`}
             </p>
           </div>
           {execution.status === 'running' && (
-            <Button variant="destructive" onClick={handleStopExecution}>
+            <Button variant="destructive" onClick={handleStopExecution} className="w-full sm:w-auto shrink-0">
               <Square className="h-4 w-4 me-2" />
-              Stop Test
+              {t('results.testRunDetail.stopTest')}
             </Button>
           )}
         </div>
       </div>
 
       {/* Execution Metadata */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-muted rounded-lg p-4">
-              <div className="text-sm text-muted-foreground mb-1">Status</div>
+      <Card className="mb-4 sm:mb-6">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-muted rounded-lg p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.testRunDetail.status')}</div>
               <div className="flex items-center gap-2">
                 {getStatusBadge(execution.status)}
-                <span className="text-lg font-semibold text-foreground capitalize">{execution.status}</span>
+                <span className="text-base sm:text-lg font-semibold text-foreground capitalize hidden sm:inline">{execution.status}</span>
               </div>
             </div>
-            <div className="bg-muted rounded-lg p-4">
-              <div className="text-sm text-muted-foreground mb-1">Duration</div>
-              <div className="text-lg font-semibold text-foreground">
+            <div className="bg-muted rounded-lg p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.duration')}</div>
+              <div className="text-base sm:text-lg font-semibold text-foreground">
                 {formatDuration(execution.total_duration_ms)}
               </div>
             </div>
-            <div className="bg-muted rounded-lg p-4">
-              <div className="text-sm text-muted-foreground mb-1">Started</div>
-              <div className="text-sm font-medium text-foreground" title={formatAbsoluteTime(execution.started_at)}>
+            <div className="bg-muted rounded-lg p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.startedAt')}</div>
+              <div className="text-xs sm:text-sm font-medium text-foreground" title={formatAbsoluteTime(execution.started_at)}>
                 {formatRelativeTime(execution.started_at)}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">
                 {formatAbsoluteTime(execution.started_at)}
               </div>
             </div>
             {execution.completed_at && (
-              <div className="bg-muted rounded-lg p-4">
-                <div className="text-sm text-muted-foreground mb-1">Completed</div>
-                <div className="text-sm font-medium text-foreground" title={formatAbsoluteTime(execution.completed_at)}>
+              <div className="bg-muted rounded-lg p-3 sm:p-4">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.completedAt')}</div>
+                <div className="text-xs sm:text-sm font-medium text-foreground" title={formatAbsoluteTime(execution.completed_at)}>
                   {formatRelativeTime(execution.completed_at)}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">
                   {formatAbsoluteTime(execution.completed_at)}
                 </div>
               </div>
             )}
           </div>
 
-          <Separator className="mb-6" />
+          <Separator className="mb-4 sm:mb-6" />
 
           {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
             <Card className="border-green-800/50 bg-green-900/10">
-              <CardContent className="p-4">
+              <CardContent className="p-2.5 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-green-400 font-medium">Steps Passed</div>
-                    <div className="text-2xl font-bold text-green-300 mt-1">{passedSteps}</div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] sm:text-sm text-green-400 font-medium truncate">{t('results.testRunDetail.stepsPassed')}</div>
+                    <div className="text-lg sm:text-2xl font-bold text-green-300 mt-1">{passedSteps}</div>
                   </div>
-                  <CheckCircle className="h-8 w-8 text-green-600 opacity-50" />
+                  <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 opacity-50 hidden sm:block shrink-0" />
                 </div>
               </CardContent>
             </Card>
             <Card className="border-destructive/50 bg-destructive/10">
-              <CardContent className="p-4">
+              <CardContent className="p-2.5 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-red-400 font-medium">Steps Failed</div>
-                    <div className="text-2xl font-bold text-red-300 mt-1">{failedSteps}</div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] sm:text-sm text-red-400 font-medium truncate">{t('results.testRunDetail.stepsFailed')}</div>
+                    <div className="text-lg sm:text-2xl font-bold text-red-300 mt-1">{failedSteps}</div>
                   </div>
-                  <XCircle className="h-8 w-8 text-red-600 opacity-50" />
+                  <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 opacity-50 hidden sm:block shrink-0" />
                 </div>
               </CardContent>
             </Card>
             <Card className="border-blue-800/50 bg-blue-900/10">
-              <CardContent className="p-4">
+              <CardContent className="p-2.5 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-blue-400 font-medium">Total Steps</div>
-                    <div className="text-2xl font-bold text-blue-300 mt-1">{totalSteps}</div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] sm:text-sm text-blue-400 font-medium truncate">{t('results.testRunDetail.totalSteps')}</div>
+                    <div className="text-lg sm:text-2xl font-bold text-blue-300 mt-1">{totalSteps}</div>
                   </div>
-                  <Clock className="h-8 w-8 text-blue-600 opacity-50" />
+                  <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 opacity-50 hidden sm:block shrink-0" />
                 </div>
               </CardContent>
             </Card>
@@ -253,7 +255,7 @@ export const TestRunDetailPage: React.FC = () => {
           {execution.error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Execution Error</AlertTitle>
+              <AlertTitle>{t('results.testRunDetail.executionError')}</AlertTitle>
               <AlertDescription>{execution.error}</AlertDescription>
             </Alert>
           )}
@@ -262,18 +264,18 @@ export const TestRunDetailPage: React.FC = () => {
 
       {/* Test Case Info */}
       {testCase && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Test Case</CardTitle>
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg">{t('results.testRunDetail.testCase')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div>
-              <div className="font-medium text-foreground mb-1">{testCase.name}</div>
+              <div className="font-medium text-foreground mb-1 text-sm sm:text-base break-words">{testCase.name}</div>
               {testCase.description && (
-                <div className="text-sm text-muted-foreground">{testCase.description}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground break-words">{testCase.description}</div>
               )}
               {testCase.website_url && (
-                <div className="text-sm text-muted-foreground mt-2">
+                <div className="text-xs sm:text-sm text-muted-foreground mt-2 break-all">
                   <span className="font-medium">URL:</span> {testCase.website_url}
                 </div>
               )}
@@ -285,12 +287,12 @@ export const TestRunDetailPage: React.FC = () => {
       {/* Step Results */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Step-by-Step Results</CardTitle>
+          <CardTitle className="text-lg">{t('results.testRunDetail.stepByStepResults')}</CardTitle>
         </CardHeader>
         <CardContent>
           {execution.steps.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No steps recorded for this execution
+              {t('results.testRunDetail.noSteps')}
             </div>
           ) : (
             <TestStepsList

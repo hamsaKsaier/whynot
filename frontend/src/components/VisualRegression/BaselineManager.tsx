@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { FiLock, FiUnlock, FiImage, FiClock, FiTrash2, FiEye } from 'react-icons/fi';
@@ -19,6 +20,7 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
   testCaseId,
   onSelectBaseline,
 }) => {
+  const { t } = useTranslation('results');
   const [baselines, setBaselines] = useState<VisualBaseline[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -81,48 +83,48 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
 
   if (loading) {
     return (
-      <Card title="Visual Baselines">
-        <div className="text-center py-8 text-slate-400">Loading baselines...</div>
+      <Card title={t('results.visualRegression.visualBaselines')}>
+        <div className="text-center py-8 text-muted-foreground">{t('results.visualRegression.loadingBaselines')}</div>
       </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      <Card title="Visual Baselines" className="space-y-4">
+      <Card title={t('results.visualRegression.visualBaselines')} className="space-y-4">
         {Object.keys(groupedBaselines).length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
-            <FiImage className="h-12 w-12 mx-auto mb-2 text-slate-500" />
-            <p>No baselines found for this test case.</p>
-            <p className="text-sm mt-1">Baselines are automatically created after successful test executions.</p>
+          <div className="text-center py-8 text-muted-foreground">
+            <FiImage className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+            <p>{t('results.visualRegression.noBaselines')}</p>
+            <p className="text-sm mt-1">{t('results.visualRegression.baselinesAutoCreated')}</p>
           </div>
         ) : (
           <div className="space-y-3">
             {Object.entries(groupedBaselines).map(([stepId, baseline]) => (
               <div
                 key={baseline.id}
-                className="border border-slate-700 rounded-lg p-4 hover:bg-slate-900 transition-colors"
+                className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold text-white">Step: {baseline.step_id}</span>
+                      <span className="font-semibold text-foreground">{t('results.visualRegression.step')}: {baseline.step_id}</span>
                       <span className="px-2 py-1 bg-blue-900/30 text-blue-300 rounded text-xs">
                         v{baseline.baseline_version}
                       </span>
                       {baseline.is_locked && (
                         <span className="px-2 py-1 bg-yellow-900/30 text-yellow-300 rounded text-xs flex items-center gap-1">
                           <FiLock className="h-3 w-3" />
-                          Locked
+                          {t('results.visualRegression.locked')}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-slate-400">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <FiClock className="h-4 w-4" />
                         {new Date(baseline.created_at).toLocaleDateString()}
                       </span>
-                      <span>Created by: {baseline.created_by}</span>
+                      <span>{t('results.visualRegression.createdBy')}: {baseline.created_by}</span>
                     </div>
                   </div>
 
@@ -132,8 +134,8 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
                       size="sm"
                       onClick={() => loadStepHistory(baseline.step_id)}
                     >
-                      <FiEye className="h-4 w-4 mr-1" />
-                      History
+                      <FiEye className="h-4 w-4 me-1" />
+                      {t('results.visualRegression.history')}
                     </Button>
                     <Button
                       variant="secondary"
@@ -143,13 +145,13 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
                     >
                       {baseline.is_locked ? (
                         <>
-                          <FiUnlock className="h-4 w-4 mr-1" />
-                          Unlock
+                          <FiUnlock className="h-4 w-4 me-1" />
+                          {t('results.visualRegression.unlock')}
                         </>
                       ) : (
                         <>
-                          <FiLock className="h-4 w-4 mr-1" />
-                          Lock
+                          <FiLock className="h-4 w-4 me-1" />
+                          {t('results.visualRegression.lock')}
                         </>
                       )}
                     </Button>
@@ -159,7 +161,7 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
                         size="sm"
                         onClick={() => onSelectBaseline(baseline)}
                       >
-                        View
+                        {t('results.visualRegression.view')}
                       </Button>
                     )}
                   </div>
@@ -169,8 +171,8 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
                   <div className="mt-3">
                     <img
                       src={getScreenshotUrl(baseline.screenshot_path)}
-                      alt={`Baseline for step ${baseline.step_id}`}
-                      className="w-full max-w-xs h-auto rounded border border-slate-700"
+                      alt={t('results.visualRegression.baselineForStep', { stepId: baseline.step_id })}
+                      className="w-full max-w-xs h-auto rounded border border-border"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/placeholder-screenshot.png';
                       }}
@@ -186,23 +188,23 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
       {/* Step History Modal */}
       {selectedStepId && stepHistory.length > 0 && (
         <Card
-          title={`Baseline History: Step ${selectedStepId}`}
+          title={t('results.visualRegression.baselineHistoryStep', { stepId: selectedStepId })}
           className="space-y-3"
         >
           <div className="space-y-2">
             {stepHistory.map((baseline) => (
               <div
                 key={baseline.id}
-                className="flex items-center justify-between p-3 border border-slate-700 rounded-lg"
+                className="flex items-center justify-between p-3 border border-border rounded-lg"
               >
                 <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 bg-slate-800 text-slate-200 rounded text-sm font-medium">
-                    Version {baseline.baseline_version}
+                  <span className="px-2 py-1 bg-muted text-foreground rounded text-sm font-medium">
+                    {t('results.visualRegression.version', { version: baseline.baseline_version })}
                   </span>
                   {baseline.is_locked && (
                     <FiLock className="h-4 w-4 text-yellow-600" />
                   )}
-                  <span className="text-sm text-slate-400">
+                  <span className="text-sm text-muted-foreground">
                     {new Date(baseline.created_at).toLocaleString()}
                   </span>
                 </div>
@@ -219,7 +221,7 @@ export const BaselineManager: React.FC<BaselineManagerProps> = ({
           </div>
           <div className="pt-3 border-t">
             <Button variant="secondary" size="sm" onClick={() => setSelectedStepId(null)}>
-              Close History
+              {t('results.visualRegression.closeHistory')}
             </Button>
           </div>
         </Card>

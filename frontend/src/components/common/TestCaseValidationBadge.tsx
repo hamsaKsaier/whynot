@@ -51,22 +51,22 @@ export const TestCaseValidationBadge: React.FC<TestCaseValidationBadgeProps> = (
           <span className="text-xs opacity-75">({score}/100)</span>
         )}
         {hasIssues && (
-          <span className="ml-1">
+          <span className="ms-1">
             {isExpanded ? <FiChevronUp className="h-3 w-3" /> : <FiChevronDown className="h-3 w-3" />}
           </span>
         )}
       </button>
 
       {isExpanded && hasIssues && (
-        <div className="absolute mt-10 z-10 bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-4 min-w-[300px] max-w-md">
+        <div className="absolute mt-10 z-10 bg-popover border border-border rounded-lg shadow-sm p-4 min-w-[300px] max-w-md">
           <div className="space-y-3">
             {errors.length > 0 && (
               <div>
-                <h4 className="font-semibold text-red-300 mb-2 flex items-center gap-2">
+                <h4 className="font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-2">
                   <FiXCircle className="h-4 w-4" />
                   Errors ({errors.length})
                 </h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-red-400">
+                <ul className="list-disc list-inside space-y-1 text-sm text-red-600 dark:text-red-400">
                   {errors.map((error, idx) => (
                     <li key={idx}>{error}</li>
                   ))}
@@ -76,11 +76,11 @@ export const TestCaseValidationBadge: React.FC<TestCaseValidationBadgeProps> = (
 
             {warnings.length > 0 && (
               <div>
-                <h4 className="font-semibold text-yellow-300 mb-2 flex items-center gap-2">
+                <h4 className="font-semibold text-yellow-600 dark:text-yellow-400 mb-2 flex items-center gap-2">
                   <FiAlertCircle className="h-4 w-4" />
                   Warnings ({warnings.length})
                 </h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-yellow-400">
+                <ul className="list-disc list-inside space-y-1 text-sm text-yellow-600 dark:text-yellow-400">
                   {warnings.map((warning, idx) => (
                     <li key={idx}>{warning}</li>
                   ))}

@@ -1,15 +1,14 @@
 services:
   database:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-whynot}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-whynot}
       - POSTGRES_DB=${POSTGRES_DB:-whynot}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./services/database/migrations:/docker-entrypoint-initdb.d
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-whynot}"]
@@ -17,23 +16,41 @@ services:
       timeout: 5s
       retries: 5
 
+  db-migrate:
+    image: postgres:16-alpine
+    volumes:
+      - ../../services/database/migrations:/migrations:ro
+      - ../../services/database/migrate.sh:/migrate.sh:ro
+    environment:
+      - POSTGRES_HOST=database
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-whynot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-whynot}
+      - POSTGRES_DB=${POSTGRES_DB:-whynot}
+      - MIGRATIONS_DIR=/migrations
+    entrypoint: ["sh", "/migrate.sh"]
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
   ai-service:
     build:
-      context: ./services/ai-service
+      context: ../../services/ai-service
       dockerfile: Dockerfile
     ports:
-      - "8010:8000"
+      - "${AI_SERVICE_PORT:-8010}:8000"
     env_file:
-      - .env
+      - ../../.env
     environment:
       - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - OPENAI_VISION_MODEL=${OPENAI_VISION_MODEL:-gpt-4o}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
-      - CORS_ORIGINS=http://localhost:3010,http://localhost:3011,http://localhost:5183
+      - CORS_ORIGINS=http://localhost:${GATEWAY_PORT:-3010},http://localhost:${TEST_EXECUTOR_PORT:-3011},http://localhost:${FRONTEND_PORT:-5183}
     volumes:
-      - ./services/ai-service/app:/app/app
+      - ../../services/ai-service/app:/app/app
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" 2>/dev/null && echo ok"]
@@ -43,10 +60,10 @@ services:
 
   test-executor:
     build:
-      context: .
-      dockerfile: ./services/test-executor/Dockerfile
+      context: ../..
+      dockerfile: services/test-executor/Dockerfile
     ports:
-      - "3011:3001"
+      - "${TEST_EXECUTOR_PORT:-3011}:3001"
     environment:
       - PW_TEST_SCREENSHOT_NO_FONTS_READY=1
       - PORT=3001
@@ -55,11 +72,9 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
       - DOCKER_ENV=true
-      # Optimized timeouts for faster execution
       - SCREENSHOT_TIMEOUT_MS=${SCREENSHOT_TIMEOUT_MS:-10000}
       - NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS:-30000}
       - NAVIGATION_MAX_TIMEOUT_MS=${NAVIGATION_MAX_TIMEOUT_MS:-60000}
-      # Visual Regression Settings
       - VISUAL_REGRESSION_ENABLED=${VISUAL_REGRESSION_ENABLED:-true}
       - VISUAL_REGRESSION_PIXEL_THRESHOLD=${VISUAL_REGRESSION_PIXEL_THRESHOLD:-0.01}
       - VISUAL_REGRESSION_AI_ANALYSIS_ENABLED=${VISUAL_REGRESSION_AI_ANALYSIS_ENABLED:-true}
@@ -67,18 +82,19 @@ services:
       - VISUAL_REGRESSION_DIFF_DIR=/app/visual-diffs
       - VIDEO_DIR=/app/videos
     volumes:
-      - ./services/test-executor/src:/app/src
-      - ./shared:/app/shared
+      - ../../services/test-executor/src:/app/src
+      - ../../shared:/app/shared
       - screenshots:/app/screenshots
       - visual-diffs:/app/visual-diffs
       - videos:/app/videos
     depends_on:
       database:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       ai-service:
         condition: service_started
     restart: unless-stopped
-    # Resource limits to prevent resource exhaustion
     deploy:
       resources:
         limits:
@@ -95,23 +111,25 @@ services:
 
   qa-loop-executor:
     build:
-      context: .
-      dockerfile: ./services/qa-loop-executor/Dockerfile
+      context: ../..
+      dockerfile: services/qa-loop-executor/Dockerfile
     ports:
-      - "3012:3002"
+      - "${QA_LOOP_EXECUTOR_PORT:-3012}:3002"
     env_file:
-      - .env
+      - ../../.env
     environment:
       - PORT=3002
       - TEST_EXECUTOR_URL=http://test-executor:3001
       - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
     volumes:
-      - ./services/qa-loop-executor/src:/app/src
-      - ./shared:/app/shared
+      - ../../services/qa-loop-executor/src:/app/src
+      - ../../shared:/app/shared
     depends_on:
       database:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       test-executor:
         condition: service_healthy
     restart: unless-stopped
@@ -123,12 +141,12 @@ services:
 
   gateway:
     build:
-      context: .
-      dockerfile: ./gateway/Dockerfile
+      context: ../..
+      dockerfile: gateway/Dockerfile
     ports:
-      - "3010:3000"
+      - "${GATEWAY_PORT:-3010}:3000"
     env_file:
-      - .env
+      - ../../.env
     environment:
       - PORT=3000
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5183}
@@ -151,19 +169,24 @@ services:
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3010/api/auth/google/callback}
       - SCREENSHOT_RETENTION_DAYS=${SCREENSHOT_RETENTION_DAYS:-30}
       - VIDEO_DIR=/app/videos
-      # Stripe
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-http://localhost:5183/billing?success=true}
       - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-http://localhost:5183/billing?canceled=true}
+      - SECRETS_ENCRYPTION_KEY=${SECRETS_ENCRYPTION_KEY:-}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - GATEWAY_URL=http://localhost:${GATEWAY_PORT:-3010}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - ./gateway/src:/app/src
-      - ./shared:/app/shared
+      - ../../gateway/src:/app/gateway/src
+      - ../../shared:/app/shared
       - videos:/app/videos
     depends_on:
       database:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       ai-service:
         condition: service_started
       test-executor:
@@ -179,50 +202,39 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ../../frontend
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=${VITE_API_URL:-/api}
         - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:3011}
         - VITE_QA_LOOP_WS_URL=${VITE_QA_LOOP_WS_URL:-ws://localhost:3012}
     ports:
-      - "5183:80"
+      - "${FRONTEND_PORT:-5183}:80"
     depends_on:
       - gateway
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
 
   admin-frontend:
     build:
-      context: ./admin-frontend
+      context: ../../admin-frontend
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=${ADMIN_VITE_API_URL:-/api}
     ports:
-      - "5184:80"
+      - "${ADMIN_FRONTEND_PORT:-5184}:80"
     depends_on:
       - gateway
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
-
-  # Test target app (buggy task manager for QA testing)
-  test-app:
-    build:
-      context: /Users/takiacademy/whynot-test-app
-      dockerfile: Dockerfile
-    ports:
-      - "4000:4000"
-    environment:
-      - PORT=4000
-    restart: unless-stopped
 
 volumes:
   screenshots:

@@ -64,28 +64,27 @@ export const TestGenerationLoader: React.FC<TestGenerationLoaderProps> = ({
         {/* Animated Icon */}
         <div className="flex justify-center mb-6">
           <div className="relative">
-            <div className="absolute inset-0 bg-primary-900/30 rounded-full animate-ping opacity-75"></div>
             <div className="relative bg-primary-900/20 rounded-full p-6">
-              <CurrentIcon className="h-12 w-12 text-primary-600 animate-pulse" />
+              <CurrentIcon className="h-12 w-12 text-primary-600" />
             </div>
           </div>
         </div>
 
         {/* Main Message */}
-        <h3 className="text-xl font-semibold text-white mb-2">{message}</h3>
-        <p className="text-sm text-slate-400 mb-6">
+        <h3 className="text-xl font-semibold text-foreground mb-2">{message}</h3>
+        <p className="text-sm text-muted-foreground mb-6">
           This usually takes 10-20 seconds. Please wait...
         </p>
 
         {/* Progress Bar */}
         <div className="max-w-md mx-auto mb-6">
-          <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-300 ease-out"
+              className="bg-primary h-2 rounded-full transition-colors duration-150 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-slate-400 mt-2">{Math.round(progress)}% complete</p>
+          <p className="text-xs text-muted-foreground mt-2">{Math.round(progress)}% complete</p>
         </div>
 
         {/* Step Indicators */}
@@ -98,28 +97,26 @@ export const TestGenerationLoader: React.FC<TestGenerationLoaderProps> = ({
             return (
               <div
                 key={index}
-                className={`flex flex-col items-center gap-2 transition-all duration-300 ${
-                  isActive ? 'scale-110' : 'scale-100'
-                }`}
+                className="flex flex-col items-center gap-2 transition-opacity duration-150"
               >
                 <div
-                  className={`p-2 rounded-lg transition-all duration-300 ${
+                  className={`p-2 rounded-lg transition-colors duration-150 ${
                     isCompleted
                       ? 'bg-green-900/30 text-green-600'
                       : isActive
                       ? 'bg-primary-900/30 text-primary-600'
-                      : 'bg-slate-800 text-slate-500'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   <StepIcon className="h-5 w-5" />
                 </div>
                 <span
-                  className={`text-xs font-medium transition-colors duration-300 ${
+                  className={`text-xs font-medium transition-colors duration-150 ${
                     isActive
                       ? 'text-primary-600'
                       : isCompleted
                       ? 'text-green-600'
-                      : 'text-slate-500'
+                      : 'text-muted-foreground'
                   }`}
                 >
                   {step.label}
@@ -134,11 +131,7 @@ export const TestGenerationLoader: React.FC<TestGenerationLoaderProps> = ({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="w-2 h-2 bg-primary-400 rounded-full animate-pulse"
-              style={{
-                animationDelay: `${i * 0.2}s`,
-                animationDuration: '1s',
-              }}
+              className="w-2 h-2 bg-primary-400 rounded-full"
             />
           ))}
         </div>

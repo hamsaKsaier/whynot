@@ -1402,26 +1402,26 @@ All tests run inside Docker containers. Never `npm test` on host.
 
 ```bash
 # Gateway unit + supertest integration
-docker compose -f docker-compose.test.yml run --rm gateway-test npx vitest run --coverage
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm gateway-test npx vitest run --coverage
 
 # Frontend unit (jsdom)
-docker compose -f docker-compose.test.yml run --rm frontend-test
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm frontend-test
 
 # Admin frontend unit (jsdom)
-docker compose -f docker-compose.test.yml run --rm admin-frontend-test
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm admin-frontend-test
 
 # Shared library unit
-docker compose -f docker-compose.test.yml run --rm shared-test
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm shared-test
 
 # E2E (Playwright)
-docker compose -f docker-compose.test.yml up -d postgres-test
-docker compose -f docker-compose.test.yml run --rm playwright
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env up -d postgres-test
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm playwright
 
 # Coverage — append --coverage to any vitest command
-docker compose -f docker-compose.test.yml run --rm gateway-test npx vitest run --coverage
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm gateway-test npx vitest run --coverage
 
 # Tear down
-docker compose -f docker-compose.test.yml down -v
+docker compose -f docker/compose/docker-compose.test.yml --env-file .env down -v
 ```
 
 ### Test Organization

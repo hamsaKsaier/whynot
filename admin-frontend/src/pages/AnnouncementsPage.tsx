@@ -226,6 +226,7 @@ export function AnnouncementsPage() {
     {
       key: 'langs',
       header: t('admin.announcements.languages', 'Languages'),
+      hideOnMobile: true,
       render: (r) => (
         <span className="flex items-center gap-1 text-sm text-muted-foreground">
           <Globe className="h-3.5 w-3.5" />
@@ -243,6 +244,7 @@ export function AnnouncementsPage() {
     {
       key: 'schedule',
       header: t('admin.announcements.schedule', 'Schedule'),
+      hideOnMobile: true,
       render: (r) => (
         <span className="text-sm text-muted-foreground">
           {r.starts_at ? fmt(r.starts_at) : t('admin.announcements.immediate', 'Immediate')}
@@ -338,7 +340,7 @@ export function AnnouncementsPage() {
               ))}
             </Tabs>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{t('admin.announcements.typeLabel', 'Type')}</Label>
                 <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v as any }))}>
@@ -364,7 +366,7 @@ export function AnnouncementsPage() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="ann-start">{t('admin.announcements.startsAt', 'Starts At')}</Label>
                 <Input

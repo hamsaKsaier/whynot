@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCheckCircle, FiXCircle, FiClock, FiPlay, FiEdit } from 'react-icons/fi';
 import type { StepResult, TestStep } from '../../types';
 
@@ -57,6 +58,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
   onStepClick,
   onStepFix,
 }) => {
+  const { t } = useTranslation('runner');
   const getActionBadgeColor = (action: string) => {
     switch (action.toLowerCase()) {
       case 'click':
@@ -69,20 +71,20 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
       case 'wait':
         return 'bg-yellow-900/30 text-yellow-400';
       case 'assert':
-        return 'bg-indigo-100 text-indigo-800';
+        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400';
       case 'scroll':
-        return 'bg-pink-100 text-pink-800';
+        return 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400';
       case 'hover':
-        return 'bg-cyan-100 text-cyan-800';
+        return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400';
       default:
-        return 'bg-slate-900 text-slate-200';
+        return 'bg-muted text-foreground';
     }
   };
 
   const getStepIcon = (step: StepResult, index: number, stepUpdate?: StepUpdate) => {
     // Check stepUpdate first for real-time status
     if (stepUpdate?.status === 'running') {
-      return <FiPlay className="h-5 w-5 text-blue-500 animate-pulse" />;
+      return <FiPlay className="h-5 w-5 text-blue-500" />;
     }
 
     if (stepUpdate?.status === 'completed' && stepUpdate.stepResult) {
@@ -96,9 +98,9 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
     // Fallback to step result
     if (step.success === undefined) {
       if (index === currentStepIndex) {
-        return <FiPlay className="h-5 w-5 text-blue-500 animate-pulse" />;
+        return <FiPlay className="h-5 w-5 text-blue-500" />;
       }
-      return <FiClock className="h-5 w-5 text-slate-500" />;
+      return <FiClock className="h-5 w-5 text-muted-foreground" />;
     }
     return step.success ? (
       <FiCheckCircle className="h-5 w-5 text-green-500" />
@@ -134,16 +136,16 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-800 border-r border-slate-700">
-      <div className="p-4 border-b border-slate-700">
-        <h3 className="font-semibold text-white">Test Steps</h3>
-        <p className="text-sm text-slate-400 mt-1">
-          {steps.filter(s => s.success === true).length} passed,{' '}
-          {steps.filter(s => s.success === false).length} failed
+    <div className="h-full overflow-y-auto bg-card border-e border-border">
+      <div className="p-3 sm:p-4 border-b border-border">
+        <h3 className="font-semibold text-foreground text-sm sm:text-base">{t('runner.steps.title')}</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+          {steps.filter(s => s.success === true).length} {t('runner.stepsList.passed')},{' '}
+          {steps.filter(s => s.success === false).length} {t('runner.stepsList.failed')}
         </p>
       </div>
 
-      <div className="divide-y divide-slate-700">
+      <div className="divide-y divide-border">
         {steps.map((step, index) => {
           const stepUpdate = stepUpdates?.get(index);
           const testStep = testSteps?.[index];
@@ -160,21 +162,21 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
             <div
               key={step.step_id}
               onClick={() => onStepClick?.(index)}
-              className={`p-4 cursor-pointer transition-colors ${isActive
-                  ? 'bg-blue-900/20 border-l-4 border-blue-500'
-                  : 'hover:bg-slate-900'
+              className={`p-3 sm:p-4 cursor-pointer transition-colors duration-150 ${isActive
+                  ? 'bg-blue-900/20 border-s-4 border-blue-500'
+                  : 'hover:bg-muted/50'
                 }`}
             >
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start gap-2 sm:gap-3">
                 <div className="flex-shrink-0 mt-0.5">
                   {getStepIcon(step, index, stepUpdate)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-white">
-                      Step {index + 1}
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-xs sm:text-sm font-medium text-foreground">
+                      {t('runner.stepsList.step', { step: index + 1 })}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">
                       {executionTime}ms
                     </span>
                   </div>
@@ -192,7 +194,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
 
                   {/* Description */}
                   {description && (
-                    <p className="text-xs text-slate-400 mt-1 mb-1 line-clamp-2">
+                    <p className="text-xs text-muted-foreground mt-1 mb-1 line-clamp-2">
                       {description}
                     </p>
                   )}
@@ -206,7 +208,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                             ? 'bg-red-900/30 text-red-400'
                             : status === 'running'
                               ? 'bg-blue-900/30 text-blue-400'
-                              : 'bg-slate-900 text-slate-200'
+                              : 'bg-muted text-foreground'
                         }`}
                     >
                       {status}
@@ -220,28 +222,28 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
 
                   {/* Selector Used */}
                   {(stepUpdate?.stepResult?.selector_used || step.selector_used) && (
-                    <p className="text-xs text-slate-400 mt-1">
-                      Selector: {(stepUpdate?.stepResult?.selector_used || step.selector_used)?.type}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('runner.stepsList.selector')}: {(stepUpdate?.stepResult?.selector_used || step.selector_used)?.type}
                     </p>
                   )}
 
                   {/* Selector Attempts */}
                   {stepUpdate?.selectorAttempts && stepUpdate.selectorAttempts.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-700">
-                      <div className="text-xs font-medium text-slate-400 mb-1">Selector Attempts:</div>
+                    <div className="mt-2 pt-2 border-t border-border">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">{t('runner.stepsList.selectorAttempts')}:</div>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
                         {stepUpdate.selectorAttempts
                           .sort((a, b) => a.attemptNumber - b.attemptNumber)
                           .map((attempt, idx) => (
-                            <div key={idx} className="text-xs flex items-center gap-1">
+                            <div key={idx} className="text-[10px] sm:text-xs flex items-start gap-1">
                               {attempt.status === 'succeeded' ? (
-                                <span className="text-green-600">✅</span>
+                                <span className="text-green-600 shrink-0">✅</span>
                               ) : attempt.status === 'failed' ? (
-                                <span className="text-red-600">❌</span>
+                                <span className="text-red-600 shrink-0">❌</span>
                               ) : (
-                                <span className="text-blue-600 animate-pulse">🔄</span>
+                                <span className="text-blue-600 shrink-0">🔄</span>
                               )}
-                              <span className={attempt.status === 'succeeded' ? 'text-green-400 font-medium' : attempt.status === 'failed' ? 'text-red-400' : 'text-blue-400'}>
+                              <span className={`break-all ${attempt.status === 'succeeded' ? 'text-green-400 font-medium' : attempt.status === 'failed' ? 'text-red-400' : 'text-blue-400'}`}>
                                 {attempt.attemptNumber}/{attempt.totalAttempts}: {attempt.selector.type} = "{attempt.selector.value}"
                               </span>
                             </div>
@@ -252,35 +254,35 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
 
                   {/* Recovery Status */}
                   {stepUpdate?.recoveryStart && (
-                    <div className="mt-2 pt-2 border-t border-slate-700">
-                      <div className="text-xs font-medium text-blue-600 mb-1">🔄 Recovery Started</div>
-                      <div className="text-xs text-slate-400">{stepUpdate.recoveryStart.reason}</div>
+                    <div className="mt-2 pt-2 border-t border-border">
+                      <div className="text-xs font-medium text-blue-600 mb-1">{t('runner.stepsList.recoveryStarted')}</div>
+                      <div className="text-xs text-muted-foreground">{stepUpdate.recoveryStart.reason}</div>
                     </div>
                   )}
 
                   {stepUpdate?.recoverySuccess && (
-                    <div className="mt-2 pt-2 border-t border-slate-700">
-                      <div className="text-xs font-medium text-green-600 mb-1">✅ Recovery Successful</div>
-                      <div className="text-xs text-slate-200">
+                    <div className="mt-2 pt-2 border-t border-border">
+                      <div className="text-xs font-medium text-green-600 mb-1">{t('runner.stepsList.recoverySuccessful')}</div>
+                      <div className="text-xs text-foreground">
                         Using: {stepUpdate.recoverySuccess.successfulSelector.type} = "{stepUpdate.recoverySuccess.successfulSelector.value}"
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        Strategy: {stepUpdate.recoverySuccess.strategyUsed}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {t('runner.stepsList.strategy')}: {stepUpdate.recoverySuccess.strategyUsed}
                       </div>
                     </div>
                   )}
                 </div>
                 {/* Fix/Edit Icon */}
                 {testStep && onStepFix && (
-                  <div className="flex-shrink-0 ml-2">
+                  <div className="flex-shrink-0 ms-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onStepFix(index, testStep);
                       }}
-                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
-                      title="Fix or modify this step"
-                      aria-label="Fix or modify this step"
+                      className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-900/20 rounded transition-colors"
+                      title={t('runner.stepsList.fixStep')}
+                      aria-label={t('runner.stepsList.fixStep')}
                     >
                       <FiEdit className="w-4 h-4" />
                     </button>

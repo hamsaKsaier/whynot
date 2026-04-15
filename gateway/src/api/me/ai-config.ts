@@ -138,7 +138,7 @@ router.put(
 
     const existing = await repo.findById(id, userId);
     if (!existing) {
-      throw createError('AI config not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.notFound', { resource: 'AI config' }), 404, 'NOT_FOUND');
     }
 
     const updateInput: any = {};
@@ -200,7 +200,7 @@ router.put(
 
     const existing = await repo.findById(id, userId);
     if (!existing) {
-      throw createError('AI config not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.notFound', { resource: 'AI config' }), 404, 'NOT_FOUND');
     }
 
     const updated = await repo.setDefault(id, userId);
@@ -238,7 +238,7 @@ router.delete(
 
     const existing = await repo.findById(id, userId);
     if (!existing) {
-      throw createError('AI config not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.notFound', { resource: 'AI config' }), 404, 'NOT_FOUND');
     }
 
     await repo.delete(id, userId);
@@ -268,7 +268,7 @@ router.post(
 
     const config = await repo.findById(id, userId);
     if (!config) {
-      throw createError('AI config not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.notFound', { resource: 'AI config' }), 404, 'NOT_FOUND');
     }
 
     const apiKey = decrypt({

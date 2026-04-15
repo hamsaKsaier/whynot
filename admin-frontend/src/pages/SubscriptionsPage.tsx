@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { FilterBar } from '../components/admin/FilterBar'
 import { PaginatedTable, type Column } from '../components/admin/PaginatedTable'
@@ -17,26 +18,28 @@ interface SubRow {
   current_period_end?: string
 }
 
-const statusOptions = [
-  { label: 'Active', value: 'active' },
-  { label: 'Trialing', value: 'trialing' },
-  { label: 'Past Due', value: 'past_due' },
-  { label: 'Canceled', value: 'canceled' },
-]
-
 const fmt = (iso?: string) =>
   iso ? Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(iso)) : '-'
 
-const columns: Column<SubRow>[] = [
-  { key: 'workspace', header: 'Workspace', render: (r) => <span className="font-medium">{r.workspace_name || r.workspace_id}</span> },
-  { key: 'owner', header: 'Owner', render: (r) => <span className="text-muted-foreground">{r.owner_name || '-'}</span> },
-  { key: 'plan', header: 'Plan', render: (r) => <span className="text-muted-foreground">{r.plan_name || '-'}</span> },
-  { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-  { key: 'credits', header: 'Credits', className: 'text-end', render: (r) => <span className="font-medium">{r.credits_remaining}</span> },
-  { key: 'period_end', header: 'Period End', render: (r) => <span className="text-muted-foreground">{fmt(r.current_period_end)}</span> },
-]
-
 export function SubscriptionsPage() {
+  const { t } = useTranslation('superadmin')
+
+  const statusOptions = [
+    { label: t('subscriptions.statuses.active'), value: 'active' },
+    { label: t('subscriptions.statuses.trialing'), value: 'trialing' },
+    { label: t('subscriptions.statuses.pastDue'), value: 'past_due' },
+    { label: t('subscriptions.statuses.canceled'), value: 'canceled' },
+  ]
+
+  const columns: Column<SubRow>[] = [
+    { key: 'workspace', header: t('subscriptions.columns.workspace'), render: (r) => <span className="font-medium">{r.workspace_name || r.workspace_id}</span> },
+    { key: 'owner', header: t('subscriptions.columns.owner'), hideOnMobile: true, render: (r) => <span className="text-muted-foreground">{r.owner_name || '-'}</span> },
+    { key: 'plan', header: t('subscriptions.columns.plan'), render: (r) => <span className="text-muted-foreground">{r.plan_name || '-'}</span> },
+    { key: 'status', header: t('subscriptions.columns.status'), render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'credits', header: t('subscriptions.columns.credits'), className: 'text-end', hideOnMobile: true, render: (r) => <span className="font-medium">{r.credits_remaining}</span> },
+    { key: 'period_end', header: t('subscriptions.columns.periodEnd'), hideOnMobile: true, render: (r) => <span className="text-muted-foreground">{fmt(r.current_period_end)}</span> },
+  ]
+
   const [subscriptions, setSubscriptions] = useState<SubRow[]>([])
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
@@ -68,13 +71,13 @@ export function SubscriptionsPage() {
 
   return (
     <div className="space-y-4">
-      <AdminPageHeader title="Subscriptions" description={`${total} total`} />
+      <AdminPageHeader title={t('subscriptions.title')} description={t('subscriptions.totalCount', { count: total })} />
 
       <FilterBar
         filters={[
           {
             key: 'status',
-            label: 'All Statuses',
+            label: t('subscriptions.allStatuses'),
             options: statusOptions,
             value: statusFilter,
             onChange: (v) => { setStatusFilter(v); setOffset(0) },
@@ -87,12 +90,12 @@ export function SubscriptionsPage() {
         data={subscriptions}
         loading={loading}
         rowKey={(r) => r.id}
-        emptyMessage="No subscriptions found"
+        emptyMessage={t('subscriptions.noSubscriptions')}
         hasNextPage={offset + limit < total}
         hasPrevPage={offset > 0}
         onNextPage={() => setOffset(offset + limit)}
         onPrevPage={() => setOffset(Math.max(0, offset - limit))}
-        pageInfo={totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : undefined}
+        pageInfo={totalPages > 0 ? t('common:admin.common.pageOf', { current: currentPage, total: totalPages }) : undefined}
       />
     </div>
   )

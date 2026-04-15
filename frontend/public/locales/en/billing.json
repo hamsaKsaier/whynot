@@ -1,5 +1,6 @@
 {
   "billing.title": "Billing",
+  "billing.subtitle": "Manage your subscription, credits, and invoices",
   "billing.currentPlan": "Current Plan",
   "billing.credits.title": "Credits",
   "billing.credits.balance": "Current balance",
@@ -12,7 +13,12 @@
   "billing.plans.current": "Current plan",
   "billing.plans.perMonth": "/month",
   "billing.plans.perYear": "/year",
+  "billing.plans.contactSales": "Contact Sales",
+  "billing.plans.creditsPerPeriod": "{{credits}} credits / {{interval}}",
+  "billing.plans.custom": "Custom",
+  "billing.plans.customCredits": "Custom credits",
   "billing.plans.features": "Features",
+  "billing.plans.freeTrial": "Free Trial",
   "billing.invoices.title": "Invoices",
   "billing.invoices.date": "Date",
   "billing.invoices.amount": "Amount",
@@ -93,5 +99,6 @@
   "billingTab.txnType.admin_grant": "Granted",
   "billingTab.txnType.admin_revoke": "Revoked",
   "billingTab.txnType.rollover": "Rollover",
-  "billingTab.txnType.expiry": "Expired"
+  "billingTab.txnType.expiry": "Expired",
+  "billingTab.creditHistory.empty": "No credit transactions yet"
 }

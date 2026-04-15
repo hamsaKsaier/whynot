@@ -116,11 +116,11 @@ export const BrowserPreview: React.FC<BrowserPreviewProps> = ({
         </div>
       </CardContent>
 
-      <CardFooter className="px-3 py-1.5 border-t border-border justify-between">
-        <Badge variant={isLoading ? 'default' : error ? 'destructive' : 'secondary'} className="text-[10px]">
+      <CardFooter className="px-2 py-1 sm:px-3 sm:py-1.5 border-t border-border justify-between gap-2">
+        <Badge variant={isLoading ? 'default' : error ? 'destructive' : 'secondary'} className="text-[10px] sm:text-xs">
           {isLoading ? 'Streaming' : error ? 'Error' : imageUrl ? 'Connected' : 'Idle'}
         </Badge>
-        <span className="text-[10px] text-muted-foreground tabular-nums">
+        <span className="text-[10px] sm:text-xs text-muted-foreground tabular-nums truncate">
           {resolution} &middot; {browser}
         </span>
       </CardFooter>

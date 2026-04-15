@@ -6,6 +6,7 @@ import { CreditRepository } from '../../shared/database/repositories/credit-repo
 import { StripeProvider } from './stripe-provider';
 import { auditedOperation } from './audit-logger';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 import { PLANS, DEFAULT_TRIAL_DAYS, isPlanSlug, type PlanSlug } from '../../shared/constants/pricing';
 import type { SubscriptionStatus } from './types';
 import { resolveWorkspaceRecipient } from '../emails/notification-helper';
@@ -108,7 +109,7 @@ export class SubscriptionManager {
           recipient,
           plan: planDef.name,
           trialEnd: trialEnd.toISOString(),
-          dashboardUrl: `${process.env.APP_URL || ''}/settings?tab=billing`,
+          dashboardUrl: `${env.APP_URL}/settings?tab=billing`,
         }).catch(() => {});
       }
     });
@@ -372,7 +373,7 @@ export class SubscriptionManager {
         sendPaymentFailedEmail({
           recipient,
           amount: '',
-          updatePaymentUrl: `${process.env.APP_URL || ''}/settings?tab=billing`,
+          updatePaymentUrl: `${env.APP_URL}/settings?tab=billing`,
         }).catch(() => {});
       }
     });
@@ -415,7 +416,7 @@ export class SubscriptionManager {
         plan: 'Free',
         trialEnd: now.toISOString(),
         daysRemaining: '0',
-        upgradeUrl: `${process.env.APP_URL || ''}/checkout`,
+        upgradeUrl: `${env.APP_URL}/checkout`,
       }).catch(() => {});
     }
   }

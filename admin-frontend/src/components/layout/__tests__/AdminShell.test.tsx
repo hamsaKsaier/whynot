@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { AdminShell } from '../AdminShell';
 
@@ -117,5 +118,70 @@ describe('AdminShell', () => {
   it('renders language switcher', () => {
     renderShell();
     expect(screen.getByTestId('language-switcher')).toBeInTheDocument();
+  });
+
+  it('sidebar uses sidebar token bg class', () => {
+    renderShell();
+    const sidebar = document.querySelector('.bg-sidebar');
+    expect(sidebar).toBeTruthy();
+  });
+
+  it('sidebar borders use sidebar-border token', () => {
+    renderShell();
+    const borderEl = document.querySelector('.border-sidebar-border');
+    expect(borderEl).toBeTruthy();
+  });
+
+  it('active nav item uses sidebar-primary classes', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AdminShell />
+      </MemoryRouter>,
+    );
+    const activeItem = document.querySelector('.bg-sidebar-primary');
+    expect(activeItem).toBeTruthy();
+  });
+
+  it('section labels use sidebar-foreground token', () => {
+    renderShell();
+    const sectionLabel = document.querySelector('.text-sidebar-foreground\\/50');
+    expect(sectionLabel).toBeTruthy();
+  });
+
+  it('hamburger button is md:hidden for responsive behavior', () => {
+    renderShell();
+    const btn = screen.getByLabelText('Open Navigation');
+    expect(btn.className).toContain('md:hidden');
+  });
+
+  it('desktop sidebar wrapper is hidden on mobile', () => {
+    renderShell();
+    const desktopWrapper = document.querySelector('.hidden.md\\:block');
+    expect(desktopWrapper).toBeTruthy();
+  });
+
+  it('header has responsive padding classes', () => {
+    renderShell();
+    const header = document.querySelector('header');
+    expect(header?.className).toContain('px-3');
+    expect(header?.className).toContain('sm:px-4');
+  });
+
+  it('header controls have responsive gap', () => {
+    renderShell();
+    const controls = screen.getByTestId('language-switcher').parentElement;
+    expect(controls?.className).toContain('gap-1.5');
+    expect(controls?.className).toContain('sm:gap-3');
+  });
+
+  it('opens mobile sheet when hamburger is clicked', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByLabelText('Open Navigation'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Navigation')).toBeInTheDocument();
+    });
   });
 });

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import { env } from '../config/env';
 import { UserRepository, UserEntity } from '../../shared/database/repositories/user-repository';
 import { WorkspaceRepository } from '../../shared/database/repositories/workspace-repository';
 import { PlanRepository } from '../../shared/database/repositories/plan-repository';
@@ -28,9 +29,7 @@ export interface PublicUser {
 }
 
 function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET environment variable is not set');
-  return secret;
+  return env.JWT_SECRET;
 }
 
 function toPublicUser(user: UserEntity): PublicUser {
@@ -120,11 +119,9 @@ export async function login(email: string, password: string): Promise<AuthResult
 // ─── GitHub OAuth ────────────────────────────────────────────────────────────
 
 export function getGithubAuthUrl(): string {
-  const clientId = process.env.GITHUB_CLIENT_ID;
+  const clientId = env.GITHUB_CLIENT_ID;
   if (!clientId) throw new Error('GITHUB_CLIENT_ID not set');
-  const callbackUrl = encodeURIComponent(
-    process.env.GITHUB_CALLBACK_URL || 'http://localhost:3010/api/auth/github/callback'
-  );
+  const callbackUrl = encodeURIComponent(env.GITHUB_CALLBACK_URL);
   return `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${callbackUrl}&scope=user:email`;
 }
 
@@ -133,10 +130,10 @@ export async function handleGithubCallback(code: string): Promise<AuthResult> {
   const tokenRes = await axios.post(
     'https://github.com/login/oauth/access_token',
     {
-      client_id: process.env.GITHUB_CLIENT_ID,
-      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      client_id: env.GITHUB_CLIENT_ID,
+      client_secret: env.GITHUB_CLIENT_SECRET,
       code,
-      redirect_uri: process.env.GITHUB_CALLBACK_URL,
+      redirect_uri: env.GITHUB_CALLBACK_URL,
     },
     { headers: { Accept: 'application/json' } }
   );
@@ -198,11 +195,9 @@ export async function handleGithubCallback(code: string): Promise<AuthResult> {
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 
 export function getGoogleAuthUrl(): string {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientId = env.GOOGLE_CLIENT_ID;
   if (!clientId) throw new Error('GOOGLE_CLIENT_ID not set');
-  const callbackUrl = encodeURIComponent(
-    process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3010/api/auth/google/callback'
-  );
+  const callbackUrl = encodeURIComponent(env.GOOGLE_CALLBACK_URL);
   return (
     `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${clientId}&redirect_uri=${callbackUrl}&response_type=code&scope=email%20profile`
@@ -213,9 +208,9 @@ export async function handleGoogleCallback(code: string): Promise<AuthResult> {
   // Exchange code for tokens
   const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
     code,
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    client_secret: process.env.GOOGLE_CLIENT_SECRET,
-    redirect_uri: process.env.GOOGLE_CALLBACK_URL,
+    client_id: env.GOOGLE_CLIENT_ID,
+    client_secret: env.GOOGLE_CLIENT_SECRET,
+    redirect_uri: env.GOOGLE_CALLBACK_URL,
     grant_type: 'authorization_code',
   });
 

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -18,33 +19,35 @@ interface KeyboardShortcutsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const shortcuts = [
-  { key: "Space", description: "Pause / Resume execution" },
-  { key: "R", description: "Rerun test" },
-  { key: "Escape", description: "Close detail dialog" },
-  { key: "?", description: "Show this dialog" },
-  { key: "F", description: "Toggle fullscreen preview" },
+const shortcutKeys = [
+  { key: "Space", descriptionKey: "common.keyboardShortcuts.pauseResume" },
+  { key: "R", descriptionKey: "common.keyboardShortcuts.rerunTest" },
+  { key: "Escape", descriptionKey: "common.keyboardShortcuts.closeDialog" },
+  { key: "?", descriptionKey: "common.keyboardShortcuts.showShortcuts" },
+  { key: "F", descriptionKey: "common.keyboardShortcuts.toggleFullscreen" },
 ] as const;
 
 export function KeyboardShortcutsDialog({
   open,
   onOpenChange,
 }: KeyboardShortcutsDialogProps) {
+  const { t } = useTranslation("common");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Keyboard Shortcuts</DialogTitle>
+          <DialogTitle>{t("common.keyboardShortcuts.title")}</DialogTitle>
         </DialogHeader>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-start">Key</TableHead>
-              <TableHead className="text-start">Action</TableHead>
+              <TableHead className="text-start">{t("common.keyboardShortcuts.key")}</TableHead>
+              <TableHead className="text-start">{t("common.keyboardShortcuts.action")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shortcuts.map((shortcut) => (
+            {shortcutKeys.map((shortcut) => (
               <TableRow key={shortcut.key}>
                 <TableCell>
                   <kbd className="bg-muted border border-border rounded-md px-1.5 py-0.5 text-xs font-mono">
@@ -52,7 +55,7 @@ export function KeyboardShortcutsDialog({
                   </kbd>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {shortcut.description}
+                  {t(shortcut.descriptionKey)}
                 </TableCell>
               </TableRow>
             ))}

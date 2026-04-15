@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Plus, X, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -21,6 +22,7 @@ import { dollarsToCents, centsToDollars } from '../lib/money'
 import { getAdminPlan, createPlan, updatePlan, setPlanFeatures } from '../services/api'
 
 export function PlanEditPage() {
+  const { t } = useTranslation('superadmin')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isNew = !id
@@ -128,26 +130,26 @@ export function PlanEditPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <AdminPageHeader
-        title={isNew ? 'Create Plan' : 'Edit Plan'}
+        title={isNew ? t('plans.createPlan') : t('plans.editPlan')}
         breadcrumbs={[
-          { label: 'Plans', to: '/plans' },
-          { label: isNew ? 'New' : form.name },
+          { label: t('plans.breadcrumbs.plans'), to: '/plans' },
+          { label: isNew ? t('plans.breadcrumbs.new') : form.name },
         ]}
       />
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Details</CardTitle>
+            <CardTitle className="text-base">{t('plans.details')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t('plans.fields.name')}</Label>
                 <Input id="name" value={form.name} onChange={(e) => handleNameChange(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="slug">Slug</Label>
+                <Label htmlFor="slug">{t('plans.fields.slug')}</Label>
                 <Input
                   id="slug"
                   value={form.slug}
@@ -158,7 +160,7 @@ export function PlanEditPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="desc">Description</Label>
+              <Label htmlFor="desc">{t('plans.fields.description')}</Label>
               <Textarea
                 id="desc"
                 value={form.description}
@@ -168,7 +170,7 @@ export function PlanEditPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="price">Price ($)</Label>
+                <Label htmlFor="price">{t('plans.fields.price')}</Label>
                 <Input
                   id="price"
                   type="number"
@@ -179,21 +181,21 @@ export function PlanEditPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Billing Interval</Label>
+                <Label>{t('plans.fields.billingInterval')}</Label>
                 <Select
                   value={form.billing_interval}
                   onValueChange={(v) => setForm((p) => ({ ...p, billing_interval: v as any }))}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                    <SelectItem value="one_time">One-time</SelectItem>
+                    <SelectItem value="monthly">{t('plans.intervals.monthly')}</SelectItem>
+                    <SelectItem value="yearly">{t('plans.intervals.yearly')}</SelectItem>
+                    <SelectItem value="one_time">{t('plans.intervals.oneTime')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="credits">Credits / Period</Label>
+                <Label htmlFor="credits">{t('plans.fields.creditsPerPeriod')}</Label>
                 <Input
                   id="credits"
                   type="number"
@@ -204,7 +206,7 @@ export function PlanEditPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="trial">Trial Days</Label>
+                <Label htmlFor="trial">{t('plans.fields.trialDays')}</Label>
                 <Input
                   id="trial"
                   type="number"
@@ -213,7 +215,7 @@ export function PlanEditPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sort">Sort Order</Label>
+                <Label htmlFor="sort">{t('plans.fields.sortOrder')}</Label>
                 <Input
                   id="sort"
                   type="number"
@@ -223,7 +225,7 @@ export function PlanEditPage() {
               </div>
               <div className="flex flex-col justify-end gap-3 pb-1">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="public" className="cursor-pointer">Public</Label>
+                  <Label htmlFor="public" className="cursor-pointer">{t('plans.fields.public')}</Label>
                   <Switch
                     id="public"
                     checked={form.is_public}
@@ -231,7 +233,7 @@ export function PlanEditPage() {
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="custom" className="cursor-pointer">Enterprise</Label>
+                  <Label htmlFor="custom" className="cursor-pointer">{t('plans.fields.enterprise')}</Label>
                   <Switch
                     id="custom"
                     checked={form.is_custom}
@@ -245,7 +247,7 @@ export function PlanEditPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Feature Flags</CardTitle>
+            <CardTitle className="text-base">{t('plans.featureFlags')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {features.length > 0 && (
@@ -263,7 +265,7 @@ export function PlanEditPage() {
             )}
             <div className="flex items-end gap-2">
               <div className="flex-1 space-y-1">
-                <Label className="text-xs">Key</Label>
+                <Label className="text-xs">{t('plans.fields.featureKey')}</Label>
                 <Input
                   value={newFeatureKey}
                   onChange={(e) => setNewFeatureKey(e.target.value)}
@@ -271,7 +273,7 @@ export function PlanEditPage() {
                 />
               </div>
               <div className="w-32 space-y-1">
-                <Label className="text-xs">Value</Label>
+                <Label className="text-xs">{t('plans.fields.featureValue')}</Label>
                 <Input
                   value={newFeatureValue}
                   onChange={(e) => setNewFeatureValue(e.target.value)}
@@ -287,11 +289,11 @@ export function PlanEditPage() {
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => navigate('/plans')}>
-            Cancel
+            {t('common:admin.common.cancel')}
           </Button>
           <Button type="submit" disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 me-1.5 animate-spin" />}
-            {isNew ? 'Create Plan' : 'Save Changes'}
+            {isNew ? t('plans.createPlan') : t('plans.saveChanges')}
           </Button>
         </div>
       </form>

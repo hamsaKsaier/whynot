@@ -78,11 +78,11 @@ EOF
 #### Step 2: Start Services
 
 ```bash
-# Build and start all services
-docker compose up --build
+# Build and start all services (detached)
+make start-build
 
-# Or run in background (detached mode)
-docker compose up --build -d
+# Or just start without rebuilding
+make start
 ```
 
 #### Step 3: Verify Services Are Running
@@ -91,12 +91,12 @@ Wait about 30-60 seconds for all services to start, then check:
 
 ```bash
 # Check service status
-docker compose ps
+make ps
 
-# Check health endpoints
-curl http://localhost:3000/health
-curl http://localhost:3001/health
-curl http://localhost:8000/health
+# Check health endpoints (host ports; see .env for overrides)
+curl http://localhost:3010/health   # gateway
+curl http://localhost:3011/health   # test-executor
+curl http://localhost:8010/health   # ai-service
 ```
 
 You should see `"status": "healthy"` in the responses.
@@ -106,19 +106,19 @@ You should see `"status": "healthy"` in the responses.
 Once services are running:
 
 ### Frontend UI
-- **URL**: http://localhost:5173
+- **URL**: http://localhost:5183
 - Open in your browser to use the web interface
 
 ### API Gateway
-- **URL**: http://localhost:3000
-- **Health Check**: http://localhost:3000/health
-- **API Docs**: http://localhost:3000/ (root endpoint shows available endpoints)
+- **URL**: http://localhost:3010
+- **Health Check**: http://localhost:3010/health
+- **API Docs**: http://localhost:3010/ (root endpoint shows available endpoints)
 
 ### Test the API
 
 ```bash
 # Generate and run a test
-curl -X POST http://localhost:3000/api/run-test \
+curl -X POST http://localhost:3010/api/run-test \
   -H "Content-Type: application/json" \
   -d '{
     "website_url": "https://example.com",
@@ -130,61 +130,45 @@ curl -X POST http://localhost:3000/api/run-test \
 ### View Logs
 
 ```bash
-# View all logs
-docker compose logs -f
-
-# View specific service logs
-docker compose logs -f gateway
-docker compose logs -f test-executor
-docker compose logs -f ai-service
-docker compose logs -f database
+make logs                  # all services
+make logs-gateway
+make logs-test-executor
+make logs-ai
+make logs-db
 ```
 
 ## Service Ports
 
-| Service | Port | URL |
-|---------|------|-----|
-| Gateway | 3000 | http://localhost:3000 |
-| Test Executor | 3001 | http://localhost:3001 |
-| AI Service | 8000 | http://localhost:8000 |
-| Frontend | 5173 | http://localhost:5173 |
-| Database | 5432 | localhost:5432 |
+Host ports are configurable through `.env` (see `.env.example`). Defaults:
+
+| Service | Env var | Default host port | Container port |
+|---------|---------|------------------:|---------------:|
+| Gateway          | `GATEWAY_PORT`           | 3010 | 3000 |
+| Test Executor    | `TEST_EXECUTOR_PORT`     | 3011 | 3001 |
+| QA Loop Executor | `QA_LOOP_EXECUTOR_PORT`  | 3012 | 3002 |
+| AI Service       | `AI_SERVICE_PORT`        | 8010 | 8000 |
+| Frontend         | `FRONTEND_PORT`          | 5183 | 80   |
+| Admin Frontend   | `ADMIN_FRONTEND_PORT`    | 5184 | 80   |
+| Database         | `POSTGRES_PORT`          | 5433 | 5432 |
 
 ## Common Commands
 
-### Start Services
 ```bash
-docker compose up -d
+make start           # Start all services
+make stop            # Stop services
+make down            # Stop and remove containers
+make restart         # Restart services
+make start-build     # Rebuild images and start
+make rebuild         # --no-cache rebuild and start
+make ps              # Service status
+make psql            # psql shell in the database
+make clean           # Remove containers, volumes, local images (destructive)
 ```
 
-### Stop Services
-```bash
-docker compose down
-```
+If you need a flag the Makefile doesn't expose, call compose directly:
 
-### Restart Services
 ```bash
-docker compose restart
-```
-
-### Rebuild Services (after code changes)
-```bash
-docker compose up --build -d
-```
-
-### View Service Status
-```bash
-docker compose ps
-```
-
-### Access Database
-```bash
-docker compose exec database psql -U whynot -d whynot
-```
-
-### Clean Everything (including volumes)
-```bash
-docker compose down -v
+docker compose -f docker/compose/docker-compose.yml --env-file .env <command>
 ```
 
 ## Troubleshooting
@@ -206,7 +190,7 @@ docker compose down -v
 
 3. **View error logs:**
    ```bash
-   docker compose logs
+   make logs
    ```
 
 ### Database Connection Errors
@@ -214,16 +198,16 @@ docker compose down -v
 1. **Wait for database to be ready:**
    ```bash
    # Check database health
-   docker compose exec database pg_isready -U whynot
+   docker compose -f docker/compose/docker-compose.yml --env-file .env exec database pg_isready -U whynot
    ```
 
-2. **Verify DATABASE_URL in .env matches docker-compose.yml**
+2. **Verify DATABASE_URL in .env matches docker/compose/docker-compose.yml**
 
 ### API Key Issues
 
 1. **Verify API key is set:**
    ```bash
-   docker compose exec ai-service env | grep OPENAI_API_KEY
+   docker compose -f docker/compose/docker-compose.yml --env-file .env exec ai-service env | grep OPENAI_API_KEY
    ```
 
 2. **Check API key is valid** - Test with OpenAI directly
@@ -234,7 +218,7 @@ If tests fail with browser errors:
 
 ```bash
 # Reinstall Playwright dependencies
-docker compose exec test-executor npx playwright install-deps chromium
+docker compose -f docker/compose/docker-compose.yml --env-file .env exec test-executor npx playwright install-deps chromium
 ```
 
 ## Next Steps

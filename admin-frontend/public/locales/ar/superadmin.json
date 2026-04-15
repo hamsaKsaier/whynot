@@ -1,0 +1,89 @@
+{
+  "plans": {
+    "title": "الخطط",
+    "newPlan": "خطة جديدة",
+    "editPlan": "تعديل الخطة",
+    "createPlan": "إنشاء خطة",
+    "saveChanges": "حفظ التغييرات",
+    "archivePlan": "أرشفة الخطة",
+    "archiveDescription": "هل أنت متأكد أنك تريد أرشفة \"{{name}}\"؟ لن يتأثر المشتركون الحاليون، لكن الاشتراكات الجديدة ستكون معطلة.",
+    "archive": "أرشفة",
+    "restore": "استعادة",
+    "syncStripe": "مزامنة مع Stripe",
+    "syncStripeFailed": "فشلت مزامنة Stripe: {{error}}",
+    "noPlans": "لم يتم إنشاء خطط بعد.",
+    "details": "التفاصيل",
+    "featureFlags": "علامات الميزات",
+    "free": "مجاني",
+    "priceInterval": "{{price}}/{{interval}}",
+    "creditsCount": "{{count}} رصيد",
+    "trialDays": "تجربة {{days}} يوم",
+    "subscriberCount": "{{count}} مشترك",
+    "breadcrumbs": {
+      "plans": "الخطط",
+      "new": "جديد"
+    },
+    "fields": {
+      "name": "الاسم",
+      "slug": "المعرّف",
+      "description": "الوصف",
+      "price": "السعر ($)",
+      "billingInterval": "فترة الفوترة",
+      "creditsPerPeriod": "الأرصدة / الفترة",
+      "trialDays": "أيام التجربة",
+      "sortOrder": "ترتيب العرض",
+      "public": "عام",
+      "enterprise": "مؤسسات",
+      "featureKey": "المفتاح",
+      "featureValue": "القيمة"
+    },
+    "intervals": {
+      "monthly": "شهري",
+      "yearly": "سنوي",
+      "oneTime": "دفعة واحدة"
+    },
+    "badges": {
+      "archived": "مؤرشف",
+      "hidden": "مخفي",
+      "custom": "مخصص"
+    }
+  },
+  "subscriptions": {
+    "title": "الاشتراكات",
+    "totalCount": "{{count}} إجمالي",
+    "allStatuses": "جميع الحالات",
+    "noSubscriptions": "لم يتم العثور على اشتراكات",
+    "columns": {
+      "workspace": "مساحة العمل",
+      "owner": "المالك",
+      "plan": "الخطة",
+      "status": "الحالة",
+      "credits": "الأرصدة",
+      "periodEnd": "نهاية الفترة"
+    },
+    "statuses": {
+      "active": "نشط",
+      "trialing": "تجريبي",
+      "pastDue": "متأخر",
+      "canceled": "ملغى"
+    }
+  },
+  "credits": {
+    "title": "الأرصدة",
+    "description": "أرصدة جميع المستخدمين",
+    "grantCredits": "منح أرصدة",
+    "grantDescription": "منح أرصدة لمساحة عمل محددة.",
+    "grant": "منح",
+    "defaultGrantDescription": "منح جماعي من المسؤول",
+    "workspaceId": "معرّف مساحة العمل",
+    "amount": "المبلغ",
+    "descriptionLabel": "الوصف",
+    "noUsers": "لم يتم العثور على مستخدمين",
+    "columns": {
+      "user": "المستخدم",
+      "email": "البريد الإلكتروني",
+      "plan": "الخطة",
+      "credits": "الأرصدة"
+    }
+  }
+}

@@ -78,9 +78,9 @@ export const DangerZoneTab: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
             <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as 'json' | 'csv')}>
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -88,7 +88,7 @@ export const DangerZoneTab: React.FC = () => {
                 <SelectItem value="csv">CSV</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={handleExport} disabled={exporting} className="gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={exporting} className="gap-2 w-full sm:w-auto">
               {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               {t('settings.danger.exportBtn', { defaultValue: 'Export data' })}
             </Button>
@@ -107,7 +107,7 @@ export const DangerZoneTab: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="gap-2">
+          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="gap-2 w-full sm:w-auto">
             <Trash2 className="h-4 w-4" />
             {t('settings.danger.deleteBtn', { defaultValue: 'Delete my account' })}
           </Button>
@@ -159,15 +159,15 @@ export const DangerZoneTab: React.FC = () => {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <DialogClose asChild>
-              <Button variant="outline">{t('settings.danger.cancel', { defaultValue: 'Cancel' })}</Button>
+              <Button variant="outline" className="w-full sm:w-auto">{t('settings.danger.cancel', { defaultValue: 'Cancel' })}</Button>
             </DialogClose>
             <Button
               variant="destructive"
               onClick={handleDeleteAccount}
               disabled={deleting || deleteConfirm !== 'DELETE' || !deletePassword}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               {t('settings.danger.confirmDelete', { defaultValue: 'Delete my account' })}

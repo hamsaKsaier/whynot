@@ -1,14 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
 import path from 'path';
+import { env } from '../config/env';
 import { WorkflowOrchestrator } from '../workflow/workflow-orchestrator';
 import { UserStory, TestCase } from '../../shared/types';
 import { errorHandler, asyncHandler, createError } from '../middleware/error-handler';
 import { requestLogger } from '../middleware/request-logger';
 import { validate, schemas, sanitizeUrl, sanitizeText } from '../middleware/validation';
 import { apiRateLimiter, testExecutionRateLimiter, testGenerationRateLimiter, qaLoopSessionRateLimiter, loginRateLimiter, registerRateLimiter, publicEndpointRateLimiter } from '../middleware/rate-limit';
+import { buildCorsOrigins } from '../utils/cors-origins';
 import { createLogger } from '../../shared/logger/logger';
 import { metrics } from '../../shared/utils/metrics';
 import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
@@ -55,8 +56,6 @@ import meApiKeysRouter from './me/api-keys';
 import meLanguageRouter from './me/language';
 import meNotificationsRouter from './me/notifications';
 import meAccountRouter from './me/account';
-
-dotenv.config();
 
 /**
  * Transform database entity to frontend TestCase format
@@ -134,7 +133,7 @@ function transformExecutionWithSteps(
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 const logger = createLogger('gateway');
 
 // Trust the first proxy (Railway's reverse proxy) so express-rate-limit
@@ -156,10 +155,7 @@ app.use(helmet({
   },
 }));
 
-const corsOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5183',
-  process.env.ADMIN_FRONTEND_URL || 'http://localhost:5184',
-].filter(o => o && o !== '*'); // Never allow wildcard origins
+const corsOrigins = buildCorsOrigins();
 app.use(cors({
   origin: corsOrigins,
   credentials: true,
@@ -186,13 +182,13 @@ app.use('/api', apiRateLimiter);
 app.use('/api/screenshots', express.static(path.join(__dirname, '../../screenshots')));
 
 // Serve video recordings (v2)
-const videoDir = process.env.VIDEO_DIR || '/tmp/videos';
+const videoDir = env.VIDEO_DIR;
 app.use('/api/videos', express.static(videoDir));
 
 // Initialize orchestrator
 const orchestrator = new WorkflowOrchestrator(
-  process.env.AI_SERVICE_URL || 'http://localhost:8000',
-  process.env.TEST_EXECUTOR_URL || 'http://localhost:3001'
+  env.AI_SERVICE_URL,
+  env.TEST_EXECUTOR_URL
 );
 
 // Initialize repositories
@@ -237,15 +233,15 @@ app.get('/health', async (req, res) => {
     service: 'gateway',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
+    environment: env.NODE_ENV,
     version: '1.0.0',
     dependencies: {
       aiService: {
-        url: process.env.AI_SERVICE_URL || 'http://localhost:8000',
+        url: env.AI_SERVICE_URL,
         status: 'unknown' // Could check actual connectivity
       },
       testExecutor: {
-        url: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001',
+        url: env.TEST_EXECUTOR_URL,
         status: 'unknown' // Could check actual connectivity
       }
     }
@@ -255,8 +251,8 @@ app.get('/health', async (req, res) => {
   try {
     const axios = require('axios');
     const [aiHealth, executorHealth] = await Promise.allSettled([
-      axios.get(`${process.env.AI_SERVICE_URL || 'http://localhost:8000'}/health`, { timeout: 2000 }).catch(() => null),
-      axios.get(`${process.env.TEST_EXECUTOR_URL || 'http://localhost:3001'}/health`, { timeout: 2000 }).catch(() => null)
+      axios.get(`${env.AI_SERVICE_URL}/health`, { timeout: 2000 }).catch(() => null),
+      axios.get(`${env.TEST_EXECUTOR_URL}/health`, { timeout: 2000 }).catch(() => null)
     ]);
 
     if (aiHealth.status === 'fulfilled' && aiHealth.value?.status === 200) {
@@ -316,7 +312,7 @@ app.get('/api/auth/github', (_req, res) => {
 
 app.get('/api/auth/github/callback', asyncHandler(async (req, res) => {
   const { code } = req.query;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = env.FRONTEND_URL;
   if (!code || typeof code !== 'string') {
     return res.redirect(`${frontendUrl}/login?error=no_code`);
   }
@@ -339,7 +335,7 @@ app.get('/api/auth/google', (_req, res) => {
 
 app.get('/api/auth/google/callback', asyncHandler(async (req, res) => {
   const { code } = req.query;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = env.FRONTEND_URL;
   if (!code || typeof code !== 'string') {
     return res.redirect(`${frontendUrl}/login?error=no_code`);
   }
@@ -460,7 +456,7 @@ app.post('/api/internal/notifications', asyncHandler(async (req, res) => {
       'SELECT user_id FROM workspace_members WHERE workspace_id = $1',
       [workspaceId],
     );
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = env.FRONTEND_URL;
     for (const m of members) {
       if (type === 'scan_complete') {
         sendScanCompleteEmail(m.user_id, {
@@ -1693,7 +1689,7 @@ app.post('/api/projects/:projectId/run-all-tests', asyncHandler(async (req, res)
   }
 
   // Queue execution through the test executor service
-  const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3002';
+  const testExecutorUrl = env.TEST_EXECUTOR_URL;
   const results: any[] = [];
 
   for (const tc of testCases) {
@@ -1742,7 +1738,7 @@ app.post('/api/projects/:projectId/run-category/:category', asyncHandler(async (
     return res.json({ success: true, results: [], message: (req as any).t('success:testCase.noCategoryTests') });
   }
 
-  const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3002';
+  const testExecutorUrl = env.TEST_EXECUTOR_URL;
   const results: any[] = [];
 
   for (const tc of testCases) {
@@ -2319,14 +2315,14 @@ app.post('/api/billing/checkout', requireAuth, asyncHandler(async (req: any, res
   const { plan_id } = req.body;
   if (!plan_id) throw createError((req as any).t('errors:validation.planIdRequired'), 400, 'MISSING_PLAN_ID');
   const plan = await planRepository.findById(plan_id);
-  if (!plan) throw createError((req as any).t('errors:billing.plan.notFound'), 404, 'PLAN_NOT_FOUND');
+  if (!plan) throw createError((req as any).t('billing:plan.notFound'), 404, 'PLAN_NOT_FOUND');
   const session = await PaymentService.createCheckoutSession(
     {
       orgId: req.workspaceId,
       plan: plan.slug,
       tier: plan.slug,
-      successUrl: process.env.STRIPE_SUCCESS_URL || 'http://localhost:5183/billing?success=true',
-      cancelUrl: process.env.STRIPE_CANCEL_URL || 'http://localhost:5183/billing?canceled=true',
+      successUrl: env.STRIPE_SUCCESS_URL,
+      cancelUrl: env.STRIPE_CANCEL_URL,
     },
     { userId: req.user!.id, orgId: req.workspaceId },
   );
@@ -2777,7 +2773,7 @@ app.post('/api/admin/users/:id/impersonate', requireAuth, requireSuperAdmin, asy
 
   // Generate short-lived token (1 hour) for impersonation
   const jwt = await import('jsonwebtoken');
-  const secret = process.env.JWT_SECRET;
+  const secret = env.JWT_SECRET;
   if (!secret) throw createError((req as any).t('errors:auth.jwtNotConfigured'), 500, 'CONFIG_ERROR');
 
   const token = jwt.default.sign(
@@ -3471,12 +3467,12 @@ app.use(errorHandler);
 
 export { app };
 
-if (process.env.NODE_ENV !== 'test') {
+if (env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     logger.info('Gateway service started', {
       port: PORT,
-      aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:8000',
-      testExecutorUrl: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001'
+      aiServiceUrl: env.AI_SERVICE_URL,
+      testExecutorUrl: env.TEST_EXECUTOR_URL
     });
 
     startCleanupScheduler();

@@ -65,7 +65,7 @@ router.post(
       id: exportRequest.id,
       status: exportRequest.status,
       format,
-      message: 'Export request queued. You will be notified when the export is ready.',
+      message: (req as any).t('success:account.exportQueued'),
       createdAt: exportRequest.created_at,
     });
   })
@@ -87,7 +87,7 @@ router.get(
     );
 
     if (rows.length === 0) {
-      throw createError('Export not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.exportNotFound'), 404, 'NOT_FOUND');
     }
 
     const row = rows[0];
@@ -109,12 +109,12 @@ router.get(
     const token = req.query.token as string;
 
     if (!token || !ExportService.validateToken(token, exportId)) {
-      throw createError('Invalid or expired download link', 403, 'INVALID_TOKEN');
+      throw createError((req as any).t('errors:auth.invalidDownloadLink'), 403, 'INVALID_TOKEN');
     }
 
     const filePath = ExportService.getExportFilePath(exportId);
     if (!existsSync(filePath)) {
-      throw createError('Export file not found', 404, 'FILE_NOT_FOUND');
+      throw createError((req as any).t('errors:resource.exportFileNotFound'), 404, 'FILE_NOT_FOUND');
     }
 
     res.setHeader('Content-Type', 'application/zip');
@@ -136,12 +136,12 @@ router.post(
 
     const user = await userRepo.findById(userId);
     if (!user) {
-      throw createError('User not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
     }
 
     if (!user.password_hash) {
       throw createError(
-        'Account deletion with password not available for OAuth accounts. Please contact support.',
+        (req as any).t('errors:account.oauthDeleteNotAvailable'),
         400,
         'NO_PASSWORD'
       );
@@ -149,7 +149,7 @@ router.post(
 
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
-      throw createError('Password is incorrect', 401, 'INVALID_PASSWORD');
+      throw createError((req as any).t('errors:auth.passwordIncorrect'), 401, 'INVALID_PASSWORD');
     }
 
     // Check if already scheduled for deletion
@@ -160,7 +160,7 @@ router.post(
 
     if (existingDeletion.length > 0) {
       throw createError(
-        'Account is already scheduled for deletion',
+        (req as any).t('errors:account.alreadyScheduledDeletion'),
         409,
         'ALREADY_SCHEDULED'
       );
@@ -188,7 +188,7 @@ router.post(
 
     res.json({
       success: true,
-      message: 'Account scheduled for deletion. You have 7 days to cancel this action by logging in.',
+      message: (req as any).t('success:account.deletionScheduled'),
       deletedAt,
       gracePeriodDays: 7,
     });

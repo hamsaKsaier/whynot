@@ -46,7 +46,7 @@ function useStructuredData() {
     '@type': 'Organization',
     name: 'WhyNot',
     url: baseUrl,
-    logo: `${baseUrl}/logo.svg`,
+    logo: `${baseUrl}/logo-light.svg`,
     description: t('footer.description'),
     sameAs: [],
   }

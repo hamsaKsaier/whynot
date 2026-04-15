@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiLink, FiPlus, FiTrash2, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import { apiClient } from '../services/api';
 import { useToastContext } from '../contexts/ToastContext';
@@ -58,6 +59,7 @@ const INTEGRATION_TYPES = [
 export const IntegrationsContent: React.FC = () => <IntegrationsPage embedded />;
 
 export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t } = useTranslation('dashboard');
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -107,7 +109,7 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       setFormName('');
       await loadIntegrations();
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Failed to create integration');
+      showError(error.response?.data?.error || t('dashboard.integrations.createError'));
     } finally {
       setSaving(false);
     }
@@ -120,7 +122,7 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       const res = await apiClient.post(`/integrations/${id}/test`);
       setTestResult({ id, ...res.data });
     } catch (error: any) {
-      setTestResult({ id, success: false, message: error.response?.data?.error || 'Connection failed' });
+      setTestResult({ id, success: false, message: error.response?.data?.error || t('dashboard.integrations.connectionFailed') });
     } finally {
       setTesting(null);
     }
@@ -131,9 +133,9 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       setDeleting(id);
       await apiClient.delete(`/integrations/${id}`);
       setIntegrations(prev => prev.filter(i => i.id !== id));
-      success('Integration deleted successfully');
+      success(t('dashboard.integrations.deleted'));
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Failed to delete integration');
+      showError(error.response?.data?.error || t('dashboard.integrations.deleteError'));
     } finally {
       setDeleting(null);
       setDeleteConfirm(null);
@@ -148,33 +150,33 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       {!embedded && (
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">Integrations</h1>
-            <p className="text-sm text-slate-400 mt-1">Connect bug trackers to create tasks from discovered bugs with one click</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('dashboard.integrations.title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('dashboard.integrations.subtitle')}</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors"
           >
             <FiPlus className="h-4 w-4" />
-            Add Integration
+            {t('dashboard.integrations.add')}
           </button>
         </div>
       )}
 
       {/* Integrations List */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400">Loading integrations...</div>
+        <div className="text-center py-12 text-muted-foreground">{t('dashboard.integrations.loading')}</div>
       ) : integrations.length === 0 ? (
-        <div className="text-center py-16 bg-slate-900 rounded-xl border border-dashed border-slate-700">
-          <FiLink className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No integrations yet</h3>
-          <p className="text-sm text-slate-400 mb-4">Connect Jira, ClickUp, or Linear to push bugs as tasks</p>
+        <div className="text-center py-16 bg-muted rounded-xl border border-dashed border-border">
+          <FiLink className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">{t('dashboard.integrations.emptyTitle')}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{t('dashboard.integrations.emptyDescription')}</p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors"
           >
             <FiPlus className="h-4 w-4" />
-            Add Integration
+            {t('dashboard.integrations.add')}
           </button>
         </div>
       ) : (
@@ -182,29 +184,29 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
           {integrations.map((integration) => {
             const typeInfo = getTypeInfo(integration.type);
             return (
-              <div key={integration.id} className="bg-slate-800 rounded-lg border border-slate-700 p-4 hover:shadow-sm transition-shadow">
+              <div key={integration.id} className="bg-card rounded-lg border border-border p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${typeInfo?.color || 'bg-slate-9000'} flex items-center justify-center text-white font-bold text-sm`}>
+                    <div className={`w-10 h-10 rounded-lg ${typeInfo?.color || 'bg-muted'} flex items-center justify-center text-foreground font-bold text-sm`}>
                       {integration.type === 'jira' ? 'J' : integration.type === 'clickup' ? 'C' : 'L'}
                     </div>
                     <div>
-                      <h3 className="font-medium text-white">{integration.name}</h3>
-                      <p className="text-xs text-slate-400">{typeInfo?.label} &middot; {integration.is_active ? 'Active' : 'Inactive'}</p>
+                      <h3 className="font-medium text-foreground">{integration.name}</h3>
+                      <p className="text-xs text-muted-foreground">{typeInfo?.label} &middot; {integration.is_active ? 'Active' : 'Inactive'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {testResult?.id === integration.id && (
                       <span className={`text-xs px-2 py-1 rounded ${testResult.success ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
-                        {testResult.success ? <FiCheck className="inline mr-1" /> : <FiX className="inline mr-1" />}
+                        {testResult.success ? <FiCheck className="inline me-1" /> : <FiX className="inline me-1" />}
                         {testResult.message}
                       </span>
                     )}
                     <button
                       onClick={() => handleTestConnection(integration.id)}
                       disabled={testing === integration.id}
-                      className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded transition-colors disabled:opacity-50"
-                      title="Test connection"
+                      className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors disabled:opacity-50"
+                      title={t('dashboard.integrations.testConnection')}
                     >
                       <FiRefreshCw className={`h-4 w-4 ${testing === integration.id ? 'animate-spin' : ''}`} />
                     </button>
@@ -212,16 +214,16 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                       onClick={() => setDeleteConfirm(integration.id)}
                       disabled={deleting === integration.id}
                       className="p-2 text-red-500 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors disabled:opacity-50"
-                      title="Delete integration"
+                      title={t('dashboard.integrations.deleteIntegration')}
                     >
                       <FiTrash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-                <div className="mt-2 text-xs text-slate-500">
+                <div className="mt-2 text-xs text-muted-foreground">
                   {integration.config.apiUrl && <span>URL: {integration.config.apiUrl}</span>}
-                  {integration.config.projectKey && <span className="ml-3">Project: {integration.config.projectKey}</span>}
-                  {integration.config.listId && <span className="ml-3">List: {integration.config.listId}</span>}
+                  {integration.config.projectKey && <span className="ms-3">Project: {integration.config.projectKey}</span>}
+                  {integration.config.listId && <span className="ms-3">List: {integration.config.listId}</span>}
                 </div>
               </div>
             );
@@ -233,7 +235,7 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title={selectedType ? `Connect ${selectedType.label}` : 'Add Integration'}
+        title={selectedType ? t('dashboard.integrations.connectType', { type: selectedType.label }) : t('dashboard.integrations.add')}
         size="lg"
       >
         {!selectedType ? (
@@ -246,14 +248,14 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                   setSelectedType(type);
                   setFormName(type.label);
                 }}
-                className="w-full flex items-center gap-4 p-4 rounded-lg border border-slate-700 hover:border-primary-300 hover:bg-primary-900/20 transition-colors text-left"
+                className="w-full flex items-center gap-4 p-4 rounded-lg border border-border hover:border-primary-300 hover:bg-primary-900/20 transition-colors text-start"
               >
-                <div className={`w-12 h-12 rounded-lg ${type.color} flex items-center justify-center text-white font-bold`}>
+                <div className={`w-12 h-12 rounded-lg ${type.color} flex items-center justify-center text-foreground font-bold`}>
                   {type.type === 'jira' ? 'J' : type.type === 'clickup' ? 'C' : 'L'}
                 </div>
                 <div>
-                  <div className="font-medium text-white">{type.label}</div>
-                  <div className="text-sm text-slate-400">{type.description}</div>
+                  <div className="font-medium text-foreground">{type.label}</div>
+                  <div className="text-sm text-muted-foreground">{type.description}</div>
                 </div>
               </button>
             ))}
@@ -262,23 +264,23 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
           /* Config form */
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Name</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{t('dashboard.integrations.nameLabel')}</label>
               <input
                 type="text"
                 value={formName}
                 onChange={e => setFormName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="My Jira Integration"
               />
             </div>
             {selectedType.fields.map((field) => (
               <div key={field.key}>
-                <label className="block text-sm font-medium text-slate-200 mb-1">{field.label}</label>
+                <label className="block text-sm font-medium text-foreground mb-1">{field.label}</label>
                 <input
                   type={field.type}
                   value={formData[field.key] || ''}
                   onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder={field.placeholder}
                 />
               </div>
@@ -296,17 +298,17 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                 setShowAddModal(false);
               }
             }}
-            className="px-4 py-2 text-slate-200 bg-slate-900 rounded-lg hover:bg-slate-700 transition-colors"
+            className="px-4 py-2 text-foreground bg-muted rounded-lg hover:bg-muted/70 transition-colors"
           >
-            {selectedType ? 'Back' : 'Cancel'}
+            {selectedType ? t('dashboard.integrations.back') : t('dashboard.integrations.cancel')}
           </button>
           {selectedType && (
             <button
               onClick={handleAddIntegration}
               disabled={saving || !formName.trim()}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Connecting...' : 'Connect'}
+              {saving ? t('dashboard.integrations.connecting') : t('dashboard.integrations.connect')}
             </button>
           )}
         </ModalFooter>
@@ -315,10 +317,10 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!deleteConfirm}
-        title="Delete Integration"
-        message="Are you sure you want to delete this integration? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('dashboard.integrations.deleteTitle')}
+        message={t('dashboard.integrations.deleteMessage')}
+        confirmText={t('dashboard.integrations.deleteConfirm')}
+        cancelText={t('dashboard.integrations.cancel')}
         variant="danger"
         onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
         onCancel={() => setDeleteConfirm(null)}

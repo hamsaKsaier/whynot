@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { CheckCircle, Loader2, Lock } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,23 +12,28 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AuthShell } from "@/components/layout/AuthShell"
 import { resetPassword } from "@/services/api"
 
-const resetSchema = z
-  .object({
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  })
+function createResetSchema(t: (key: string) => string) {
+  return z
+    .object({
+      newPassword: z.string().min(8, t("auth.common.passwordMinLength")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: t("auth.signup.error.passwordMismatch"),
+      path: ["confirmPassword"],
+    })
+}
 
-type ResetFormData = z.infer<typeof resetSchema>
+type ResetFormData = z.infer<ReturnType<typeof createResetSchema>>
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation("common")
   const [searchParams] = useSearchParams()
   const token = searchParams.get("token") || ""
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+
+  const resetSchema = createResetSchema(t)
 
   const {
     register,
@@ -44,7 +50,7 @@ export function ResetPasswordPage() {
       setSuccess(true)
     } catch (err: any) {
       setServerError(
-        err?.response?.data?.error || err?.message || "Something went wrong"
+        err?.response?.data?.error || err?.message || t("auth.signup.error.generic")
       )
     }
   }
@@ -52,7 +58,7 @@ export function ResetPasswordPage() {
   return (
     <AuthShell>
       <h2 className="mb-4 text-lg font-semibold text-foreground">
-        Reset your password
+        {t("auth.resetPassword.title")}
       </h2>
 
       {success ? (
@@ -61,38 +67,41 @@ export function ResetPasswordPage() {
             <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
             <div>
               <p className="text-sm font-medium text-green-800 dark:text-green-300">
-                Password reset successfully
+                {t("auth.resetPassword.success.title")}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                You can now sign in with your new password.
+                {t("auth.resetPassword.success.description")}
               </p>
             </div>
           </div>
           <Button asChild className="w-full">
-            <Link to="/login">Go to Login</Link>
+            <Link to="/login">{t("auth.resetPassword.success.loginLink")}</Link>
           </Button>
         </div>
       ) : !token ? (
         <div>
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>
-              Invalid reset link. Please request a new password reset.
+              {t("auth.resetPassword.error.invalidLink")}
             </AlertDescription>
           </Alert>
           <Button variant="outline" asChild className="w-full">
-            <Link to="/login">Back to Login</Link>
+            <Link to="/login">{t("auth.resetPassword.error.backToLogin")}</Link>
           </Button>
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="newPassword">New password</Label>
+            <Label htmlFor="newPassword">{t("auth.resetPassword.newPasswordLabel")}</Label>
             <div className="relative">
               <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="newPassword"
                 type="password"
-                placeholder="••••••••"
+                autoComplete="new-password"
+                enterKeyHint="next"
+                autoFocus
+                placeholder={t("auth.common.passwordPlaceholder")}
                 className="ps-10"
                 {...register("newPassword")}
               />
@@ -105,13 +114,15 @@ export function ResetPasswordPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm password</Label>
+            <Label htmlFor="confirmPassword">{t("auth.resetPassword.confirmPasswordLabel")}</Label>
             <div className="relative">
               <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                autoComplete="new-password"
+                enterKeyHint="done"
+                placeholder={t("auth.common.passwordPlaceholder")}
                 className="ps-10"
                 {...register("confirmPassword")}
               />
@@ -129,14 +140,14 @@ export function ResetPasswordPage() {
             </Alert>
           )}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                Resetting…
+                {t("auth.resetPassword.submitting")}
               </>
             ) : (
-              "Reset Password"
+              t("auth.resetPassword.submit")
             )}
           </Button>
         </form>

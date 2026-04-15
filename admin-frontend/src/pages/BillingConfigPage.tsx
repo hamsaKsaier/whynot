@@ -258,7 +258,7 @@ export function BillingConfigPage() {
           ) : (
             <div className="space-y-3">
               {paygRates.map((rate, i) => (
-                <div key={i} className="flex items-end gap-3">
+                <div key={i} className="flex flex-col sm:flex-row sm:items-end gap-3">
                   <div className="flex-1 space-y-1">
                     {i === 0 && <Label>{t('admin.billingConfig.eventType')}</Label>}
                     <Input
@@ -267,7 +267,7 @@ export function BillingConfigPage() {
                       placeholder="test_execution"
                     />
                   </div>
-                  <div className="w-40 space-y-1">
+                  <div className="w-full sm:w-40 space-y-1">
                     {i === 0 && <Label>{t('admin.billingConfig.costCents')}</Label>}
                     <Input
                       value={rate.costCents}
@@ -279,7 +279,7 @@ export function BillingConfigPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => removePaygRate(i)}
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive self-end"
                   >
                     {t('admin.billingConfig.remove')}
                   </Button>

@@ -36,7 +36,7 @@ export const Select: React.FC<SelectProps> = ({
       {label && (
         <label htmlFor={selectId} className="block text-sm font-medium text-slate-200 mb-1">
           {label}
-          {required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
+          {required && <span className="text-red-500 ms-1" aria-label="required">*</span>}
         </label>
       )}
       <select

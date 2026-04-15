@@ -1,5 +1,6 @@
 {
   "admin.nav.title": "Admin",
+  "admin.nav.superadminTitle": "Super Admin",
   "admin.nav.dashboard": "Panel",
   "admin.nav.users": "Usuarios",
   "admin.nav.organizations": "Organizaciones",
@@ -125,7 +126,6 @@
   "admin.aiProviders.providerDesc.anthropic": "Modelos Claude Opus, Sonnet y Haiku.",
   "admin.aiProviders.providerDesc.google": "Gemini Pro y otros modelos de Google AI.",
   "admin.aiProviders.providerDesc.openrouter": "Pasarela multi-proveedor para varios modelos.",
-
   "admin.audit.title": "Registro de auditoría",
   "admin.audit.time": "Hora",
   "admin.audit.actor": "Actor",
@@ -135,7 +135,6 @@
   "admin.audit.allActions": "Todas las acciones",
   "admin.audit.empty": "No se encontraron entradas de auditoría",
   "admin.audit.page": "Página",
-
   "admin.analytics.title": "Analítica",
   "admin.analytics.dau": "UAD",
   "admin.analytics.mau": "UAM",
@@ -149,7 +148,6 @@
   "admin.analytics.creditUsage": "Uso de créditos (últimos 30 días)",
   "admin.analytics.cancellations": "Cancelaciones (últimos 90 días)",
   "admin.analytics.noCancellations": "Sin cancelaciones en este período",
-
   "admin.announcements.pageTitle": "Anuncios",
   "admin.announcements.title": "Título",
   "admin.announcements.type": "Tipo",
@@ -175,7 +173,6 @@
   "admin.announcements.deleteTitle": "Eliminar anuncio",
   "admin.announcements.deleteConfirm": "¿Está seguro de que desea eliminar este anuncio? Esta acción no se puede deshacer.",
   "admin.announcements.deleteBtn": "Eliminar",
-
   "admin.usage.title": "Seguimiento de uso",
   "admin.usage.noData": "No hay datos de uso disponibles aún",
   "admin.usage.overviewTab": "Resumen",

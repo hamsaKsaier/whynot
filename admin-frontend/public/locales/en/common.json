@@ -1,6 +1,7 @@
 {
   "admin": {
     "nav": {
+      "superadminTitle": "Super Admin",
       "dashboard": "Dashboard",
       "analytics": "Analytics",
       "users": "Users",
@@ -42,14 +43,29 @@
       "search": "Search...",
       "noData": "No data found",
       "loading": "Loading...",
+      "processing": "Processing...",
       "actions": "Actions",
       "selected": "{{count}} selected",
       "clear": "Clear",
       "previousPage": "Previous page",
       "nextPage": "Next page",
+      "selectAll": "Select all",
+      "selectRow": "Select row {{id}}",
       "pageOf": "Page {{current}} of {{total}}",
       "signOut": "Sign out",
-      "typeToConfirm": "Type {{text}} to confirm"
+      "typeToConfirm": "Type {{text}} to confirm",
+      "apply": "Apply",
+      "from": "From",
+      "to": "To",
+      "selectDateRange": "Select date range",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "last90Days": "Last 90 days",
+        "thisYear": "This year"
+      },
+      "logoAlt": "WhyNot — AI QA platform"
     },
     "login": {
       "title": "Admin Login",
@@ -78,7 +94,14 @@
       },
       "subscribers": "{{count}} subscribers",
       "noUsers": "No users yet",
-      "noSubscriptionData": "No subscription data"
+      "noSubscriptionData": "No subscription data",
+      "creditsLabel": "credits",
+      "quickActions": {
+        "users": "Users",
+        "plans": "Plans",
+        "analytics": "Analytics",
+        "settings": "Settings"
+      }
     },
     "users": {
       "title": "Users",
@@ -334,6 +357,27 @@
       "banned": "Banned",
       "suspended": "Suspended",
       "expired": "Expired"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Page Not Found",
+        "description": "The page you're looking for doesn't exist or has been moved."
+      },
+      "serverError": {
+        "title": "Server Error",
+        "description": "Something went wrong on our end. Please try again later."
+      },
+      "forbidden": {
+        "title": "Access Forbidden",
+        "description": "You don't have permission to access this area. Super administrator access is required."
+      },
+      "accessDenied": {
+        "title": "Access Denied",
+        "description": "This area is restricted to super administrators. Contact your administrator if you believe this is an error.",
+        "goToAdmin": "Go to Admin Panel"
+      },
+      "backHome": "Back to Dashboard",
+      "backToLogin": "Back to Login"
     }
   }
 }

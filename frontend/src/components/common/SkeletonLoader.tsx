@@ -15,7 +15,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   count = 1,
   circle = false,
 }) => {
-  const baseClasses = 'bg-slate-700 rounded animate-pulse';
+  const baseClasses = 'bg-muted rounded animate-pulse';
   const shapeClasses = circle ? 'rounded-full' : 'rounded';
   
   const skeletonItems = Array.from({ length: count }).map((_, index) => (

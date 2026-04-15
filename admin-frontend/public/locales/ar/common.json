@@ -1,6 +1,7 @@
 {
   "admin": {
     "nav": {
+      "superadminTitle": "المسؤول الأعلى",
       "dashboard": "لوحة التحكم",
       "analytics": "التحليلات",
       "users": "المستخدمون",
@@ -42,14 +43,29 @@
       "search": "بحث...",
       "noData": "لا توجد بيانات",
       "loading": "جارٍ التحميل...",
+      "processing": "جارٍ المعالجة...",
       "actions": "الإجراءات",
       "selected": "{{count}} محدد",
       "clear": "مسح",
       "previousPage": "الصفحة السابقة",
       "nextPage": "الصفحة التالية",
+      "selectAll": "تحديد الكل",
+      "selectRow": "تحديد الصف {{id}}",
       "pageOf": "الصفحة {{current}} من {{total}}",
       "signOut": "تسجيل الخروج",
-      "typeToConfirm": "اكتب {{text}} للتأكيد"
+      "typeToConfirm": "اكتب {{text}} للتأكيد",
+      "apply": "تطبيق",
+      "from": "من",
+      "to": "إلى",
+      "selectDateRange": "تحديد نطاق التاريخ",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "آخر 7 أيام",
+        "last30Days": "آخر 30 يومًا",
+        "last90Days": "آخر 90 يومًا",
+        "thisYear": "هذا العام"
+      },
+      "logoAlt": "WhyNot — منصة ضمان الجودة بالذكاء الاصطناعي"
     },
     "login": {
       "title": "تسجيل دخول المسؤول",
@@ -78,7 +94,14 @@
       },
       "subscribers": "{{count}} مشترك",
       "noUsers": "لا يوجد مستخدمون بعد",
-      "noSubscriptionData": "لا توجد بيانات اشتراكات"
+      "noSubscriptionData": "لا توجد بيانات اشتراكات",
+      "creditsLabel": "أرصدة",
+      "quickActions": {
+        "users": "المستخدمون",
+        "plans": "الخطط",
+        "analytics": "التحليلات",
+        "settings": "الإعدادات"
+      }
     },
     "users": {
       "title": "المستخدمون",
@@ -334,6 +357,27 @@
       "banned": "محظور",
       "suspended": "معلّق",
       "expired": "منتهي الصلاحية"
+    },
+    "errors": {
+      "notFound": {
+        "title": "الصفحة غير موجودة",
+        "description": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها."
+      },
+      "serverError": {
+        "title": "خطأ في الخادم",
+        "description": "حدث خطأ ما. يرجى المحاولة مرة أخرى لاحقًا."
+      },
+      "forbidden": {
+        "title": "الوصول محظور",
+        "description": "ليس لديك صلاحية للوصول إلى هذه المنطقة. مطلوب صلاحيات المسؤول الأعلى."
+      },
+      "accessDenied": {
+        "title": "تم رفض الوصول",
+        "description": "هذه المنطقة مخصصة للمسؤولين الأعلى فقط. تواصل مع المسؤول إذا كنت تعتقد أن هذا خطأ.",
+        "goToAdmin": "الانتقال إلى لوحة الإدارة"
+      },
+      "backHome": "العودة إلى لوحة التحكم",
+      "backToLogin": "العودة إلى تسجيل الدخول"
     }
   }
 }

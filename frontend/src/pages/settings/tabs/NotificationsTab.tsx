@@ -107,7 +107,7 @@ export const NotificationsTab: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -115,27 +115,34 @@ export const NotificationsTab: React.FC = () => {
   return (
     <div className="space-y-6 max-w-2xl">
       {categories.map((category) => (
-        <Card key={category.title} className="bg-slate-800/50 border-slate-700">
+        <Card key={category.title} className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">{category.title}</CardTitle>
-            <CardDescription className="text-slate-400">{category.description}</CardDescription>
+            <CardTitle className="text-foreground">{category.title}</CardTitle>
+            <CardDescription className="text-muted-foreground">{category.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {category.items.map((item) => (
               <div
                 key={item.key}
-                className="flex items-center justify-between p-3 rounded-md hover:bg-slate-700/30 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors duration-150 gap-2 sm:gap-4 min-h-[44px]"
               >
-                <div className="flex-1 me-4">
-                  <p className="text-sm font-medium text-white">{item.label}</p>
-                  <p className="text-sm text-slate-400">{item.description}</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{item.label}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
                 </div>
-                <Switch
-                  checked={prefs[item.key]}
-                  onCheckedChange={() => handleToggle(item.key)}
-                  disabled={savingKey === item.key}
-                  className="data-[state=checked]:bg-primary-600"
-                />
+                <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0">
+                  <span className="text-xs text-muted-foreground sm:hidden">
+                    {prefs[item.key]
+                      ? t('settings.notifications.on', { defaultValue: 'On' })
+                      : t('settings.notifications.off', { defaultValue: 'Off' })}
+                  </span>
+                  <Switch
+                    checked={prefs[item.key]}
+                    onCheckedChange={() => handleToggle(item.key)}
+                    disabled={savingKey === item.key}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
               </div>
             ))}
           </CardContent>

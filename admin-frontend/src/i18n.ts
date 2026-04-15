@@ -35,7 +35,7 @@ i18n
       lookupLocalStorage: 'i18nextLng',
       caches: ['localStorage'],
     },
-    ns: ['common', 'admin', 'auth', 'settings'],
+    ns: ['common', 'admin', 'auth', 'settings', 'superadmin'],
     defaultNS: 'common',
   });
 

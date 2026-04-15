@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiList, FiFileText, FiMonitor, FiActivity } from 'react-icons/fi';
 
 export type ExecutionViewTab = 'steps' | 'details' | 'preview' | 'activity';
@@ -16,19 +17,21 @@ export const ExecutionViewTabs: React.FC<ExecutionViewTabsProps> = ({
   hasPreview,
   className = '',
 }) => {
+  const { t } = useTranslation('runner');
+
   const tabs: Array<{
     id: ExecutionViewTab;
     label: string;
     icon: React.ReactNode;
   }> = [
-    { id: 'steps', label: 'Steps', icon: <FiList className="h-4 w-4" /> },
-    { id: 'details', label: 'Details', icon: <FiFileText className="h-4 w-4" /> },
-    ...(hasPreview ? [{ id: 'preview' as ExecutionViewTab, label: 'Preview', icon: <FiMonitor className="h-4 w-4" /> }] : []),
-    { id: 'activity', label: 'Activity', icon: <FiActivity className="h-4 w-4" /> },
+    { id: 'steps', label: t('runner.execution.stepsTab', { defaultValue: 'Steps' }), icon: <FiList className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> },
+    { id: 'details', label: t('runner.execution.detailsTab', { defaultValue: 'Details' }), icon: <FiFileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> },
+    ...(hasPreview ? [{ id: 'preview' as ExecutionViewTab, label: t('runner.execution.previewTab', { defaultValue: 'Preview' }), icon: <FiMonitor className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> }] : []),
+    { id: 'activity', label: t('runner.execution.activityTab', { defaultValue: 'Activity' }), icon: <FiActivity className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> },
   ];
 
   return (
-    <div className={`border-b border-slate-700 bg-slate-800 ${className}`}>
+    <div className={`border-b border-border bg-card ${className}`}>
       <div className="flex overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -37,12 +40,12 @@ export const ExecutionViewTabs: React.FC<ExecutionViewTabsProps> = ({
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={`
-                flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors
+                flex items-center gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors duration-150 min-h-[44px]
                 ${isActive
-                  ? 'border-primary-600 text-primary-600 bg-primary-50'
-                  : 'border-transparent text-slate-400 hover:text-white hover:border-slate-700'
+                  ? 'border-primary text-primary bg-primary/10'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                 }
-                whitespace-nowrap
+                whitespace-nowrap flex-1 justify-center sm:flex-initial sm:justify-start
               `}
             >
               {tab.icon}

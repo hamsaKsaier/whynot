@@ -33,6 +33,8 @@ import {
   FiPackage,
   FiFileText,
   FiActivity,
+  FiFilter,
+  FiMonitor,
 } from 'react-icons/fi';
 import { applyDagreLayout } from '../utils/dagreLayout';
 
@@ -73,7 +75,7 @@ const FILTER_ITEMS: { type: FlowNodeType; label: string; color: string; borderCo
   { type: 'userStory', label: 'User Story', color: 'bg-green-900/200', borderColor: 'border-green-800' },
   { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-800' },
   { type: 'testCase', label: 'Test Case', color: 'bg-sky-900/200', borderColor: 'border-sky-300' },
-  { type: 'testStep', label: 'Test Step', color: 'bg-slate-500', borderColor: 'border-slate-700' },
+  { type: 'testStep', label: 'Test Step', color: 'bg-muted', borderColor: 'border-border' },
 ];
 
 // ─── Stat Pill (inline helper component) ────────────────────────────────────
@@ -86,8 +88,8 @@ const StatPill: React.FC<{
 }> = ({ icon, label, value, colorClass }) => (
   <div className="flex items-center gap-1.5">
     <span className={colorClass}>{icon}</span>
-    <span className="text-slate-400 text-xs">{label}</span>
-    <span className="font-bold text-white text-sm">{value}</span>
+    <span className="text-muted-foreground text-xs">{label}</span>
+    <span className="font-bold text-foreground text-sm">{value}</span>
   </div>
 );
 
@@ -138,6 +140,9 @@ export const ArchitectureFlowPage: React.FC = () => {
   const [visibleTypes, setVisibleTypes] = useState<Set<FlowNodeType>>(
     new Set(['project', 'folder', 'userStory', 'testSuite', 'testCase']),
   );
+
+  // Mobile filter panel toggle
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Folder modal
   const [folderModalOpen, setFolderModalOpen] = useState(false);
@@ -597,30 +602,46 @@ export const ArchitectureFlowPage: React.FC = () => {
   const firstProjectId = flowData.length > 0 ? flowData[0].project.id : null;
 
   return (
-    <div className="w-full flex flex-col -mx-4 sm:-mx-6 -mt-4 sm:-mt-6" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="w-full flex flex-col -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100vh - 56px)' }}>
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-700 bg-slate-800 flex items-center justify-between">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border bg-card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">All Tests</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">All Tests</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Visual map of your testing hierarchy
           </p>
         </div>
-        {firstProjectId && (
-          <Button onClick={() => openCreateFolderModal(firstProjectId)} variant="primary" size="sm">
-            <FiFolderPlus className="inline mr-2" />
-            Create Folder
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setMobileFiltersOpen((p) => !p)}
+            className="p-2 rounded-md border border-border bg-background text-muted-foreground hover:bg-muted transition-colors md:hidden"
+            aria-label="Toggle filters"
+          >
+            <FiFilter className="h-4 w-4" />
+          </button>
+          {firstProjectId && (
+            <Button onClick={() => openCreateFolderModal(firstProjectId)} variant="primary" size="sm">
+              <FiFolderPlus className="inline me-2" />
+              <span className="hidden sm:inline">Create Folder</span>
+              <span className="sm:hidden">Folder</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center gap-6 px-5 py-2.5 bg-slate-900 border-b border-slate-700">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:gap-6 px-4 sm:px-5 py-2 sm:py-2.5 bg-background border-b border-border">
         <StatPill icon={<FiGlobe className="h-3.5 w-3.5" />} label="Projects" value={stats.projects} colorClass="text-sky-500" />
         <StatPill icon={<FiBook className="h-3.5 w-3.5" />} label="Stories" value={stats.stories} colorClass="text-green-500" />
         <StatPill icon={<FiPackage className="h-3.5 w-3.5" />} label="Suites" value={stats.suites} colorClass="text-orange-500" />
         <StatPill icon={<FiFileText className="h-3.5 w-3.5" />} label="Cases" value={stats.cases} colorClass="text-sky-500" />
-        <StatPill icon={<FiActivity className="h-3.5 w-3.5" />} label="Steps" value={stats.steps} colorClass="text-slate-400" />
+        <StatPill icon={<FiActivity className="h-3.5 w-3.5" />} label="Steps" value={stats.steps} colorClass="text-muted-foreground" />
+      </div>
+
+      {/* Mobile small-screen warning */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-xs border-b border-border sm:hidden">
+        <FiMonitor className="h-3.5 w-3.5 flex-shrink-0" />
+        <span>Best viewed on tablet or desktop for full interactivity.</span>
       </div>
 
       {/* Flow canvas */}
@@ -643,37 +664,39 @@ export const ArchitectureFlowPage: React.FC = () => {
         >
           <Controls position="bottom-left" />
           <Background color="#334155" gap={20} size={1} />
-          <MiniMap
-            nodeColor={(node) => MINIMAP_COLORS[node.type || ''] || '#9ca3af'}
-            maskColor="rgba(0,0,0,0.08)"
-            style={{ borderRadius: 8 }}
-          />
+          <div className="hidden md:block">
+            <MiniMap
+              nodeColor={(node) => MINIMAP_COLORS[node.type || ''] || '#9ca3af'}
+              maskColor="rgba(0,0,0,0.08)"
+              style={{ borderRadius: 8 }}
+            />
+          </div>
 
-          {/* Visibility filter panel */}
-          <Panel position="top-right" className="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700">
-            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          {/* Visibility filter panel - hidden on mobile, toggled via button */}
+          <Panel position="top-right" className={`bg-card p-3 rounded-lg shadow-sm border border-border ${mobileFiltersOpen ? 'block' : 'hidden'} md:block`}>
+            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Filters
             </div>
             <div className="space-y-1.5">
               {FILTER_ITEMS.map(({ type, label, color }) => (
                 <label
                   key={type}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1.5 rounded-lg transition-colors text-sm"
+                  className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1.5 rounded-lg transition-colors text-sm"
                   onClick={() => toggleVisibility(type)}
                 >
                   <input
                     type="checkbox"
                     checked={visibleTypes.has(type)}
                     onChange={() => toggleVisibility(type)}
-                    className="rounded border-slate-700 text-slate-400 focus:ring-slate-700"
+                    className="rounded border-border text-muted-foreground focus:ring-border"
                   />
                   <div className={`w-3 h-3 rounded-sm ${color}`} />
-                  <span className="text-slate-200">{label}</span>
+                  <span className="text-foreground">{label}</span>
                 </label>
               ))}
             </div>
-            <div className="mt-2.5 pt-2 border-t border-slate-700">
-              <p className="text-[11px] text-slate-500">
+            <div className="mt-2.5 pt-2 border-t border-border">
+              <p className="text-[11px] text-muted-foreground">
                 Click test cases to expand steps
               </p>
             </div>

@@ -1,5 +1,6 @@
 {
   "billing.title": "Facturation",
+  "billing.subtitle": "Gérez votre abonnement, vos crédits et vos factures",
   "billing.currentPlan": "Forfait actuel",
   "billing.credits.title": "Crédits",
   "billing.credits.balance": "Solde actuel",
@@ -12,7 +13,12 @@
   "billing.plans.current": "Forfait actuel",
   "billing.plans.perMonth": "/mois",
   "billing.plans.perYear": "/an",
+  "billing.plans.contactSales": "Contacter le service commercial",
+  "billing.plans.creditsPerPeriod": "{{credits}} crédits / {{interval}}",
+  "billing.plans.custom": "Personnalisé",
+  "billing.plans.customCredits": "Crédits personnalisés",
   "billing.plans.features": "Fonctionnalités",
+  "billing.plans.freeTrial": "Essai gratuit",
   "billing.invoices.title": "Factures",
   "billing.invoices.date": "Date",
   "billing.invoices.amount": "Montant",
@@ -20,7 +26,7 @@
   "billing.invoices.download": "Télécharger",
   "billing.invoices.empty": "Aucune facture pour le moment",
   "billing.cancel": "Annuler l'abonnement",
-  "billing.cancelConfirm": "Êtes-vous sûr de vouloir annuler ? Vous perdrez l'accès à la fin de votre période de facturation.",
+  "billing.cancelConfirm": "Êtes-vous sûr de vouloir annuler\u00a0? Vous perdrez l'accès à la fin de votre période de facturation.",
   "checkout.title": "Choisissez votre forfait",
   "checkout.subtitle": "Commencez avec un essai gratuit de 14 jours. Pas de carte bancaire requise pour les forfaits BYO.",
   "checkout.tier.byo": "Apportez vos propres clés",
@@ -52,7 +58,7 @@
   "checkout.maxProjects": "{{count}} projets",
   "checkout.payAsYouGo": "Facturation à l'usage",
   "checkout.startTrial": "Démarrer l'essai gratuit",
-  "checkout.processing": "Traitement…",
+  "checkout.processing": "Traitement en cours…",
   "checkout.feature.qaLoop": "Boucle QA",
   "checkout.feature.visualRegression": "Régression visuelle",
   "checkout.feature.webhooks": "Notifications",
@@ -93,5 +99,6 @@
   "billingTab.txnType.admin_grant": "Accordé",
   "billingTab.txnType.admin_revoke": "Révoqué",
   "billingTab.txnType.rollover": "Report",
-  "billingTab.txnType.expiry": "Expiré"
+  "billingTab.txnType.expiry": "Expiré",
+  "billingTab.creditHistory.empty": "Aucune transaction de crédit pour le moment"
 }

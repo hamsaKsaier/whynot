@@ -6,6 +6,7 @@
  * uses cached data after completion.
  */
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,29 +35,30 @@ const AGENT_META: Record<string, { icon: string; label: string }> = {
 };
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation('runner');
   switch (status) {
     case 'done':
       return (
         <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800">
-          <CheckCircle className="h-3 w-3" /> Done
+          <CheckCircle className="h-3 w-3" /> {t('runner.qaLoop.agents.done')}
         </Badge>
       );
     case 'working':
       return (
         <Badge variant="outline" className="gap-1 bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300 border-sky-200 dark:border-sky-800">
-          <Loader2 className="h-3 w-3 animate-spin" /> Working
+          <Loader2 className="h-3 w-3 animate-spin" /> {t('runner.qaLoop.agents.working')}
         </Badge>
       );
     case 'error':
       return (
         <Badge variant="outline" className="gap-1 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800">
-          <AlertTriangle className="h-3 w-3" /> Error
+          <AlertTriangle className="h-3 w-3" /> {t('runner.qaLoop.agents.error')}
         </Badge>
       );
     default:
       return (
         <Badge variant="outline" className="gap-1 text-muted-foreground">
-          <Clock className="h-3 w-3" /> Idle
+          <Clock className="h-3 w-3" /> {t('runner.qaLoop.agents.idle')}
         </Badge>
       );
   }
@@ -100,6 +102,7 @@ interface AgentProgressPanelProps {
 }
 
 export const AgentProgressPanel: React.FC<AgentProgressPanelProps> = ({ sessionId, isRunning }) => {
+  const { t } = useTranslation('runner');
   const [agents, setAgents] = useState<AgentBoardEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -133,7 +136,7 @@ export const AgentProgressPanel: React.FC<AgentProgressPanelProps> = ({ sessionI
     <Card className="mb-4">
       <CardContent className="p-4">
         <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="text-base">{'\uD83E\uDD16'}</span> QA Team
+          <span className="text-base">{'\uD83E\uDD16'}</span> {t('runner.qaLoop.agents.qaTeam')}
           {isRunning && (
             <Badge variant="outline" className="text-xs bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300 border-sky-200 dark:border-sky-800">
               Live

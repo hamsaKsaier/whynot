@@ -1,13 +1,12 @@
 import { Separator } from "@/components/ui/separator"
-
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || "2.0.0"
+import { config } from "@/config"
 
 export function Footer() {
   return (
     <footer className="border-t bg-background">
       <Separator />
       <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground sm:px-6">
-        <span>WhyNot QA v{APP_VERSION}</span>
+        <span>WhyNot QA v{config.appVersion}</span>
         <div className="flex items-center gap-4">
           <a
             href="https://docs.whynot.qa"

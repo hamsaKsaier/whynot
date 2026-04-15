@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AreaChart,
   Area,
@@ -15,14 +16,15 @@ interface VirtualUsersChartProps {
 }
 
 export const VirtualUsersChart: React.FC<VirtualUsersChartProps> = ({ data }) => {
+  const { t } = useTranslation('runner');
   const chartData = data.map((m, i) => ({
     time: i,
     vus: m.vus,
   }));
 
   return (
-    <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
-      <h3 className="text-sm font-medium text-slate-300 mb-3">Virtual Users</h3>
+    <div className="bg-card border border-border rounded-lg p-4">
+      <h3 className="text-sm font-medium text-slate-300 mb-3">{t('runner.performance.virtualUsers')}</h3>
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData}>
@@ -45,7 +47,7 @@ export const VirtualUsersChart: React.FC<VirtualUsersChartProps> = ({ data }) =>
                 fontSize: 12,
               }}
               labelFormatter={(v) => `${v}s`}
-              formatter={(value: any) => [`${value} VUs`, 'Virtual Users']}
+              formatter={(value: any) => [`${value} VUs`, t('runner.performance.virtualUsers')]}
             />
             <Area
               type="monotone"

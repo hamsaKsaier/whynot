@@ -260,7 +260,14 @@
         "example": "5 scans = 1,000 credits"
       }
     },
+    "creditsUnit": "credits",
     "creditPack": "Credit packs start at $10 for 1,000 credits.",
+    "calculator": {
+      "heading": "Credit calculator",
+      "description": "Estimate your monthly credit usage and cost.",
+      "totalCredits": "Total credits:",
+      "estimatedCost": "Estimated cost:"
+    },
     "workedExample": {
       "heading": "Worked example",
       "description": "A typical mid-size team running 50 test generations and 200 test executions per month:",
@@ -283,9 +290,18 @@
     "about": "About",
     "blog": "Blog",
     "contact": "Contact",
+    "resources": "Resources",
+    "docs": "Documentation",
+    "status": "Status",
+    "api": "API",
     "legal": "Legal",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "copyright": "© {{year}} WhyNot. All rights reserved."
+  },
+  "seo": {
+    "title": "WhyNot — Autonomous AI-Powered QA Testing",
+    "description": "Find bugs before your users do. Autonomous AI agents explore your web app, detect bugs, and generate Playwright test code.",
+    "keywords": "AI testing, autonomous QA, bug detection, Playwright, visual regression, test automation"
   }
 }

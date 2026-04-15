@@ -212,45 +212,47 @@ export const UsageTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Date Range Selector */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7d">{t('settings.usage.last7d', { defaultValue: 'Last 7 days' })}</SelectItem>
-            <SelectItem value="30d">{t('settings.usage.last30d', { defaultValue: 'Last 30 days' })}</SelectItem>
-            <SelectItem value="90d">{t('settings.usage.last90d', { defaultValue: 'Last 90 days' })}</SelectItem>
-            <SelectItem value="custom">{t('settings.usage.custom', { defaultValue: 'Custom' })}</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">{t('settings.usage.last7d', { defaultValue: 'Last 7 days' })}</SelectItem>
+              <SelectItem value="30d">{t('settings.usage.last30d', { defaultValue: 'Last 30 days' })}</SelectItem>
+              <SelectItem value="90d">{t('settings.usage.last90d', { defaultValue: 'Last 90 days' })}</SelectItem>
+              <SelectItem value="custom">{t('settings.usage.custom', { defaultValue: 'Custom' })}</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {dateRange === 'custom' && (
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="px-3 py-2 bg-card border border-border rounded-md text-foreground text-sm"
-            />
-            <span className="text-muted-foreground">–</span>
-            <input
-              type="date"
-              value={customTo}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="px-3 py-2 bg-card border border-border rounded-md text-foreground text-sm"
-            />
-          </div>
-        )}
+          {dateRange === 'custom' && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="flex-1 sm:flex-initial px-3 py-2 bg-card border border-border rounded-md text-foreground text-sm"
+              />
+              <span className="text-muted-foreground">–</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="flex-1 sm:flex-initial px-3 py-2 bg-card border border-border rounded-md text-foreground text-sm"
+              />
+            </div>
+          )}
+        </div>
 
-        <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="ms-auto">
+        <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="sm:ms-auto w-full sm:w-auto">
           {exporting ? <Loader2 className="h-4 w-4 me-1 animate-spin" /> : <Download className="h-4 w-4 me-1" />}
           {t('settings.usage.exportCsv', { defaultValue: 'Export CSV' })}
         </Button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3 mb-1">
@@ -363,36 +365,62 @@ export const UsageTab: React.FC = () => {
             </p>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-start">{t('settings.usage.eventTypeCol', { defaultValue: 'Event Type' })}</TableHead>
-                    <TableHead className="text-end">{t('settings.usage.quantity', { defaultValue: 'Qty' })}</TableHead>
-                    <TableHead className="text-end">{t('settings.usage.credits', { defaultValue: 'Credits' })}</TableHead>
-                    <TableHead className="text-start">{t('settings.usage.date', { defaultValue: 'Date' })}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentEvents.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell className="text-start">
-                        <Badge variant="outline" className="gap-1">
-                          <span
-                            className="inline-block h-2 w-2 rounded-full"
-                            style={{ backgroundColor: getEventColor(event.eventType) }}
-                          />
-                          {formatEventType(event.eventType)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-end">{event.quantity}</TableCell>
-                      <TableCell className="text-end text-muted-foreground">{event.creditsConsumed}</TableCell>
-                      <TableCell className="text-start text-muted-foreground text-sm">
-                        {formatDateTime(event.createdAt)}
-                      </TableCell>
+              {/* Desktop: table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-start">{t('settings.usage.eventTypeCol', { defaultValue: 'Event Type' })}</TableHead>
+                      <TableHead className="text-end">{t('settings.usage.quantity', { defaultValue: 'Qty' })}</TableHead>
+                      <TableHead className="text-end">{t('settings.usage.credits', { defaultValue: 'Credits' })}</TableHead>
+                      <TableHead className="text-start">{t('settings.usage.date', { defaultValue: 'Date' })}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {recentEvents.map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell className="text-start">
+                          <Badge variant="outline" className="gap-1">
+                            <span
+                              className="inline-block h-2 w-2 rounded-full"
+                              style={{ backgroundColor: getEventColor(event.eventType) }}
+                            />
+                            {formatEventType(event.eventType)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-end">{event.quantity}</TableCell>
+                        <TableCell className="text-end text-muted-foreground">{event.creditsConsumed}</TableCell>
+                        <TableCell className="text-start text-muted-foreground text-sm">
+                          {formatDateTime(event.createdAt)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile: cards */}
+              <div className="sm:hidden px-4 pb-4 space-y-3">
+                {recentEvents.map((event) => (
+                  <div key={event.id} className="rounded-lg border border-border p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="gap-1">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: getEventColor(event.eventType) }}
+                        />
+                        {formatEventType(event.eventType)}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{formatDateTime(event.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{t('settings.usage.quantity', { defaultValue: 'Qty' })}: {event.quantity}</span>
+                      <span className="text-muted-foreground">{t('settings.usage.credits', { defaultValue: 'Credits' })}: {event.creditsConsumed}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {nextCursor && (
                 <div className="flex justify-center py-4 border-t border-border">
                   <Button variant="ghost" size="sm" onClick={loadMore} disabled={loadingMore}>

@@ -38,18 +38,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className={`bg-slate-800 rounded-lg shadow-xl max-w-md w-full border-2 ${variantStyles[variant]}`}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className={`bg-card rounded-lg shadow-sm max-w-md w-full border-2 ${variantStyles[variant]}`}>
         <div className="p-6">
           <div className="flex items-start mb-4">
-            <FiAlertTriangle className={`h-6 w-6 mr-3 flex-shrink-0 ${
+            <FiAlertTriangle className={`h-6 w-6 me-3 flex-shrink-0 ${
               variant === 'danger' ? 'text-red-600' : 
               variant === 'warning' ? 'text-yellow-600' : 
               'text-blue-600'
             }`} />
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
-              <p className="text-sm text-slate-200">{message}</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+              <p className="text-sm text-muted-foreground">{message}</p>
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">

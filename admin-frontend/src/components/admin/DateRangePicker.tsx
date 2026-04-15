@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Calendar } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -17,13 +18,6 @@ interface DateRangePickerProps {
   className?: string
 }
 
-const presets = [
-  { label: 'Last 7 days', days: 7 },
-  { label: 'Last 30 days', days: 30 },
-  { label: 'Last 90 days', days: 90 },
-  { label: 'This year', days: -1 },
-]
-
 function daysAgo(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() - days)
@@ -39,12 +33,20 @@ function today(): string {
 }
 
 export function DateRangePicker({ value, onChange, className }: DateRangePickerProps) {
+  const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
+
+  const presets = [
+    { label: t('admin.common.presets.last7Days'), days: 7 },
+    { label: t('admin.common.presets.last30Days'), days: 30 },
+    { label: t('admin.common.presets.last90Days'), days: 90 },
+    { label: t('admin.common.presets.thisYear'), days: -1 },
+  ]
 
   const displayLabel =
     value.from && value.to
-      ? `${value.from} — ${value.to}`
-      : 'Select date range'
+      ? t('admin.common.dateRange', { from: value.from, to: value.to })
+      : t('admin.common.selectDateRange')
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -54,7 +56,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
           <span className="text-sm">{displayLabel}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="end">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80" align="end">
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {presets.map((p) => (
@@ -76,7 +78,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>From</Label>
+              <Label>{t('admin.common.from')}</Label>
               <Input
                 type="date"
                 value={value.from}
@@ -84,7 +86,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
               />
             </div>
             <div className="space-y-1">
-              <Label>To</Label>
+              <Label>{t('admin.common.to')}</Label>
               <Input
                 type="date"
                 value={value.to}
@@ -93,7 +95,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
             </div>
           </div>
           <Button size="sm" className="w-full" onClick={() => setOpen(false)}>
-            Apply
+            {t('admin.common.apply')}
           </Button>
         </div>
       </PopoverContent>

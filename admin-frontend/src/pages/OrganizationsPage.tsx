@@ -95,6 +95,7 @@ export function OrganizationsPage() {
     {
       key: 'plan',
       header: t('admin.organizations.columns.plan', 'Plan'),
+      hideOnMobile: true,
       render: (row) => <span className="text-muted-foreground">{row.planName || '-'}</span>,
     },
     {
@@ -106,11 +107,13 @@ export function OrganizationsPage() {
       key: 'credits',
       header: t('admin.organizations.columns.credits', 'Credits'),
       className: 'text-end',
+      hideOnMobile: true,
       render: (row) => <span className="font-medium">{row.credits}</span>,
     },
     {
       key: 'created_at',
       header: t('admin.organizations.columns.created', 'Created'),
+      hideOnMobile: true,
       render: (row) => (
         <span className="text-muted-foreground">
           {Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(row.createdAt))}

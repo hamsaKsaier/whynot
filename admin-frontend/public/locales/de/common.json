@@ -1,6 +1,7 @@
 {
   "admin": {
     "nav": {
+      "superadminTitle": "Super-Admin",
       "dashboard": "Dashboard",
       "analytics": "Analysen",
       "users": "Benutzer",
@@ -13,12 +14,12 @@
       "featureFlags": "Feature-Flags",
       "billingConfig": "Abrechnungskonfiguration",
       "aiProviders": "KI-Anbieter",
+      "organizations": "Organisationen",
       "usageTracking": "Nutzungsverfolgung",
       "usage": "Nutzung",
       "management": "Verwaltung",
       "system": "System",
       "comingSoon": "Demnächst verfügbar",
-      "organizations": "Organisationen",
       "sections": {
         "platform": "Plattform",
         "billing": "Abrechnung",
@@ -42,14 +43,29 @@
       "search": "Suchen...",
       "noData": "Keine Daten gefunden",
       "loading": "Wird geladen...",
+      "processing": "Wird verarbeitet...",
       "actions": "Aktionen",
       "selected": "{{count}} ausgewählt",
       "clear": "Zurücksetzen",
       "previousPage": "Vorherige Seite",
       "nextPage": "Nächste Seite",
+      "selectAll": "Alle auswählen",
+      "selectRow": "Zeile {{id}} auswählen",
       "pageOf": "Seite {{current}} von {{total}}",
       "signOut": "Abmelden",
-      "typeToConfirm": "Geben Sie {{text}} zur Bestätigung ein"
+      "typeToConfirm": "Geben Sie {{text}} zur Bestätigung ein",
+      "apply": "Anwenden",
+      "from": "Von",
+      "to": "Bis",
+      "selectDateRange": "Zeitraum auswählen",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "Letzte 7 Tage",
+        "last30Days": "Letzte 30 Tage",
+        "last90Days": "Letzte 90 Tage",
+        "thisYear": "Dieses Jahr"
+      },
+      "logoAlt": "WhyNot — KI-gestützte QA-Plattform"
     },
     "login": {
       "title": "Admin-Anmeldung",
@@ -78,7 +94,14 @@
       },
       "subscribers": "{{count}} Abonnenten",
       "noUsers": "Noch keine Benutzer",
-      "noSubscriptionData": "Keine Abonnementdaten"
+      "noSubscriptionData": "Keine Abonnementdaten",
+      "creditsLabel": "Guthaben",
+      "quickActions": {
+        "users": "Benutzer",
+        "plans": "Tarife",
+        "analytics": "Analytik",
+        "settings": "Einstellungen"
+      }
     },
     "users": {
       "title": "Benutzer",
@@ -118,22 +141,62 @@
         "audit": "Prüfprotokoll"
       },
       "role": "Rolle",
+      "id": "ID",
+      "joined": "Beigetreten",
       "grantCredits": "Gewähren",
       "revokeCredits": "Entziehen",
       "amount": "Betrag",
       "description": "Beschreibung",
-      "notFound": "Benutzer nicht gefunden.",
-      "id": "ID",
-      "joined": "Beigetreten",
       "reason": "Grund...",
-      "noPlan": "Kein Plan",
+      "notFound": "Benutzer nicht gefunden.",
+      "noPlan": "Kein Tarif",
       "credits": "Guthaben",
-      "forcePlan": "Plan erzwingen",
-      "selectPlan": "Plan auswählen",
-      "choosePlan": "Plan auswählen...",
-      "applyPlan": "Plan anwenden",
+      "forcePlan": "Tarif erzwingen",
+      "selectPlan": "Tarif auswählen",
+      "choosePlan": "Tarif auswählen...",
+      "applyPlan": "Tarif anwenden",
       "flagOverrides": "Feature-Flag-Überschreibungen",
       "noFlags": "Keine Flag-Überschreibungen für den Arbeitsbereich dieses Benutzers."
+    },
+    "organizations": {
+      "title": "Organisationen",
+      "totalOrgs": "{{count}} Organisationen",
+      "searchPlaceholder": "Nach Name suchen...",
+      "noOrgsFound": "Keine Organisationen gefunden",
+      "notFound": "Organisation nicht gefunden.",
+      "backToOrgs": "Zurück zu Organisationen",
+      "noMembers": "Keine Mitglieder gefunden",
+      "columns": {
+        "name": "Name",
+        "owner": "Besitzer",
+        "plan": "Tarif",
+        "status": "Status",
+        "credits": "Guthaben",
+        "created": "Erstellt"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "Übersicht",
+        "members": "Mitglieder",
+        "subscription": "Abonnement",
+        "flags": "Flags",
+        "audit": "Prüfprotokoll"
+      },
+      "details": "Organisationsdetails",
+      "name": "Name",
+      "id": "ID",
+      "owner": "Besitzer",
+      "created": "Erstellt",
+      "credits": "Guthaben",
+      "plan": "Tarif",
+      "status": "Status",
+      "selectPlan": "Tarif auswählen...",
+      "subscriptionDetails": "Abonnementdetails",
+      "periodEnd": "Periodenende",
+      "trialEnd": "Testende",
+      "flagOverrides": "Feature-Flag-Überschreibungen",
+      "noFlagOverrides": "Keine Flag-Überschreibungen für diese Organisation."
     },
     "plans": {
       "title": "Tarife",
@@ -285,46 +348,6 @@
         "schedule": "Zeitplan"
       }
     },
-    "organizations": {
-      "title": "Organisationen",
-      "totalOrgs": "{{count}} Organisationen",
-      "searchPlaceholder": "Nach Name suchen...",
-      "noOrgsFound": "Keine Organisationen gefunden",
-      "notFound": "Organisation nicht gefunden.",
-      "backToOrgs": "Zurück zu Organisationen",
-      "noMembers": "Keine Mitglieder gefunden",
-      "columns": {
-        "name": "Name",
-        "owner": "Besitzer",
-        "plan": "Plan",
-        "status": "Status",
-        "credits": "Guthaben",
-        "created": "Erstellt"
-      }
-    },
-    "orgDetail": {
-      "tabs": {
-        "overview": "Übersicht",
-        "members": "Mitglieder",
-        "subscription": "Abonnement",
-        "flags": "Flags",
-        "audit": "Prüfprotokoll"
-      },
-      "details": "Organisationsdetails",
-      "name": "Name",
-      "id": "ID",
-      "owner": "Besitzer",
-      "created": "Erstellt",
-      "credits": "Guthaben",
-      "plan": "Plan",
-      "status": "Status",
-      "selectPlan": "Plan auswählen...",
-      "subscriptionDetails": "Abonnementdetails",
-      "periodEnd": "Periodenende",
-      "trialEnd": "Testende",
-      "flagOverrides": "Feature-Flag-Überschreibungen",
-      "noFlagOverrides": "Keine Flag-Überschreibungen für diese Organisation."
-    },
     "status": {
       "active": "Aktiv",
       "trialing": "Testzeitraum",
@@ -334,6 +357,27 @@
       "banned": "Gesperrt",
       "suspended": "Gesperrt",
       "expired": "Abgelaufen"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Seite nicht gefunden",
+        "description": "Die gesuchte Seite existiert nicht oder wurde verschoben."
+      },
+      "serverError": {
+        "title": "Serverfehler",
+        "description": "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut."
+      },
+      "forbidden": {
+        "title": "Zugriff verboten",
+        "description": "Sie haben keine Berechtigung für diesen Bereich. Super-Administratorzugang erforderlich."
+      },
+      "accessDenied": {
+        "title": "Zugriff verweigert",
+        "description": "Dieser Bereich ist Super-Administratoren vorbehalten. Kontaktieren Sie Ihren Administrator, wenn Sie glauben, dass dies ein Fehler ist.",
+        "goToAdmin": "Zum Admin-Panel"
+      },
+      "backHome": "Zurück zum Dashboard",
+      "backToLogin": "Zurück zur Anmeldung"
     }
   }
 }

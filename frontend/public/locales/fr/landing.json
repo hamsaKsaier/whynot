@@ -24,7 +24,7 @@
       "soc2": "Conforme SOC 2",
       "dataPrivacy": "Données chiffrées au repos",
       "moneyBack": "Garantie de remboursement 30 jours",
-      "uptime": "SLA de disponibilité 99,9 %"
+      "uptime": "SLA de disponibilité 99,9\u00a0%"
     },
     "stats": {
       "bugsFound": "Bugs trouvés",
@@ -126,27 +126,27 @@
     "subheading": "Tout ce que vous devez savoir sur WhyNot.",
     "items": {
       "howItWorks": {
-        "question": "Comment WhyNot trouve-t-il les bugs automatiquement ?",
+        "question": "Comment WhyNot trouve-t-il les bugs automatiquement\u00a0?",
         "answer": "WhyNot déploie des agents IA autonomes qui naviguent dans votre application comme de vrais utilisateurs. Ils cliquent sur les boutons, remplissent les formulaires, explorent les parcours de navigation et surveillent les erreurs console, les mises en page cassées, les appels API échoués et les régressions visuelles — le tout sans écrire une seule ligne de code de test."
       },
       "integration": {
-        "question": "Comment intégrer WhyNot avec mon application ?",
+        "question": "Comment intégrer WhyNot avec mon application\u00a0?",
         "answer": "Fournissez simplement l'URL de votre application. WhyNot fonctionne avec toute application web, quelle que soit la stack technique — React, Vue, Angular, Next.js, Django, Rails, Laravel, WordPress ou tout autre framework. Aucun SDK ni modification de code nécessaire."
       },
       "pricing": {
-        "question": "Y a-t-il une offre gratuite ?",
-        "answer": "Oui ! Notre offre gratuite comprend 50 exécutions de tests par mois, jusqu'à 3 projets et un accès complet à la détection de bugs par IA et à la génération de code Playwright. Aucune carte bancaire nécessaire."
+        "question": "Y a-t-il une offre gratuite\u00a0?",
+        "answer": "Oui\u00a0! Notre offre gratuite comprend 50 exécutions de tests par mois, jusqu'à 3 projets et un accès complet à la détection de bugs par IA et à la génération de code Playwright. Aucune carte bancaire nécessaire."
       },
       "security": {
-        "question": "Les données de mon application sont-elles sécurisées ?",
+        "question": "Les données de mon application sont-elles sécurisées\u00a0?",
         "answer": "Absolument. WhyNot exécute les tests dans des sandboxes de navigateur isolés. Nous ne stockons jamais les données de votre application, vos identifiants ou les informations utilisateur. Toutes les connexions sont chiffrées avec TLS et nous sommes conformes SOC 2."
       },
       "accuracy": {
-        "question": "Quelle est la précision de la détection des bugs ?",
-        "answer": "Notre IA atteint un taux de précision de 99,2 % avec très peu de faux positifs. Chaque bug signalé comprend des captures d'écran, des logs console, des traces réseau et du code Playwright généré pour que vous puissiez vérifier et reproduire instantanément."
+        "question": "Quelle est la précision de la détection des bugs\u00a0?",
+        "answer": "Notre IA atteint un taux de précision de 99,2\u00a0% avec très peu de faux positifs. Chaque bug signalé comprend des captures d'écran, des logs console, des traces réseau et du code Playwright généré pour que vous puissiez vérifier et reproduire instantanément."
       }
     },
-    "contactText": "Encore des questions ?",
+    "contactText": "Encore des questions\u00a0?",
     "contactLink": "Contactez-nous"
   },
   "cta": {
@@ -169,8 +169,8 @@
     "placeholder": "Entrez votre email professionnel",
     "ariaLabel": "Adresse email",
     "cta": "Commencer gratuitement",
-    "sending": "Envoi en cours...",
-    "success": "Merci ! Nous vous contacterons bientôt.",
+    "sending": "Envoi en cours…",
+    "success": "Merci\u00a0! Nous vous contacterons bientôt.",
     "error": "Une erreur est survenue. Veuillez réessayer.",
     "invalidEmail": "Veuillez entrer une adresse email valide.",
     "rateLimited": "Trop de tentatives. Veuillez réessayer plus tard."
@@ -233,11 +233,11 @@
     "events": {
       "test_generation": {
         "name": "Génération de tests",
-        "example": "Générer 20 tests = 1 000 crédits"
+        "example": "Générer 20 tests = 1\u00a0000 crédits"
       },
       "test_execution": {
         "name": "Exécution de tests",
-        "example": "Exécuter 100 tests = 1 000 crédits"
+        "example": "Exécuter 100 tests = 1\u00a0000 crédits"
       },
       "qa_loop_iteration": {
         "name": "Itération de boucle QA",
@@ -245,7 +245,7 @@
       },
       "auto_fix_attempt": {
         "name": "Tentative de correction auto",
-        "example": "10 corrections = 1 000 crédits"
+        "example": "10 corrections = 1\u00a0000 crédits"
       },
       "visual_regression": {
         "name": "Régression visuelle",
@@ -253,24 +253,31 @@
       },
       "qa_monitor_session": {
         "name": "Session de monitoring QA",
-        "example": "5 sessions = 1 000 crédits"
+        "example": "5 sessions = 1\u00a0000 crédits"
       },
       "ci_scan": {
         "name": "Scan CI",
-        "example": "5 scans = 1 000 crédits"
+        "example": "5 scans = 1\u00a0000 crédits"
       }
     },
-    "creditPack": "Les packs de crédits commencent à 10 $ pour 1 000 crédits.",
+    "creditsUnit": "crédits",
+    "creditPack": "Les packs de crédits commencent à 10\u00a0$ pour 1\u00a0000 crédits.",
+    "calculator": {
+      "heading": "Calculateur de crédits",
+      "description": "Estimez votre consommation mensuelle de crédits et son coût.",
+      "totalCredits": "Total des crédits\u00a0:",
+      "estimatedCost": "Coût estimé\u00a0:"
+    },
     "workedExample": {
       "heading": "Exemple concret",
-      "description": "Une équipe moyenne exécutant 50 générations de tests et 200 exécutions par mois :",
+      "description": "Une équipe moyenne exécutant 50 générations de tests et 200 exécutions par mois\u00a0:",
       "items": [
-        "50 × génération de tests (50 crédits) = 2 500 crédits",
-        "200 × exécution de tests (10 crédits) = 2 000 crédits",
-        "10 × tentatives de correction auto (100 crédits) = 1 000 crédits"
+        "50 × génération de tests (50 crédits) = 2\u00a0500 crédits",
+        "200 × exécution de tests (10 crédits) = 2\u00a0000 crédits",
+        "10 × tentatives de correction auto (100 crédits) = 1\u00a0000 crédits"
       ],
-      "total": "Total : 5 500 crédits ≈ 55 $/mois",
-      "note": "Plus l'abonnement de base à 49 $/mois."
+      "total": "Total\u00a0: 5\u00a0500 crédits ≈ 55\u00a0$/mois",
+      "note": "Plus l'abonnement de base à 49\u00a0$/mois."
     }
   },
   "footer": {
@@ -283,9 +290,18 @@
     "about": "À propos",
     "blog": "Blog",
     "contact": "Contact",
+    "resources": "Ressources",
+    "docs": "Documentation",
+    "status": "Statut",
+    "api": "API",
     "legal": "Mentions légales",
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation",
     "copyright": "© {{year}} WhyNot. Tous droits réservés."
+  },
+  "seo": {
+    "title": "WhyNot — Tests QA autonomes propulsés par l'IA",
+    "description": "Trouvez les bugs avant vos utilisateurs. Des agents IA autonomes explorent votre application web, détectent les bugs et génèrent du code de test Playwright.",
+    "keywords": "tests IA, QA autonome, détection de bugs, Playwright, régression visuelle, automatisation des tests"
   }
 }

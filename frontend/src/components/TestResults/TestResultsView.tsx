@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, XCircle, Clock, Image, Pencil, Eye } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -28,6 +29,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
   onViewScreenshots,
   onStepFix,
 }) => {
+  const { t } = useTranslation('results');
   const [selectedComparison, setSelectedComparison] = useState<any>(null);
   const [comparisonModalOpen, setComparisonModalOpen] = useState(false);
   const [visualComparisons, setVisualComparisons] = useState<Record<string, any>>({});
@@ -84,7 +86,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle className="text-lg">Test Results</CardTitle>
+        <CardTitle className="text-lg">{t('results.title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Summary */}
@@ -93,7 +95,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground font-medium">Test Name</p>
+                  <p className="text-sm text-muted-foreground font-medium">{t('results.testName')}</p>
                   <p className="text-lg font-bold text-foreground mt-1">
                     {testCase?.name || 'N/A'}
                   </p>
@@ -107,7 +109,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-green-400 font-medium">Success Rate</p>
+                  <p className="text-sm text-green-400 font-medium">{t('results.successRate')}</p>
                   <p className="text-lg font-bold text-foreground mt-1">
                     {successRate.toFixed(0)}%
                   </p>
@@ -121,7 +123,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-blue-400 font-medium">Total Steps</p>
+                  <p className="text-sm text-blue-400 font-medium">{t('results.totalSteps')}</p>
                   <p className="text-lg font-bold text-foreground mt-1">
                     {totalSteps}
                   </p>
@@ -135,7 +137,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground font-medium">Duration</p>
+                  <p className="text-sm text-muted-foreground font-medium">{t('results.duration')}</p>
                   <p className="text-lg font-bold text-foreground mt-1">
                     {(executionResult.total_duration_ms / 1000).toFixed(2)}s
                   </p>
@@ -149,18 +151,18 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
         {/* Status and Actions */}
         <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Status:</span>
+            <span className="text-sm text-muted-foreground">{t('results.status')}:</span>
             <Badge variant={statusInfo.variant} className={statusInfo.className}>
               {statusInfo.label}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              {passedSteps} passed, {failedSteps} failed
+              {t('results.passedFailed', { passed: passedSteps, failed: failedSteps })}
             </span>
           </div>
           {executionResult.screenshots.length > 0 && (
             <Button variant="outline" size="sm" onClick={onViewScreenshots}>
               <Image className="h-4 w-4 me-2" />
-              View Screenshots ({executionResult.screenshots.length})
+              {t('results.viewScreenshots', { count: executionResult.screenshots.length })}
             </Button>
           )}
         </div>
@@ -169,7 +171,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
 
         {/* Step-by-Step Results */}
         <div>
-          <h4 className="font-semibold text-foreground mb-3">Step-by-Step Results</h4>
+          <h4 className="font-semibold text-foreground mb-3">{t('results.stepByStepResults')}</h4>
           <div className="space-y-2">
             {executionResult.steps.map((step, index) => {
               const correspondingStep = testCase?.steps.find(s => s.id === step.step_id);
@@ -203,17 +205,17 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                       </div>
                       {correspondingStep && (
                         <p className="text-sm text-muted-foreground mb-2">
-                          Action: <span className="font-medium capitalize">{correspondingStep.action}</span>
+                          {t('results.action')}: <span className="font-medium capitalize">{correspondingStep.action}</span>
                         </p>
                       )}
                       {step.error && (
                         <div className="mt-2 p-2 bg-destructive/10 rounded text-sm text-destructive">
-                          <strong>Error:</strong> {step.error}
+                          <strong>{t('results.error')}:</strong> {step.error}
                         </div>
                       )}
                       {step.selector_used && (
                         <div className="mt-2 text-xs text-muted-foreground">
-                          <span className="font-medium">Selector used:</span> {step.selector_used.type} - {step.selector_used.value}
+                          <span className="font-medium">{t('results.selectorUsed')}:</span> {step.selector_used.type} - {step.selector_used.value}
                         </div>
                       )}
                       {/* Visual Regression Indicator */}
@@ -235,7 +237,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                                 <div className="flex items-center gap-2">
                                   <Eye className="h-4 w-4" />
                                   <span className="text-sm font-medium">
-                                    Visual Regression ({severity.toUpperCase()})
+                                    {t('results.visualRegressionLabel', { severity: severity.toUpperCase() })}
                                   </span>
                                 </div>
                                 <Button
@@ -244,7 +246,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                                   className="h-auto p-0 text-xs"
                                   onClick={() => handleViewVisualComparison(step.step_id)}
                                 >
-                                  View Details
+                                  {t('results.viewDetails')}
                                 </Button>
                               </div>
                               {comparison?.differences && comparison.differences.length > 0 && (
@@ -269,8 +271,8 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
                             e.stopPropagation();
                             onStepFix(testCase, index, correspondingStep);
                           }}
-                          title="Fix or modify this step"
-                          aria-label="Fix or modify this step"
+                          title={t('results.fixStep')}
+                          aria-label={t('results.fixStep')}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -302,7 +304,7 @@ export const TestResultsView: React.FC<TestResultsViewProps> = ({
         {/* Error Summary */}
         {executionResult.error && (
           <div className="p-4 bg-destructive/10 border border-destructive/50 rounded-lg">
-            <h4 className="font-semibold text-destructive mb-2">Execution Error</h4>
+            <h4 className="font-semibold text-destructive mb-2">{t('results.executionError')}</h4>
             <p className="text-sm text-destructive">{executionResult.error}</p>
           </div>
         )}

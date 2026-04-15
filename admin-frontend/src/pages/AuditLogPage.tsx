@@ -209,6 +209,7 @@ export function AuditLogPage() {
     {
       key: 'target',
       header: t('admin.audit.target', 'Target'),
+      hideOnMobile: true,
       render: (r) =>
         r.target_type ? (
           <code className="text-xs">{r.target_type}:{r.target_id?.slice(0, 8)}</code>
@@ -219,6 +220,7 @@ export function AuditLogPage() {
     {
       key: 'details',
       header: t('admin.audit.details', 'Details'),
+      hideOnMobile: true,
       render: (r) => <DetailsCell details={r.details} />,
     },
   ]

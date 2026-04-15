@@ -83,45 +83,47 @@ export const ProfileTab: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">{t('settings.profile.title', { defaultValue: 'Profile Information' })}</CardTitle>
-          <CardDescription className="text-slate-400">{t('settings.profile.description', { defaultValue: 'Update your name and email address' })}</CardDescription>
+          <CardTitle className="text-foreground">{t('settings.profile.title', { defaultValue: 'Profile Information' })}</CardTitle>
+          <CardDescription className="text-muted-foreground">{t('settings.profile.description', { defaultValue: 'Update your name and email address' })}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSaveProfile} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                {t('settings.profile.name', { defaultValue: 'Full name' })}
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
-                required
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  {t('settings.profile.name', { defaultValue: 'Full name' })}
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  {t('settings.profile.email', { defaultValue: 'Email address' })}
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                {t('settings.profile.email', { defaultValue: 'Email address' })}
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
-                required
-              />
-            </div>
-            <Button type="submit" disabled={saving} className="gap-2">
+            <Button type="submit" disabled={saving} className="gap-2 w-full sm:w-auto">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiSave className="h-4 w-4" />}
               {t('settings.profile.save', { defaultValue: 'Save changes' })}
             </Button>
@@ -129,15 +131,15 @@ export const ProfileTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">{t('settings.profile.changePassword', { defaultValue: 'Change Password' })}</CardTitle>
-          <CardDescription className="text-slate-400">{t('settings.profile.changePasswordDesc', { defaultValue: 'Update your password. You must provide your current password.' })}</CardDescription>
+          <CardTitle className="text-foreground">{t('settings.profile.changePassword', { defaultValue: 'Change Password' })}</CardTitle>
+          <CardDescription className="text-muted-foreground">{t('settings.profile.changePasswordDesc', { defaultValue: 'Update your password. You must provide your current password.' })}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {t('settings.profile.currentPassword', { defaultValue: 'Current password' })}
               </label>
               <div className="relative">
@@ -145,20 +147,20 @@ export const ProfileTab: React.FC = () => {
                   type={showCurrentPassword ? 'text' : 'password'}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3 py-2 pe-10 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+                  className="w-full px-3 py-2 pe-10 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showCurrentPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {t('settings.profile.newPassword', { defaultValue: 'New password' })}
               </label>
               <div className="relative">
@@ -166,33 +168,33 @@ export const ProfileTab: React.FC = () => {
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 pe-10 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+                  className="w-full px-3 py-2 pe-10 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                   required
                   minLength={8}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showNewPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {t('settings.profile.confirmPassword', { defaultValue: 'Confirm new password' })}
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                 required
                 minLength={8}
               />
             </div>
-            <Button type="submit" disabled={changingPassword} className="gap-2">
+            <Button type="submit" disabled={changingPassword} className="gap-2 w-full sm:w-auto">
               {changingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <FiLock className="h-4 w-4" />}
               {t('settings.profile.updatePassword', { defaultValue: 'Update password' })}
             </Button>

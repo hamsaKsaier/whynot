@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiGithub, FiPlus, FiTrash2, FiRefreshCw, FiCheck, FiX } from 'react-icons/fi';
 import { apiClient } from '../services/api';
 import { useToastContext } from '../contexts/ToastContext';
@@ -19,6 +20,7 @@ interface GitHubRepo {
 export const GitHubReposContent: React.FC = () => <GitHubReposPage embedded />;
 
 export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t } = useTranslation('dashboard');
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -70,7 +72,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       setToken('');
       await loadRepos();
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Failed to connect repo');
+      showError(error.response?.data?.error || t('dashboard.github.connectError'));
     } finally {
       setSaving(false);
     }
@@ -83,7 +85,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       const res = await apiClient.post(`/github-repos/${id}/test`);
       setTestResult({ id, ...res.data });
     } catch (error: any) {
-      setTestResult({ id, success: false, message: error.response?.data?.error || 'Test failed' });
+      setTestResult({ id, success: false, message: error.response?.data?.error || t('dashboard.github.testFailed') });
     } finally {
       setTesting(null);
     }
@@ -94,9 +96,9 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       setDeleting(id);
       await apiClient.delete(`/github-repos/${id}`);
       setRepos(prev => prev.filter(r => r.id !== id));
-      success('Repository disconnected successfully');
+      success(t('dashboard.github.disconnected'));
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Failed to disconnect');
+      showError(error.response?.data?.error || t('dashboard.github.disconnectError'));
     } finally {
       setDeleting(null);
       setDeleteConfirm(null);
@@ -108,60 +110,60 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       {!embedded && (
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">GitHub Repositories</h1>
-            <p className="text-sm text-slate-400 mt-1">Connect repos to enable Auto-Fix — AI generates PRs to fix discovered bugs</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('dashboard.github.title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('dashboard.github.subtitle')}</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-foreground rounded-lg hover:bg-sky-700 transition-colors"
           >
             <FiPlus className="h-4 w-4" />
-            Connect Repo
+            {t('dashboard.github.connectRepo')}
           </button>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-slate-400">Loading repositories...</div>
+        <div className="text-center py-12 text-muted-foreground">{t('dashboard.github.loading')}</div>
       ) : repos.length === 0 ? (
-        <div className="text-center py-16 bg-slate-900 rounded-xl border border-dashed border-slate-700">
-          <FiGithub className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No repositories connected</h3>
-          <p className="text-sm text-slate-400 mb-4">Connect a GitHub repository to enable automatic bug fixes via pull requests</p>
+        <div className="text-center py-16 bg-muted rounded-xl border border-dashed border-border">
+          <FiGithub className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">{t('dashboard.github.emptyTitle')}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{t('dashboard.github.emptyDescription')}</p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-foreground rounded-lg hover:bg-sky-700 transition-colors"
           >
             <FiGithub className="h-4 w-4" />
-            Connect Repository
+            {t('dashboard.github.connectRepository')}
           </button>
         </div>
       ) : (
         <div className="space-y-4">
           {repos.map(r => (
-            <div key={r.id} className="bg-slate-800 rounded-lg border border-slate-700 p-4 hover:shadow-sm transition-shadow">
+            <div key={r.id} className="bg-card rounded-lg border border-border p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <FiGithub className="h-8 w-8 text-slate-200" />
+                  <FiGithub className="h-8 w-8 text-foreground" />
                   <div>
-                    <h3 className="font-medium text-white">
-                      <span className="text-slate-400">{r.owner}/</span>{r.repo}
+                    <h3 className="font-medium text-foreground">
+                      <span className="text-muted-foreground">{r.owner}/</span>{r.repo}
                     </h3>
-                    <p className="text-xs text-slate-400">Branch: {r.default_branch} &middot; Connected {new Date(r.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.github.branch')}: {r.default_branch} &middot; {t('dashboard.github.connected')} {new Date(r.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {testResult?.id === r.id && (
                     <span className={`text-xs px-2 py-1 rounded ${testResult.success ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
-                      {testResult.success ? <FiCheck className="inline mr-1" /> : <FiX className="inline mr-1" />}
+                      {testResult.success ? <FiCheck className="inline me-1" /> : <FiX className="inline me-1" />}
                       {testResult.message}
                     </span>
                   )}
                   <button
                     onClick={() => handleTest(r.id)}
                     disabled={testing === r.id}
-                    className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded transition-colors"
-                    title="Test connection"
+                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                    title={t('dashboard.github.testConnection')}
                   >
                     <FiRefreshCw className={`h-4 w-4 ${testing === r.id ? 'animate-spin' : ''}`} />
                   </button>
@@ -169,7 +171,7 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
                     onClick={() => setDeleteConfirm(r.id)}
                     disabled={deleting === r.id}
                     className="p-2 text-red-500 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
-                    title="Disconnect"
+                    title={t('dashboard.github.disconnect')}
                   >
                     <FiTrash2 className="h-4 w-4" />
                   </button>
@@ -184,57 +186,56 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Connect GitHub Repository"
+        title={t('dashboard.github.connectTitle')}
         size="lg"
       >
-        <p className="text-sm text-slate-400 mb-4">
-          Provide a personal access token with <code className="bg-slate-900 px-1 rounded">repo</code> scope
+        <p className="text-sm text-muted-foreground mb-4">
+          {t('dashboard.github.tokenDescription')}
         </p>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Owner</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{t('dashboard.github.ownerLabel')}</label>
               <input
                 type="text"
                 value={owner}
                 onChange={e => setOwner(e.target.value)}
                 placeholder="octocat"
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Repository</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{t('dashboard.github.repositoryLabel')}</label>
               <input
                 type="text"
                 value={repo}
                 onChange={e => setRepo(e.target.value)}
                 placeholder="my-app"
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Default Branch</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t('dashboard.github.defaultBranchLabel')}</label>
             <input
               type="text"
               value={branch}
               onChange={e => setBranch(e.target.value)}
               placeholder="main"
-              className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Personal Access Token</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t('dashboard.github.tokenLabel')}</label>
             <input
               type="password"
               value={token}
               onChange={e => setToken(e.target.value)}
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500"
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Create at GitHub &gt; Settings &gt; Developer settings &gt; Personal access tokens.
-              Needs <code className="bg-slate-900 px-1 rounded">repo</code> scope.
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('dashboard.github.tokenHint')}
             </p>
           </div>
         </div>
@@ -242,16 +243,16 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
         <ModalFooter>
           <button
             onClick={() => setShowAddModal(false)}
-            className="px-4 py-2 text-slate-200 bg-slate-900 rounded-lg hover:bg-slate-700 transition-colors"
+            className="px-4 py-2 text-foreground bg-muted rounded-lg hover:bg-muted/70 transition-colors"
           >
-            Cancel
+            {t('dashboard.github.cancel')}
           </button>
           <button
             onClick={handleAdd}
             disabled={saving || !owner.trim() || !repo.trim() || !token.trim()}
-            className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-sky-600 text-foreground rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50"
           >
-            {saving ? 'Connecting...' : 'Connect'}
+            {saving ? t('dashboard.github.connecting') : t('dashboard.github.connect')}
           </button>
         </ModalFooter>
       </Modal>
@@ -259,10 +260,10 @@ export const GitHubReposPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!deleteConfirm}
-        title="Disconnect Repository"
-        message="Are you sure you want to disconnect this repository? This action cannot be undone."
-        confirmText="Disconnect"
-        cancelText="Cancel"
+        title={t('dashboard.github.disconnectTitle')}
+        message={t('dashboard.github.disconnectMessage')}
+        confirmText={t('dashboard.github.disconnect')}
+        cancelText={t('dashboard.github.cancel')}
         variant="danger"
         onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
         onCancel={() => setDeleteConfirm(null)}

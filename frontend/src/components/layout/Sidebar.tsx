@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import {
   Home,
   FolderOpen,
@@ -20,6 +21,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { Logo } from "@/components/ui/Logo"
 
 interface SidebarProps {
   collapsed: boolean
@@ -28,16 +30,16 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { icon: Zap, label: "QA Loop", path: "/qa-loop" },
-  { icon: BarChart2, label: "Performance", path: "/performance" },
-  { icon: Home, label: "Dashboard", path: "/app" },
-  { icon: FolderOpen, label: "Projects", path: "/projects" },
-  { icon: ClipboardList, label: "Test Results", path: "/test-results" },
-  { icon: Activity, label: "Monitors", path: "/monitors" },
+  { icon: Zap, labelKey: "common.nav.qaLoop", path: "/qa-loop" },
+  { icon: BarChart2, labelKey: "common.nav.performance", path: "/performance" },
+  { icon: Home, labelKey: "common.nav.dashboard", path: "/app" },
+  { icon: FolderOpen, labelKey: "common.nav.projects", path: "/projects" },
+  { icon: ClipboardList, labelKey: "common.nav.testResults", path: "/test-results" },
+  { icon: Activity, labelKey: "common.nav.monitors", path: "/monitors" },
 ] as const
 
 const BOTTOM_ITEMS = [
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Settings, labelKey: "common.nav.settings", path: "/settings" },
 ] as const
 
 function isActive(pathname: string, itemPath: string) {
@@ -47,19 +49,22 @@ function isActive(pathname: string, itemPath: string) {
 
 function NavItem({
   icon: Icon,
-  label,
+  labelKey,
   path,
   active,
   collapsed,
   onClick,
 }: {
   icon: typeof Home
-  label: string
+  labelKey: string
   path: string
   active: boolean
   collapsed: boolean
   onClick?: () => void
 }) {
+  const { t } = useTranslation("common")
+  const label = t(labelKey)
+
   const link = (
     <Link
       to={path}
@@ -92,6 +97,7 @@ function NavItem({
 }
 
 export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarProps) {
+  const { t } = useTranslation("common")
   const { pathname } = useLocation()
 
   return (
@@ -105,12 +111,12 @@ export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarP
         <div className="flex h-14 items-center justify-between border-b px-3">
           {!collapsed && (
             <Link to="/app" className="flex items-center gap-2">
-              <img src="/logo.svg" alt="WhyNot" className="h-6" />
+              <Logo size="sm" />
             </Link>
           )}
           {collapsed && (
             <Link to="/app" className="mx-auto">
-              <img src="/favicon.svg" alt="WhyNot" className="h-6 w-6" />
+              <Logo size="sm" variant="mark" />
             </Link>
           )}
           <Button
@@ -118,7 +124,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarP
             size="icon"
             className="h-7 w-7 text-muted-foreground"
             onClick={onToggleCollapse}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? t("common.sidebar.expand") : t("common.sidebar.collapse")}
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4 rtl:scale-x-[-1]" />
@@ -132,12 +138,14 @@ export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarP
           <nav
             className="space-y-1 px-2"
             role="navigation"
-            aria-label="Main navigation"
+            aria-label={t("common.sidebar.mainNav")}
           >
             {NAV_ITEMS.map((item) => (
               <NavItem
                 key={item.path}
-                {...item}
+                icon={item.icon}
+                labelKey={item.labelKey}
+                path={item.path}
                 active={isActive(pathname, item.path)}
                 collapsed={collapsed}
                 onClick={onMobileClose}
@@ -151,7 +159,9 @@ export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarP
           {BOTTOM_ITEMS.map((item) => (
             <NavItem
               key={item.path}
-              {...item}
+              icon={item.icon}
+              labelKey={item.labelKey}
+              path={item.path}
               active={isActive(pathname, item.path)}
               collapsed={collapsed}
               onClick={onMobileClose}

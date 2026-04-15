@@ -3,45 +3,47 @@
  * Displayed in Settings > Notifications tab.
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiMail, FiCheckCircle, FiAlertTriangle, FiActivity, FiGitPullRequest } from 'react-icons/fi';
 import { apiClient } from '../services/api';
 import { useToastContext } from '../contexts/ToastContext';
 
 interface TriggerConfig {
   key: string;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: React.ReactNode;
 }
 
 const TRIGGERS: TriggerConfig[] = [
   {
     key: 'scan_complete',
-    label: 'Scan complete',
-    description: 'Get notified when a QA scan finishes',
+    labelKey: 'settings.notifications.scanComplete',
+    descriptionKey: 'settings.notifications.scanCompleteDesc',
     icon: <FiCheckCircle className="text-green-500" size={18} />,
   },
   {
     key: 'critical_bug',
-    label: 'Critical bug found',
-    description: 'Immediate alert when a critical severity bug is detected',
+    labelKey: 'settings.notifications.criticalBug',
+    descriptionKey: 'settings.notifications.criticalBugDesc',
     icon: <FiAlertTriangle className="text-red-500" size={18} />,
   },
   {
     key: 'monitor_alert',
-    label: 'Monitor alert',
-    description: 'Alerts from scheduled QA monitors',
+    labelKey: 'settings.notifications.monitorAlert',
+    descriptionKey: 'settings.notifications.monitorAlertDesc',
     icon: <FiActivity className="text-amber-500" size={18} />,
   },
   {
     key: 'autofix_pr',
-    label: 'Auto-fix PR ready',
-    description: 'Notification when an auto-fix pull request is created',
+    labelKey: 'settings.notifications.autofixPr',
+    descriptionKey: 'settings.notifications.autofixPrDesc',
     icon: <FiGitPullRequest className="text-purple-500" size={18} />,
   },
 ];
 
 export const NotificationPreferences: React.FC = () => {
+  const { t } = useTranslation('settings');
   const { success, error: showError } = useToastContext();
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -72,9 +74,9 @@ export const NotificationPreferences: React.FC = () => {
         enabled: newValue,
       });
       setPrefs(prev => ({ ...prev, [triggerType]: newValue }));
-      success(`Notification ${newValue ? 'enabled' : 'disabled'}`);
+      success(t(newValue ? 'settings.notifications.enabled' : 'settings.notifications.disabled'));
     } catch {
-      showError('Failed to update preference');
+      showError(t('settings.notifications.updateFailed'));
     } finally {
       setUpdating(null);
     }
@@ -82,20 +84,20 @@ export const NotificationPreferences: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12 text-slate-500 text-sm">
-        Loading preferences...
+      <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+        {t("settings.notifications.loading")}
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+    <div className="bg-card rounded-lg border border-border p-6">
       <div className="flex items-center gap-2 mb-4">
-        <FiMail className="text-slate-200" size={20} />
-        <h3 className="text-lg font-semibold text-white">Email Notifications</h3>
+        <FiMail className="text-muted-foreground" size={20} />
+        <h3 className="text-lg font-semibold text-foreground">{t("settings.notifications.emailTitle")}</h3>
       </div>
-      <p className="text-sm text-slate-400 mb-6">
-        Choose which events trigger an email notification to your account email.
+      <p className="text-sm text-muted-foreground mb-6">
+        {t("settings.notifications.emailDesc")}
       </p>
 
       <div className="space-y-4">
@@ -105,28 +107,28 @@ export const NotificationPreferences: React.FC = () => {
           return (
             <div
               key={trigger.key}
-              className="flex items-center justify-between py-3 px-4 rounded-lg border border-slate-700 hover:bg-slate-900 transition-colors"
+              className="flex items-center justify-between py-3 px-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center gap-3">
                 {trigger.icon}
                 <div>
-                  <p className="text-sm font-medium text-white">{trigger.label}</p>
-                  <p className="text-xs text-slate-400">{trigger.description}</p>
+                  <p className="text-sm font-medium text-foreground">{t(trigger.labelKey)}</p>
+                  <p className="text-xs text-muted-foreground">{t(trigger.descriptionKey)}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => togglePref(trigger.key)}
                 disabled={isUpdating}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  enabled ? 'bg-blue-600' : 'bg-slate-700'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ${
+                  enabled ? 'bg-primary' : 'bg-input'
                 } ${isUpdating ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
                 role="switch"
                 aria-checked={enabled}
-                aria-label={`${trigger.label} notifications`}
+                aria-label={t(trigger.labelKey)}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                  className={`inline-block h-4 w-4 transform rounded-full bg-foreground shadow-sm transition-transform ${
                     enabled ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />

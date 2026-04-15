@@ -8,8 +8,8 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     volumes:
-      - ./services/database/migrations:/migrations:ro
-      - ./scripts/test-init-db.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ../../services/database/migrations:/migrations:ro
+      - ../../scripts/test-init-db.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U whynot -d whynot_test"]
       interval: 5s
@@ -18,10 +18,10 @@ services:
 
   gateway-test:
     build:
-      context: .
-      dockerfile: ./gateway/Dockerfile.test
+      context: ../..
+      dockerfile: gateway/Dockerfile.test
     env_file:
-      - .env.test
+      - ../../.env.test
     environment:
       NODE_ENV: test
       DATABASE_URL: postgresql://whynot:whynot@postgres-test:5432/whynot_test
@@ -29,20 +29,20 @@ services:
       postgres-test:
         condition: service_healthy
     volumes:
-      - ./gateway/src:/app/gateway/src:ro
-      - ./shared:/app/shared:ro
-      - ./gateway/vitest.config.ts:/app/gateway/vitest.config.ts:ro
-      - ./gateway/coverage:/app/gateway/coverage
+      - ../../gateway/src:/app/gateway/src:ro
+      - ../../shared:/app/shared:ro
+      - ../../gateway/vitest.config.ts:/app/gateway/vitest.config.ts:ro
+      - ../../gateway/coverage:/app/gateway/coverage
 
   frontend-test:
     image: node:20-slim
     working_dir: /app
     env_file:
-      - .env.test
+      - ../../.env.test
     environment:
       NODE_ENV: test
     volumes:
-      - ./frontend:/app
+      - ../../frontend:/app
       - frontend_node_modules:/app/node_modules
     command: >
       sh -c "npm install --prefer-offline && npx vitest run --coverage"
@@ -51,11 +51,11 @@ services:
     image: node:20-slim
     working_dir: /app
     env_file:
-      - .env.test
+      - ../../.env.test
     environment:
       NODE_ENV: test
     volumes:
-      - ./admin-frontend:/app
+      - ../../admin-frontend:/app
       - admin_frontend_node_modules:/app/node_modules
     command: >
       sh -c "npm install --prefer-offline && npx vitest run --coverage"
@@ -64,11 +64,11 @@ services:
     image: node:20-slim
     working_dir: /app
     env_file:
-      - .env.test
+      - ../../.env.test
     environment:
       NODE_ENV: test
     volumes:
-      - ./shared:/app
+      - ../../shared:/app
       - shared_node_modules:/app/node_modules
     command: >
       sh -c "npm install --prefer-offline && npx vitest run --coverage"
@@ -77,11 +77,11 @@ services:
     image: mcr.microsoft.com/playwright:v1.48.0-jammy
     working_dir: /app
     env_file:
-      - .env.test
+      - ../../.env.test
     environment:
       PLAYWRIGHT_BASE_URL: http://frontend:5183
     volumes:
-      - ./frontend:/app
+      - ../../frontend:/app
       - playwright_node_modules:/app/node_modules
     command: >
       sh -c "npm install --prefer-offline && npx playwright test"
@@ -93,7 +93,7 @@ services:
     image: node:20-slim
     working_dir: /app
     volumes:
-      - ./frontend:/app:ro
+      - ../../frontend:/app:ro
       - lighthouse_node_modules:/app/node_modules
     command: >
       sh -c "npm install --prefer-offline && echo 'Lighthouse CI ready — run against built frontend'"

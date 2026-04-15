@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Github, Loader2, Mail, Lock, User } from "lucide-react"
+import { useTranslation, Trans } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,30 +13,34 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { AuthShell } from "@/components/layout/AuthShell"
 import { useAuth } from "@/contexts/AuthContext"
+import { config } from "@/config"
 
-const signupSchema = z
-  .object({
-    name: z.string().min(1, "Name is required"),
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
-    acceptTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the terms" }),
-    }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  })
+function createSignupSchema(t: (key: string) => string) {
+  return z
+    .object({
+      name: z.string().min(1, t("auth.signup.error.nameRequired")),
+      email: z.string().email(t("auth.common.emailValidation")),
+      password: z.string().min(8, t("auth.common.passwordMinLength")),
+      confirmPassword: z.string(),
+      acceptTerms: z.literal(true, {
+        errorMap: () => ({ message: t("auth.signup.error.termsRequired") }),
+      }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("auth.signup.error.passwordMismatch"),
+      path: ["confirmPassword"],
+    })
+}
 
-type SignupFormData = z.infer<typeof signupSchema>
-
-const apiBase = import.meta.env.VITE_API_URL || "/api"
+type SignupFormData = z.infer<ReturnType<typeof createSignupSchema>>
 
 export function SignupPage() {
+  const { t } = useTranslation("common")
   const { register: registerUser } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState<string | null>(null)
+
+  const signupSchema = createSignupSchema(t)
 
   const {
     register,
@@ -60,7 +65,7 @@ export function SignupPage() {
         err?.response?.data?.error ||
         err?.response?.data?.message ||
         err?.message ||
-        "Something went wrong. Please try again."
+        t("auth.signup.error.generic")
       setServerError(msg)
     }
   }
@@ -68,18 +73,18 @@ export function SignupPage() {
   return (
     <AuthShell>
       <h2 className="mb-6 text-lg font-semibold text-foreground">
-        Create your account
+        {t("auth.signup.title")}
       </h2>
 
       <div className="space-y-3">
         <Button variant="outline" className="w-full" asChild>
-          <a href={`${apiBase}/auth/github`}>
+          <a href={`${config.apiUrl}/auth/github`}>
             <Github className="me-2 h-4 w-4" />
-            Continue with GitHub
+            {t("auth.login.oauth.github")}
           </a>
         </Button>
         <Button variant="outline" className="w-full" asChild>
-          <a href={`${apiBase}/auth/google`}>
+          <a href={`${config.apiUrl}/auth/google`}>
             <svg className="me-2 h-4 w-4" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -98,26 +103,29 @@ export function SignupPage() {
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            {t("auth.login.oauth.google")}
           </a>
         </Button>
       </div>
 
       <div className="my-6 flex items-center gap-3">
         <Separator className="flex-1" />
-        <span className="text-xs text-muted-foreground">or</span>
+        <span className="text-xs text-muted-foreground">{t("auth.login.divider")}</span>
         <Separator className="flex-1" />
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Full name</Label>
+          <Label htmlFor="name">{t("auth.signup.nameLabel")}</Label>
           <div className="relative">
             <User className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="name"
               type="text"
-              placeholder="Jane Smith"
+              autoComplete="name"
+              enterKeyHint="next"
+              autoFocus
+              placeholder={t("auth.signup.namePlaceholder")}
               className="ps-10"
               {...register("name")}
             />
@@ -128,13 +136,16 @@ export function SignupPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email address</Label>
+          <Label htmlFor="email">{t("auth.signup.emailLabel")}</Label>
           <div className="relative">
             <Mail className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              inputMode="email"
+              autoComplete="email"
+              enterKeyHint="next"
+              placeholder={t("auth.common.emailPlaceholder")}
               className="ps-10"
               {...register("email")}
             />
@@ -145,13 +156,15 @@ export function SignupPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("auth.signup.passwordLabel")}</Label>
           <div className="relative">
             <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="password"
               type="password"
-              placeholder="••••••••"
+              autoComplete="new-password"
+              enterKeyHint="next"
+              placeholder={t("auth.common.passwordPlaceholder")}
               className="ps-10"
               {...register("password")}
             />
@@ -162,13 +175,15 @@ export function SignupPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <Label htmlFor="confirmPassword">{t("auth.signup.confirmPasswordLabel")}</Label>
           <div className="relative">
             <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="confirmPassword"
               type="password"
-              placeholder="••••••••"
+              autoComplete="new-password"
+              enterKeyHint="done"
+              placeholder={t("auth.common.passwordPlaceholder")}
               className="ps-10"
               {...register("confirmPassword")}
             />
@@ -180,7 +195,7 @@ export function SignupPage() {
           )}
         </div>
 
-        <div className="flex items-start gap-2">
+        <div className="flex min-h-[44px] items-start gap-2 py-2">
           <Checkbox
             id="terms"
             checked={acceptTerms}
@@ -191,23 +206,15 @@ export function SignupPage() {
             }
             className="mt-0.5"
           />
-          <Label htmlFor="terms" className="text-sm font-normal leading-snug">
-            I agree to the{" "}
-            <a
-              href="/terms"
-              target="_blank"
-              className="text-primary underline"
-            >
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a
-              href="/privacy"
-              target="_blank"
-              className="text-primary underline"
-            >
-              Privacy Policy
-            </a>
+          <Label htmlFor="terms" className="cursor-pointer text-sm font-normal leading-snug">
+            <Trans
+              i18nKey="auth.signup.acceptTerms"
+              ns="common"
+              components={{
+                termsLink: <a href="/terms" target="_blank" className="text-primary underline" />,
+                privacyLink: <a href="/privacy" target="_blank" className="text-primary underline" />,
+              }}
+            />
           </Label>
         </div>
         {errors.acceptTerms && (
@@ -222,25 +229,25 @@ export function SignupPage() {
           </Alert>
         )}
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              Creating account…
+              {t("auth.signup.submitting")}
             </>
           ) : (
-            "Create account"
+            t("auth.signup.submit")
           )}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
+        {t("auth.signup.loginPrompt")}{" "}
         <Link
           to="/login"
           className="font-medium text-primary transition-colors duration-150 hover:text-primary/80"
         >
-          Sign in
+          {t("auth.signup.loginLink")}
         </Link>
       </p>
     </AuthShell>

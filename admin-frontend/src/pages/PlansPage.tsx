@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Plus, Pencil, Archive, RotateCcw, Upload } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
@@ -11,6 +12,7 @@ import { formatCents } from '../lib/money'
 import { getAdminPlans, archivePlan, restorePlan, syncPlanToStripe } from '../services/api'
 
 export function PlansPage() {
+  const { t } = useTranslation('superadmin')
   const [plans, setPlans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [archiveTarget, setArchiveTarget] = useState<any>(null)
@@ -46,19 +48,19 @@ export function PlansPage() {
       await syncPlanToStripe(id)
       await fetchPlans()
     } catch (err: any) {
-      alert(`Stripe sync failed: ${err.response?.data?.error || err.message}`)
+      alert(t('plans.syncStripeFailed', { error: err.response?.data?.error || err.message }))
     }
   }
 
   return (
     <div className="space-y-4">
       <AdminPageHeader
-        title="Plans"
+        title={t('plans.title')}
         actions={
           <Button asChild size="sm">
             <Link to="/plans/new">
               <Plus className="h-4 w-4 me-1.5" />
-              New Plan
+              {t('plans.newPlan')}
             </Link>
           </Button>
         }
@@ -73,7 +75,7 @@ export function PlansPage() {
       ) : plans.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
-            No plans created yet.
+            {t('plans.noPlans')}
           </CardContent>
         </Card>
       ) : (
@@ -81,44 +83,44 @@ export function PlansPage() {
           {plans.map((plan: any) => (
             <Card key={plan.id} className={plan.is_archived ? 'opacity-60' : undefined}>
               <CardContent className="p-5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold">{plan.name}</h3>
-                      {plan.is_archived && <Badge variant="secondary">Archived</Badge>}
+                      {plan.is_archived && <Badge variant="secondary">{t('plans.badges.archived')}</Badge>}
                       {!plan.is_public && (
                         <Badge variant="outline" className="bg-yellow-50 text-yellow-900 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800">
-                          Hidden
+                          {t('plans.badges.hidden')}
                         </Badge>
                       )}
                       {plan.is_custom && (
                         <Badge variant="outline" className="bg-sky-50 text-sky-900 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800">
-                          Custom
+                          {t('plans.badges.custom')}
                         </Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {plan.price_cents === 0 ? 'Free' : `${formatCents(plan.price_cents)}/${plan.billing_interval}`}
-                      {' · '}{plan.credits_per_period} credits
-                      {plan.trial_days > 0 && ` · ${plan.trial_days}-day trial`}
-                      {' · '}{plan.subscriber_count || 0} subscribers
+                      {plan.price_cents === 0 ? t('plans.free') : t('plans.priceInterval', { price: formatCents(plan.price_cents), interval: plan.billing_interval })}
+                      {' · '}{t('plans.creditsCount', { count: plan.credits_per_period })}
+                      {plan.trial_days > 0 && ` · ${t('plans.trialDays', { days: plan.trial_days })}`}
+                      {' · '}{t('plans.subscriberCount', { count: plan.subscriber_count || 0 })}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button variant="ghost" size="icon" onClick={() => handleSyncStripe(plan.id)} title="Sync to Stripe">
+                    <Button variant="ghost" size="icon" onClick={() => handleSyncStripe(plan.id)} title={t('plans.syncStripe')}>
                       <Upload className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" asChild title="Edit">
+                    <Button variant="ghost" size="icon" asChild title={t('common:admin.common.edit')}>
                       <Link to={`/plans/${plan.id}/edit`}>
                         <Pencil className="h-4 w-4" />
                       </Link>
                     </Button>
                     {plan.is_archived ? (
-                      <Button variant="ghost" size="icon" onClick={() => handleRestore(plan.id)} title="Restore">
+                      <Button variant="ghost" size="icon" onClick={() => handleRestore(plan.id)} title={t('plans.restore')}>
                         <RotateCcw className="h-4 w-4" />
                       </Button>
                     ) : (
-                      <Button variant="ghost" size="icon" onClick={() => setArchiveTarget(plan)} title="Archive">
+                      <Button variant="ghost" size="icon" onClick={() => setArchiveTarget(plan)} title={t('plans.archive')}>
                         <Archive className="h-4 w-4" />
                       </Button>
                     )}
@@ -143,9 +145,9 @@ export function PlansPage() {
       <ConfirmDialog
         open={!!archiveTarget}
         onOpenChange={(open) => { if (!open) setArchiveTarget(null) }}
-        title="Archive Plan"
-        description={`Are you sure you want to archive "${archiveTarget?.name}"? Existing subscribers won't be affected, but new subscriptions will be disabled.`}
-        confirmText="Archive"
+        title={t('plans.archivePlan')}
+        description={t('plans.archiveDescription', { name: archiveTarget?.name })}
+        confirmText={t('plans.archive')}
         variant="destructive"
         onConfirm={handleArchive}
       />

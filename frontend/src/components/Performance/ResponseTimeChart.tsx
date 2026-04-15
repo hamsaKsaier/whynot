@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -18,6 +19,7 @@ interface ResponseTimeChartProps {
 }
 
 export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) => {
+  const { t } = useTranslation('runner');
   const chartData = data.map((m, i) => ({
     time: i,
     p50: Math.round(m.p50ResponseTime),
@@ -26,8 +28,8 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) =>
   }));
 
   return (
-    <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
-      <h3 className="text-sm font-medium text-slate-300 mb-3">Response Time (ms)</h3>
+    <div className="bg-card border border-border rounded-lg p-4">
+      <h3 className="text-sm font-medium text-slate-300 mb-3">{t('runner.performance.responseTimeMs')}</h3>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData}>

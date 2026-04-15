@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Loader2, Save, Users, CreditCard, Flag, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -78,6 +78,7 @@ export function OrganizationDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [org, setOrg] = useState<OrgDetail | null>(null)
   const [subscription, setSubscription] = useState<OrgSubscription | null>(null)
   const [credits, setCredits] = useState(0)
@@ -85,7 +86,8 @@ export function OrganizationDetailPage() {
   const [flagOverrides, setFlagOverrides] = useState<FlagOverride[]>([])
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('overview')
+  const initialTab = searchParams.get('tab') || 'overview'
+  const [tab, setTab] = useState(initialTab)
   const [plans, setPlans] = useState<any[]>([])
 
   const [editName, setEditName] = useState('')
@@ -137,6 +139,11 @@ export function OrganizationDetailPage() {
     }
   }
 
+  const handleTabChange = useCallback((newTab: string) => {
+    setTab(newTab)
+    setSearchParams({ tab: newTab }, { replace: true })
+  }, [setSearchParams])
+
   const handleFlagToggle = async (key: string, enabled: boolean) => {
     if (!id) return
     await setOrgFlagOverrideViaOrg(id, key, enabled)
@@ -183,8 +190,8 @@ export function OrganizationDetailPage() {
         }
       />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={handleTabChange}>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">{t('admin.orgDetail.tabs.overview', 'Overview')}</TabsTrigger>
           <TabsTrigger value="members">
             <Users className="h-3.5 w-3.5 me-1.5" />
@@ -236,7 +243,7 @@ export function OrganizationDetailPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-semibold">{credits}</p>
@@ -260,7 +267,7 @@ export function OrganizationDetailPage() {
 
         <TabsContent value="members" className="mt-4">
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -383,7 +390,7 @@ export function OrganizationDetailPage() {
 
         <TabsContent value="audit" className="mt-4">
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

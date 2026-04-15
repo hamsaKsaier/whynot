@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   Table,
@@ -10,6 +11,7 @@ import {
 import { Skeleton } from '../ui/skeleton'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
+import { Card, CardContent } from '../ui/card'
 import { cn } from '../../lib/utils'
 
 export interface Column<T> {
@@ -17,6 +19,7 @@ export interface Column<T> {
   header: string
   className?: string
   render: (row: T) => React.ReactNode
+  hideOnMobile?: boolean
 }
 
 interface PaginatedTableProps<T> {
@@ -45,7 +48,7 @@ export function PaginatedTable<T>({
   columns,
   data,
   loading = false,
-  emptyMessage = 'No data found',
+  emptyMessage,
   rowKey,
   skeletonRows = 5,
   hasNextPage,
@@ -59,6 +62,8 @@ export function PaginatedTable<T>({
   onRowClick,
   className,
 }: PaginatedTableProps<T>) {
+  const { t } = useTranslation('common')
+  const resolvedEmptyMessage = emptyMessage ?? t('admin.common.noData')
   const allSelected = data.length > 0 && data.every((r) => selectedIds?.has(rowKey(r)))
   const someSelected = data.some((r) => selectedIds?.has(rowKey(r)))
 
@@ -79,9 +84,13 @@ export function PaginatedTable<T>({
     onSelectionChange(next)
   }
 
+  const mobileColumns = columns.filter((col) => !col.hideOnMobile)
+  const actionColumn = columns.find((col) => col.key === 'actions')
+
   return (
     <div className={cn('space-y-4', className)}>
-      <div className="rounded-lg border bg-card">
+      {/* Desktop table view */}
+      <div className="hidden md:block rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -90,7 +99,7 @@ export function PaginatedTable<T>({
                   <Checkbox
                     checked={allSelected ? true : someSelected ? 'indeterminate' : false}
                     onCheckedChange={toggleAll}
-                    aria-label="Select all"
+                    aria-label={t('admin.common.selectAll')}
                   />
                 </TableHead>
               )}
@@ -121,7 +130,7 @@ export function PaginatedTable<T>({
                   colSpan={columns.length + (selectable ? 1 : 0)}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  {emptyMessage}
+                  {resolvedEmptyMessage}
                 </TableCell>
               </TableRow>
             ) : (
@@ -140,7 +149,7 @@ export function PaginatedTable<T>({
                         <Checkbox
                           checked={selected}
                           onCheckedChange={() => toggleRow(id)}
-                          aria-label={`Select row ${id}`}
+                          aria-label={t('admin.common.selectRow', { id })}
                         />
                       </TableCell>
                     )}
@@ -157,6 +166,72 @@ export function PaginatedTable<T>({
         </Table>
       </div>
 
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          Array.from({ length: skeletonRows }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
+          ))
+        ) : data.length === 0 ? (
+          <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
+            {resolvedEmptyMessage}
+          </div>
+        ) : (
+          data.map((row) => {
+            const id = rowKey(row)
+            const selected = selectedIds?.has(id) ?? false
+            return (
+              <Card
+                key={id}
+                data-state={selected ? 'selected' : undefined}
+                className={cn(
+                  onRowClick && 'cursor-pointer',
+                  selected && 'ring-1 ring-primary',
+                )}
+                onClick={() => onRowClick?.(row)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      {selectable && (
+                        <div className="flex items-center gap-2 mb-2" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selected}
+                            onCheckedChange={() => toggleRow(id)}
+                            aria-label={t('admin.common.selectRow', { id })}
+                          />
+                        </div>
+                      )}
+                      {mobileColumns
+                        .filter((col) => col.key !== 'actions')
+                        .map((col) => (
+                          <div key={col.key} className="flex items-baseline justify-between gap-2">
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {col.header}
+                            </span>
+                            <span className="text-sm text-end truncate">
+                              {col.render(row)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                    {actionColumn && (
+                      <div className="flex-shrink-0">{actionColumn.render(row)}</div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
+      </div>
+
       {(hasPrevPage || hasNextPage || pageInfo) && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{pageInfo}</span>
@@ -166,7 +241,7 @@ export function PaginatedTable<T>({
               size="icon"
               disabled={!hasPrevPage}
               onClick={onPrevPage}
-              aria-label="Previous page"
+              aria-label={t('admin.common.previousPage')}
             >
               <ChevronLeft className="h-4 w-4 rtl:scale-x-[-1]" />
             </Button>
@@ -175,7 +250,7 @@ export function PaginatedTable<T>({
               size="icon"
               disabled={!hasNextPage}
               onClick={onNextPage}
-              aria-label="Next page"
+              aria-label={t('admin.common.nextPage')}
             >
               <ChevronRight className="h-4 w-4 rtl:scale-x-[-1]" />
             </Button>

@@ -1,6 +1,7 @@
 {
   "admin": {
     "nav": {
+      "superadminTitle": "Super Admin",
       "dashboard": "Panel de control",
       "analytics": "Analíticas",
       "users": "Usuarios",
@@ -13,16 +14,16 @@
       "featureFlags": "Feature flags",
       "billingConfig": "Configuración de facturación",
       "aiProviders": "Proveedores de IA",
+      "organizations": "Organizaciones",
       "usageTracking": "Seguimiento de uso",
       "usage": "Uso",
       "management": "Gestión",
       "system": "Sistema",
       "comingSoon": "Próximamente",
-      "organizations": "Organizaciones",
       "sections": {
         "platform": "Plataforma",
         "billing": "Facturación",
-        "flagsAi": "Banderas e IA",
+        "flagsAi": "Flags e IA",
         "insights": "Análisis",
         "content": "Contenido",
         "settings": "Configuración"
@@ -42,14 +43,29 @@
       "search": "Buscar...",
       "noData": "No se encontraron datos",
       "loading": "Cargando...",
+      "processing": "Procesando...",
       "actions": "Acciones",
       "selected": "{{count}} seleccionados",
       "clear": "Limpiar",
       "previousPage": "Página anterior",
       "nextPage": "Página siguiente",
+      "selectAll": "Seleccionar todo",
+      "selectRow": "Seleccionar fila {{id}}",
       "pageOf": "Página {{current}} de {{total}}",
       "signOut": "Cerrar sesión",
-      "typeToConfirm": "Escriba {{text}} para confirmar"
+      "typeToConfirm": "Escriba {{text}} para confirmar",
+      "apply": "Aplicar",
+      "from": "Desde",
+      "to": "Hasta",
+      "selectDateRange": "Seleccionar rango de fechas",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "Últimos 7 días",
+        "last30Days": "Últimos 30 días",
+        "last90Days": "Últimos 90 días",
+        "thisYear": "Este año"
+      },
+      "logoAlt": "WhyNot — Plataforma QA con IA"
     },
     "login": {
       "title": "Inicio de sesión de administrador",
@@ -78,7 +94,14 @@
       },
       "subscribers": "{{count}} suscriptores",
       "noUsers": "Aún no hay usuarios",
-      "noSubscriptionData": "No hay datos de suscripción"
+      "noSubscriptionData": "No hay datos de suscripción",
+      "creditsLabel": "créditos",
+      "quickActions": {
+        "users": "Usuarios",
+        "plans": "Planes",
+        "analytics": "Analíticas",
+        "settings": "Configuración"
+      }
     },
     "users": {
       "title": "Usuarios",
@@ -114,26 +137,66 @@
       "tabs": {
         "overview": "Resumen",
         "subscription": "Suscripción",
-        "flags": "Banderas",
+        "flags": "Flags",
         "audit": "Auditoría"
       },
       "role": "Rol",
+      "id": "ID",
+      "joined": "Registrado",
       "grantCredits": "Otorgar",
       "revokeCredits": "Revocar",
       "amount": "Monto",
       "description": "Descripción",
-      "notFound": "Usuario no encontrado.",
-      "id": "ID",
-      "joined": "Registrado",
       "reason": "Motivo...",
+      "notFound": "Usuario no encontrado.",
       "noPlan": "Sin plan",
       "credits": "créditos",
       "forcePlan": "Forzar plan",
       "selectPlan": "Seleccionar plan",
       "choosePlan": "Elegir un plan...",
       "applyPlan": "Aplicar plan",
-      "flagOverrides": "Sobrescrituras de banderas",
-      "noFlags": "No hay sobrescrituras de banderas para el espacio de trabajo de este usuario."
+      "flagOverrides": "Excepciones de flags",
+      "noFlags": "No hay excepciones de flags para el espacio de trabajo de este usuario."
+    },
+    "organizations": {
+      "title": "Organizaciones",
+      "totalOrgs": "{{count}} organizaciones",
+      "searchPlaceholder": "Buscar por nombre...",
+      "noOrgsFound": "No se encontraron organizaciones",
+      "notFound": "Organización no encontrada.",
+      "backToOrgs": "Volver a organizaciones",
+      "noMembers": "No se encontraron miembros",
+      "columns": {
+        "name": "Nombre",
+        "owner": "Propietario",
+        "plan": "Plan",
+        "status": "Estado",
+        "credits": "Créditos",
+        "created": "Creado"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "Resumen",
+        "members": "Miembros",
+        "subscription": "Suscripción",
+        "flags": "Flags",
+        "audit": "Auditoría"
+      },
+      "details": "Detalles de la organización",
+      "name": "Nombre",
+      "id": "ID",
+      "owner": "Propietario",
+      "created": "Creado",
+      "credits": "Créditos",
+      "plan": "Plan",
+      "status": "Estado",
+      "selectPlan": "Seleccionar plan...",
+      "subscriptionDetails": "Detalles de la suscripción",
+      "periodEnd": "Fin del período",
+      "trialEnd": "Fin de la prueba",
+      "flagOverrides": "Excepciones de flags",
+      "noFlagOverrides": "No hay excepciones de flags para esta organización."
     },
     "plans": {
       "title": "Planes",
@@ -285,46 +348,6 @@
         "schedule": "Programación"
       }
     },
-    "organizations": {
-      "title": "Organizaciones",
-      "totalOrgs": "{{count}} organizaciones",
-      "searchPlaceholder": "Buscar por nombre...",
-      "noOrgsFound": "No se encontraron organizaciones",
-      "notFound": "Organización no encontrada.",
-      "backToOrgs": "Volver a organizaciones",
-      "noMembers": "No se encontraron miembros",
-      "columns": {
-        "name": "Nombre",
-        "owner": "Propietario",
-        "plan": "Plan",
-        "status": "Estado",
-        "credits": "Créditos",
-        "created": "Creado"
-      }
-    },
-    "orgDetail": {
-      "tabs": {
-        "overview": "Resumen",
-        "members": "Miembros",
-        "subscription": "Suscripción",
-        "flags": "Banderas",
-        "audit": "Auditoría"
-      },
-      "details": "Detalles de la organización",
-      "name": "Nombre",
-      "id": "ID",
-      "owner": "Propietario",
-      "created": "Creado",
-      "credits": "Créditos",
-      "plan": "Plan",
-      "status": "Estado",
-      "selectPlan": "Seleccionar plan...",
-      "subscriptionDetails": "Detalles de suscripción",
-      "periodEnd": "Fin del período",
-      "trialEnd": "Fin de prueba",
-      "flagOverrides": "Sobrescrituras de banderas",
-      "noFlagOverrides": "No hay sobrescrituras de banderas para esta organización."
-    },
     "status": {
       "active": "Activo",
       "trialing": "En prueba",
@@ -334,6 +357,27 @@
       "banned": "Suspendido",
       "suspended": "Suspendido",
       "expired": "Expirado"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Página no encontrada",
+        "description": "La página que busca no existe o ha sido movida."
+      },
+      "serverError": {
+        "title": "Error del servidor",
+        "description": "Algo salió mal. Por favor, inténtelo de nuevo más tarde."
+      },
+      "forbidden": {
+        "title": "Acceso prohibido",
+        "description": "No tiene permiso para acceder a esta área. Se requiere acceso de super administrador."
+      },
+      "accessDenied": {
+        "title": "Acceso denegado",
+        "description": "Esta área está restringida a super administradores. Contacte a su administrador si cree que esto es un error.",
+        "goToAdmin": "Ir al panel de administración"
+      },
+      "backHome": "Volver al panel",
+      "backToLogin": "Volver al inicio de sesión"
     }
   }
 }

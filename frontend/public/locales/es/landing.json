@@ -260,7 +260,14 @@
         "example": "5 escaneos = 1.000 créditos"
       }
     },
+    "creditsUnit": "créditos",
     "creditPack": "Los packs de créditos empiezan en $10 por 1.000 créditos.",
+    "calculator": {
+      "heading": "Calculadora de créditos",
+      "description": "Estima tu consumo mensual de créditos y el coste.",
+      "totalCredits": "Total de créditos:",
+      "estimatedCost": "Coste estimado:"
+    },
     "workedExample": {
       "heading": "Ejemplo práctico",
       "description": "Un equipo mediano ejecutando 50 generaciones de pruebas y 200 ejecuciones al mes:",
@@ -283,9 +290,18 @@
     "about": "Acerca de",
     "blog": "Blog",
     "contact": "Contacto",
+    "resources": "Recursos",
+    "docs": "Documentación",
+    "status": "Estado",
+    "api": "API",
     "legal": "Legal",
     "privacy": "Política de privacidad",
     "terms": "Términos de servicio",
     "copyright": "© {{year}} WhyNot. Todos los derechos reservados."
+  },
+  "seo": {
+    "title": "WhyNot — Pruebas QA autónomas con IA",
+    "description": "Encuentra errores antes que tus usuarios. Agentes de IA autónomos exploran tu aplicación web, detectan bugs y generan código de pruebas Playwright.",
+    "keywords": "pruebas IA, QA autónomo, detección de errores, Playwright, regresión visual, automatización de pruebas"
   }
 }

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { env } from '../config/env';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -31,7 +32,7 @@ export function errorHandler(
     path: req.path
   };
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (env.NODE_ENV !== 'production') {
     errorResponse.stack = err.stack;
     if ((err as AppError).details) {
       errorResponse.details = (err as AppError).details;

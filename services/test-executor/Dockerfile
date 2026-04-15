@@ -21,8 +21,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY services/test-executor/package*.json ./
+COPY services/test-executor/tsconfig.json ./
 
 # Install dependencies
 RUN npm install
@@ -34,7 +34,7 @@ RUN npx playwright install-deps chromium || true
 # Copy shared directory (needed for TypeScript compilation)
 COPY shared/ ./shared/
 # Copy source code
-COPY src/ ./src/
+COPY services/test-executor/src/ ./src/
 
 # Build TypeScript
 RUN npm run build

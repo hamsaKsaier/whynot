@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Search, Play, Activity, Square, Download } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -22,6 +23,7 @@ const formatDuration = (ms: number): string => {
 export const TestRunsContent: React.FC = () => <TestRunsPage embedded />;
 
 export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t } = useTranslation('results');
   const navigate = useNavigate();
   const { success, error: showError } = useToastContext();
   const [executions, setExecutions] = useState<ExecutionResult[]>([]);
@@ -97,7 +99,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
   const handleStopExecution = async (executionId: string) => {
     try {
       await stopExecution(executionId);
-      success('Test execution stopped successfully');
+      success(t('results.testRuns.stopped'));
       // Update local state optimistically
       setExecutions(prev => prev.map(e =>
         e.execution_id === executionId
@@ -105,7 +107,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
           : e
       ));
     } catch (err: any) {
-      showError(err.response?.data?.error || err.message || 'Failed to stop execution');
+      showError(err.response?.data?.error || err.message || t('results.testRuns.stopError'));
     }
   };
 
@@ -170,28 +172,30 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
   };
 
   const filterButtons: Array<{ value: typeof filter; label: string }> = [
-    { value: 'all', label: 'All' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'failed', label: 'Failed' },
+    { value: 'all', label: t('results.testRuns.filterAll') },
+    { value: 'completed', label: t('results.testRuns.filterCompleted') },
+    { value: 'failed', label: t('results.testRuns.filterFailed') },
   ];
 
   return (
     <div>
       {!embedded && (
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Test Runs</h1>
-            <p className="text-muted-foreground mt-1">View execution history and results</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{t('results.testRuns.title')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('results.testRuns.subtitle')}</p>
           </div>
           {executions.length > 0 && (
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
-                <Download className="h-4 w-4 me-2" />
-                Export CSV
+                <Download className="h-4 w-4 me-1 sm:me-2" />
+                <span className="hidden sm:inline">{t('results.testRuns.exportCsv')}</span>
+                <span className="sm:hidden">CSV</span>
               </Button>
               <Button variant="outline" size="sm" onClick={() => handleExport('json')}>
-                <Download className="h-4 w-4 me-2" />
-                Export JSON
+                <Download className="h-4 w-4 me-1 sm:me-2" />
+                <span className="hidden sm:inline">{t('results.testRuns.exportJson')}</span>
+                <span className="sm:hidden">JSON</span>
               </Button>
             </div>
           )}
@@ -200,17 +204,17 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
 
       {/* Analytics/Metrics */}
       {executions.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Total Executions</div>
-              <div className="text-2xl font-bold text-foreground">{total}</div>
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.testRuns.totalExecutions')}</div>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">{total}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Success Rate</div>
-              <div className="text-2xl font-bold text-green-500">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.testRuns.successRate')}</div>
+              <div className="text-xl sm:text-2xl font-bold text-green-500">
                 {total > 0 && executions.length > 0
                   ? `${Math.round((executions.filter(e => e && e.status === 'completed').length / total) * 100)}%`
                   : '0%'}
@@ -218,9 +222,9 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Average Duration</div>
-              <div className="text-2xl font-bold text-foreground">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.testRuns.averageDuration')}</div>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">
                 {(() => {
                   const completed = executions.filter(e => e && e.status !== 'running' && e.total_duration_ms);
                   return completed.length > 0
@@ -231,9 +235,9 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Running Now</div>
-              <div className="text-2xl font-bold text-blue-500">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('results.testRuns.runningNow')}</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-500">
                 {executions.filter(e => e && e.status === 'running').length}
               </div>
             </CardContent>
@@ -242,23 +246,25 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
       )}
 
       {/* Search and Filter */}
-      <div className="mb-6 space-y-3">
+      <div className="mb-4 sm:mb-6 space-y-3">
         <div className="relative">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search executions..."
+            placeholder={t('results.testRuns.searchPlaceholder')}
             className="ps-9"
+            inputMode="search"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto">
           {filterButtons.map(({ value, label }) => (
             <Button
               key={value}
               variant={filter === value ? 'default' : 'secondary'}
               size="sm"
               onClick={() => setFilter(value)}
+              className="shrink-0"
             >
               {label}
             </Button>
@@ -294,35 +300,36 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Activity className="h-8 w-8 text-muted-foreground mb-3" />
             <h3 className="font-semibold text-foreground mb-1">
-              {searchTerm || filter !== 'all' ? 'No test runs match your filters' : 'No test runs yet'}
+              {searchTerm || filter !== 'all' ? t('results.testRuns.noMatch') : t('results.testRuns.emptyTitle')}
             </h3>
             <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
               {searchTerm || filter !== 'all'
-                ? 'Try adjusting your search or filter criteria to see more results.'
-                : 'Test runs are created when you execute test cases. Run a test case to see execution history here.'}
+                ? t('results.testRuns.noMatchDescription')
+                : t('results.testRuns.emptyDescription')}
             </p>
             {!searchTerm && filter === 'all' && (
               <Button onClick={() => navigate('/test-cases')}>
                 <Play className="h-4 w-4 me-2" />
-                View Test Cases
+                {t('results.testRuns.viewTestCases')}
               </Button>
             )}
             {!searchTerm && filter === 'all' && (
               <p className="text-xs text-muted-foreground mt-3">
-                Tip: Navigate to a test case and click "Run Test" to create your first execution
+                {t('results.testRuns.emptyTip')}
               </p>
             )}
           </CardContent>
         </Card>
       ) : (
         <>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {executions
               .filter(execution => execution && execution.execution_id)
               .map((execution) => (
                 <Card key={execution.execution_id} className="hover:bg-muted/50 transition-colors duration-150">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-3 sm:p-4">
+                    {/* Desktop: single row */}
+                    <div className="hidden md:flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         {getStatusBadge(execution.status)}
                         <div>
@@ -336,13 +343,13 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                       </div>
                       <div className="flex items-center gap-6">
                         <div className="text-sm">
-                          <span className="text-muted-foreground">Duration:</span>
+                          <span className="text-muted-foreground">{t('results.duration')}:</span>
                           <span className="ms-2 font-medium">{formatDuration(execution.total_duration_ms || 0)}</span>
                         </div>
                         <div className="text-sm">
-                          <span className="text-muted-foreground">Steps:</span>
+                          <span className="text-muted-foreground">{t('results.steps.title')}:</span>
                           <span className="ms-2 font-medium">
-                            {execution.steps?.filter((s) => s.success).length || 0}/{execution.steps?.length || 0} passed
+                            {execution.steps?.filter((s) => s.success).length || 0}/{execution.steps?.length || 0} {t('results.passed').toLowerCase()}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
@@ -353,16 +360,55 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                               onClick={() => handleStopExecution(execution.execution_id)}
                             >
                               <Square className="h-3 w-3 me-1" />
-                              Stop
+                              {t('results.testRuns.stop')}
                             </Button>
                           )}
                           <Link
                             to={`/test-runs/${execution.execution_id}`}
                             className="text-primary hover:text-primary/80 text-sm font-medium transition-colors duration-150"
                           >
-                            View Details
+                            {t('results.testRuns.viewDetails')}
                           </Link>
                         </div>
+                      </div>
+                    </div>
+                    {/* Mobile: stacked card */}
+                    <div className="md:hidden space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getStatusBadge(execution.status)}
+                          <span className="font-medium text-foreground text-sm truncate">
+                            {execution.execution_id?.substring(0, 8) || 'N/A'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground shrink-0" title={execution.started_at ? formatAbsoluteTime(execution.started_at) : ''}>
+                          {execution.started_at ? formatRelativeTime(execution.started_at) : 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>{formatDuration(execution.total_duration_ms || 0)}</span>
+                        <span>
+                          {execution.steps?.filter((s) => s.success).length || 0}/{execution.steps?.length || 0} {t('results.passed').toLowerCase()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        {execution.status === 'running' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleStopExecution(execution.execution_id)}
+                          >
+                            <Square className="h-3 w-3 me-1" />
+                            {t('results.testRuns.stop')}
+                          </Button>
+                        )}
+                        <Link
+                          to={`/test-runs/${execution.execution_id}`}
+                          className="text-primary hover:text-primary/80 text-xs font-medium transition-colors duration-150"
+                        >
+                          {t('results.testRuns.viewDetails')}
+                        </Link>
                       </div>
                     </div>
                   </CardContent>
@@ -372,26 +418,77 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
 
           {/* Pagination */}
           {total > limit && (
-            <div className="mt-6 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Showing {offset + 1}-{Math.min(offset + limit, total)} of {total} executions
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                {offset + 1}-{Math.min(offset + limit, total)} / {total}
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Mobile: simple prev/next */}
+              <div className="flex items-center gap-2 sm:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-[44px] flex-1"
+                  onClick={() => setOffset(Math.max(0, offset - limit))}
+                  disabled={offset === 0}
+                >
+                  {t('results.testRuns.previous')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-[44px] flex-1"
+                  onClick={() => setOffset(offset + limit)}
+                  disabled={offset + limit >= total}
+                >
+                  {t('results.testRuns.next')}
+                </Button>
+              </div>
+
+              {/* Desktop: full pagination with page numbers */}
+              <div className="hidden sm:flex items-center gap-1">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setOffset(Math.max(0, offset - limit))}
                   disabled={offset === 0}
                 >
-                  Previous
+                  {t('results.testRuns.previous')}
                 </Button>
+                {(() => {
+                  const totalPages = Math.ceil(total / limit);
+                  const currentPage = Math.floor(offset / limit);
+                  const pages: (number | 'ellipsis')[] = [];
+                  for (let i = 0; i < totalPages; i++) {
+                    if (i === 0 || i === totalPages - 1 || Math.abs(i - currentPage) <= 1) {
+                      pages.push(i);
+                    } else if (pages[pages.length - 1] !== 'ellipsis') {
+                      pages.push('ellipsis');
+                    }
+                  }
+                  return pages.map((page, idx) =>
+                    page === 'ellipsis' ? (
+                      <span key={`e-${idx}`} className="px-1.5 text-muted-foreground text-sm">…</span>
+                    ) : (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? 'default' : 'outline'}
+                        size="sm"
+                        className="w-9 h-9"
+                        onClick={() => setOffset(page * limit)}
+                      >
+                        {page + 1}
+                      </Button>
+                    )
+                  );
+                })()}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setOffset(offset + limit)}
                   disabled={offset + limit >= total}
                 >
-                  Next
+                  {t('results.testRuns.next')}
                 </Button>
               </div>
             </div>

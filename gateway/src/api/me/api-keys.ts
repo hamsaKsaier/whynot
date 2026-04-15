@@ -132,7 +132,7 @@ router.post(
     );
 
     if (existing.length === 0) {
-      throw createError('API key not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.apiKeyNotFound'), 404, 'NOT_FOUND');
     }
 
     const { label } = existing[0];
@@ -198,7 +198,7 @@ router.delete(
     );
 
     if (existing.length === 0) {
-      throw createError('API key not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.apiKeyNotFound'), 404, 'NOT_FOUND');
     }
 
     await query(

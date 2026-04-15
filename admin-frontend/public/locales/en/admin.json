@@ -1,5 +1,6 @@
 {
   "admin.nav.title": "Admin",
+  "admin.nav.superadminTitle": "Super Admin",
   "admin.nav.dashboard": "Dashboard",
   "admin.nav.users": "Users",
   "admin.nav.organizations": "Organizations",

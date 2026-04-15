@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -28,13 +29,15 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmText = 'Confirm',
+  confirmText,
   typeToConfirm,
   variant = 'default',
   loading = false,
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('common')
   const [typed, setTyped] = useState('')
+  const resolvedConfirmText = confirmText ?? t('admin.common.confirm')
 
   const canConfirm = !typeToConfirm || typed === typeToConfirm
 
@@ -60,7 +63,7 @@ export function ConfirmDialog({
         {typeToConfirm && (
           <div className="space-y-2 py-2">
             <Label htmlFor="confirm-input">
-              Type <span className="font-mono font-semibold">{typeToConfirm}</span> to confirm
+              {t('admin.common.typeToConfirm', { text: typeToConfirm })}
             </Label>
             <Input
               id="confirm-input"
@@ -74,14 +77,14 @@ export function ConfirmDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={loading}>
-            Cancel
+            {t('admin.common.cancel')}
           </Button>
           <Button
             variant={variant === 'destructive' ? 'destructive' : 'default'}
             onClick={handleConfirm}
             disabled={!canConfirm || loading}
           >
-            {loading ? 'Processing...' : confirmText}
+            {loading ? t('admin.common.processing') : resolvedConfirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Play, Pencil, Trash2, Save, X, Globe, Search, Filter } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Plus, Play, Pencil, Trash2, Save, X, Globe, Search, Filter, SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -22,6 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '../components/ui/sheet';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { cn } from '../lib/utils';
 import { useToastContext } from '../contexts/ToastContext';
@@ -32,6 +40,7 @@ import type { TestCase } from '../types';
 export const TestCasesContent: React.FC = () => <TestCasesPage embedded />;
 
 export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t } = useTranslation('results');
   const { success, error: showError } = useToastContext();
   const { optimisticUpdate, optimisticDelete } = useOptimisticUpdate<TestCase>();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -62,7 +71,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
       const response = await getTestCases();
       setTestCases(response.test_cases);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to fetch test cases');
+      setError(err.response?.data?.error || err.message || t('results.testCases.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -99,8 +108,8 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
           description: editDescription,
         }),
         {
-          successMessage: 'Test case updated successfully',
-          errorMessage: 'Failed to update test case',
+          successMessage: t('results.testCases.updated'),
+          errorMessage: t('results.testCases.updateError'),
         }
       );
       setTestCases(updatedTestCases);
@@ -108,7 +117,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
       setEditName('');
       setEditDescription('');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to update test case';
+      const errorMessage = err.response?.data?.error || err.message || t('results.testCases.updateError');
       setError(errorMessage);
     }
   };
@@ -126,14 +135,14 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         deleteConfirm.testCase.id,
         () => deleteTestCase(deleteConfirm.testCase!.id),
         {
-          successMessage: 'Test case deleted successfully',
-          errorMessage: 'Failed to delete test case',
+          successMessage: t('results.testCases.deleted'),
+          errorMessage: t('results.testCases.deleteError'),
         }
       );
       setTestCases(updatedTestCases);
       setDeleteConfirm({ isOpen: false, testCase: null });
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to delete test case';
+      const errorMessage = err.response?.data?.error || err.message || t('results.testCases.deleteError');
       setError(errorMessage);
       setDeleteConfirm({ isOpen: false, testCase: null });
     }
@@ -148,7 +157,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         navigate(`/test-runs/${result.execution_id}`);
       }
     } catch (err: any) {
-      showError(err.response?.data?.error || err.message || 'Failed to run test');
+      showError(err.response?.data?.error || err.message || t('results.testCases.runError'));
       setRunningTestId(null);
     }
   };
@@ -183,78 +192,165 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
   return (
     <div>
       {!embedded && (
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Test Cases</h1>
-            <p className="text-muted-foreground mt-1">Manage and execute your saved test cases</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{t('results.testCases.title')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('results.testCases.subtitle')}</p>
           </div>
-          <Button onClick={() => navigate('/qa-loop')}>
+          <Button onClick={() => navigate('/qa-loop')} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 me-2" />
-            New Test Case
+            {t('results.testCases.new')}
           </Button>
         </div>
       )}
 
       {/* Filter bar -- only shown when there are test cases */}
       {testCases.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-muted rounded-lg border border-border">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[180px]">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or URL..."
-              className="ps-9"
-            />
-          </div>
-
-          {/* Domain filter */}
-          {uniqueDomains.length > 0 && (
-            <Select value={domainFilter} onValueChange={setDomainFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All domains" />
+        <>
+          {/* Desktop: inline filter bar */}
+          <div className="hidden md:flex flex-wrap items-center gap-3 mb-4 p-3 bg-muted rounded-lg border border-border">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('results.testCases.searchPlaceholder')}
+                className="ps-9"
+              />
+            </div>
+            {uniqueDomains.length > 0 && (
+              <Select value={domainFilter} onValueChange={setDomainFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder={t('results.testCases.allDomains')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t('results.testCases.allDomains')}</SelectItem>
+                  {uniqueDomains.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder={t('results.testCases.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All domains</SelectItem>
-                {uniqueDomains.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
+                <SelectItem value="all">{t('results.testCases.allStatuses')}</SelectItem>
+                <SelectItem value="passed">{t('results.passed')}</SelectItem>
+                <SelectItem value="failed">{t('results.failed')}</SelectItem>
+                <SelectItem value="not_run">{t('results.testCases.notRun')}</SelectItem>
               </SelectContent>
             </Select>
-          )}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+              >
+                <X className="h-3 w-3 me-1" />
+                {t('results.testCases.clear')}
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ms-auto">
+              {filteredTestCases.length} of {testCases.length}
+            </span>
+          </div>
 
-          {/* Status filter */}
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="passed">Passed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="not_run">Not run</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Clear filters */}
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-            >
-              <X className="h-3 w-3 me-1" />
-              Clear
-            </Button>
-          )}
-
-          {/* Result count */}
-          <span className="text-xs text-muted-foreground ms-auto">
-            {filteredTestCases.length} of {testCases.length}
-          </span>
-        </div>
+          {/* Mobile: search + filter drawer */}
+          <div className="md:hidden mb-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  inputMode="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('results.testCases.searchPlaceholder')}
+                  className="ps-9"
+                />
+              </div>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 relative">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {hasActiveFilters && (
+                      <span className="absolute -top-1 -end-1 w-2.5 h-2.5 bg-primary rounded-full" />
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="rounded-t-lg">
+                  <SheetHeader>
+                    <SheetTitle>{t('results.testCases.filters', { defaultValue: 'Filters' })}</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 py-4">
+                    {uniqueDomains.length > 0 && (
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">
+                          {t('results.testCases.allDomains')}
+                        </label>
+                        <Select value={domainFilter} onValueChange={setDomainFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('results.testCases.allDomains')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">{t('results.testCases.allDomains')}</SelectItem>
+                            {uniqueDomains.map((d) => (
+                              <SelectItem key={d} value={d}>{d}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">
+                        {t('results.testCases.allStatuses')}
+                      </label>
+                      <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('results.testCases.allStatuses')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t('results.testCases.allStatuses')}</SelectItem>
+                          <SelectItem value="passed">{t('results.passed')}</SelectItem>
+                          <SelectItem value="failed">{t('results.failed')}</SelectItem>
+                          <SelectItem value="not_run">{t('results.testCases.notRun')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {hasActiveFilters && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+                      >
+                        <X className="h-3 w-3 me-1" />
+                        {t('results.testCases.clear')}
+                      </Button>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {filteredTestCases.length} of {testCases.length}
+              </span>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+                >
+                  {t('results.testCases.clearFilters')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {error && (
@@ -263,10 +359,10 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
             <span>{error}</span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => { setError(null); fetchTestCases(); }}>
-                Retry
+                {t('results.testCases.retry')}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setError(null)}>
-                Dismiss
+                {t('results.testCases.dismiss')}
               </Button>
             </div>
           </AlertDescription>
@@ -294,16 +390,16 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Play className="h-8 w-8 text-muted-foreground mb-3" />
-            <h3 className="font-semibold text-foreground mb-1">No test cases yet</h3>
+            <h3 className="font-semibold text-foreground mb-1">{t('results.testCases.emptyTitle')}</h3>
             <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
-              Test cases are generated from user stories. Create a project and add user stories to get started
+              {t('results.testCases.emptyDescription')}
             </p>
             <Button onClick={() => navigate('/qa-loop')}>
               <Plus className="h-4 w-4 me-2" />
-              Create Your First Test Case
+              {t('results.testCases.createFirst')}
             </Button>
             <p className="text-xs text-muted-foreground mt-3">
-              Tip: Navigate to a project, add a user story, then generate test cases
+              {t('results.testCases.emptyTip')}
             </p>
           </CardContent>
         </Card>
@@ -311,13 +407,13 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Filter className="h-8 w-8 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground text-sm mb-2">No test cases match your filters</p>
+            <p className="text-muted-foreground text-sm mb-2">{t('results.testCases.noMatch')}</p>
             <Button
               variant="link"
               size="sm"
               onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
             >
-              Clear filters
+              {t('results.testCases.clearFilters')}
             </Button>
           </CardContent>
         </Card>
@@ -335,13 +431,13 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                       <Input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Test case name"
+                        placeholder={t('results.testCases.namePlaceholder')}
                       />
                       <Textarea
                         value={editDescription}
                         onChange={(e) => setEditDescription(e.target.value)}
                         rows={3}
-                        placeholder="Description"
+                        placeholder={t('results.testCases.descriptionPlaceholder')}
                         className="resize-none"
                       />
                       <div className="flex gap-2">
@@ -351,7 +447,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                           className="flex-1"
                         >
                           <Save className="h-4 w-4 me-1" />
-                          Save
+                          {t('results.testCases.save')}
                         </Button>
                         <Button
                           size="sm"
@@ -360,7 +456,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                           className="flex-1"
                         >
                           <X className="h-4 w-4 me-1" />
-                          Cancel
+                          {t('results.testCases.cancel')}
                         </Button>
                       </div>
                     </div>
@@ -368,7 +464,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                     <>
                       <h3 className="font-semibold text-foreground mb-2">{testCase.name}</h3>
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {testCase.description || 'No description'}
+                        {testCase.description || t('results.testCases.noDescription')}
                       </p>
                       <div className="flex items-center text-xs text-muted-foreground mb-3">
                         <Globe className="h-3 w-3 me-1" />
@@ -386,7 +482,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                             className="h-8 w-8"
                             onClick={() => handleRunTest(testCase)}
                             disabled={isRunning}
-                            title="Run test"
+                            title={t('results.testCases.runTest')}
                           >
                             <Play className={cn('h-4 w-4', isRunning ? 'text-muted-foreground' : 'text-primary')} />
                           </Button>
@@ -395,7 +491,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => handleEdit(testCase)}
-                            title="Edit"
+                            title={t('results.testCases.edit')}
                           >
                             <Pencil className="h-4 w-4 text-muted-foreground" />
                           </Button>
@@ -404,7 +500,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => handleDeleteClick(testCase)}
-                            title="Delete"
+                            title={t('results.testCases.delete')}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -428,9 +524,9 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Test Case</DialogTitle>
+            <DialogTitle>{t('results.testCases.deleteTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteConfirm.testCase?.name}"? This action cannot be undone.
+              {t('results.testCases.deleteConfirm', { name: deleteConfirm.testCase?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -438,10 +534,10 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
               variant="secondary"
               onClick={() => setDeleteConfirm({ isOpen: false, testCase: null })}
             >
-              Cancel
+              {t('results.testCases.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
+              {t('results.testCases.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

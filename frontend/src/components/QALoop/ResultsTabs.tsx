@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText, AlertTriangle, Globe, Shield, Search, CheckCircle, Clock, ArrowRight,
@@ -44,6 +45,7 @@ export interface ResultsTabsProps {
 export const ResultsTabs: React.FC<ResultsTabsProps> = ({
   testCases, bugs, pages, chaosResults, chaosSummary, analyses, correlations, isRunning, projectId, reportData
 }) => {
+  const { t } = useTranslation('runner');
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'tests' | 'bugs' | 'pages' | 'analysis' | 'report'>('tests');
 
@@ -65,10 +67,10 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
   };
 
   const statusLabel = (s: string | null) => {
-    if (s === 'passed' || s === 'confirmed') return 'Passed';
-    if (s === 'failed' || s === 'error') return 'Failed';
-    if (s === 'mismatch') return 'Needs Review';
-    return s || 'Pending';
+    if (s === 'passed' || s === 'confirmed') return t('runner.qaLoop.results.passed');
+    if (s === 'failed' || s === 'error') return t('runner.qaLoop.results.failed');
+    if (s === 'mismatch') return t('runner.qaLoop.results.needsReview');
+    return s || t('runner.qaLoop.results.pending');
   };
 
   const statusColor = (s: string | null) => {
@@ -95,31 +97,31 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
       {/* Summary card */}
       {(testCases.length > 0 || bugs.length > 0 || pages.length > 0) && (
         <Card className="mb-4">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Pages Scanned</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{t('runner.qaLoop.results.pagesScanned')}</div>
                 <div className="text-xl font-bold text-foreground">{pages.length}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Test Cases</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{t('runner.qaLoop.results.testCases')}</div>
                 <div className="text-xl font-bold text-foreground">{testCases.length}</div>
                 {testCases.length > 0 && (
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {passed > 0 && <span className="text-green-500 dark:text-green-400">{passed} passed</span>}
-                    {failed > 0 && <span className="text-red-500 dark:text-red-400">{passed > 0 ? ' / ' : ''}{failed} failed</span>}
-                    {review > 0 && <span className="text-amber-500 dark:text-amber-400">{(passed > 0 || failed > 0) ? ' / ' : ''}{review} review</span>}
-                    {pending > 0 && <span className="text-muted-foreground">{(passed > 0 || failed > 0 || review > 0) ? ' / ' : ''}{pending} pending</span>}
+                    {passed > 0 && <span className="text-green-500 dark:text-green-400">{t('runner.qaLoop.results.passedCount', { count: passed })}</span>}
+                    {failed > 0 && <span className="text-red-500 dark:text-red-400">{passed > 0 ? ' / ' : ''}{t('runner.qaLoop.results.failedCount', { count: failed })}</span>}
+                    {review > 0 && <span className="text-amber-500 dark:text-amber-400">{(passed > 0 || failed > 0) ? ' / ' : ''}{t('runner.qaLoop.results.reviewCount', { count: review })}</span>}
+                    {pending > 0 && <span className="text-muted-foreground">{(passed > 0 || failed > 0 || review > 0) ? ' / ' : ''}{t('runner.qaLoop.results.pendingCount', { count: pending })}</span>}
                   </div>
                 )}
               </div>
               <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Bugs Found</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{t('runner.qaLoop.stats.bugsFound')}</div>
                 <div className="text-xl font-bold text-foreground">{bugs.length}</div>
                 {bugs.length > 0 && (
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {verifiedBugs > 0 && <span className="text-green-500 dark:text-green-400">{verifiedBugs} Verified</span>}
-                    {potentialBugs > 0 && <span className="text-amber-500 dark:text-amber-400">{verifiedBugs > 0 ? ', ' : ''}{potentialBugs} AI-Observed</span>}
+                    {verifiedBugs > 0 && <span className="text-green-500 dark:text-green-400">{t('runner.qaLoop.results.verifiedCount', { count: verifiedBugs })}</span>}
+                    {potentialBugs > 0 && <span className="text-amber-500 dark:text-amber-400">{verifiedBugs > 0 ? ', ' : ''}{t('runner.qaLoop.results.aiObservedCount', { count: potentialBugs })}</span>}
                     {(critical > 0 || high > 0) && (
                       <span className="text-red-500 dark:text-red-400 ms-1">
                         ({critical > 0 ? `${critical} critical` : ''}{critical > 0 && high > 0 ? ', ' : ''}{high > 0 ? `${high} high` : ''})
@@ -129,10 +131,10 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
                 )}
               </div>
               <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Security</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{t('runner.qaLoop.results.security')}</div>
                 <div className="text-xl font-bold text-foreground">{chaosResults.length}</div>
                 {vulns > 0 && (
-                  <div className="text-xs text-red-500 dark:text-red-400 mt-0.5">{vulns} confirmed vulnerabilities</div>
+                  <div className="text-xs text-red-500 dark:text-red-400 mt-0.5">{t('runner.qaLoop.results.confirmedVulnerabilities', { count: vulns })}</div>
                 )}
               </div>
             </div>
@@ -147,7 +149,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
                   onClick={() => navigate(`/projects/${projectId}`)}
                   className="flex items-center gap-2 text-sm text-sky-500 hover:text-sky-400 p-0 h-auto"
                 >
-                  View All Tests <ArrowRight className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
+                  {t('runner.qaLoop.results.viewAllTests')} <ArrowRight className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
                 </Button>
               </>
             )}
@@ -156,57 +158,61 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="tests" className="gap-1">
-            <FileText className="h-3.5 w-3.5" />
-            Tests ({testCases.length})
+        <TabsList className="mb-4 w-full overflow-x-auto justify-start sm:justify-center">
+          <TabsTrigger value="tests" className="gap-1 text-xs sm:text-sm">
+            <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{t('runner.qaLoop.results.testsTab', { count: testCases.length })}</span>
+            <span className="sm:hidden">{testCases.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="bugs" className="gap-1">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Bugs ({bugs.length})
+          <TabsTrigger value="bugs" className="gap-1 text-xs sm:text-sm">
+            <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{t('runner.qaLoop.results.bugsTab', { count: bugs.length })}</span>
+            <span className="sm:hidden">{bugs.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="pages" className="gap-1">
-            <Globe className="h-3.5 w-3.5" />
-            Pages ({pages.length})
+          <TabsTrigger value="pages" className="gap-1 text-xs sm:text-sm">
+            <Globe className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{t('runner.qaLoop.results.pagesTab', { count: pages.length })}</span>
+            <span className="sm:hidden">{pages.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="analysis" className="gap-1">
-            <Search className="h-3.5 w-3.5" />
-            Analysis ({analyses.length})
+          <TabsTrigger value="analysis" className="gap-1 text-xs sm:text-sm">
+            <Search className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{t('runner.qaLoop.results.analysisTab', { count: analyses.length })}</span>
+            <span className="sm:hidden">{analyses.length}</span>
           </TabsTrigger>
           {reportData && (
-            <TabsTrigger value="report" className="gap-1">
-              <Shield className="h-3.5 w-3.5" />
-              Report (1)
+            <TabsTrigger value="report" className="gap-1 text-xs sm:text-sm">
+              <Shield className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">{t('runner.qaLoop.results.reportTab')}</span>
             </TabsTrigger>
           )}
         </TabsList>
 
-        <ScrollArea className="max-h-96">
+        <ScrollArea className="max-h-[50vh] sm:max-h-96">
           <TabsContent value="tests">
             <div className="space-y-2">
               {testCases.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No test cases generated yet</div>
+                <div className="text-center py-8 text-muted-foreground">{t('runner.qaLoop.results.noTestCases')}</div>
               ) : testCases.map(tc => (
                 <Card key={tc.id} className="shadow-none">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {statusIcon(tc.last_run_status)}
-                        <span className="font-medium text-foreground">{tc.name}</span>
+                  <CardContent className="p-2.5 sm:p-3">
+                    <div className="flex items-start sm:items-center justify-between gap-2">
+                      <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+                        <span className="shrink-0 mt-0.5 sm:mt-0">{statusIcon(tc.last_run_status)}</span>
+                        <span className="font-medium text-foreground text-sm break-words">{tc.name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800 text-[10px] sm:text-xs">
                           {tc.category}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">P{tc.priority}</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">P{tc.priority}</span>
                       </div>
                     </div>
-                    {tc.description && <p className="text-sm text-muted-foreground mt-1 ms-6">{tc.description}</p>}
-                    <div className="text-xs text-muted-foreground mt-1 ms-6 flex items-center gap-3">
-                      <span>{tc.steps?.length || 0} steps</span>
+                    {tc.description && <p className="text-xs sm:text-sm text-muted-foreground mt-1 ms-6 break-words">{tc.description}</p>}
+                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 ms-6 flex items-center gap-2 sm:gap-3 flex-wrap">
+                      <span>{t('runner.qaLoop.results.stepsCount', { count: tc.steps?.length || 0 })}</span>
                       {tc.last_run_status && (
                         <span className={statusColor(tc.last_run_status)}>
-                          Last: {statusLabel(tc.last_run_status)}
+                          {t('runner.qaLoop.results.lastStatus', { status: statusLabel(tc.last_run_status) })}
                         </span>
                       )}
                     </div>
@@ -219,7 +225,7 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
           <TabsContent value="bugs">
             <div className="space-y-2">
               {bugs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No bugs found yet -- that's a good sign!</div>
+                <div className="text-center py-8 text-muted-foreground">{t('runner.qaLoop.results.noBugs')}</div>
               ) : bugs.map(bug => (
                 <BugCard key={bug.id} bug={bug} severityColor={severityColor} safePathname={safePathname} />
               ))}
@@ -229,26 +235,28 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({
           <TabsContent value="pages">
             <div className="space-y-2">
               {pages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No pages explored yet</div>
+                <div className="text-center py-8 text-muted-foreground">{t('runner.qaLoop.results.noPages')}</div>
               ) : pages.map(page => (
                 <Card key={page.id} className="shadow-none">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {page.is_explored
-                          ? <CheckCircle className="h-4 w-4 text-green-500" />
-                          : <Clock className="h-4 w-4 text-yellow-500" />
-                        }
-                        <span className="font-medium text-foreground truncate max-w-md">
+                  <CardContent className="p-2.5 sm:p-3">
+                    <div className="flex items-start sm:items-center justify-between gap-2">
+                      <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+                        <span className="shrink-0 mt-0.5 sm:mt-0">
+                          {page.is_explored
+                            ? <CheckCircle className="h-4 w-4 text-green-500" />
+                            : <Clock className="h-4 w-4 text-yellow-500" />
+                          }
+                        </span>
+                        <span className="font-medium text-foreground text-sm truncate">
                           {page.title || safePathname(page.url, page.url)}
                         </span>
                       </div>
                       {page.page_type && (
-                        <Badge variant="outline" className="text-muted-foreground">{page.page_type}</Badge>
+                        <Badge variant="outline" className="text-muted-foreground text-[10px] sm:text-xs shrink-0">{page.page_type}</Badge>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1 ms-6 truncate">{page.url}</div>
-                    {page.description && <p className="text-sm text-muted-foreground mt-1 ms-6">{page.description}</p>}
+                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 ms-6 truncate break-all">{page.url}</div>
+                    {page.description && <p className="text-xs sm:text-sm text-muted-foreground mt-1 ms-6 break-words">{page.description}</p>}
                   </CardContent>
                 </Card>
               ))}

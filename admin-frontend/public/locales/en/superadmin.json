@@ -1,0 +1,89 @@
+{
+  "plans": {
+    "title": "Plans",
+    "newPlan": "New Plan",
+    "editPlan": "Edit Plan",
+    "createPlan": "Create Plan",
+    "saveChanges": "Save Changes",
+    "archivePlan": "Archive Plan",
+    "archiveDescription": "Are you sure you want to archive \"{{name}}\"? Existing subscribers won't be affected, but new subscriptions will be disabled.",
+    "archive": "Archive",
+    "restore": "Restore",
+    "syncStripe": "Sync to Stripe",
+    "syncStripeFailed": "Stripe sync failed: {{error}}",
+    "noPlans": "No plans created yet.",
+    "details": "Details",
+    "featureFlags": "Feature Flags",
+    "free": "Free",
+    "priceInterval": "{{price}}/{{interval}}",
+    "creditsCount": "{{count}} credits",
+    "trialDays": "{{days}}-day trial",
+    "subscriberCount": "{{count}} subscribers",
+    "breadcrumbs": {
+      "plans": "Plans",
+      "new": "New"
+    },
+    "fields": {
+      "name": "Name",
+      "slug": "Slug",
+      "description": "Description",
+      "price": "Price ($)",
+      "billingInterval": "Billing Interval",
+      "creditsPerPeriod": "Credits / Period",
+      "trialDays": "Trial Days",
+      "sortOrder": "Sort Order",
+      "public": "Public",
+      "enterprise": "Enterprise",
+      "featureKey": "Key",
+      "featureValue": "Value"
+    },
+    "intervals": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "oneTime": "One-time"
+    },
+    "badges": {
+      "archived": "Archived",
+      "hidden": "Hidden",
+      "custom": "Custom"
+    }
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "totalCount": "{{count}} total",
+    "allStatuses": "All Statuses",
+    "noSubscriptions": "No subscriptions found",
+    "columns": {
+      "workspace": "Workspace",
+      "owner": "Owner",
+      "plan": "Plan",
+      "status": "Status",
+      "credits": "Credits",
+      "periodEnd": "Period End"
+    },
+    "statuses": {
+      "active": "Active",
+      "trialing": "Trialing",
+      "pastDue": "Past Due",
+      "canceled": "Canceled"
+    }
+  },
+  "credits": {
+    "title": "Credits",
+    "description": "Credit balances across all users",
+    "grantCredits": "Grant Credits",
+    "grantDescription": "Grant credits to a specific workspace.",
+    "grant": "Grant",
+    "defaultGrantDescription": "Admin bulk grant",
+    "workspaceId": "Workspace ID",
+    "amount": "Amount",
+    "descriptionLabel": "Description",
+    "noUsers": "No users found",
+    "columns": {
+      "user": "User",
+      "email": "Email",
+      "plan": "Plan",
+      "credits": "Credits"
+    }
+  }
+}

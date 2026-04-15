@@ -2,6 +2,7 @@
  * SessionList — "Recent Sessions" card extracted from QALoopPage (5.1).
  */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -58,12 +59,15 @@ export const SessionList: React.FC<SessionListProps> = ({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
-}) => (
+}) => {
+  const { t } = useTranslation('runner');
+
+  return (
   <Card>
     <CardContent className="p-6">
       <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-        Recent Sessions
+        {t('runner.qaLoop.sessions.title')}
       </h2>
 
       {isLoading ? (
@@ -75,7 +79,7 @@ export const SessionList: React.FC<SessionListProps> = ({
       ) : sessions.length === 0 ? (
         <div className="text-center py-8">
           <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground mb-3">No sessions yet</p>
+          <p className="text-sm text-muted-foreground mb-3">{t('runner.qaLoop.sessions.empty')}</p>
           <Button
             variant="link"
             className="text-sm"
@@ -85,7 +89,7 @@ export const SessionList: React.FC<SessionListProps> = ({
               el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }}
           >
-            Start your first exploration &rarr;
+            {t('runner.qaLoop.sessions.startFirst')}
           </Button>
         </div>
       ) : (
@@ -113,9 +117,9 @@ export const SessionList: React.FC<SessionListProps> = ({
                 </Badge>
               </div>
               <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                <span>{session.pages_explored} pages</span>
-                <span>{session.tests_generated} tests</span>
-                <span>{session.bugs_found} bugs</span>
+                <span>{t('runner.qaLoop.sessions.pages', { count: session.pages_explored })}</span>
+                <span>{t('runner.qaLoop.sessions.tests', { count: session.tests_generated })}</span>
+                <span>{t('runner.qaLoop.sessions.bugs', { count: session.bugs_found })}</span>
               </div>
             </button>
           ))}
@@ -129,11 +133,12 @@ export const SessionList: React.FC<SessionListProps> = ({
               disabled={isLoadingMore}
               className="w-full mt-1"
             >
-              {isLoadingMore ? 'Loading...' : 'Load more'}
+              {isLoadingMore ? t('runner.qaLoop.sessions.loading') : t('runner.qaLoop.sessions.loadMore')}
             </Button>
           )}
         </div>
       )}
     </CardContent>
   </Card>
-);
+  );
+};

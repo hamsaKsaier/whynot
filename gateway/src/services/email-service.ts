@@ -7,11 +7,12 @@
 
 import { createLogger } from '../../shared/logger/logger';
 import { query } from '../../shared/database/connection';
+import { env } from '../config/env';
 
 const logger = createLogger('email-service');
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
-const FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || 'WhyNot <notifications@whynot.qa>';
+const FROM_ADDRESS = env.EMAIL_FROM_ADDRESS;
 
 // ── Template helper ──────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ function emailLayout(content: string, ctaUrl?: string, ctaText?: string): string
 // ── Send via Resend ──────────────────────────────────────────────────────────
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     logger.warn('RESEND_API_KEY not set — skipping email', { to, subject });
     return;
@@ -214,7 +215,7 @@ export async function sendAutoFixPREmail(userId: string, data: AutoFixPRData): P
 // ── Password Reset Email ─────────────────────────────────────────────────────
 
 export async function sendPasswordResetEmail(to: string, resetToken: string): Promise<void> {
-  const frontendUrl = process.env.FRONTEND_URL || 'https://whynotqa.com';
+  const frontendUrl = env.FRONTEND_URL;
   const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
   const subject = 'Reset your WhyNot password';

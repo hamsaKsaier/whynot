@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Download, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -28,14 +29,16 @@ interface CreditRow {
   plan_name?: string
 }
 
-const columns: Column<CreditRow>[] = [
-  { key: 'name', header: 'User', render: (r) => <span className="font-medium">{r.name}</span> },
-  { key: 'email', header: 'Email', render: (r) => <span className="text-muted-foreground">{r.email}</span> },
-  { key: 'plan', header: 'Plan', render: (r) => <span className="text-muted-foreground">{r.plan_name || '-'}</span> },
-  { key: 'credits', header: 'Credits', className: 'text-end', render: (r) => <span className="font-medium">{r.credits}</span> },
-]
-
 export function CreditsPage() {
+  const { t } = useTranslation('superadmin')
+
+  const columns: Column<CreditRow>[] = [
+    { key: 'name', header: t('credits.columns.user'), render: (r) => <span className="font-medium">{r.name}</span> },
+    { key: 'email', header: t('credits.columns.email'), render: (r) => <span className="text-muted-foreground">{r.email}</span> },
+    { key: 'plan', header: t('credits.columns.plan'), hideOnMobile: true, render: (r) => <span className="text-muted-foreground">{r.plan_name || '-'}</span> },
+    { key: 'credits', header: t('credits.columns.credits'), className: 'text-end', render: (r) => <span className="font-medium">{r.credits}</span> },
+  ]
+
   const [users, setUsers] = useState<CreditRow[]>([])
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
@@ -68,7 +71,7 @@ export function CreditsPage() {
     if (!grantForm.workspaceId || !amount || amount <= 0) return
     setGranting(true)
     try {
-      await grantCredits(grantForm.workspaceId, amount, grantForm.description || 'Admin bulk grant')
+      await grantCredits(grantForm.workspaceId, amount, grantForm.description || t('credits.defaultGrantDescription'))
       setGrantOpen(false)
       setGrantForm({ workspaceId: '', amount: '', description: '' })
       await fetchData()
@@ -92,14 +95,14 @@ export function CreditsPage() {
   return (
     <div className="space-y-4">
       <AdminPageHeader
-        title="Credits"
-        description="Credit balances across all users"
+        title={t('credits.title')}
+        description={t('credits.description')}
         actions={
           <div className="flex gap-2">
             <ExportMenu onExportCSV={handleExportCSV} />
             <Button size="sm" onClick={() => setGrantOpen(true)}>
               <Plus className="h-4 w-4 me-1.5" />
-              Grant Credits
+              {t('credits.grantCredits')}
             </Button>
           </div>
         }
@@ -110,23 +113,23 @@ export function CreditsPage() {
         data={users}
         loading={loading}
         rowKey={(r) => r.id}
-        emptyMessage="No users found"
+        emptyMessage={t('credits.noUsers')}
         hasNextPage={offset + limit < total}
         hasPrevPage={offset > 0}
         onNextPage={() => setOffset(offset + limit)}
         onPrevPage={() => setOffset(Math.max(0, offset - limit))}
-        pageInfo={totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : undefined}
+        pageInfo={totalPages > 0 ? t('common:admin.common.pageOf', { current: currentPage, total: totalPages }) : undefined}
       />
 
       <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Grant Credits</DialogTitle>
-            <DialogDescription>Grant credits to a specific workspace.</DialogDescription>
+            <DialogTitle>{t('credits.grantCredits')}</DialogTitle>
+            <DialogDescription>{t('credits.grantDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="ws-id">Workspace ID</Label>
+              <Label htmlFor="ws-id">{t('credits.workspaceId')}</Label>
               <Input
                 id="ws-id"
                 value={grantForm.workspaceId}
@@ -135,7 +138,7 @@ export function CreditsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="amount">Amount</Label>
+              <Label htmlFor="amount">{t('credits.amount')}</Label>
               <Input
                 id="amount"
                 type="number"
@@ -145,7 +148,7 @@ export function CreditsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="desc">Description</Label>
+              <Label htmlFor="desc">{t('credits.descriptionLabel')}</Label>
               <Textarea
                 id="desc"
                 value={grantForm.description}
@@ -156,10 +159,10 @@ export function CreditsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGrantOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setGrantOpen(false)}>{t('common:admin.common.cancel')}</Button>
             <Button onClick={handleGrant} disabled={granting}>
               {granting && <Loader2 className="h-4 w-4 me-1.5 animate-spin" />}
-              Grant
+              {t('credits.grant')}
             </Button>
           </DialogFooter>
         </DialogContent>

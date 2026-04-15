@@ -4,6 +4,7 @@ import { createLogger } from '../../shared/logger/logger'
 import { createError, asyncHandler } from '../middleware/error-handler'
 import rateLimit from 'express-rate-limit'
 import { PLANS, DEFAULT_PAYG_RATES, DEFAULT_TRIAL_DAYS } from '../../shared/constants/pricing'
+import { env } from '../config/env'
 
 const logger = createLogger('landing-leads')
 
@@ -11,13 +12,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const leadCaptureRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_LEAD_CAPTURE_MAX || '10', 10),
+  max: env.RATE_LIMIT_LEAD_CAPTURE_MAX,
   message: 'Too many requests. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (_req: Request, res: Response) => {
+  handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many lead capture requests from this IP. Please try again later.',
+      (req as any).t('errors:rateLimit.leadCapture'),
       429,
       'RATE_LIMIT_EXCEEDED'
     )
@@ -62,7 +63,7 @@ landingLeadsRouter.post('/leads', leadCaptureRateLimiter, asyncHandler(async (re
   const { email, source, metadata } = req.body
 
   if (!email || typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
-    throw createError('Invalid email address.', 400, 'INVALID_EMAIL')
+    throw createError((req as any).t('errors:validation.emailInvalid'), 400, 'INVALID_EMAIL')
   }
 
   const normalizedEmail = email.trim().toLowerCase()
@@ -82,6 +83,6 @@ landingLeadsRouter.post('/leads', leadCaptureRateLimiter, asyncHandler(async (re
     res.status(200).json({ success: true })
   } catch (error) {
     logger.error('Failed to capture landing lead', error)
-    throw createError('Failed to save lead.', 500, 'INTERNAL_ERROR')
+    throw createError((req as any).t('errors:service.leadSaveFailed'), 500, 'INTERNAL_ERROR')
   }
 }))

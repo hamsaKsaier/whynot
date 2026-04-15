@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../lib/utils';
 
 interface CardProps {
   title?: string;
@@ -19,15 +20,15 @@ export const Card: React.FC<CardProps> = ({
   clickable = false,
   onClick,
 }) => {
-  const baseClasses = 'bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6 transition-all duration-200';
+  const baseClasses = 'bg-card rounded-lg shadow-sm border border-border p-6 transition-colors duration-150';
   const hoverClasses = hoverable || clickable
-    ? 'hover:shadow-md hover:border-primary-700 hover:scale-[1.01]'
+    ? 'hover:bg-muted/50'
     : '';
-  const clickableClasses = clickable ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-900' : '';
+  const clickableClasses = clickable ? 'cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary' : '';
 
   return (
     <div
-      className={`${baseClasses} ${hoverClasses} ${clickableClasses} ${className}`}
+      className={cn(baseClasses, hoverClasses, clickableClasses, className)}
       onClick={onClick}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
@@ -39,9 +40,9 @@ export const Card: React.FC<CardProps> = ({
       } : undefined}
     >
       {(title || headerActions) && (
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-700">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
           {title && (
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
           )}
           {headerActions && (
             <div>{headerActions}</div>

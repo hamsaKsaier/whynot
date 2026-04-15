@@ -10,6 +10,7 @@
  * Heavy UI lives in SessionForm / SessionList / StatsBar / LiveMonitor.
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../contexts/ToastContext';
 import {
   Zap, Globe, Activity, Play, Pause,
@@ -57,6 +58,7 @@ function getStatusColor(status: string): string {
 
 // -- Page ---------------------------------------------------------------------
 export const QALoopPage: React.FC = () => {
+  const { t } = useTranslation('runner');
   const { success, error: showError } = useToastContext();
 
   // -- Session manager (data / API / stream) ----------------------------------
@@ -192,7 +194,7 @@ export const QALoopPage: React.FC = () => {
 
   // Build start params and delegate to session manager
   const onStartClick = useCallback(async () => {
-    if (!targetUrl) { showError('Please enter a target URL'); return; }
+    if (!targetUrl) { showError(t('runner.qaLoop.errors.enterTargetUrl')); return; }
     const loginCreds = useLogin && loginCredentials.email && loginCredentials.password
       ? {
           email:             loginCredentials.email,
@@ -280,7 +282,7 @@ export const QALoopPage: React.FC = () => {
       <AlertDescription className="flex items-center justify-between gap-2">
         <span>{wsError}</span>
         <Button variant="ghost" size="sm" onClick={() => setWsErrorDismissed(true)}>
-          Dismiss
+          {t('runner.qaLoop.dismiss')}
         </Button>
       </AlertDescription>
     </Alert>
@@ -313,7 +315,7 @@ export const QALoopPage: React.FC = () => {
         >
 
           {/* -- Cinema Top Bar ------------------------------------------------ */}
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-muted border-b border-border shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-muted border-b border-border shrink-0">
 
             {/* Sidebar toggle */}
             <Button
@@ -327,61 +329,61 @@ export const QALoopPage: React.FC = () => {
             </Button>
 
             {/* Session URL */}
-            <Globe className="text-primary shrink-0" size={14} />
-            <span className="text-sm font-semibold text-foreground truncate max-w-xs">
+            <Globe className="text-primary shrink-0 hidden sm:block" size={14} />
+            <span className="text-xs sm:text-sm font-semibold text-foreground truncate max-w-[120px] sm:max-w-xs">
               {activeSession.target_url}
             </span>
 
             {/* Status pill */}
-            <Badge variant={statusInfo.variant} className={cn('gap-1.5 text-xs', statusInfo.className)}>
+            <Badge variant={statusInfo.variant} className={cn('gap-1 sm:gap-1.5 text-[10px] sm:text-xs', statusInfo.className)}>
               <Activity size={11} />
               {activeSession.status}
             </Badge>
 
             {/* Iteration counter */}
-            <span className="text-xs text-muted-foreground shrink-0">
-              Iter <span className="font-semibold">{iteration || activeSession.iteration_count}</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0 hidden sm:inline">
+              {t('runner.qaLoop.cinema.iteration')} <span className="font-semibold">{iteration || activeSession.iteration_count}</span>
             </span>
 
             {/* Quality score */}
             {activeSession.quality_score > 0 && (
-              <span className="text-xs text-muted-foreground shrink-0">
+              <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0 hidden sm:inline">
                 Q: <span className="text-primary font-semibold">{activeSession.quality_score}%</span>
               </span>
             )}
 
             {/* Live indicator */}
             {isConnected && (
-              <span className="text-xs text-green-400 flex items-center gap-1 shrink-0">
+              <span className="text-[10px] sm:text-xs text-green-400 flex items-center gap-1 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
                 LIVE
               </span>
             )}
 
             {/* -- Controls (right-aligned) -- */}
-            <div className="ms-auto flex items-center gap-2 shrink-0">
+            <div className="ms-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
               {activeSession.status === 'running' && (
-                <Button variant="secondary" size="sm" onClick={handlePauseSession}>
-                  <Pause className="me-1" size={12} /> Pause
+                <Button variant="secondary" size="sm" className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3" onClick={handlePauseSession}>
+                  <Pause className="me-1" size={12} /> <span className="hidden sm:inline">{t('runner.controls.pause')}</span>
                 </Button>
               )}
               {activeSession.status === 'paused' && (
-                <Button variant="secondary" size="sm" onClick={handleResumeSession}>
-                  <Play className="me-1" size={12} /> Resume
+                <Button variant="secondary" size="sm" className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3" onClick={handleResumeSession}>
+                  <Play className="me-1" size={12} /> <span className="hidden sm:inline">{t('runner.controls.resume')}</span>
                 </Button>
               )}
               {(activeSession.status === 'running' || activeSession.status === 'paused') && (
-                <Button variant="destructive" size="sm" onClick={() => setShowStopConfirm(true)}>
-                  <CircleStop className="me-1" size={12} /> Stop
+                <Button variant="destructive" size="sm" className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3" onClick={() => setShowStopConfirm(true)}>
+                  <CircleStop className="me-1" size={12} /> <span className="hidden sm:inline">{t('runner.controls.stop')}</span>
                 </Button>
               )}
               {activeSession.status === 'completed' && (
                 <>
-                  <Button variant="secondary" size="sm" onClick={() => handleRetest('quick')}>
-                    <RefreshCw className="me-1" size={12} /> Quick Retest
+                  <Button variant="secondary" size="sm" className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3" onClick={() => handleRetest('quick')}>
+                    <RefreshCw className="me-1" size={12} /> <span className="hidden sm:inline">{t('runner.qaLoop.cinema.quickRetest')}</span>
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={() => handleRetest('smart')}>
-                    <Target className="me-1" size={12} /> Smart Retest
+                  <Button variant="secondary" size="sm" className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3" onClick={() => handleRetest('smart')}>
+                    <Target className="me-1" size={12} /> <span className="hidden sm:inline">{t('runner.qaLoop.cinema.smartRetest')}</span>
                   </Button>
                 </>
               )}
@@ -392,17 +394,17 @@ export const QALoopPage: React.FC = () => {
           <Dialog open={showStopConfirm} onOpenChange={setShowStopConfirm}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Stop Session</DialogTitle>
+                <DialogTitle>{t('runner.qaLoop.cinema.stopSession')}</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to stop this session? Results collected so far will be preserved.
+                  {t('runner.qaLoop.cinema.stopConfirmation')}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="secondary" onClick={() => setShowStopConfirm(false)}>
-                  Cancel
+                  {t('runner.qaLoop.cinema.cancel')}
                 </Button>
                 <Button variant="destructive" onClick={() => { setShowStopConfirm(false); handleStopSession(); }}>
-                  Yes, stop
+                  {t('runner.qaLoop.cinema.yesStop')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -416,14 +418,23 @@ export const QALoopPage: React.FC = () => {
               <div className="absolute inset-0 bg-card/70 flex items-center justify-center z-20">
                 <div className="flex items-center gap-2 text-muted-foreground bg-muted px-4 py-2 rounded-lg shadow-sm border border-border">
                   <Loader2 className="animate-spin text-primary" size={14} />
-                  <span className="text-sm font-medium">Loading session...</span>
+                  <span className="text-sm font-medium">{t('runner.qaLoop.cinema.loadingSession')}</span>
                 </div>
               </div>
             )}
 
-            {/* -- Collapsible Sidebar ----------------------------------------- */}
+            {/* -- Collapsible Sidebar (overlay on mobile, push on lg+) --------- */}
+            {showSidebar && (
+              <div
+                className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+                onClick={() => setShowSidebar(false)}
+              />
+            )}
             <div
-              className="shrink-0 bg-muted/40 border-e border-border overflow-hidden transition-[width] duration-200 ease-in-out"
+              className={cn(
+                'shrink-0 bg-muted/40 border-e border-border overflow-hidden transition-[width] duration-200 ease-in-out',
+                'fixed top-0 start-0 h-full z-40 lg:relative lg:z-auto',
+              )}
               style={{ width: showSidebar ? '320px' : '0px' }}
             >
               <div className="w-80 h-full overflow-y-auto p-4 space-y-4">
@@ -513,37 +524,37 @@ export const QALoopPage: React.FC = () => {
       {wsErrorToast}
 
       {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-3">
-          <Zap className="text-primary" />
-          QA Loop
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-semibold text-foreground flex items-center gap-2 sm:gap-3">
+          <Zap className="text-primary shrink-0" />
+          {t('runner.qaLoop.title')}
         </h1>
-        <p className="text-muted-foreground mt-2">
-          Autonomous exploration and testing powered by AI. Point at a URL, let it explore overnight.
+        <p className="text-sm sm:text-base text-muted-foreground mt-1.5 sm:mt-2">
+          {t('runner.qaLoop.subtitle')}
         </p>
       </div>
 
       {/* First-run onboarding banner */}
       {showOnboarding && (
-        <Card className="max-w-3xl mx-auto mb-6 border-primary/30">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Zap className="text-primary" /> How QA Loop works
+        <Card className="max-w-3xl mx-auto mb-4 sm:mb-6 border-primary/30">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3 sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-foreground mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
+                  <Zap className="text-primary shrink-0" /> {t('runner.qaLoop.onboarding.title')}
                 </h3>
-                <div className="flex flex-col sm:flex-row gap-4 text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 text-sm text-muted-foreground">
                   {[
-                    { n: '1', title: 'Enter a URL',           sub: 'Any public or internal app' },
-                    { n: '2', title: 'AI explores overnight',  sub: 'Clicks, forms, edge cases' },
-                    { n: '3', title: 'See results',            sub: 'Bugs, tests, quality score' },
+                    { n: '1', title: t('runner.qaLoop.onboarding.step1Title'), sub: t('runner.qaLoop.onboarding.step1Sub') },
+                    { n: '2', title: t('runner.qaLoop.onboarding.step2Title'), sub: t('runner.qaLoop.onboarding.step2Sub') },
+                    { n: '3', title: t('runner.qaLoop.onboarding.step3Title'), sub: t('runner.qaLoop.onboarding.step3Sub') },
                   ].map(({ n, title, sub }, i) => (
                     <React.Fragment key={n}>
                       {i > 0 && <div className="hidden sm:block text-muted-foreground self-center">&#8594;</div>}
                       <div className="flex items-start gap-2">
                         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold mt-0.5">{n}</span>
                         <div>
-                          <p className="font-medium text-foreground">{title}</p>
+                          <p className="font-medium text-foreground text-sm">{title}</p>
                           <p className="text-xs text-muted-foreground">{sub}</p>
                         </div>
                       </div>
@@ -556,8 +567,9 @@ export const QALoopPage: React.FC = () => {
                 size="sm"
                 onClick={dismissOnboarding}
                 aria-label="Dismiss"
+                className="shrink-0"
               >
-                Got it
+                {t('runner.qaLoop.onboarding.gotIt')}
               </Button>
             </div>
           </CardContent>
@@ -565,7 +577,7 @@ export const QALoopPage: React.FC = () => {
       )}
 
       {/* Session form + list */}
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
         <SessionForm {...sessionFormProps} />
         <SessionList {...sessionListProps} />
       </div>

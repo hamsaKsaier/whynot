@@ -30,7 +30,7 @@ const statusConfig = {
   },
   pending: {
     icon: FiClock,
-    color: 'bg-slate-800 text-slate-200 border-slate-700',
+    color: 'bg-muted text-muted-foreground border-border',
   },
   running: {
     icon: FiClock,
@@ -73,9 +73,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center ${sizeStyles.gap} rounded-full border font-medium ${config.color} ${sizeStyles.text} ${sizeStyles.padding} ${
-        pulse ? 'animate-pulse' : ''
-      } transition-all duration-200 ${className}`}
+      className={`inline-flex items-center ${sizeStyles.gap} rounded-full border font-medium ${config.color} ${sizeStyles.text} ${sizeStyles.padding} transition-colors duration-150 ${className}`}
       role="status"
       aria-label={`Status: ${label || defaultLabel}`}
     >

@@ -1,6 +1,7 @@
 import { generateText } from 'ai';
 import axios from 'axios';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 import { AutoFixRepository, AutoFixAttemptEntity } from '../../shared/database/repositories/auto-fix-repository';
 import { GitHubService } from './github-service';
 import { query } from '../../shared/database/connection';
@@ -9,8 +10,7 @@ import { selectAIProvider } from '../utils/ai/select-ai-provider';
 
 const logger = createLogger('auto-fix-service');
 
-const qaLoopExecutorUrl =
-  process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+const qaLoopExecutorUrl = env.QA_LOOP_EXECUTOR_URL;
 
 interface BugDetails {
   id: string;
@@ -49,7 +49,7 @@ export class AutoFixService {
 
   constructor() {
     this.repository = new AutoFixRepository();
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY is required for auto-fix service');
     }

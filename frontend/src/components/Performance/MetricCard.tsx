@@ -18,7 +18,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   formatValue,
 }) => {
   const colorMap = {
-    default: 'text-white',
+    default: 'text-foreground',
     success: 'text-emerald-400',
     warning: 'text-amber-400',
     danger: 'text-red-400',
@@ -38,14 +38,14 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   const displayValue = formatValue ? formatValue(value) : value.toLocaleString();
 
   return (
-    <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
+    <div className="bg-card border border-border rounded-lg p-4">
       <div className="flex items-baseline gap-1.5">
         <span className={`text-2xl font-bold tabular-nums ${colorMap[color]}`}>
           {displayValue}
         </span>
         {unit && <span className="text-sm text-slate-500">{unit}</span>}
         {previousValue !== undefined && (
-          <span className={`text-xs ml-1 ${trendColor}`}>{trendIcon}</span>
+          <span className={`text-xs ms-1 ${trendColor}`}>{trendIcon}</span>
         )}
       </div>
       <div className="text-xs text-slate-500 mt-1">{label}</div>

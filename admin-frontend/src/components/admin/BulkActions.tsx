@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/button'
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ interface BulkActionsProps {
 }
 
 export function BulkActions({ selectedCount, actions, onClear, className }: BulkActionsProps) {
+  const { t } = useTranslation('common')
   if (selectedCount === 0) return null
 
   return (
@@ -33,12 +35,12 @@ export function BulkActions({ selectedCount, actions, onClear, className }: Bulk
       )}
     >
       <span className="text-sm font-medium">
-        {selectedCount} selected
+        {t('admin.common.selected', { count: selectedCount })}
       </span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
-            Actions
+            {t('admin.common.actions')}
             <ChevronDown className="h-4 w-4 ms-1.5" />
           </Button>
         </DropdownMenuTrigger>
@@ -57,7 +59,7 @@ export function BulkActions({ selectedCount, actions, onClear, className }: Bulk
       </DropdownMenu>
       <Button variant="ghost" size="sm" onClick={onClear}>
         <X className="h-4 w-4 me-1" />
-        Clear
+        {t('admin.common.clear')}
       </Button>
     </div>
   )

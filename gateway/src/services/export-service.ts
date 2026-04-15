@@ -5,6 +5,7 @@ import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import archiver from 'archiver';
 import { query } from '../../shared/database/connection';
+import { env } from '../config/env';
 import { UsageEventRepository } from '../../shared/database/repositories/usage-event-repository';
 import { AuditRepository } from '../../shared/database/repositories/audit-repository';
 import { createLogger } from '../../shared/logger/logger';
@@ -137,7 +138,7 @@ export class ExportService {
         expiresAt: Date.now() + SIGNED_URL_TTL_MS,
       });
 
-      const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
+      const baseUrl = env.API_BASE_URL;
       const downloadUrl = `${baseUrl}/api/me/account/export/${exportId}/download?token=${token}`;
 
       await query(

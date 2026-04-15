@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { Menu, CreditCard, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -54,6 +55,7 @@ function getBreadcrumbs(pathname: string) {
 }
 
 export function Header({ onMenuToggle }: HeaderProps) {
+  const { t } = useTranslation("common")
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
   const [creditBalance, setCreditBalance] = useState<number | null>(null)
@@ -79,7 +81,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           size="icon"
           className="lg:hidden"
           onClick={onMenuToggle}
-          aria-label="Open navigation menu"
+          aria-label={t("common.header.openNavMenu")}
         >
           <Menu className="h-5 w-5" />
         </Button>
@@ -88,7 +90,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        <nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <nav className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground" aria-label="Breadcrumb">
           {breadcrumbs.map((crumb, index) => (
             <span key={crumb.path} className="flex items-center gap-1">
               {index > 0 && <span>/</span>}
@@ -120,7 +122,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             )}
           >
             <CreditCard className="h-3 w-3" />
-            {creditBalance} credits
+            {t("common.header.credits", { count: creditBalance })}
           </Link>
         )}
 
@@ -149,12 +151,12 @@ export function Header({ onMenuToggle }: HeaderProps) {
               </>
             )}
             <DropdownMenuItem asChild>
-              <Link to="/settings">Settings</Link>
+              <Link to="/settings">{t("common.header.settings")}</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
-              <LogOut className="me-2 h-4 w-4" />
-              Sign out
+              <LogOut className="me-2 h-4 w-4 rtl:scale-x-[-1]" />
+              {t("common.header.signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -81,7 +81,7 @@ export const CheckoutPage: React.FC = () => {
         window.location.href = result.url;
       }
     } catch {
-      // Error handled by API interceptor (upgrade-prompt event)
+      // Error handled by API interceptor
     } finally {
       setCheckoutLoading(null);
     }
@@ -116,10 +116,10 @@ export const CheckoutPage: React.FC = () => {
   const paidPlans = plans.filter(p => p.price_cents > 0 && !p.is_custom);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-10">
+    <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-semibold text-foreground">
+        <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
           {t('checkout.title')}
         </h1>
         <p className="text-muted-foreground text-sm max-w-lg mx-auto">
@@ -128,7 +128,7 @@ export const CheckoutPage: React.FC = () => {
       </div>
 
       {/* Tier Explainer */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {(['byo_keys', 'managed_payg'] as const).map((tier) => {
           const info = TIER_INFO[tier];
           const Icon = info.icon;
@@ -136,7 +136,7 @@ export const CheckoutPage: React.FC = () => {
             <Card key={tier}>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <Icon className="h-5 w-5 text-muted-foreground" />
+                  <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   <CardTitle className="text-base">{t(info.label)}</CardTitle>
                 </div>
                 <CardDescription className="text-sm">
@@ -148,13 +148,14 @@ export const CheckoutPage: React.FC = () => {
         })}
       </div>
 
-      {/* Comparison Table */}
+      {/* Comparison Table — desktop table, mobile card list */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('checkout.compare.title')}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
@@ -186,11 +187,30 @@ export const CheckoutPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile stacked comparison */}
+          <div className="sm:hidden divide-y divide-border">
+            {COMPARISON_ROWS.map((row) => (
+              <div key={row.key} className="px-4 py-3">
+                <p className="text-sm font-medium text-foreground mb-2">{t(row.label)}</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block mb-0.5">{t('checkout.tier.byo')}</span>
+                    <span className="text-foreground">{t(`checkout.compare.${row.key}Byo`)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-0.5">{t('checkout.tier.managed')}</span>
+                    <span className="text-foreground">{t(`checkout.compare.${row.key}Managed`)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
       {/* Plan Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Free Plan */}
         {freePlan && (
           <Card className="flex flex-col">
@@ -200,7 +220,7 @@ export const CheckoutPage: React.FC = () => {
             </CardHeader>
             <CardContent className="flex-1">
               <div className="mb-4">
-                <span className="text-2xl font-semibold text-foreground">
+                <span className="text-2xl md:text-3xl font-semibold text-foreground">
                   {t('checkout.free')}
                 </span>
               </div>
@@ -209,7 +229,7 @@ export const CheckoutPage: React.FC = () => {
                   .filter(([key, val]) => val === 'true' && featureLabels[key])
                   .map(([key]) => (
                     <li key={key} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                       {featureLabels[key]}
                     </li>
                   ))}
@@ -248,7 +268,7 @@ export const CheckoutPage: React.FC = () => {
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="mb-1">
-                  <span className="text-2xl font-semibold text-foreground">
+                  <span className="text-2xl md:text-3xl font-semibold text-foreground">
                     {formatPrice(plan.price_cents)}
                   </span>
                   <span className="text-sm text-muted-foreground">
@@ -266,13 +286,13 @@ export const CheckoutPage: React.FC = () => {
                     .filter(([key, val]) => val === 'true' && featureLabels[key])
                     .map(([key]) => (
                       <li key={key} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                         {featureLabels[key]}
                       </li>
                     ))}
                   {plan.features.max_projects && (
                     <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                       {plan.features.max_projects === '-1'
                         ? t('checkout.unlimitedProjects')
                         : t('checkout.maxProjects', { count: parseInt(plan.features.max_projects, 10) })}
@@ -280,7 +300,7 @@ export const CheckoutPage: React.FC = () => {
                   )}
                   {isManaged && (
                     <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <Shield className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                       {t('checkout.payAsYouGo')}
                     </li>
                   )}

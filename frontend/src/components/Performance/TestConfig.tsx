@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiPlus, FiTrash2, FiPlay, FiSave, FiBookmark } from 'react-icons/fi';
 import type { PerfRunConfig } from '../../services/perf-api';
 
@@ -73,6 +74,7 @@ interface AdditionalRequest {
 }
 
 export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projectId }) => {
+  const { t } = useTranslation('runner');
   const [testType, setTestType] = useState<TestType>('load');
   const [targetUrl, setTargetUrl] = useState('');
   const [method, setMethod] = useState('POST');
@@ -190,7 +192,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
     <div className="space-y-5">
       {/* Test Type Selector */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">Test Type</label>
+        <label className="block text-sm font-medium text-slate-300 mb-2">{t('runner.performance.testType')}</label>
         <div className="grid grid-cols-4 gap-2">
           {(Object.keys(TEST_TYPE_INFO) as TestType[]).map((type) => (
             <button
@@ -199,7 +201,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 testType === type
                   ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
-                  : 'bg-[#1e293b] text-slate-400 border border-[#334155] hover:border-slate-500'
+                  : 'bg-card text-slate-400 border border-border hover:border-slate-500'
               }`}
             >
               {TEST_TYPE_INFO[type].label}
@@ -211,23 +213,23 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
 
       {/* Target URL */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">Target URL</label>
+        <label className="block text-sm font-medium text-slate-300 mb-1">{t('runner.performance.targetUrl')}</label>
         <input
           type="url"
           value={targetUrl}
           onChange={(e) => setTargetUrl(e.target.value)}
           placeholder="https://api.example.com/auth/login"
-          className="w-full px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 text-sm"
+          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-slate-600 focus:outline-none focus:border-sky-500 text-sm"
         />
       </div>
 
       {/* Method */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">Method</label>
+        <label className="block text-sm font-medium text-slate-300 mb-1">{t('runner.performance.method')}</label>
         <select
           value={method}
           onChange={(e) => setMethod(e.target.value)}
-          className="w-full px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:border-sky-500 text-sm"
+          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:border-sky-500 text-sm"
         >
           <option value="GET">GET</option>
           <option value="POST">POST</option>
@@ -239,21 +241,21 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
 
       {/* Expected Status */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">Expected Status Code</label>
+        <label className="block text-sm font-medium text-slate-300 mb-1">{t('runner.performance.expectedStatusCode')}</label>
         <input
           type="number"
           value={expectedStatus}
           onChange={(e) => setExpectedStatus(e.target.value)}
           min={100}
           max={599}
-          className="w-full px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:border-sky-500 text-sm"
+          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:border-sky-500 text-sm"
         />
-        <p className="text-xs text-slate-600 mt-1">Requests not matching this status are counted as errors</p>
+        <p className="text-xs text-slate-600 mt-1">{t('runner.performance.expectedStatusHint')}</p>
       </div>
 
       {/* Headers */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">Headers</label>
+        <label className="block text-sm font-medium text-slate-300 mb-1">{t('runner.performance.headers')}</label>
         <div className="space-y-2">
           {headers.map((header, i) => (
             <div key={i} className="flex gap-2">
@@ -261,15 +263,15 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
                 type="text"
                 value={header.key}
                 onChange={(e) => handleHeaderChange(i, 'key', e.target.value)}
-                placeholder="Key"
-                className="flex-1 px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 text-sm"
+                placeholder={t('runner.performance.headerKey')}
+                className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-foreground placeholder-slate-600 focus:outline-none focus:border-sky-500 text-sm"
               />
               <input
                 type="text"
                 value={header.value}
                 onChange={(e) => handleHeaderChange(i, 'value', e.target.value)}
-                placeholder="Value"
-                className="flex-1 px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 text-sm"
+                placeholder={t('runner.performance.headerValue')}
+                className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-foreground placeholder-slate-600 focus:outline-none focus:border-sky-500 text-sm"
               />
               <button
                 onClick={() => handleRemoveHeader(i)}
@@ -284,20 +286,20 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
           onClick={handleAddHeader}
           className="mt-2 text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
         >
-          <FiPlus className="h-3 w-3" /> Add Header
+          <FiPlus className="h-3 w-3" /> {t('runner.performance.addHeader')}
         </button>
       </div>
 
       {/* Request Body */}
       {showBody && (
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Request Body (JSON)</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1">{t('runner.performance.requestBody')}</label>
           <textarea
             value={requestBody}
             onChange={(e) => { setRequestBody(e.target.value); setBodyError(null); }}
             rows={5}
-            className={`w-full px-3 py-2 bg-[#0f172a] border rounded-lg text-white font-mono text-sm placeholder-slate-600 focus:outline-none resize-none ${
-              bodyError ? 'border-red-500/50 focus:border-red-500' : 'border-[#334155] focus:border-sky-500'
+            className={`w-full px-3 py-2 bg-background border rounded-lg text-foreground font-mono text-sm placeholder-slate-600 focus:outline-none resize-none ${
+              bodyError ? 'border-red-500/50 focus:border-red-500' : 'border-border focus:border-sky-500'
             }`}
           />
           {bodyError && (
@@ -307,37 +309,37 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
       )}
 
       {/* Test Settings */}
-      <div className="border-t border-[#334155] pt-4">
-        <label className="block text-sm font-medium text-slate-300 mb-2">Test Settings</label>
+      <div className="border-t border-border pt-4">
+        <label className="block text-sm font-medium text-slate-300 mb-2">{t('runner.performance.testSettings')}</label>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-500 mb-1">Virtual Users</label>
+            <label className="block text-xs text-slate-500 mb-1">{t('runner.performance.virtualUsers')}</label>
             <input
               type="text"
               value={vus}
               onChange={(e) => setVus(e.target.value)}
-              className="w-full px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+              className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-sky-500"
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-500 mb-1">Duration</label>
+            <label className="block text-xs text-slate-500 mb-1">{t('runner.performance.duration')}</label>
             <input
               type="text"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              className="w-full px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+              className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-sky-500"
             />
           </div>
         </div>
       </div>
 
       {/* Additional Requests */}
-      <div className="border-t border-[#334155] pt-4">
+      <div className="border-t border-border pt-4">
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Additional Requests <span className="text-slate-500 font-normal">(optional)</span>
+          {t('runner.performance.additionalRequests')} <span className="text-slate-500 font-normal">({t('runner.performance.optional')})</span>
         </label>
         {additionalRequests.map((req, i) => (
-          <div key={i} className="bg-[#0f172a] border border-[#334155] rounded-lg p-3 mb-2">
+          <div key={i} className="bg-background border border-border rounded-lg p-3 mb-2">
             <div className="flex items-center justify-between mb-2">
               <input
                 type="text"
@@ -347,12 +349,12 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
                   updated[i].name = e.target.value;
                   setAdditionalRequests(updated);
                 }}
-                placeholder="Request name"
-                className="flex-1 px-2 py-1 bg-transparent border-b border-[#334155] text-white text-sm focus:outline-none focus:border-sky-500"
+                placeholder={t('runner.performance.requestName')}
+                className="flex-1 px-2 py-1 bg-transparent border-b border-border text-foreground text-sm focus:outline-none focus:border-sky-500"
               />
               <button
                 onClick={() => handleRemoveRequest(i)}
-                className="ml-2 p-1 text-slate-500 hover:text-red-400"
+                className="ms-2 p-1 text-slate-500 hover:text-red-400"
               >
                 <FiTrash2 className="h-4 w-4" />
               </button>
@@ -365,7 +367,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
                   updated[i].method = e.target.value;
                   setAdditionalRequests(updated);
                 }}
-                className="px-2 py-1 bg-[#1e293b] border border-[#334155] rounded text-white text-xs"
+                className="px-2 py-1 bg-card border border-border rounded text-foreground text-xs"
               >
                 <option>GET</option>
                 <option>POST</option>
@@ -381,7 +383,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
                   setAdditionalRequests(updated);
                 }}
                 placeholder="https://api.example.com/endpoint"
-                className="px-2 py-1 bg-[#1e293b] border border-[#334155] rounded text-white text-xs focus:outline-none focus:border-sky-500"
+                className="px-2 py-1 bg-card border border-border rounded text-foreground text-xs focus:outline-none focus:border-sky-500"
               />
             </div>
           </div>
@@ -390,26 +392,26 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
           onClick={handleAddRequest}
           className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
         >
-          <FiPlus className="h-3 w-3" /> Add Another Request
+          <FiPlus className="h-3 w-3" /> {t('runner.performance.addAnotherRequest')}
         </button>
       </div>
 
       {/* Saved Configs */}
-      <div className="border-t border-[#334155] pt-4 flex gap-2">
+      <div className="border-t border-border pt-4 flex gap-2">
         {savedConfigs.length > 0 && (
           <button
             onClick={() => setShowSaved(!showSaved)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 border border-[#334155] rounded-lg hover:border-slate-500 hover:text-slate-300 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 border border-border rounded-lg hover:border-slate-500 hover:text-slate-300 transition-colors"
           >
-            <FiBookmark className="h-3 w-3" /> Load Saved ({savedConfigs.length})
+            <FiBookmark className="h-3 w-3" /> {t('runner.performance.loadSaved', { count: savedConfigs.length })}
           </button>
         )}
         {targetUrl.trim() && (
           <button
             onClick={() => setShowSaveInput(!showSaveInput)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 border border-[#334155] rounded-lg hover:border-slate-500 hover:text-slate-300 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 border border-border rounded-lg hover:border-slate-500 hover:text-slate-300 transition-colors"
           >
-            <FiSave className="h-3 w-3" /> Save Config
+            <FiSave className="h-3 w-3" /> {t('runner.performance.saveConfig')}
           </button>
         )}
       </div>
@@ -420,8 +422,8 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
             type="text"
             value={saveName}
             onChange={(e) => setSaveName(e.target.value)}
-            placeholder="Config name (e.g. Login API)"
-            className="flex-1 px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white text-sm focus:outline-none focus:border-sky-500"
+            placeholder={t('runner.performance.configNamePlaceholder')}
+            className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-sky-500"
             onKeyDown={(e) => e.key === 'Enter' && handleSaveConfig()}
           />
           <button
@@ -429,7 +431,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
             disabled={!saveName.trim()}
             className="px-3 py-1.5 bg-sky-500/20 text-sky-400 border border-sky-500/50 rounded-lg text-xs hover:bg-sky-500/30 disabled:opacity-50"
           >
-            Save
+            {t('runner.performance.save')}
           </button>
         </div>
       )}
@@ -437,9 +439,9 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
       {showSaved && savedConfigs.length > 0 && (
         <div className="space-y-1.5">
           {savedConfigs.map((cfg) => (
-            <div key={cfg.name} className="flex items-center gap-2 px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg">
-              <button onClick={() => handleLoadConfig(cfg)} className="flex-1 text-left">
-                <div className="text-xs font-medium text-white">{cfg.name}</div>
+            <div key={cfg.name} className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg">
+              <button onClick={() => handleLoadConfig(cfg)} className="flex-1 text-start">
+                <div className="text-xs font-medium text-foreground">{cfg.name}</div>
                 <div className="text-[10px] text-slate-500 truncate">{cfg.method} {cfg.targetUrl}</div>
               </button>
               <button onClick={() => handleDeleteConfig(cfg.name)} className="text-slate-600 hover:text-red-400">
@@ -457,11 +459,11 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
         className={`w-full py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${
           isRunning || !targetUrl.trim()
             ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-            : 'bg-sky-500 hover:bg-sky-400 text-white'
+            : 'bg-sky-500 hover:bg-sky-400 text-foreground'
         }`}
       >
         <FiPlay className="h-4 w-4" />
-        {isRunning ? 'Test Running...' : 'Run Test'}
+        {isRunning ? t('runner.performance.testRunning') : t('runner.performance.runTest')}
       </button>
     </div>
   );

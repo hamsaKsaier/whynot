@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { env } from '../../config/env';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
@@ -7,7 +8,7 @@ let cachedKey: Buffer | null = null;
 
 function getKey(): Buffer {
   if (cachedKey) return cachedKey;
-  const raw = process.env.SECRETS_ENCRYPTION_KEY;
+  const raw = env.SECRETS_ENCRYPTION_KEY;
   if (!raw) {
     throw new Error(
       'SECRETS_ENCRYPTION_KEY env var is required. Generate with: openssl rand -base64 32'

@@ -38,6 +38,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { useAuth } from '../../contexts/AuthContext'
 import { useThemeContext } from '../ThemeProvider'
 import { cn } from '../../lib/utils'
+import { getHostnameMode } from '../../lib/hostname'
 import { LanguageSwitcher } from '../LanguageSwitcher'
 
 interface NavItem {
@@ -53,7 +54,7 @@ interface NavSection {
   items: NavItem[]
 }
 
-const navSections: NavSection[] = [
+const allNavSections: NavSection[] = [
   {
     titleKey: null,
     items: [
@@ -105,6 +106,21 @@ const navSections: NavSection[] = [
   },
 ]
 
+const superadminSectionKeys = new Set([
+  'admin.nav.sections.platform',
+  'admin.nav.sections.billing',
+  'admin.nav.sections.flagsAi',
+  'admin.nav.sections.settings',
+  null,
+]);
+
+function getNavSections(): NavSection[] {
+  if (getHostnameMode() === 'superadmin') {
+    return allNavSections.filter(s => superadminSectionKeys.has(s.titleKey));
+  }
+  return allNavSections;
+}
+
 function SidebarNav({
   collapsed,
   onToggleCollapse,
@@ -116,6 +132,8 @@ function SidebarNav({
 }) {
   const location = useLocation()
   const { t } = useTranslation('admin')
+  const navSections = getNavSections()
+  const hostnameMode = getHostnameMode()
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
@@ -126,11 +144,11 @@ function SidebarNav({
     <TooltipProvider delayDuration={0}>
       <div
         className={cn(
-          'flex h-full flex-col border-e bg-card transition-[width] duration-150',
+          'flex h-full flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-150',
           collapsed ? 'w-16' : 'w-60'
         )}
       >
-        <div className="flex h-14 items-center border-b px-3">
+        <div className="flex h-14 items-center border-b border-sidebar-border px-3">
           {!collapsed && (
             <Link
               to="/"
@@ -138,7 +156,9 @@ function SidebarNav({
               onClick={onMobileClose}
             >
               <Shield className="h-5 w-5 text-primary" />
-              <span className="font-semibold">{t('admin.nav.title')}</span>
+              <span className="font-semibold">
+                {hostnameMode === 'superadmin' ? t('admin.nav.superadminTitle') : t('admin.nav.title')}
+              </span>
             </Link>
           )}
           {collapsed && (
@@ -169,7 +189,7 @@ function SidebarNav({
             {navSections.map((section, si) => (
               <div key={si}>
                 {section.titleKey && !collapsed && (
-                  <p className="mb-1 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <p className="mb-1 px-3 text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">
                     {t(section.titleKey)}
                   </p>
                 )}
@@ -184,10 +204,10 @@ function SidebarNav({
                         className={cn(
                           'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-150',
                           active
-                            ? 'bg-primary text-primary-foreground'
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                             : item.disabled
-                              ? 'text-muted-foreground/50 cursor-not-allowed'
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                              ? 'text-sidebar-foreground/50 cursor-not-allowed'
+                              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                           collapsed && 'justify-center px-0'
                         )}
                       >
@@ -237,7 +257,7 @@ function SidebarNav({
         </ScrollArea>
 
         {!collapsed && (
-          <div className="border-t px-4 py-3 text-xs text-muted-foreground">
+          <div className="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-foreground/50">
             WhyNot Admin v2.0
           </div>
         )}
@@ -290,11 +310,11 @@ export function AdminShell() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-14 items-center justify-between border-b bg-card px-4">
+        <header className="flex h-14 items-center justify-between border-b bg-card px-3 sm:px-4">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden h-9 w-9"
             onClick={() => setMobileOpen(true)}
             aria-label={t('admin.nav.openNavigation')}
           >
@@ -303,7 +323,7 @@ export function AdminShell() {
 
           <div className="hidden md:block" />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <LanguageSwitcher />
             <Button
               variant="ghost"
@@ -334,7 +354,7 @@ export function AdminShell() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
-                  <LogOut className="h-4 w-4 me-2" />
+                  <LogOut className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
                   {t('admin.nav.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>

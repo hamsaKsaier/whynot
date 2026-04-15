@@ -44,25 +44,25 @@ export const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, t
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-slate-800 rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+      <div className="bg-card rounded-lg shadow-sm max-w-md w-full mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <FiAlertTriangle className="h-5 w-5 text-amber-500" />
-            <h3 className="text-lg font-semibold text-white">{msg.title}</h3>
+            <h3 className="text-lg font-semibold text-foreground">{msg.title}</h3>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-slate-800 rounded-lg">
-            <FiX className="h-4 w-4 text-slate-400" />
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg">
+            <FiX className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
         <div className="px-6 py-5">
-          <p className="text-sm text-slate-400">{msg.description}</p>
+          <p className="text-sm text-muted-foreground">{msg.description}</p>
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700 bg-slate-900">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border bg-muted">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 rounded-lg"
+            className="px-4 py-2 text-sm text-foreground hover:bg-accent rounded-lg"
           >
             Cancel
           </button>
@@ -71,10 +71,10 @@ export const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, t
               onClose();
               window.location.href = '/billing';
             }}
-            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700"
+            className="inline-flex items-center px-4 py-2 bg-primary-600 text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary-700"
           >
             {msg.action}
-            <FiArrowRight className="ml-1.5 h-4 w-4" />
+            <FiArrowRight className="ms-1.5 h-4 w-4 rtl:scale-x-[-1]" />
           </button>
         </div>
       </div>

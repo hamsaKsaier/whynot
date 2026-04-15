@@ -37,7 +37,7 @@ router.patch(
     );
 
     if (rows.length === 0) {
-      throw createError('User not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
     }
 
     await audit.log({

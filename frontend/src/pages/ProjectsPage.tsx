@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FiPlus, FiEdit2, FiTrash2, FiFolder, FiGlobe, FiBook, FiCopy } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -38,6 +39,7 @@ const initialFormData: ProjectFormData = {
 
 export const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('dashboard');
   const { success, error: showError } = useToastContext();
   const { copyToClipboard } = useClipboard();
   const { optimisticCreate, optimisticUpdate, optimisticDelete } = useOptimisticUpdate<ProjectWithStats>();
@@ -83,7 +85,7 @@ export const ProjectsPage: React.FC = () => {
       const response = await getProjects();
       setProjects(response.projects);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to fetch projects');
+      setError(err.response?.data?.error || err.message || t('dashboard.projects.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -124,11 +126,11 @@ export const ProjectsPage: React.FC = () => {
     const errors: Partial<ProjectFormData> = {};
 
     if (!formData.name.trim()) {
-      errors.name = 'Project name is required';
+      errors.name = t('dashboard.projects.nameRequired');
     }
 
     if (formData.website_url && !isValidUrl(formData.website_url)) {
-      errors.website_url = 'Please enter a valid URL';
+      errors.website_url = t('dashboard.projects.invalidUrl');
     }
 
     setFormErrors(errors);
@@ -166,8 +168,8 @@ export const ProjectsPage: React.FC = () => {
             website_url: formData.website_url.trim() || undefined,
           }).then(res => ({ ...res.project, user_story_count: editingProject.user_story_count })),
           {
-            successMessage: 'Project updated successfully',
-            errorMessage: 'Failed to update project',
+            successMessage: t('dashboard.projects.updateSuccess'),
+            errorMessage: t('dashboard.projects.updateError'),
           }
         );
         setProjects(updatedProjects);
@@ -192,8 +194,8 @@ export const ProjectsPage: React.FC = () => {
             website_url: formData.website_url.trim() || undefined,
           }).then(res => ({ ...res.project, user_story_count: 0 })),
           {
-            successMessage: 'Project created successfully',
-            errorMessage: 'Failed to create project',
+            successMessage: t('dashboard.projects.createSuccess'),
+            errorMessage: t('dashboard.projects.createError'),
           }
         );
         setProjects(updatedProjects);
@@ -201,7 +203,7 @@ export const ProjectsPage: React.FC = () => {
       clearDraft(); // Clear draft on successful submission
       closeModal();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to save project';
+      const errorMessage = err.response?.data?.error || err.message || t('dashboard.projects.saveError');
       setError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -213,11 +215,11 @@ export const ProjectsPage: React.FC = () => {
 
     try {
       await deleteProject(deleteConfirm.project.id);
-      success('Project deleted successfully');
+      success(t('dashboard.projects.deleteSuccess'));
       setDeleteConfirm({ isOpen: false, project: null });
       fetchProjects();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to delete project';
+      const errorMessage = err.response?.data?.error || err.message || t('dashboard.projects.deleteError');
       setError(errorMessage);
       showError(errorMessage);
       setDeleteConfirm({ isOpen: false, project: null });
@@ -231,14 +233,14 @@ export const ProjectsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="page-header flex items-center justify-between">
+        <div className="page-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <SkeletonLoader width="w-48" height="h-8" className="mb-2" />
             <SkeletonLoader width="w-64" height="h-4" />
           </div>
           <SkeletonLoader width="w-32" height="h-10" />
         </div>
-        <div className="card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="card-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <SkeletonCard count={3} />
         </div>
       </div>
@@ -248,32 +250,32 @@ export const ProjectsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="page-header flex items-center justify-between">
+      <div className="page-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="page-title">Projects</h1>
+          <h1 className="page-title">{t('dashboard.projects.title')}</h1>
           <p className="page-subtitle">
-            Manage your testing projects and user stories
+            {t('dashboard.projects.subtitle')}
           </p>
         </div>
-        <Button onClick={openCreateModal}>
-          <FiPlus className="mr-2" />
-          New Project
+        <Button onClick={openCreateModal} className="w-full sm:w-auto">
+          <FiPlus className="me-2" />
+          {t('dashboard.projects.create')}
         </Button>
       </div>
 
       {error && (
         <Alert
           type="error"
-          title="Error"
+          title={t('dashboard.projects.errorTitle')}
           message={error}
           suggestions={[
-            'Check your network connection',
-            'Verify that all services are running',
-            'Try refreshing the page',
+            t('dashboard.projects.suggestionNetwork'),
+            t('dashboard.projects.suggestionServices'),
+            t('dashboard.projects.suggestionRefresh'),
           ]}
           actions={[
             {
-              label: 'Retry',
+              label: t('dashboard.projects.retry'),
               onClick: () => {
                 setError(null);
                 fetchProjects();
@@ -281,7 +283,7 @@ export const ProjectsPage: React.FC = () => {
               variant: 'primary',
             },
             {
-              label: 'Dismiss',
+              label: t('dashboard.projects.dismiss'),
               onClick: () => setError(null),
               variant: 'secondary',
             },
@@ -295,19 +297,19 @@ export const ProjectsPage: React.FC = () => {
         <Card>
           <EmptyState
             icon={<FiFolder />}
-            title="No projects yet"
-            description="Projects help you organize your test cases by application or feature"
+            title={t('dashboard.projects.empty.title')}
+            description={t('dashboard.projects.empty.description')}
             action={
               <Button onClick={openCreateModal}>
-                <FiPlus className="mr-2" />
-                Create Your First Project
+                <FiPlus className="me-2" />
+                {t('dashboard.projects.empty.action')}
               </Button>
             }
-            tip="Tip: Each project can have multiple user stories and test cases"
+            tip={t('dashboard.projects.empty.tip')}
           />
         </Card>
       ) : (
-        <div className="card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="card-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {projects.map((project) => (
             <Card
               key={project.id}
@@ -321,11 +323,11 @@ export const ProjectsPage: React.FC = () => {
                     <FiFolder className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">{project.name}</h3>
+                    <h3 className="font-semibold text-foreground">{project.name}</h3>
                     {project.website_url && (
-                      <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                         <FiGlobe className="h-3 w-3" />
-                        <span className="truncate max-w-[200px]">{project.website_url}</span>
+                        <span className="truncate max-w-[150px] sm:max-w-[200px]">{project.website_url}</span>
                       </div>
                     )}
                   </div>
@@ -334,21 +336,21 @@ export const ProjectsPage: React.FC = () => {
                   <QuickActions
                     actions={[
                       {
-                        label: 'Copy Project ID',
+                        label: t('dashboard.projects.copyId'),
                         icon: <FiCopy className="h-4 w-4" />,
                         onClick: () => {
                           copyToClipboard(project.id, {
-                            successMessage: 'Project ID copied to clipboard',
+                            successMessage: t('dashboard.projects.idCopied'),
                           });
                         },
                       },
                       {
-                        label: 'Edit',
+                        label: t('dashboard.projects.edit'),
                         icon: <FiEdit2 className="h-4 w-4" />,
                         onClick: () => openEditModal(project),
                       },
                       {
-                        label: 'Delete',
+                        label: t('dashboard.projects.delete'),
                         icon: <FiTrash2 className="h-4 w-4" />,
                         onClick: () => setDeleteConfirm({ isOpen: true, project }),
                         variant: 'danger',
@@ -360,15 +362,15 @@ export const ProjectsPage: React.FC = () => {
               </div>
 
               {project.description && (
-                <p className="mt-3 text-sm text-slate-400 line-clamp-2">
+                <p className="mt-3 text-sm text-muted-foreground line-clamp-2">
                   {project.description}
                 </p>
               )}
 
-              <div className="mt-4 pt-4 border-t border-slate-700">
-                <div className="flex items-center gap-2 text-sm text-slate-400">
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <FiBook className="h-4 w-4" />
-                  <span>{project.user_story_count} user stories</span>
+                  <span>{t('dashboard.projects.userStories', { count: project.user_story_count })}</span>
                 </div>
               </div>
             </Card>
@@ -380,29 +382,29 @@ export const ProjectsPage: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingProject ? 'Edit Project' : 'Create Project'}
+        title={editingProject ? t('dashboard.projects.editTitle') : t('dashboard.projects.createTitle')}
         size="md"
       >
         <div className="space-y-4">
           <Input
-            label="Project Name"
-            placeholder="Enter project name"
+            label={t('dashboard.projects.form.nameLabel')}
+            placeholder={t('dashboard.projects.form.namePlaceholder')}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             error={formErrors.name}
             required
           />
           <Textarea
-            label="Description"
-            placeholder="Describe your project (optional)"
+            label={t('dashboard.projects.form.descriptionLabel')}
+            placeholder={t('dashboard.projects.form.descriptionPlaceholder')}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={3}
           />
           <Input
-            label="Website URL"
+            label={t('dashboard.projects.form.urlLabel')}
             type="url"
-            placeholder="https://example.com (optional)"
+            placeholder={t('dashboard.projects.form.urlPlaceholder')}
             value={formData.website_url}
             onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
             error={formErrors.website_url}
@@ -410,10 +412,10 @@ export const ProjectsPage: React.FC = () => {
         </div>
         <ModalFooter>
           <Button variant="secondary" onClick={closeModal} disabled={submitting}>
-            Cancel
+            {t('dashboard.projects.cancel')}
           </Button>
           <Button onClick={handleSubmit} isLoading={submitting}>
-            {editingProject ? 'Save Changes' : 'Create Project'}
+            {editingProject ? t('dashboard.projects.saveChanges') : t('dashboard.projects.createTitle')}
           </Button>
         </ModalFooter>
       </Modal>
@@ -421,10 +423,10 @@ export const ProjectsPage: React.FC = () => {
       {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
-        title="Delete Project"
-        message={`Are you sure you want to delete "${deleteConfirm.project?.name}"? This will also delete all user stories and test cases associated with this project. This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('dashboard.projects.deleteTitle')}
+        message={t('dashboard.projects.deleteConfirm', { name: deleteConfirm.project?.name })}
+        confirmText={t('dashboard.projects.delete')}
+        cancelText={t('dashboard.projects.cancel')}
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirm({ isOpen: false, project: null })}

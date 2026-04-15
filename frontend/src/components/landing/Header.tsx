@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Menu, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/ui/Logo'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
   Sheet,
   SheetContent,
@@ -58,13 +60,13 @@ export function Header() {
       className={cn(
         'sticky top-0 z-50 border-b transition-colors duration-150',
         isScrolled
-          ? 'border-border bg-background'
+          ? 'border-border bg-background/95'
           : 'border-transparent bg-transparent'
       )}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <a href="/" className="flex items-center gap-2" aria-label="WhyNot">
-          <img src="/logo.svg" alt="" className="h-8" aria-hidden="true" />
+          <Logo size="md" />
           <span className="text-lg font-semibold text-foreground">WhyNot</span>
         </a>
 
@@ -81,6 +83,7 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -158,6 +161,10 @@ export function Header() {
                 ))}
 
                 <div className="my-2 border-t border-border" />
+
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                </div>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

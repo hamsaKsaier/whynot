@@ -28,7 +28,7 @@ router.get(
     const user = await userRepo.findById(userId);
 
     if (!user) {
-      throw createError('User not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
     }
 
     res.json({
@@ -56,7 +56,7 @@ router.patch(
     if (email) {
       const existing = await userRepo.findByEmail(email);
       if (existing && existing.id !== userId) {
-        throw createError('Email already in use', 409, 'EMAIL_TAKEN');
+        throw createError((req as any).t('errors:validation.emailInvalid'), 409, 'EMAIL_TAKEN');
       }
     }
 
@@ -67,7 +67,7 @@ router.patch(
     const updated = await userRepo.update(userId, updates);
 
     if (!updated) {
-      throw createError('User not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
     }
 
     const changedFields = Object.keys(updates);
