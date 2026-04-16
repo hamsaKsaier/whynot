@@ -50,4 +50,32 @@ export class BillingConfigRepository {
   async delete(key: string): Promise<void> {
     await query('DELETE FROM billing_config WHERE key = $1', [key]);
   }
+
+  async getDefaultAiProvider(): Promise<{ provider: string; model: string } | null> {
+    const value = await this.get('default_ai_provider');
+    if (value == null) return null;
+    try {
+      return JSON.parse(value) as { provider: string; model: string };
+    } catch {
+      return null;
+    }
+  }
+
+  async setDefaultAiProvider(provider: string, model: string): Promise<void> {
+    await this.set('default_ai_provider', JSON.stringify({ provider, model }));
+  }
+
+  async getAiFallbackOrder(): Promise<string[]> {
+    const value = await this.get('ai_fallback_order');
+    if (value == null) return [];
+    try {
+      return JSON.parse(value) as string[];
+    } catch {
+      return [];
+    }
+  }
+
+  async setAiFallbackOrder(order: string[]): Promise<void> {
+    await this.set('ai_fallback_order', JSON.stringify(order));
+  }
 }

@@ -323,18 +323,63 @@ export const updateBillingConfig = async (updates: Record<string, string>) => {
 
 export interface AIProviderEntry {
   provider: string;
+  displayName: string;
   enabled: boolean;
   rateLimit: number;
+  hasKey: boolean;
+  hasFallbackKey: boolean;
+  maskedKey: string | null;
+  maskedFallbackKey: string | null;
+  defaultModel: string;
+  models: string[];
 }
 
-export const getAIProviders = async () => {
+export interface AIProvidersConfig {
+  providers: AIProviderEntry[];
+  defaultProvider: { provider: string; model: string };
+  fallbackOrder: string[];
+}
+
+export const getAIProviders = async (): Promise<AIProvidersConfig> => {
   const res = await apiClient.get('/admin/ai-providers');
   return res.data;
 };
 
-export const updateAIProviders = async (providers: AIProviderEntry[]) => {
+export const updateAIProviders = async (providers: Partial<AIProviderEntry>[]): Promise<AIProvidersConfig> => {
   const res = await apiClient.patch('/admin/ai-providers', { providers });
   return res.data;
+};
+
+export const setProviderKey = async (provider: string, apiKey: string): Promise<{ hasKey: boolean; maskedKey: string }> => {
+  const res = await apiClient.post(`/admin/ai-providers/${provider}/key`, { apiKey });
+  return res.data;
+};
+
+export const removeProviderKey = async (provider: string): Promise<void> => {
+  await apiClient.delete(`/admin/ai-providers/${provider}/key`);
+};
+
+export const setProviderFallbackKey = async (provider: string, apiKey: string): Promise<{ hasFallbackKey: boolean; maskedFallbackKey: string }> => {
+  const res = await apiClient.post(`/admin/ai-providers/${provider}/fallback-key`, { apiKey });
+  return res.data;
+};
+
+export const removeProviderFallbackKey = async (provider: string): Promise<void> => {
+  await apiClient.delete(`/admin/ai-providers/${provider}/fallback-key`);
+};
+
+export const testProviderKey = async (provider: string, useFallback?: boolean): Promise<{ ok: boolean; latencyMs?: number; error?: string }> => {
+  const params = useFallback ? '?useFallback=true' : '';
+  const res = await apiClient.post(`/admin/ai-providers/${provider}/test${params}`);
+  return res.data;
+};
+
+export const setDefaultModel = async (provider: string, model: string): Promise<void> => {
+  await apiClient.patch('/admin/ai-providers/default-model', { provider, model });
+};
+
+export const setFallbackOrder = async (order: string[]): Promise<void> => {
+  await apiClient.patch('/admin/ai-providers/fallback-order', { order });
 };
 
 export default apiClient;

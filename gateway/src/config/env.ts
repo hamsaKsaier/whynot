@@ -82,14 +82,6 @@ const envSchema = z.object({
   STRIPE_PRICE_ENTERPRISE_YEARLY: z.string().default(''),
   STRIPE_PRICE_PAYG_METERED: z.string().default(''),
 
-  // ── AI Providers ────────────────────────────────────────────────────────
-  LLM_PROVIDER: z.string().default('anthropic'),
-  ANTHROPIC_API_KEY: z.string().default(''),
-  ANTHROPIC_MODEL: z.string().default('claude-sonnet-4-6'),
-  OPENAI_API_KEY: z.string().default(''),
-  OPENAI_MODEL: z.string().default('gpt-4'),
-  OPENAI_VISION_MODEL: z.string().default('gpt-4o'),
-
   // ── Email ───────────────────────────────────────────────────────────────
   RESEND_API_KEY: z.string().default(''),
   EMAIL_FROM_ADDRESS: z

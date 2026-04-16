@@ -1148,9 +1148,10 @@ CRITICAL RULES:
     steps: any[];
   }>): Promise<Array<{ testCaseId: string; correctedSteps: any[] }>> {
     const Anthropic = require('@anthropic-ai/sdk').default;
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const { getPlatformKey } = require('./platform-config');
+    const apiKey = await getPlatformKey('anthropic');
     if (!apiKey) {
-      logger.error('No ANTHROPIC_API_KEY — cannot run correction');
+      logger.error('No Anthropic API key configured on platform — cannot run correction');
       return [];
     }
 

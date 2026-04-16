@@ -15,16 +15,13 @@ WhyNot QA unterstützt mehrere KI-Anbieter über eine einheitliche Fabrik in `ga
 ## Verwendung
 
 ```typescript
-import { selectAIProvider } from './utils/ai/select-ai-provider';
+import { getPlatformAIModel } from './utils/ai/get-platform-ai-model';
 import { generateText } from 'ai';
 
-const provider = selectAIProvider({
-  apiUrl: 'https://api.anthropic.com',
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+const model = await getPlatformAIModel();
 
 const { text } = await generateText({
-  model: provider('claude-sonnet-4-6'),
+  model,
   prompt: 'Hallo',
 });
 ```
@@ -40,6 +37,40 @@ const provider = selectAIProvider({
   provider: 'anthropic',
 });
 ```
+
+## Plattform-KI-Konfiguration
+
+API-Schlüssel für KI-Anbieter werden verschlüsselt in der Datenbanktabelle `platform_ai_config` gespeichert und von Super-Administratoren über das Admin-Dashboard verwaltet.
+
+> **Migrationshinweis:** Die `.env`-basierte API-Schlüssel-Konfiguration (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, usw.) wurde aus dem Gateway entfernt. Wenn Sie von einer Version aktualisieren, die `.env` für KI-Schlüssel verwendet hat, müssen Sie die Schlüssel jetzt über das Admin-Dashboard konfigurieren. Der Agent-Pfad `services/qa-loop-executor/src/v2/` liest weiterhin aus Umgebungsvariablen.
+
+### Interne API für Container-übergreifenden Zugriff
+
+Das Gateway stellt `GET /api/internal/ai-config` für interne Dienste (z.B. qa-loop-executor) bereit, die in separaten Docker-Containern laufen. Dieser Endpunkt gibt entschlüsselte KI-Schlüssel zurück und ist über eine IP-Zulassungsliste auf das Docker-Netzwerk beschränkt.
+
+### Tabellenschema
+
+| Spalte | Typ | Beschreibung |
+|--------|-----|-------------|
+| `provider` | `VARCHAR(50)` | Anbieter-Kennung (`openai`, `anthropic`, `google`, `openrouter`) |
+| `display_name` | `VARCHAR(100)` | Lesbarer Name |
+| `api_key_encrypted` | `BYTEA` | Primärer API-Schlüssel, AES-256-GCM-verschlüsselt |
+| `fallback_key_encrypted` | `BYTEA` | Fallback-API-Schlüssel, AES-256-GCM-verschlüsselt |
+| `default_model` | `VARCHAR(100)` | Standardmodell für diesen Anbieter |
+| `models` | `JSONB` | Liste verfügbarer Modelle |
+| `is_active` | `BOOLEAN` | Aktiv nur wenn ein gültiger Schlüssel konfiguriert ist |
+| `rate_limit` | `INTEGER` | Anfragen pro Minute (0 = unbegrenzt) |
+
+### Verschlüsselung
+
+Alle API-Schlüssel werden im Ruhezustand mit AES-256-GCM verschlüsselt (derselbe Algorithmus wie für die KI-Konfiguration auf Benutzerebene). Jeder Schlüssel wird in drei separaten Spalten gespeichert: Chiffretext, Initialisierungsvektor (IV) und Authentifizierungs-Tag. Der Verschlüsselungsschlüssel wird über die Umgebungsvariable `SECRETS_ENCRYPTION_KEY` konfiguriert.
+
+### Standardanbieter und Fallback-Reihenfolge
+
+Der Standard-KI-Anbieter und die Fallback-Reihenfolge werden in der Tabelle `billing_config` gespeichert:
+
+- `default_ai_provider` — JSON-Objekt mit den Feldern `provider` und `model`
+- `ai_fallback_order` — JSON-Array der Anbieter-Kennungen in Prioritätsreihenfolge
 
 ## OpenRouter-Hinweis
 

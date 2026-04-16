@@ -6,7 +6,7 @@ import { AutoFixRepository, AutoFixAttemptEntity } from '../../shared/database/r
 import { GitHubService } from './github-service';
 import { query } from '../../shared/database/connection';
 import { sendAutoFixPREmail } from './email-service';
-import { selectAIProvider } from '../utils/ai/select-ai-provider';
+import { getPlatformAIModel } from '../utils/ai/get-platform-ai-model';
 
 const logger = createLogger('auto-fix-service');
 
@@ -45,18 +45,21 @@ interface RetestResult {
 
 export class AutoFixService {
   private repository: AutoFixRepository;
-  private aiProvider: ReturnType<typeof selectAIProvider>;
+  private aiModel: Awaited<ReturnType<typeof getPlatformAIModel>> | null = null;
 
   constructor() {
     this.repository = new AutoFixRepository();
-    const apiKey = env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY is required for auto-fix service');
+  }
+
+  /**
+   * Lazily resolve the platform AI model on first use.
+   * Throws if no AI provider is configured on the platform.
+   */
+  private async getAIModel() {
+    if (!this.aiModel) {
+      this.aiModel = await getPlatformAIModel();
     }
-    this.aiProvider = selectAIProvider({
-      apiUrl: 'https://api.anthropic.com',
-      apiKey,
-    });
+    return this.aiModel;
   }
 
   /**
@@ -937,8 +940,9 @@ IMPORTANT:
     reasoning: string;
     diff: string;
   }> {
+    const aiModel = await this.getAIModel();
     const { text: textContent } = await generateText({
-      model: this.aiProvider('claude-sonnet-4-6'),
+      model: aiModel,
       maxOutputTokens: 8192,
       system: 'You are an expert software engineer. You MUST respond with ONLY a valid JSON object. No markdown, no explanation text before or after the JSON. Just the raw JSON object starting with { and ending with }.',
       prompt,

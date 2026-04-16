@@ -111,10 +111,24 @@ async function recoverStrandedSessions(): Promise<void> {
 }
 
 server.listen(PORT, async () => {
+  // Fetch platform config at startup to determine available providers
+  let anthropicConfigured = false;
+  try {
+    const { getPlatformConfig } = await import('./platform-config');
+    const platformConfig = await getPlatformConfig();
+    anthropicConfigured = platformConfig.providers.some(p => p.provider === 'anthropic' && p.apiKey);
+
+    // Initialize model selector with platform config
+    const { initModelSelector } = await import('./model-selector');
+    await initModelSelector();
+  } catch (error: any) {
+    logger.warn('Failed to fetch platform AI config on startup', { error: error.message });
+  }
+
   logger.info('QA Loop Executor Service started', {
     port: PORT,
     testExecutorUrl: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001',
-    anthropicConfigured: !!process.env.ANTHROPIC_API_KEY
+    anthropicConfigured,
   });
 
   // Recover any sessions that were left running by a crash

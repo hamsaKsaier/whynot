@@ -8,6 +8,7 @@ import { getToolsForPhase, toGemmaFunctionDeclarations } from './tools/tool-defi
 import { RateLimiter, estimateTokens } from './rate-limiter';
 import { IterationResult, TokenUsage, CostInfo } from './claude-session';
 import Anthropic from '@anthropic-ai/sdk';
+import { getPlatformKey } from './platform-config';
 
 type FocusArea = 'explore' | 'chaos' | 'retest' | 'investigate';
 
@@ -22,7 +23,7 @@ const logger = createLogger('gemma-session');
  * the orchestrator level — this class always expects the key to exist).
  */
 export class GemmaSession {
-  private client: GoogleGenAI;
+  private client: GoogleGenAI | null = null;
   private sessionId: string;
   private config: LoopConfig;
   private toolExecutor: ToolExecutor;
@@ -42,12 +43,6 @@ export class GemmaSession {
     _preloadedDocumentContext?: string | null,
     onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void,
   ) {
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (!apiKey) {
-      throw new Error('GOOGLE_AI_API_KEY environment variable is not set');
-    }
-
-    this.client = new GoogleGenAI({ apiKey });
     this.sessionId = sessionId;
     this.config = config;
     this.toolExecutor = new ToolExecutor(sessionId, config, mcpBrowser, onTestCaseCreated);
@@ -56,6 +51,18 @@ export class GemmaSession {
     // Build tool list in Anthropic format first, then convert
     this.tools = getToolsForPhase('explore', mcpBrowser.getTools());
     this.gemmaTools = toGemmaFunctionDeclarations(this.tools);
+  }
+
+  /** Lazily initialize the Google GenAI client using the platform key. */
+  private async getClient(): Promise<GoogleGenAI> {
+    if (!this.client) {
+      const apiKey = await getPlatformKey('google');
+      if (!apiKey) {
+        throw new Error('No Google AI API key configured on platform. Add one at the admin dashboard.');
+      }
+      this.client = new GoogleGenAI({ apiKey });
+    }
+    return this.client;
   }
 
   /**
@@ -113,7 +120,8 @@ export class GemmaSession {
 
       let response: any;
       try {
-        response = await this.client.models.generateContent({
+        const client = await this.getClient();
+        response = await client.models.generateContent({
           model: 'gemma-4-26b-a4b-it',
           contents: messages as any,
           config: {

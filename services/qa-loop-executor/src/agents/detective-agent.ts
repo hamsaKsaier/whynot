@@ -88,17 +88,26 @@ export class DetectiveAgent {
   private sessionId: string;
   private repository: QALoopRepository;
   private client: Anthropic | null = null;
+  private clientInitialized = false;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
     this.repository = new QALoopRepository();
+  }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (apiKey) {
-      this.client = new Anthropic({ apiKey });
-    } else {
-      logger.warn('ANTHROPIC_API_KEY not set, detective agent AI features disabled');
+  /** Lazily initialize the Anthropic client using the platform key. */
+  private async getClient(): Promise<Anthropic | null> {
+    if (!this.clientInitialized) {
+      this.clientInitialized = true;
+      const { getPlatformKey } = await import('../platform-config');
+      const apiKey = await getPlatformKey('anthropic');
+      if (apiKey) {
+        this.client = new Anthropic({ apiKey });
+      } else {
+        logger.warn('No Anthropic API key configured on platform, detective agent AI features disabled');
+      }
     }
+    return this.client;
   }
 
   /**
@@ -129,7 +138,8 @@ export class DetectiveAgent {
     }
 
     // Use AI for deeper analysis if available
-    if (this.client) {
+    const client = await this.getClient();
+    if (client) {
       return this.aiAnalyzeFailure(failure, history);
     }
 
@@ -254,8 +264,12 @@ export class DetectiveAgent {
     try {
       const prompt = this.buildAnalysisPrompt(failure, history);
 
+      const client = await this.getClient();
+      if (!client) {
+        return this.buildFallbackAnalysis(failure, history);
+      }
       const DETECTIVE_MODEL = FOCUS_AREA_MODELS['investigate'];
-      const response = await this.client.messages.create({
+      const response = await client.messages.create({
         model: DETECTIVE_MODEL,
         max_tokens: 2048,
         messages: [{ role: 'user', content: prompt }]

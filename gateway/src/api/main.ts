@@ -48,8 +48,17 @@ import { BillingConfigRepository } from '../../shared/database/repositories/bill
 import { isValidFeatureKey } from '../../shared/constants/platform-features';
 import { invalidateFlag, invalidateOrg, resolveAllFlags } from '../utils/feature-flags';
 import { stripeWebhookRouter } from './webhooks/stripe';
+import { generateText } from 'ai';
+import { PlatformAiConfigRepository } from '../../shared/database/repositories/platform-ai-config-repository';
+import { platformKeyCache } from '../utils/ai/platform-key-cache';
+import { selectAIProvider } from '../utils/ai/select-ai-provider';
+import { providerBaseUrl } from '../utils/ai/provider-base-url';
+import type { AIProviderName } from '../utils/ai/detect-provider';
+import { requireInternalNetwork } from '../middleware/internal-network';
+import { getAllPlatformConfigs } from '../utils/ai/get-platform-ai-model';
 import { meBillingRouter } from './me/billing';
 import { meUsageRouter } from './me/usage';
+import { PLANS, isPlanSlug } from '../../shared/constants/pricing';
 import meProfileRouter from './me/profile';
 import mePasswordRouter from './me/password';
 import meOrganizationRouter from './me/organization';
@@ -212,6 +221,7 @@ const systemSettingsRepository = new SystemSettingsRepository();
 const announcementRepository = new AnnouncementRepository();
 const featureFlagRepository = new FeatureFlagRepository();
 const billingConfigRepository = new BillingConfigRepository();
+const platformAiConfigRepository = new PlatformAiConfigRepository();
 
 /** Fire-and-forget audit logging helper */
 function auditLog(req: Express.Request, action: string, targetType?: string, targetId?: string, details?: Record<string, any>) {
@@ -2156,12 +2166,7 @@ app.get('/api/bugs/:bugId/tasks', requireAuth, asyncHandler(async (req: any, res
 // ── Auto-Fix Routes (Phase 4) ─────────────────────────────────────────────────
 
 import { AutoFixService } from '../services/auto-fix-service';
-let autoFixService: AutoFixService | null = null;
-try {
-  autoFixService = new AutoFixService();
-} catch (e: any) {
-  logger.warn('Auto-fix service not available (missing ANTHROPIC_API_KEY)', { error: e.message });
-}
+const autoFixService = new AutoFixService();
 
 // List GitHub repos for workspace
 app.get('/api/github-repos', requireAuth, asyncHandler(async (req: any, res) => {
@@ -3383,73 +3388,337 @@ app.patch('/api/admin/billing-config', requireAuth, requireSuperAdmin, asyncHand
 // ─── Admin: AI Providers ────────────────────────────────────────────────────
 
 const KNOWN_AI_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter'] as const;
-const AI_PROVIDERS_CONFIG_KEY = 'ai_providers_config';
 
-interface AIProviderEntry {
-  provider: string;
-  enabled: boolean;
-  rateLimit: number;
-}
-
-async function getAIProvidersConfig(): Promise<AIProviderEntry[]> {
-  const raw = await billingConfigRepository.get(AI_PROVIDERS_CONFIG_KEY);
-  if (raw) {
-    try { return JSON.parse(raw); } catch { /* fall through */ }
-  }
-  return KNOWN_AI_PROVIDERS.map((p) => ({ provider: p, enabled: true, rateLimit: 0 }));
+function isKnownProvider(p: string): p is (typeof KNOWN_AI_PROVIDERS)[number] {
+  return (KNOWN_AI_PROVIDERS as readonly string[]).includes(p);
 }
 
 app.get('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
-  const providers = await getAIProvidersConfig();
-  res.json({ success: true, providers });
+  const [configs, defaultProvider, fallbackOrder] = await Promise.all([
+    platformAiConfigRepository.listAll(),
+    billingConfigRepository.getDefaultAiProvider(),
+    billingConfigRepository.getAiFallbackOrder(),
+  ]);
+
+  const providers = configs.map((c) => ({
+    provider: c.provider,
+    displayName: c.display_name,
+    enabled: c.is_active,
+    rateLimit: c.rate_limit,
+    hasKey: c.hasKey,
+    hasFallbackKey: c.hasFallbackKey,
+    maskedKey: c.maskedKey,
+    maskedFallbackKey: c.maskedFallbackKey,
+    defaultModel: c.default_model || '',
+    models: c.models || [],
+  }));
+
+  res.json({
+    success: true,
+    providers,
+    defaultProvider: defaultProvider || { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+    fallbackOrder: fallbackOrder.length > 0 ? fallbackOrder : [...KNOWN_AI_PROVIDERS],
+  });
 }));
 
 app.patch('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
   const { providers } = req.body;
 
   if (!Array.isArray(providers)) {
-    throw createError('Body must contain a "providers" array', 400, 'INVALID_BODY');
+    throw createError(req.t('errors:validation.workspaceRequired') || 'Body must contain a "providers" array', 400, 'INVALID_BODY');
   }
 
   for (const entry of providers) {
     if (!entry || typeof entry !== 'object') {
       throw createError('Each provider entry must be an object', 400, 'INVALID_ENTRY');
     }
-    if (typeof entry.provider !== 'string' || entry.provider.length === 0) {
-      throw createError('Each provider entry must have a "provider" string', 400, 'INVALID_ENTRY');
+    if (typeof entry.provider !== 'string' || !isKnownProvider(entry.provider)) {
+      throw createError(req.t('errors:ai.unknownProvider', { provider: entry.provider }) || 'Unknown provider', 400, 'INVALID_ENTRY');
     }
-    if (typeof entry.enabled !== 'boolean') {
-      throw createError('Each provider entry must have an "enabled" boolean', 400, 'INVALID_ENTRY');
+  }
+
+  const results = [];
+  for (const entry of providers) {
+    const provider = entry.provider as string;
+    if (typeof entry.enabled === 'boolean') {
+      if (entry.enabled) {
+        await platformAiConfigRepository.setActive(provider, true);
+      } else {
+        await platformAiConfigRepository.setActive(provider, false);
+      }
     }
     if (entry.rateLimit !== undefined) {
       const rl = Number(entry.rateLimit);
       if (!Number.isInteger(rl) || rl < 0) {
-        throw createError('rateLimit must be a non-negative integer', 400, 'INVALID_ENTRY');
+        throw createError(req.t('errors:ai.invalidRateLimit') || 'Rate limit must be a non-negative integer', 400, 'INVALID_ENTRY');
+      }
+      await platformAiConfigRepository.updateRateLimit(provider, rl);
+    }
+    if (typeof entry.defaultModel === 'string' && entry.defaultModel.length > 0) {
+      await platformAiConfigRepository.updateDefaultModel(provider, entry.defaultModel);
+    }
+    if (Array.isArray(entry.models)) {
+      await platformAiConfigRepository.updateModels(provider, entry.models);
+    }
+    platformKeyCache.invalidate(provider);
+    const updated = await platformAiConfigRepository.findByProvider(provider);
+    if (updated) results.push(updated);
+  }
+
+  auditLog(req, 'ai_providers.update', 'platform_ai_config', undefined, {
+    updatedProviders: providers.map((p: any) => p.provider),
+  });
+
+  const [allConfigs, defaultProvider, fallbackOrder] = await Promise.all([
+    platformAiConfigRepository.listAll(),
+    billingConfigRepository.getDefaultAiProvider(),
+    billingConfigRepository.getAiFallbackOrder(),
+  ]);
+
+  res.json({
+    success: true,
+    providers: allConfigs.map((c) => ({
+      provider: c.provider,
+      displayName: c.display_name,
+      enabled: c.is_active,
+      rateLimit: c.rate_limit,
+      hasKey: c.hasKey,
+      hasFallbackKey: c.hasFallbackKey,
+      maskedKey: c.maskedKey,
+      maskedFallbackKey: c.maskedFallbackKey,
+      defaultModel: c.default_model || '',
+      models: c.models || [],
+    })),
+    defaultProvider: defaultProvider || { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+    fallbackOrder: fallbackOrder.length > 0 ? fallbackOrder : [...KNOWN_AI_PROVIDERS],
+  });
+}));
+
+// ─── Admin: AI Provider Key Management ──────────────────────────────────────
+
+app.post('/api/admin/ai-providers/:provider/key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  const { apiKey } = req.body;
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+    throw createError(req.t('errors:ai.keyRequired') || 'API key is required', 400, 'KEY_REQUIRED');
+  }
+  if (apiKey.length > 500) {
+    throw createError(req.t('errors:ai.keyTooLong') || 'API key exceeds maximum length', 400, 'KEY_TOO_LONG');
+  }
+
+  const updated = await platformAiConfigRepository.upsertKey(provider, apiKey.trim());
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.key-set', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasKey: true, maskedKey: updated.maskedKey });
+}));
+
+app.delete('/api/admin/ai-providers/:provider/key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  await platformAiConfigRepository.removeKey(provider);
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.key-removed', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasKey: false });
+}));
+
+app.post('/api/admin/ai-providers/:provider/fallback-key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  const { apiKey } = req.body;
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+    throw createError(req.t('errors:ai.keyRequired') || 'API key is required', 400, 'KEY_REQUIRED');
+  }
+  if (apiKey.length > 500) {
+    throw createError(req.t('errors:ai.keyTooLong') || 'API key exceeds maximum length', 400, 'KEY_TOO_LONG');
+  }
+
+  const updated = await platformAiConfigRepository.upsertFallbackKey(provider, apiKey.trim());
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.fallback-key-set', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasFallbackKey: true, maskedFallbackKey: updated.maskedFallbackKey });
+}));
+
+app.delete('/api/admin/ai-providers/:provider/fallback-key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  await platformAiConfigRepository.removeFallbackKey(provider);
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.fallback-key-removed', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasFallbackKey: false });
+}));
+
+// ─── Admin: AI Provider Test Connection ─────────────────────────────────────
+
+app.post('/api/admin/ai-providers/:provider/test', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  const useFallback = req.query.useFallback === 'true';
+
+  let apiKey: string | null;
+  if (useFallback) {
+    apiKey = await platformAiConfigRepository.getDecryptedFallbackKey(provider);
+  } else {
+    apiKey = await platformAiConfigRepository.getDecryptedKey(provider);
+  }
+
+  if (!apiKey) {
+    res.json({
+      success: false,
+      error: req.t('errors:ai.testNoKey', { provider }) || `No API key configured for ${provider}`,
+      provider,
+    });
+    return;
+  }
+
+  const config = await platformAiConfigRepository.findByProvider(provider);
+  const model = config?.default_model || '';
+  const apiUrl = providerBaseUrl(provider as AIProviderName);
+
+  const start = Date.now();
+  try {
+    const aiProvider = selectAIProvider({ apiUrl, apiKey, provider: provider as AIProviderName });
+    await generateText({
+      model: aiProvider(model),
+      prompt: 'Say "ok"',
+      maxOutputTokens: 1,
+    });
+    const latencyMs = Date.now() - start;
+    res.json({ success: true, ok: true, latencyMs, provider });
+  } catch (err: any) {
+    const latencyMs = Date.now() - start;
+    logger.warn('AI provider test failed', { provider, error: err.message });
+    res.json({
+      success: true,
+      ok: false,
+      error: err.message || 'Connection test failed',
+      latencyMs,
+      provider,
+    });
+  }
+}));
+
+// ─── Admin: AI Provider Default Model & Fallback Order ──────────────────────
+
+app.patch('/api/admin/ai-providers/default-model', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider, model } = req.body;
+
+  if (!provider || typeof provider !== 'string' || !isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+  if (!model || typeof model !== 'string') {
+    throw createError(req.t('errors:ai.modelNotAvailable', { model, provider }) || `Model is required`, 400, 'INVALID_MODEL');
+  }
+
+  const config = await platformAiConfigRepository.findByProvider(provider);
+  if (!config || !config.is_active) {
+    throw createError(req.t('errors:ai.providerNotActive', { provider }) || `Provider ${provider} is not active`, 400, 'PROVIDER_NOT_ACTIVE');
+  }
+  if (config.models.length > 0 && !config.models.includes(model)) {
+    throw createError(req.t('errors:ai.modelNotAvailable', { model, provider }) || `Model ${model} is not available for ${provider}`, 400, 'MODEL_NOT_AVAILABLE');
+  }
+
+  await billingConfigRepository.setDefaultAiProvider(provider, model);
+  platformKeyCache.invalidate();
+
+  auditLog(req, 'ai-provider.default-changed', 'platform_ai_config', provider, { provider, model });
+
+  res.json({ success: true, defaultProvider: { provider, model } });
+}));
+
+app.patch('/api/admin/ai-providers/fallback-order', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { order } = req.body;
+
+  if (!Array.isArray(order)) {
+    throw createError(req.t('errors:ai.invalidFallbackOrder') || 'Fallback order must be an array', 400, 'INVALID_ORDER');
+  }
+
+  const uniqueOrder = new Set(order);
+  if (uniqueOrder.size !== order.length) {
+    throw createError(req.t('errors:ai.invalidFallbackOrder') || 'Fallback order must not contain duplicates', 400, 'INVALID_ORDER');
+  }
+  for (const p of order) {
+    if (!isKnownProvider(p)) {
+      throw createError(req.t('errors:ai.invalidFallbackOrder') || `Unknown provider in fallback order: ${p}`, 400, 'INVALID_ORDER');
+    }
+  }
+  if (order.length !== KNOWN_AI_PROVIDERS.length) {
+    throw createError(req.t('errors:ai.invalidFallbackOrder') || 'Fallback order must include all known providers', 400, 'INVALID_ORDER');
+  }
+
+  await billingConfigRepository.setAiFallbackOrder(order);
+  platformKeyCache.invalidate();
+
+  auditLog(req, 'ai-provider.fallback-order-changed', 'platform_ai_config', undefined, { order });
+
+  res.json({ success: true, fallbackOrder: order });
+}));
+
+// ─── User: AI Providers (public) ────────────────────────────────────────────
+
+app.get('/api/me/ai-providers', requireAuth, asyncHandler(async (req: any, res) => {
+  const configs = await platformAiConfigRepository.findActive();
+
+  const providers = configs.map((c) => ({
+    provider: c.provider,
+    displayName: c.display_name,
+    models: c.models || [],
+    defaultModel: c.default_model || '',
+  }));
+
+  // Always include custom (OpenAI-compatible) option
+  providers.push({
+    provider: 'custom',
+    displayName: 'Custom (OpenAI-compatible)',
+    models: [],
+    defaultModel: '',
+  });
+
+  // Determine user's subscription tier
+  let tier: 'byo_keys' | 'managed_payg' = 'byo_keys';
+  if (req.workspaceId) {
+    const subscription = await subscriptionRepository.findByWorkspaceId(req.workspaceId);
+    if (subscription) {
+      const plan = await planRepository.findById(subscription.plan_id);
+      if (plan && isPlanSlug(plan.slug)) {
+        tier = PLANS[plan.slug].tier;
       }
     }
   }
 
-  const validated: AIProviderEntry[] = providers.map((p: any) => ({
-    provider: p.provider,
-    enabled: p.enabled,
-    rateLimit: Number(p.rateLimit) || 0,
-  }));
+  const hasPlatformKeys = configs.length > 0;
+  const platformDefault = await billingConfigRepository.getDefaultAiProvider();
 
-  const before = await getAIProvidersConfig();
-  await billingConfigRepository.set(AI_PROVIDERS_CONFIG_KEY, JSON.stringify(validated));
-
-  auditLog(req, 'ai_providers.update', 'ai_providers', undefined, {
-    before,
-    after: validated,
+  res.json({
+    success: true,
+    providers,
+    tier,
+    hasPlatformKeys,
+    platformDefault,
   });
-
-  res.json({ success: true, providers: validated });
-}));
-
-app.get('/api/me/ai-providers', requireAuth, asyncHandler(async (_req, res) => {
-  const all = await getAIProvidersConfig();
-  const allowed = all.filter((p) => p.enabled).map((p) => p.provider);
-  res.json({ success: true, providers: allowed });
 }));
 
 // ─── User: Feature Flags ────────────────────────────────────────────────────
@@ -3462,6 +3731,28 @@ app.get('/api/me/flags', requireAuth, asyncHandler(async (req: any, res) => {
   const flags = await resolveAllFlags(orgId);
   res.json({ success: true, flags });
 }));
+
+// ── Internal: AI Config (Docker-network only, no auth) ──────────────────
+// This endpoint is NOT exposed to the public internet.
+// It is accessed only by internal services on the Docker network.
+// Restricted by Docker network configuration + IP allowlist middleware.
+
+app.get('/api/internal/ai-config',
+  requireInternalNetwork,
+  asyncHandler(async (_req, res) => {
+    const configs = await getAllPlatformConfigs();
+    const billingConfigRepo = new BillingConfigRepository();
+    const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
+    const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
+
+    res.json({
+      success: true,
+      providers: configs,
+      defaultProvider,
+      fallbackOrder,
+    });
+  })
+);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
