@@ -367,10 +367,16 @@ export abstract class BaseAgent {
     this.modelIdUsed = modelId;
     const maxOuterLoops = this.getMaxLoops();
 
+    // Part 1 feature flag — read only, no compression behaviour applied yet.
+    // When ENABLE_PROMPT_COMPRESSION=true and compression is wired in Part 2,
+    // this flag will gate windowing / context compression / tool truncation.
+    const compressionEnabled = process.env.ENABLE_PROMPT_COMPRESSION === 'true';
+
     logger.info(`Starting ${this.agentType} agent loop`, {
       sessionId: this.sessionId,
       model: modelName,
       maxOuterLoops,
+      compressionEnabled,
     });
 
     // Build tools with execute callbacks
@@ -497,6 +503,34 @@ export abstract class BaseAgent {
         // cache_read > 0 means the system prompt was served from cache.
         const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens || 0;
         const cacheHitRate = callInput > 0 ? ((callCached / callInput) * 100).toFixed(1) : '0.0';
+
+        // Compression baseline instrumentation (Part 1 — no compression yet).
+        // Chars / 4 is a rough token estimate consistent with OpenAI's guidance.
+        // These values let us pinpoint WHICH portion of the input dominates
+        // cost before applying the 3 compression techniques (windowing,
+        // context compression, tool-output truncation).
+        const systemPromptChars = systemPrompt.length;
+        const historyChars = messages.reduce((sum, m) => {
+          const c: any = (m as any).content;
+          if (typeof c === 'string') return sum + c.length;
+          if (Array.isArray(c)) {
+            return sum + c.reduce((s: number, p: any) =>
+              s + (typeof p?.text === 'string' ? p.text.length : 0), 0);
+          }
+          return sum;
+        }, 0);
+        const projectContextChars = this.config.projectContext
+          ? JSON.stringify(this.config.projectContext).length
+          : 0;
+        const approxToolOverheadChars = (() => {
+          try {
+            return Object.keys(tools || {}).reduce((sum, name) => {
+              const def: any = (tools as any)[name];
+              return sum + (def?.description?.length || 0) + 200;
+            }, 0);
+          } catch { return 0; }
+        })();
+
         logger.info('generateText usage', {
           sessionId: this.sessionId,
           agentType: this.agentType,
@@ -507,6 +541,18 @@ export abstract class BaseAgent {
           cacheWriteTokens: cacheWrite,
           cacheHitRate: cacheHitRate + '%',
           model: modelId,
+          // Part 1 baseline: size breakdown (chars + estimated tokens)
+          sizes: {
+            systemPromptChars,
+            systemPromptTokensApprox: Math.round(systemPromptChars / 4),
+            historyChars,
+            historyTokensApprox: Math.round(historyChars / 4),
+            projectContextChars,
+            projectContextTokensApprox: Math.round(projectContextChars / 4),
+            toolDefsCharsApprox: approxToolOverheadChars,
+            toolDefsTokensApprox: Math.round(approxToolOverheadChars / 4),
+            messageCount: messages.length,
+          },
         });
 
         // Check text output for completion

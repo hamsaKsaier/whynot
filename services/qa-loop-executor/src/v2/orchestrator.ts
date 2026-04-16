@@ -263,6 +263,56 @@ export class V2Orchestrator {
         totalPages,
       });
 
+      // ─── Compression baseline summary (Part 1 instrumentation) ────
+      // Aggregate token + cost totals across every agent in this session
+      // so we have ONE log line per scan showing the full cost breakdown.
+      // Format matches the spec: "Scan cost breakdown: N API calls, XK input
+      // tokens, YK output tokens, $Z.ZZ total, avg WK input tokens/call"
+      const costSummary = allResults.reduce(
+        (acc, r) => ({
+          apiCalls: acc.apiCalls + (r.toolCallCount || 0),
+          inputTokens: acc.inputTokens + (r.inputTokens || 0),
+          outputTokens: acc.outputTokens + (r.outputTokens || 0),
+          cachedInputTokens: acc.cachedInputTokens + (r.cachedInputTokens || 0),
+          costCents: acc.costCents + (r.costCents || 0),
+        }),
+        { apiCalls: 0, inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, costCents: 0 },
+      );
+      const avgInputTokensPerCall = costSummary.apiCalls > 0
+        ? Math.round(costSummary.inputTokens / costSummary.apiCalls)
+        : 0;
+      const cacheHitRateOverall = costSummary.inputTokens > 0
+        ? ((costSummary.cachedInputTokens / costSummary.inputTokens) * 100).toFixed(1) + '%'
+        : '0.0%';
+      const totalCostDollars = (costSummary.costCents / 100).toFixed(3);
+      const compressionMode = process.env.ENABLE_PROMPT_COMPRESSION === 'true'
+        ? 'on' : 'off';
+
+      logger.info('Scan cost breakdown', {
+        sessionId: this.sessionId,
+        apiCalls: costSummary.apiCalls,
+        inputTokens: costSummary.inputTokens,
+        outputTokens: costSummary.outputTokens,
+        cachedInputTokens: costSummary.cachedInputTokens,
+        totalCostCents: costSummary.costCents,
+        totalCostDollars,
+        avgInputTokensPerCall,
+        cacheHitRateOverall,
+        compressionMode,
+        summary: `Scan cost breakdown: ${costSummary.apiCalls} API calls, `
+          + `${(costSummary.inputTokens / 1000).toFixed(1)}K input tokens, `
+          + `${(costSummary.outputTokens / 1000).toFixed(1)}K output tokens, `
+          + `$${totalCostDollars} total, avg ${(avgInputTokensPerCall / 1000).toFixed(1)}K input tokens/call`,
+        perAgent: allResults.map(r => ({
+          agent: r.agentType,
+          apiCalls: r.toolCallCount || 0,
+          inputTokens: r.inputTokens || 0,
+          outputTokens: r.outputTokens || 0,
+          costCents: r.costCents || 0,
+          model: r.modelUsed,
+        })),
+      });
+
     } catch (err: any) {
       logger.error('V2 orchestrator failed', {
         sessionId: this.sessionId,
