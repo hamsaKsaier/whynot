@@ -19,6 +19,22 @@ const MAX_LIST_ITEMS = 10;
  * Preamble added to EVERY agent's system prompt.
  * These rules are critical for correct tool usage and error recovery.
  */
+/**
+ * Week 2: short per-agent helper describing the Chrome DevTools
+ * diagnostics tools. Kept tight — we are actively compressing on
+ * feat/prompt-compression, don't balloon the system prompt here.
+ *
+ * Agents that don't get CDP (qa_lead, auto_tester) never see this block.
+ */
+const CDP_DIAGNOSTICS_BLOCK = `
+LIVE BROWSER DIAGNOSTICS (Chrome DevTools):
+- cdp_list_console_messages: recent console log/warn/error with levels. Call after any action to catch page-side errors.
+- cdp_list_network_requests: HTTP requests since last navigate. Use to spot 4xx/5xx, missing CORS, slow APIs.
+- cdp_get_network_request: full headers + body for one request.
+- cdp_take_snapshot: accessibility tree — cheaper than a full DOM snapshot when you just need structure.
+Self-healing rule: after any test execution, always call cdp_list_console_messages. If the console has a clear error ("ReferenceError: X is not defined", "Network request failed", "CSP violation", etc.), use it in your bug report or to correct the test.
+`;
+
 const CRITICAL_TOOL_RULES = `CRITICAL RULES:
 Be concise. Output only structured data when asked. No long explanations, no commentary. Take action via tools instead of describing what you would do.
 
@@ -176,7 +192,8 @@ RULES:
 - Max 6 tool calls per page then move on
 - TARGET: explore 10+ pages total, capture 10+ API endpoints
 
-You are evaluated on DISCOVERY THROUGHPUT. Find forms, links, APIs — the Security and API agents need them.`;
+You are evaluated on DISCOVERY THROUGHPUT. Find forms, links, APIs — the Security and API agents need them.
+${CDP_DIAGNOSTICS_BLOCK}`;
 
     if (objectives.length > 0) {
       prompt += `\n\nYOUR OBJECTIVES:\n${objectives.map(o => `- [${o.priority}] ${o.objective}`).join('\n')}`;
@@ -229,7 +246,8 @@ ALSO CHECK:
 - HTTP headers: HSTS, CSP, X-Frame-Options, X-Content-Type-Options
 - IDOR: try accessing /profile/1, /profile/2 without auth
 
-Write findings to board with save_bug(). Set severity accurately.`;
+Write findings to board with save_bug(). Set severity accurately.
+${CDP_DIAGNOSTICS_BLOCK}`;
 
     if (objectives.length > 0) {
       prompt += `\n\nYOUR OBJECTIVES:\n${objectives.map(o => `- [${o.priority}] ${o.objective}`).join('\n')}`;
@@ -274,7 +292,8 @@ FOR EACH ENDPOINT:
 - Large payloads: send oversized data
 - Validate response schema consistency
 
-Write findings to board with save_bug(). Include endpoint + request + response in reproduction steps.`;
+Write findings to board with save_bug(). Include endpoint + request + response in reproduction steps.
+${CDP_DIAGNOSTICS_BLOCK}`;
 
     if (objectives.length > 0) {
       prompt += `\n\nYOUR OBJECTIVES:\n${objectives.map(o => `- [${o.priority}] ${o.objective}`).join('\n')}`;

@@ -25,6 +25,7 @@ import { AgentBoard } from '../agent-board';
 import { AgentContextBuilder } from '../agent-context-builder';
 import { ToolExecutor, ToolResult } from '../../tool-executor';
 import { MCPBrowser } from '../../mcp-browser';
+import { ChromeDevToolsMCP } from '../../chrome-devtools-mcp';
 import { BoardTools } from '../tools/board-tools';
 
 const logger = createLogger('base-agent');
@@ -185,7 +186,14 @@ export abstract class BaseAgent {
   protected modelIdUsed: string = 'unknown';
   protected lastCompletionReason: string = '';
 
-  constructor(config: AgentConfig, mcpBrowser?: MCPBrowser) {
+  // Week 2: Chrome DevTools MCP (optional, shared across agents in this session).
+  protected cdpMcp: ChromeDevToolsMCP | null = null;
+
+  constructor(
+    config: AgentConfig,
+    mcpBrowser?: MCPBrowser,
+    cdpMcp: ChromeDevToolsMCP | null = null,
+  ) {
     this.sessionId = config.sessionId;
     this.agentType = config.agentType;
     this.config = config;
@@ -193,6 +201,7 @@ export abstract class BaseAgent {
     this.contextBuilder = new AgentContextBuilder();
     this.boardTools = new BoardTools(config.sessionId, config.agentType);
     this.lastBoardPollTime = new Date().toISOString();
+    this.cdpMcp = cdpMcp;
 
     if (mcpBrowser) {
       this.mcpBrowser = mcpBrowser;
@@ -206,7 +215,9 @@ export abstract class BaseAgent {
           maxDurationHours: 1,
           loginCredentials: config.loginCredentials,
         },
-        mcpBrowser
+        mcpBrowser,
+        undefined,            // onTestCaseCreated
+        cdpMcp,               // Week 2: hand CDP MCP to the tool executor
       );
     }
   }
@@ -299,6 +310,9 @@ export abstract class BaseAgent {
         },
       });
 
+      // Week 2: snapshot CDP telemetry from the tool executor before returning
+      const cdpSnapshot = this.snapshotCdpTelemetry();
+
       return {
         agentType: this.agentType,
         status: 'done',
@@ -315,6 +329,8 @@ export abstract class BaseAgent {
         toolCallCount: this.totalToolCalls,
         durationMs,
         completionReason: this.lastCompletionReason || 'iteration_end',
+        cdpCallCounts: cdpSnapshot.cdpCallCounts,
+        cdpCharsDropped: cdpSnapshot.cdpCharsDropped,
       };
     } catch (err: any) {
       logger.error(`${this.agentType} agent failed`, {
@@ -337,6 +353,8 @@ export abstract class BaseAgent {
         this.cachedInputTokens,
       );
 
+      const cdpSnapshot = this.snapshotCdpTelemetry();
+
       return {
         agentType: this.agentType,
         status: 'error',
@@ -354,8 +372,32 @@ export abstract class BaseAgent {
         toolCallCount: this.totalToolCalls,
         durationMs: Date.now() - startTime,
         completionReason: 'error',
+        cdpCallCounts: cdpSnapshot.cdpCallCounts,
+        cdpCharsDropped: cdpSnapshot.cdpCharsDropped,
       };
     }
+  }
+
+  /**
+   * Week 2 helper: read CDP tool stats from the shared ToolExecutor so they
+   * end up in the AgentResult. Orchestrator rolls these into the Scan cost
+   * breakdown's chromeDevtools block.
+   */
+  private snapshotCdpTelemetry(): {
+    cdpCallCounts: Record<string, number>;
+    cdpCharsDropped: number;
+  } {
+    if (!this.toolExecutor) {
+      return { cdpCallCounts: {}, cdpCharsDropped: 0 };
+    }
+    const counts: Record<string, number> = {};
+    // cdpCallCounts is a Map<string, number> on ToolExecutor
+    const rawCounts = (this.toolExecutor as any).cdpCallCounts as Map<string, number> | undefined;
+    if (rawCounts) {
+      for (const [tool, n] of rawCounts.entries()) counts[tool] = n;
+    }
+    const charsDropped = (this.toolExecutor as any).cdpCharsDropped || 0;
+    return { cdpCallCounts: counts, cdpCharsDropped: charsDropped };
   }
 
   /**

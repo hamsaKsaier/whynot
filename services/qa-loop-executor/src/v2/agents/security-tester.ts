@@ -14,9 +14,15 @@ import { MCPBrowser } from '../../mcp-browser';
 import { getToolSchemasForAgent, ToolSchema } from '../tools/agent-tools';
 import { ToolResult } from '../../tool-executor';
 
+import { ChromeDevToolsMCP, filterCdpToolsForAgent } from '../../chrome-devtools-mcp';
+
 export class SecurityTesterAgent extends BaseAgent {
-  constructor(config: AgentConfig, mcpBrowser: MCPBrowser) {
-    super(config, mcpBrowser);
+  constructor(
+    config: AgentConfig,
+    mcpBrowser: MCPBrowser,
+    cdpMcp: ChromeDevToolsMCP | null = null,
+  ) {
+    super(config, mcpBrowser, cdpMcp);
   }
 
   protected buildToolSchemas(): Record<string, { description: string; parameters: z.ZodType }> {
@@ -35,6 +41,17 @@ export class SecurityTesterAgent extends BaseAgent {
         if (!include.includes(tool.name)) continue;
         agentTools[tool.name] = {
           description: tool.description || `Browser tool: ${tool.name}`,
+          parameters: this.convertSchema(tool.input_schema),
+        };
+      }
+    }
+
+    // Week 2: Chrome DevTools diagnostics — critical for header/CSP/CORS checks
+    if (this.cdpMcp) {
+      const cdpAllowed = filterCdpToolsForAgent('security', this.cdpMcp.getTools());
+      for (const tool of cdpAllowed) {
+        agentTools[tool.name] = {
+          description: tool.description || `Chrome DevTools tool: ${tool.name}`,
           parameters: this.convertSchema(tool.input_schema),
         };
       }

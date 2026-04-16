@@ -98,4 +98,9 @@ export interface AgentResult {
   toolCallCount?: number;
   durationMs?: number;
   completionReason?: string;
+  // Week 2 CDP telemetry: which cdp_* tools this agent called, plus total
+  // chars dropped by output truncation. Aggregated across all agents by
+  // the orchestrator into the chromeDevtools block of "Scan cost breakdown".
+  cdpCallCounts?: Record<string, number>;
+  cdpCharsDropped?: number;
 }
