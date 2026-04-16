@@ -98,4 +98,13 @@ export interface AgentResult {
   toolCallCount?: number;
   durationMs?: number;
   completionReason?: string;
+  // Task 1–3 instrumentation (separates LLM calls from tool calls,
+  // tracks worst-case single call, accumulates char-based composition
+  // so the orchestrator can compute session-wide averages).
+  llmCallCount?: number;
+  maxSingleCallInputTokens?: number;
+  sumSystemPromptChars?: number;
+  sumHistoryChars?: number;
+  sumProjectContextChars?: number;
+  sumToolDefsChars?: number;
 }

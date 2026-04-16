@@ -263,23 +263,40 @@ export class V2Orchestrator {
         totalPages,
       });
 
-      // ─── Compression baseline summary (Part 1 instrumentation) ────
-      // Aggregate token + cost totals across every agent in this session
-      // so we have ONE log line per scan showing the full cost breakdown.
-      // Format matches the spec: "Scan cost breakdown: N API calls, XK input
-      // tokens, YK output tokens, $Z.ZZ total, avg WK input tokens/call"
+      // ─── Compression baseline summary (Part 1 + Part 2 instrumentation) ────
+      // Aggregate token + cost totals across every agent in this session.
+      //
+      // Task 1: separate LLM calls (generateText invocations) from TOOL calls
+      //   (individual tool-call steps). Previous aggregator mislabeled
+      //   toolCallCount as "apiCalls", inflating the headline number ~30×.
+      // Task 2: average char-based composition across every LLM call so we
+      //   can see WHERE input tokens are going (system / history / context / tools).
+      // Task 3: expose the single biggest LLM call + which agent produced it.
       const costSummary = allResults.reduce(
         (acc, r) => ({
-          apiCalls: acc.apiCalls + (r.toolCallCount || 0),
+          llmCalls: acc.llmCalls + (r.llmCallCount || 0),
+          toolCalls: acc.toolCalls + (r.toolCallCount || 0),
           inputTokens: acc.inputTokens + (r.inputTokens || 0),
           outputTokens: acc.outputTokens + (r.outputTokens || 0),
           cachedInputTokens: acc.cachedInputTokens + (r.cachedInputTokens || 0),
           costCents: acc.costCents + (r.costCents || 0),
+          sumSystemPromptChars: acc.sumSystemPromptChars + (r.sumSystemPromptChars || 0),
+          sumHistoryChars: acc.sumHistoryChars + (r.sumHistoryChars || 0),
+          sumProjectContextChars: acc.sumProjectContextChars + (r.sumProjectContextChars || 0),
+          sumToolDefsChars: acc.sumToolDefsChars + (r.sumToolDefsChars || 0),
         }),
-        { apiCalls: 0, inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, costCents: 0 },
+        {
+          llmCalls: 0, toolCalls: 0, inputTokens: 0, outputTokens: 0,
+          cachedInputTokens: 0, costCents: 0,
+          sumSystemPromptChars: 0, sumHistoryChars: 0,
+          sumProjectContextChars: 0, sumToolDefsChars: 0,
+        },
       );
-      const avgInputTokensPerCall = costSummary.apiCalls > 0
-        ? Math.round(costSummary.inputTokens / costSummary.apiCalls)
+      const avgInputTokensPerLlmCall = costSummary.llmCalls > 0
+        ? Math.round(costSummary.inputTokens / costSummary.llmCalls)
+        : 0;
+      const avgToolCallsPerLlmCall = costSummary.llmCalls > 0
+        ? Math.round((costSummary.toolCalls / costSummary.llmCalls) * 10) / 10
         : 0;
       const cacheHitRateOverall = costSummary.inputTokens > 0
         ? ((costSummary.cachedInputTokens / costSummary.inputTokens) * 100).toFixed(1) + '%'
@@ -288,28 +305,66 @@ export class V2Orchestrator {
       const compressionMode = process.env.ENABLE_PROMPT_COMPRESSION === 'true'
         ? 'on' : 'off';
 
+      // Task 2: average char-based composition per LLM call (chars/4 ≈ tokens).
+      // These averages tell us which compression technique to prioritize:
+      //   historyAvg > 40% total → implement conversation windowing
+      //   projectContextAvg > 20% total → implement context compression
+      //   toolDefsAvg > 20% total → trim tool descriptions
+      const tokenComposition = costSummary.llmCalls > 0 ? {
+        systemPromptAvg: Math.round(costSummary.sumSystemPromptChars / costSummary.llmCalls / 4),
+        historyAvg: Math.round(costSummary.sumHistoryChars / costSummary.llmCalls / 4),
+        projectContextAvg: Math.round(costSummary.sumProjectContextChars / costSummary.llmCalls / 4),
+        toolDefsAvg: Math.round(costSummary.sumToolDefsChars / costSummary.llmCalls / 4),
+      } : { systemPromptAvg: 0, historyAvg: 0, projectContextAvg: 0, toolDefsAvg: 0 };
+
+      // Task 3: worst-case single LLM call across all agents.
+      let maxSingleCallInputTokens = 0;
+      let maxCallAgent: string | null = null;
+      for (const r of allResults) {
+        if ((r.maxSingleCallInputTokens || 0) > maxSingleCallInputTokens) {
+          maxSingleCallInputTokens = r.maxSingleCallInputTokens || 0;
+          maxCallAgent = r.agentType;
+        }
+      }
+
       logger.info('Scan cost breakdown', {
         sessionId: this.sessionId,
-        apiCalls: costSummary.apiCalls,
+        // Task 1: clearly labeled counters
+        llmCalls: costSummary.llmCalls,
+        toolCalls: costSummary.toolCalls,
         inputTokens: costSummary.inputTokens,
         outputTokens: costSummary.outputTokens,
         cachedInputTokens: costSummary.cachedInputTokens,
         totalCostCents: costSummary.costCents,
         totalCostDollars,
-        avgInputTokensPerCall,
+        avgInputTokensPerLlmCall,
+        avgToolCallsPerLlmCall,
         cacheHitRateOverall,
         compressionMode,
-        summary: `Scan cost breakdown: ${costSummary.apiCalls} API calls, `
+        // Task 2: token composition
+        tokenComposition,
+        // Task 3: worst-case LLM call
+        maxSingleCallInputTokens,
+        maxCallAgent,
+        summary: `Scan cost breakdown: ${costSummary.llmCalls} LLM calls `
+          + `(${costSummary.toolCalls} tool calls), `
           + `${(costSummary.inputTokens / 1000).toFixed(1)}K input tokens, `
           + `${(costSummary.outputTokens / 1000).toFixed(1)}K output tokens, `
-          + `$${totalCostDollars} total, avg ${(avgInputTokensPerCall / 1000).toFixed(1)}K input tokens/call`,
+          + `$${totalCostDollars} total, avg ${(avgInputTokensPerLlmCall / 1000).toFixed(1)}K input tokens/LLM call`,
         perAgent: allResults.map(r => ({
           agent: r.agentType,
-          apiCalls: r.toolCallCount || 0,
+          // Task 1: per-agent separation
+          llmCalls: r.llmCallCount || 0,
+          toolCalls: r.toolCallCount || 0,
           inputTokens: r.inputTokens || 0,
           outputTokens: r.outputTokens || 0,
+          cachedInputTokens: r.cachedInputTokens || 0,
+          cacheHitRate: (r.inputTokens || 0) > 0
+            ? (((r.cachedInputTokens || 0) / (r.inputTokens || 1)) * 100).toFixed(1) + '%'
+            : '0.0%',
           costCents: r.costCents || 0,
           model: r.modelUsed,
+          maxSingleCallInputTokens: r.maxSingleCallInputTokens || 0,
         })),
       });
 

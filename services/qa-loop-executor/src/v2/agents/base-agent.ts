@@ -185,6 +185,21 @@ export abstract class BaseAgent {
   protected modelIdUsed: string = 'unknown';
   protected lastCompletionReason: string = '';
 
+  // Task 1–3 instrumentation: distinguish LLM calls from tool calls and
+  // track max single-call size + token composition averages.
+  protected llmCallCount = 0;                    // generateText invocations
+  protected maxSingleCallInputTokens = 0;        // biggest single call
+  // Accumulators for token-composition averages (chars-based estimates)
+  protected sumSystemPromptChars = 0;
+  protected sumHistoryChars = 0;
+  protected sumProjectContextChars = 0;
+  protected sumToolDefsChars = 0;
+
+  // Task 4 support: snapshot of the board at agent start. Agents can read
+  // this in getInitialPrompt() to embed board-derived data in the USER
+  // message (not the system prompt, which must stay byte-stable for caching).
+  protected boardEntriesAtStart: any[] = [];
+
   constructor(config: AgentConfig, mcpBrowser?: MCPBrowser) {
     this.sessionId = config.sessionId;
     this.agentType = config.agentType;
@@ -233,6 +248,8 @@ export abstract class BaseAgent {
 
       // Get board state for context
       const boardEntries = await this.board.getAllForSession(this.sessionId);
+      // Task 4: stash snapshot so getInitialPrompt() can read it.
+      this.boardEntriesAtStart = boardEntries;
 
       // Build system prompt with agent-specific context
       const systemPrompt = this.contextBuilder.buildSystemPrompt(
@@ -315,6 +332,13 @@ export abstract class BaseAgent {
         toolCallCount: this.totalToolCalls,
         durationMs,
         completionReason: this.lastCompletionReason || 'iteration_end',
+        // Task 1–3 instrumentation passthrough
+        llmCallCount: this.llmCallCount,
+        maxSingleCallInputTokens: this.maxSingleCallInputTokens,
+        sumSystemPromptChars: this.sumSystemPromptChars,
+        sumHistoryChars: this.sumHistoryChars,
+        sumProjectContextChars: this.sumProjectContextChars,
+        sumToolDefsChars: this.sumToolDefsChars,
       };
     } catch (err: any) {
       logger.error(`${this.agentType} agent failed`, {
@@ -354,6 +378,13 @@ export abstract class BaseAgent {
         toolCallCount: this.totalToolCalls,
         durationMs: Date.now() - startTime,
         completionReason: 'error',
+        // Task 1–3 instrumentation passthrough
+        llmCallCount: this.llmCallCount,
+        maxSingleCallInputTokens: this.maxSingleCallInputTokens,
+        sumSystemPromptChars: this.sumSystemPromptChars,
+        sumHistoryChars: this.sumHistoryChars,
+        sumProjectContextChars: this.sumProjectContextChars,
+        sumToolDefsChars: this.sumToolDefsChars,
       };
     }
   }
@@ -495,6 +526,12 @@ export abstract class BaseAgent {
         this.inputTokens += callInput;
         this.outputTokens += callOutput;
         this.cachedInputTokens += callCached;
+        // Task 1: count LLM invocations distinctly from tool calls.
+        this.llmCallCount++;
+        // Task 3: track biggest single call so we know the worst case.
+        if (callInput > this.maxSingleCallInputTokens) {
+          this.maxSingleCallInputTokens = callInput;
+        }
         if ((result as any).finishReason) {
           this.lastCompletionReason = String((result as any).finishReason);
         }
@@ -530,6 +567,12 @@ export abstract class BaseAgent {
             }, 0);
           } catch { return 0; }
         })();
+
+        // Task 2: accumulate char-based composition sizes for session-wide averages.
+        this.sumSystemPromptChars += systemPromptChars;
+        this.sumHistoryChars += historyChars;
+        this.sumProjectContextChars += projectContextChars;
+        this.sumToolDefsChars += approxToolOverheadChars;
 
         logger.info('generateText usage', {
           sessionId: this.sessionId,

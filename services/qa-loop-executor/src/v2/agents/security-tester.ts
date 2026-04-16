@@ -64,7 +64,19 @@ export class SecurityTesterAgent extends BaseAgent {
   }
 
   protected getInitialPrompt(): string {
-    return `Begin security testing for ${this.config.targetUrl}.
+    // Task 4: board-derived context (forms + known issues) lives in the
+    // user message, NOT the system prompt, so the system prompt stays
+    // byte-stable across calls and Anthropic's ephemeral cache hits.
+    let contextHeader = '';
+    const contextMsg = this.contextBuilder.buildSecurityContextMessage(
+      this.config.projectContext,
+      this.boardEntriesAtStart,
+    );
+    if (contextMsg) {
+      contextHeader = `CONTEXT FROM PRIOR AGENTS:\n\n${contextMsg}\n\n---\n\n`;
+    }
+
+    return `${contextHeader}Begin security testing for ${this.config.targetUrl}.
 
 Your first step: read_board() for forms discovered by Exploratory.
 
