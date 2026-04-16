@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext"
 import { FeatureFlagsProvider } from "./providers/FeatureFlagsProvider"
 import { WorkspaceProvider } from "./contexts/WorkspaceContext"
 import { ToastProvider } from "./contexts/ToastContext"
+import { DirectionProvider } from "./components/DirectionProvider"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { AppShell } from "./components/layout/AppShell"
@@ -54,6 +55,7 @@ function App() {
         <AuthProvider>
           <FeatureFlagsProvider>
           <ToastProvider>
+            <DirectionProvider>
             <Router>
               <Routes>
                 {/* Public routes — rendered without the app shell */}
@@ -103,6 +105,7 @@ function App() {
                 details={upgradePrompt.details}
               />
             </Router>
+            </DirectionProvider>
             <Toaster position="bottom-right" richColors closeButton />
           </ToastProvider>
           </FeatureFlagsProvider>

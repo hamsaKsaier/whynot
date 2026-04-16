@@ -34,6 +34,7 @@ import { PaymentService } from '../payments/payment-service';
 import { InvoiceRepository } from '../../shared/database/repositories/invoice-repository';
 import { UserRepository } from '../../shared/database/repositories/user-repository';
 import { startCleanupScheduler, runCleanup } from '../services/cleanup-service';
+import { seedAdminUser } from '../../shared/database/seeds/admin-user';
 import { requireCredits, deductCredits } from '../middleware/credit-gate';
 import { recordUsageEvent } from '../utils/usage-tracker';
 import { requireFeature, requireFeatureLimit } from '../middleware/feature-gate';
@@ -3476,6 +3477,12 @@ if (env.NODE_ENV !== 'test') {
     });
 
     startCleanupScheduler();
+
+    if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
+      seedAdminUser(env.ADMIN_EMAIL, env.ADMIN_PASSWORD, env.ADMIN_NAME)
+        .then(() => logger.info('Admin user seeded'))
+        .catch((err: any) => logger.error('Admin seed failed', { error: err.message }));
+    }
 
     import('../services/qa-monitor-scheduler').then(({ startMonitorScheduler }) => {
       startMonitorScheduler();

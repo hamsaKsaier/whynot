@@ -62,7 +62,8 @@ down: ## Stop and remove containers (keeps volumes)
 	$(DC_RUN) down
 
 .PHONY: restart
-restart: ## Restart all services (no rebuild)
+restart: check-env ## Rebuild gateway and restart all services
+	$(DC_RUN) up -d --build gateway
 	$(DC_RUN) restart
 
 .PHONY: rebuild

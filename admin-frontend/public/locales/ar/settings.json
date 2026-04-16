@@ -7,6 +7,7 @@
   "settings.tabs.security": "الأمان",
   "settings.noSettings": "لا توجد إعدادات في هذه الفئة.",
   "settings.saveFailed": "فشل الحفظ",
+  "settings.save": "حفظ",
   "settings.saveSuccess": "تم حفظ الإعدادات",
   "settings.general.siteName": "اسم الموقع",
   "settings.general.supportEmail": "بريد الدعم",

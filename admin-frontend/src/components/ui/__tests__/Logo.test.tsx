@@ -12,9 +12,9 @@ vi.mock("react-i18next", () => ({
 }))
 
 const mockUseThemeContext = vi.fn(() => ({
-  theme: "light" as const,
-  resolvedTheme: "light" as const,
-  setTheme: vi.fn(),
+  theme: "light" as "light" | "dark" | "system",
+  resolvedTheme: "light" as "light" | "dark",
+  setTheme: vi.fn() as (theme: "light" | "dark" | "system") => void,
   toggle: vi.fn(),
 }))
 
@@ -42,8 +42,8 @@ describe("Logo", () => {
 
   it("renders dark variant in dark mode", () => {
     mockUseThemeContext.mockReturnValue({
-      theme: "dark",
-      resolvedTheme: "dark",
+      theme: "dark" as const,
+      resolvedTheme: "dark" as const,
       setTheme: vi.fn(),
       toggle: vi.fn(),
     })

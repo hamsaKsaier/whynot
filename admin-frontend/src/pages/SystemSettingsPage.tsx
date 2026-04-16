@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Save, Check, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
@@ -11,6 +12,7 @@ import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { getSystemSettings, updateSystemSetting } from '../services/api'
 
 export function SystemSettingsPage() {
+  const { t } = useTranslation('settings')
   const [searchParams, setSearchParams] = useSearchParams()
   const [settings, setSettings] = useState<any[]>([])
   const [editValues, setEditValues] = useState<Record<string, string>>({})
@@ -47,7 +49,7 @@ export function SystemSettingsPage() {
       if (s) s.value = editValues[key]
       setTimeout(() => setSaved(null), 2000)
     } catch (err: any) {
-      alert(`Failed to save: ${err.response?.data?.error || err.message}`)
+      alert(`${t('settings.saveFailed')}: ${err.response?.data?.error || err.message}`)
     } finally {
       setSaving(null)
     }
@@ -78,7 +80,7 @@ export function SystemSettingsPage() {
       <CardContent className="p-0 divide-y">
         {(!items || items.length === 0) ? (
           <div className="p-6 text-center text-sm text-muted-foreground">
-            No settings in this category.
+            {t('settings.noSettings')}
           </div>
         ) : (
           items.map((setting: any) => (
@@ -101,7 +103,7 @@ export function SystemSettingsPage() {
                   className="flex-shrink-0"
                   onClick={() => handleSave(setting.key)}
                   disabled={saving === setting.key || editValues[setting.key] === setting.value}
-                  title="Save"
+                  title={t('settings.save')}
                 >
                   {saving === setting.key ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -121,15 +123,15 @@ export function SystemSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="System Settings" />
+      <AdminPageHeader title={t('settings.title')} />
 
       <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="credits">Credit Costs</TabsTrigger>
-          <TabsTrigger value="email">Email</TabsTrigger>
-          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
+          <TabsTrigger value="credits">{t('settings.tabs.credits')}</TabsTrigger>
+          <TabsTrigger value="email">{t('settings.tabs.email')}</TabsTrigger>
+          <TabsTrigger value="webhooks">{t('settings.tabs.webhooks')}</TabsTrigger>
+          <TabsTrigger value="security">{t('settings.tabs.security')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-4">

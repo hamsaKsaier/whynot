@@ -7,6 +7,7 @@
   "settings.tabs.security": "Security",
   "settings.noSettings": "No settings in this category.",
   "settings.saveFailed": "Failed to save",
+  "settings.save": "Save",
   "settings.saveSuccess": "Settings saved",
   "settings.general.siteName": "Site name",
   "settings.general.supportEmail": "Support email",

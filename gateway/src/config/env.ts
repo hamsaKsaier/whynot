@@ -110,6 +110,11 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   ADMIN_FRONTEND_URL: z.string().default('http://localhost:5184'),
   SUPERADMIN_FRONTEND_URL: z.string().default('http://localhost:5184'),
+  // ── Admin Seed ──────────────────────────────────────────────────────────
+  ADMIN_EMAIL: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
+  ADMIN_NAME: z.string().default('Admin'),
+
   CORS_ALLOWED_ORIGINS: z.string().default(''),
   GATEWAY_URL: z.string().default('http://localhost:3010'),
   APP_URL: z.string().default(''),

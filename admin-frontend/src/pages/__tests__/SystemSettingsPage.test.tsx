@@ -9,6 +9,27 @@ vi.mock('../../services/api', () => ({
   updateSystemSetting: vi.fn(),
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'settings.title': 'System Settings',
+        'settings.tabs.general': 'General',
+        'settings.tabs.credits': 'Credit Costs',
+        'settings.tabs.email': 'Email',
+        'settings.tabs.webhooks': 'Webhooks',
+        'settings.tabs.security': 'Security',
+        'settings.noSettings': 'No settings in this category.',
+        'settings.save': 'Save',
+        'settings.saveFailed': 'Failed to save',
+        'settings.saveSuccess': 'Settings saved',
+      }
+      return map[key] || key
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}))
+
 import { getSystemSettings, updateSystemSetting } from '../../services/api'
 
 const mockSettings = {

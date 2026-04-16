@@ -84,13 +84,14 @@ async function provisionWorkspace(workspaceId: string): Promise<void> {
  * Register with email + password
  */
 export async function register(email: string, password: string, name: string): Promise<AuthResult> {
-  const existing = await userRepository.findByEmail(email);
+  const normalizedEmail = email.trim().toLowerCase();
+  const existing = await userRepository.findByEmail(normalizedEmail);
   if (existing) {
     throw createError('Email already in use', 409, 'EMAIL_IN_USE');
   }
 
   const password_hash = await bcrypt.hash(password, 10);
-  const user = await userRepository.create({ email, password_hash, name });
+  const user = await userRepository.create({ email: normalizedEmail, password_hash, name });
 
   // Auto-create default workspace + provision subscription & credits
   const workspace = await workspaceRepository.create({ name: `${name}'s Workspace`, owner_id: user.id });
@@ -103,7 +104,7 @@ export async function register(email: string, password: string, name: string): P
  * Login with email + password
  */
 export async function login(email: string, password: string): Promise<AuthResult> {
-  const user = await userRepository.findByEmail(email);
+  const user = await userRepository.findByEmail(email.trim().toLowerCase());
   if (!user || !user.password_hash) {
     throw createError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
