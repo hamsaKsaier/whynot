@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RTL_LANGUAGES, type SupportedLanguage } from '@/i18n';
 
@@ -18,7 +18,7 @@ export function useDirection() {
     document.documentElement.setAttribute('dir', dir);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dir = resolveDirection(lang);
     setDirectionState(dir);
     document.documentElement.setAttribute('dir', dir);

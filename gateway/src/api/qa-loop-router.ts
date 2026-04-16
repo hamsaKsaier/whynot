@@ -442,6 +442,7 @@ createProxy('get', '/sessions/:id/test-cases', 'Failed to get test cases');
 createProxy('get', '/sessions/:id/bugs',        'Failed to get bugs');
 createProxy('get', '/sessions/:id/pages',       'Failed to get pages');
 createProxy('get', '/sessions/:id/test-runs',   'Failed to get test runs');
+createProxy('get', '/sessions/:id/agents',      'Failed to get agent board');
 
 // ── Document management ────────────────────────────────────────────────────────
 // combined must come BEFORE /:docId to avoid route shadowing

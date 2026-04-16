@@ -18,6 +18,25 @@ export const LANGUAGE_META: Record<
   es: { nativeName: 'Español', flag: '🇪🇸', dir: 'ltr' },
 };
 
+function resolveSupportedLang(raw: string | null | undefined): SupportedLanguage {
+  const base = (raw ?? '').split('-')[0];
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(base)
+    ? (base as SupportedLanguage)
+    : 'en';
+}
+
+export function getInitialLang(): SupportedLanguage {
+  const stored = typeof localStorage !== 'undefined'
+    ? localStorage.getItem('i18nextLng')
+    : null;
+  const navLang = typeof navigator !== 'undefined' ? navigator.language : '';
+  return resolveSupportedLang(stored || navLang);
+}
+
+export function getInitialDirection(): 'ltr' | 'rtl' {
+  return LANGUAGE_META[getInitialLang()].dir;
+}
+
 i18n
   .use(HttpBackend)
   .use(LanguageDetector)

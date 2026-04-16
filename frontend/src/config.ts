@@ -19,7 +19,7 @@ function getQaLoopWsUrl(): string {
   const explicit = import.meta.env.VITE_QA_LOOP_WS_URL;
   if (explicit) return explicit;
   if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    return `wss://${window.location.host}/qa-ws`;
+    return `wss://${window.location.host}`;
   }
   return 'ws://localhost:3012';
 }

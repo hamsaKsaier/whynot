@@ -50,6 +50,7 @@ import { invalidateFlag, invalidateOrg, resolveAllFlags } from '../utils/feature
 import { stripeWebhookRouter } from './webhooks/stripe';
 import { generateText } from 'ai';
 import { PlatformAiConfigRepository } from '../../shared/database/repositories/platform-ai-config-repository';
+import { DecryptionKeyMismatchError } from '../utils/crypto/secret-cipher';
 import { platformKeyCache } from '../utils/ai/platform-key-cache';
 import { selectAIProvider } from '../utils/ai/select-ai-provider';
 import { providerBaseUrl } from '../utils/ai/provider-base-url';
@@ -3579,10 +3580,23 @@ app.post('/api/admin/ai-providers/:provider/test', requireAuth, requireSuperAdmi
   const useFallback = req.query.useFallback === 'true';
 
   let apiKey: string | null;
-  if (useFallback) {
-    apiKey = await platformAiConfigRepository.getDecryptedFallbackKey(provider);
-  } else {
-    apiKey = await platformAiConfigRepository.getDecryptedKey(provider);
+  try {
+    apiKey = useFallback
+      ? await platformAiConfigRepository.getDecryptedFallbackKey(provider)
+      : await platformAiConfigRepository.getDecryptedKey(provider);
+  } catch (err) {
+    if (err instanceof DecryptionKeyMismatchError) {
+      res.json({
+        success: false,
+        error:
+          req.t('errors:ai.keyDecryptFailed', { provider }) ||
+          `Stored API key for ${provider} can no longer be decrypted (encryption key changed). Please re-enter the key.`,
+        code: 'KEY_DECRYPT_FAILED',
+        provider,
+      });
+      return;
+    }
+    throw err;
   }
 
   if (!apiKey) {
@@ -3604,7 +3618,7 @@ app.post('/api/admin/ai-providers/:provider/test', requireAuth, requireSuperAdmi
     await generateText({
       model: aiProvider(model),
       prompt: 'Say "ok"',
-      maxOutputTokens: 1,
+      maxOutputTokens: 16,
     });
     const latencyMs = Date.now() - start;
     res.json({ success: true, ok: true, latencyMs, provider });

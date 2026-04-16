@@ -204,6 +204,7 @@ vi.mock('../../../utils/ai/provider-base-url', () => ({
 // ─── Import after mocks ─────────────────────────────────────────────────────
 
 import { PlatformAiConfigRepository } from '../../../../shared/database/repositories/platform-ai-config-repository';
+import { DecryptionKeyMismatchError } from '../../../utils/crypto/secret-cipher';
 import { BillingConfigRepository } from '../../../../shared/database/repositories/billing-config-repository';
 import { AuditRepository } from '../../../../shared/database/repositories/audit-repository';
 import { errorHandler, asyncHandler, createError } from '../../../middleware/error-handler';
@@ -388,10 +389,21 @@ function createApp() {
     if (!isKnownProvider(provider)) throw createError(`Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
     const useFallback = req.query.useFallback === 'true';
     let apiKey: string | null;
-    if (useFallback) {
-      apiKey = await platformAiConfigRepository.getDecryptedFallbackKey(provider);
-    } else {
-      apiKey = await platformAiConfigRepository.getDecryptedKey(provider);
+    try {
+      apiKey = useFallback
+        ? await platformAiConfigRepository.getDecryptedFallbackKey(provider)
+        : await platformAiConfigRepository.getDecryptedKey(provider);
+    } catch (err) {
+      if (err instanceof DecryptionKeyMismatchError) {
+        res.json({
+          success: false,
+          error: `Stored API key for ${provider} can no longer be decrypted (encryption key changed). Please re-enter the key.`,
+          code: 'KEY_DECRYPT_FAILED',
+          provider,
+        });
+        return;
+      }
+      throw err;
     }
     if (!apiKey) {
       res.json({ success: false, error: `No API key configured for ${provider}`, provider });
@@ -757,6 +769,29 @@ describe('Admin AI Providers API', () => {
         .post('/api/admin/ai-providers/openai/test')
         .set(USER_HEADERS);
       expect(res.status).toBe(403);
+    });
+
+    it('returns KEY_DECRYPT_FAILED when stored key cannot be decrypted', async () => {
+      await request(app)
+        .post('/api/admin/ai-providers/openai/key')
+        .set(ADMIN_HEADERS)
+        .send({ apiKey: 'sk-test1234' });
+
+      const repoInstance = vi
+        .mocked(PlatformAiConfigRepository)
+        .mock.results.at(-1)?.value;
+      (repoInstance.getDecryptedKey as any).mockRejectedValueOnce(
+        new DecryptionKeyMismatchError(),
+      );
+
+      const res = await request(app)
+        .post('/api/admin/ai-providers/openai/test')
+        .set(ADMIN_HEADERS);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe('KEY_DECRYPT_FAILED');
+      expect(res.body.provider).toBe('openai');
+      expect(res.body.error).toContain('can no longer be decrypted');
     });
   });
 

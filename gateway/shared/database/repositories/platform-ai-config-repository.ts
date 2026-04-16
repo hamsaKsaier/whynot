@@ -1,5 +1,5 @@
 import { query } from '../connection';
-import { encrypt, decrypt } from '../../../src/utils/crypto/secret-cipher';
+import { encrypt, decrypt, DecryptionKeyMismatchError } from '../../../src/utils/crypto/secret-cipher';
 
 export interface PlatformAiConfigEntity {
   id: string;
@@ -46,22 +46,30 @@ function toSafe(entity: PlatformAiConfigEntity): PlatformAiConfigSafe {
 
   let maskedKey: string | null = null;
   if (hasKey) {
-    const plain = decrypt({
-      ciphertext: entity.api_key_encrypted!,
-      iv: entity.api_key_iv!,
-      tag: entity.api_key_tag!,
-    });
-    maskedKey = maskApiKey(plain);
+    try {
+      const plain = decrypt({
+        ciphertext: entity.api_key_encrypted!,
+        iv: entity.api_key_iv!,
+        tag: entity.api_key_tag!,
+      });
+      maskedKey = maskApiKey(plain);
+    } catch {
+      maskedKey = '(unable to decrypt — re-enter key)';
+    }
   }
 
   let maskedFallbackKey: string | null = null;
   if (hasFallbackKey) {
-    const plain = decrypt({
-      ciphertext: entity.fallback_key_encrypted!,
-      iv: entity.fallback_key_iv!,
-      tag: entity.fallback_key_tag!,
-    });
-    maskedFallbackKey = maskApiKey(plain);
+    try {
+      const plain = decrypt({
+        ciphertext: entity.fallback_key_encrypted!,
+        iv: entity.fallback_key_iv!,
+        tag: entity.fallback_key_tag!,
+      });
+      maskedFallbackKey = maskApiKey(plain);
+    } catch {
+      maskedFallbackKey = '(unable to decrypt — re-enter key)';
+    }
   }
 
   return {
@@ -193,11 +201,15 @@ export class PlatformAiConfigRepository {
     }
     const row = rows[0];
     if (row.api_key_encrypted == null) return null;
-    return decrypt({
-      ciphertext: row.api_key_encrypted,
-      iv: row.api_key_iv!,
-      tag: row.api_key_tag!,
-    });
+    try {
+      return decrypt({
+        ciphertext: row.api_key_encrypted,
+        iv: row.api_key_iv!,
+        tag: row.api_key_tag!,
+      });
+    } catch (err) {
+      throw new DecryptionKeyMismatchError(err);
+    }
   }
 
   async getDecryptedFallbackKey(provider: string): Promise<string | null> {
@@ -210,11 +222,15 @@ export class PlatformAiConfigRepository {
     }
     const row = rows[0];
     if (row.fallback_key_encrypted == null) return null;
-    return decrypt({
-      ciphertext: row.fallback_key_encrypted,
-      iv: row.fallback_key_iv!,
-      tag: row.fallback_key_tag!,
-    });
+    try {
+      return decrypt({
+        ciphertext: row.fallback_key_encrypted,
+        iv: row.fallback_key_iv!,
+        tag: row.fallback_key_tag!,
+      });
+    } catch (err) {
+      throw new DecryptionKeyMismatchError(err);
+    }
   }
 
   async updateModels(provider: string, models: string[]): Promise<PlatformAiConfigSafe> {

@@ -266,7 +266,7 @@ export class DetectiveAgent {
 
       const client = await this.getClient();
       if (!client) {
-        return this.buildFallbackAnalysis(failure, history);
+        return this.quickAnalysis(failure, history);
       }
       const DETECTIVE_MODEL = FOCUS_AREA_MODELS['investigate'];
       const response = await client.messages.create({

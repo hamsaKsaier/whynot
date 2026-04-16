@@ -791,8 +791,13 @@ router.get('/api/sessions/:id/documents', async (req: Request, res: Response) =>
       }))
     });
   } catch (error: any) {
-    logger.error('Failed to list documents', { error: error.message });
-    res.status(500).json({ error: 'Failed to list documents' });
+    logger.error('Failed to list documents', {
+      error: error.message,
+      stack: error.stack,
+      code: error.code,
+      sessionId: req.params.id,
+    });
+    res.status(500).json({ error: 'Failed to list documents', details: error.message });
   }
 });
 

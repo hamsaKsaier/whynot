@@ -57,3 +57,12 @@ export function decrypt(params: {
     decipher.final(),
   ]).toString('utf8');
 }
+
+export class DecryptionKeyMismatchError extends Error {
+  readonly code = 'DECRYPTION_KEY_MISMATCH';
+  constructor(cause?: unknown) {
+    super('Stored ciphertext cannot be decrypted with the current SECRETS_ENCRYPTION_KEY');
+    this.name = 'DecryptionKeyMismatchError';
+    if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
+  }
+}

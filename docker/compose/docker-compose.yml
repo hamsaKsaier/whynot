@@ -122,6 +122,8 @@ services:
       - TEST_EXECUTOR_URL=http://test-executor:3001
       - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://whynot.skrum.io,http://localhost:5173,http://localhost:5183,http://localhost:5184}
+      - QA_LOOP_WS_SECRET=${QA_LOOP_WS_SECRET}
     volumes:
       - ../../services/qa-loop-executor/src:/app/src
       - ../../shared:/app/shared
@@ -182,6 +184,7 @@ services:
       - ../../gateway/src:/app/gateway/src
       - ../../shared:/app/shared
       - videos:/app/videos
+      - gateway_secrets:/app/gateway/secrets
     depends_on:
       database:
         condition: service_healthy
@@ -207,7 +210,7 @@ services:
       args:
         - VITE_API_URL=${VITE_API_URL:-/api}
         - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:3011}
-        - VITE_QA_LOOP_WS_URL=${VITE_QA_LOOP_WS_URL:-ws://localhost:3012}
+        - VITE_QA_LOOP_WS_URL=${VITE_QA_LOOP_WS_URL:-}
     ports:
       - "${FRONTEND_PORT:-5183}:80"
     depends_on:
@@ -241,3 +244,4 @@ volumes:
   postgres_data:
   visual-diffs:
   videos:
+  gateway_secrets:
