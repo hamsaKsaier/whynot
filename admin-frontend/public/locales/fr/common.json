@@ -156,7 +156,9 @@
       "choosePlan": "Choisir un forfait\u2026",
       "applyPlan": "Appliquer le forfait",
       "flagOverrides": "Exceptions de feature flags",
-      "noFlags": "Aucune exception de feature flag pour l'espace de travail de cet utilisateur."
+      "noFlags": "Aucune exception de feature flag pour l'espace de travail de cet utilisateur.",
+      "defaultGrant": "Attribution administrative",
+      "defaultRevoke": "R\u00e9vocation administrative"
     },
     "organizations": {
       "title": "Organisations",
@@ -196,7 +198,8 @@
       "periodEnd": "Fin de p\u00e9riode",
       "trialEnd": "Fin d'essai",
       "flagOverrides": "Exceptions de feature flags",
-      "noFlagOverrides": "Aucune exception de feature flag d\u00e9finie pour cette organisation."
+      "noFlagOverrides": "Aucune exception de feature flag d\u00e9finie pour cette organisation.",
+      "none": "Aucun"
     },
     "plans": {
       "title": "Plans",

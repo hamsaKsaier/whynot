@@ -31,21 +31,22 @@ function getInitials(name: string): string {
     .join("")
 }
 
-function getBreadcrumbs(pathname: string) {
+function getBreadcrumbs(pathname: string, t: (key: string) => string) {
   const paths = pathname.split("/").filter(Boolean)
 
   if (paths.length === 0) {
-    return [{ label: "Dashboard", path: "/app" }]
+    return [{ label: t("common.nav.dashboard"), path: "/app" }]
   }
 
   const labelMap: Record<string, string> = {
-    "qa-loop": "QA Loop",
-    "test-results": "Test Results",
-    settings: "Settings",
-    "architecture-flow": "All Tests",
-    projects: "Projects",
-    performance: "Performance",
-    monitors: "Monitors",
+    "qa-loop": t("common.nav.qaLoop"),
+    "test-results": t("common.nav.testResults"),
+    settings: t("common.nav.settings"),
+    "architecture-flow": t("common.nav.architectureFlow"),
+    projects: t("common.nav.projects"),
+    performance: t("common.nav.performance"),
+    monitors: t("common.nav.monitors"),
+    app: t("common.nav.dashboard"),
   }
 
   return paths.map((segment, index) => ({
@@ -59,7 +60,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
   const [creditBalance, setCreditBalance] = useState<number | null>(null)
-  const breadcrumbs = getBreadcrumbs(pathname)
+  const breadcrumbs = getBreadcrumbs(pathname, t)
 
   useEffect(() => {
     if (!user) return

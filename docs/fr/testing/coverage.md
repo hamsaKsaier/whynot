@@ -1,3 +1,10 @@
+---
+title: "Politique de couverture des tests"
+description: "Exigences de couverture de tests a 100% et configuration pour les packages WhyNot QA."
+lang: fr
+draft: false
+---
+
 # Politique de couverture des tests
 
 ## Exigence de couverture à 100%
@@ -44,3 +51,22 @@ docker compose -f docker-compose.test.yml run --rm shared-test npx vitest run --
 ## Politique `/* istanbul ignore */`
 
 **Interdit** sauf si la ligne est prouvablement inaccessible ET annotée avec un commentaire sur une seule ligne expliquant pourquoi.
+
+## Configuration
+
+Les seuils de couverture sont configures dans le fichier `vitest.config.ts` de chaque package :
+
+```ts
+coverage: {
+  provider: 'v8',
+  reporter: ['text', 'html', 'lcov'],
+  thresholds: {
+    lines: 100,
+    branches: 100,
+    functions: 100,
+    statements: 100,
+  },
+  include: ['src/**'],
+  exclude: [/* see excluded paths above */],
+}
+```

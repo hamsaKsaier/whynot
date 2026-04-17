@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 
 interface MetricCardProps {
   label: string;
@@ -7,6 +7,7 @@ interface MetricCardProps {
   color?: 'default' | 'success' | 'warning' | 'danger';
   previousValue?: number;
   formatValue?: (v: number) => string;
+  invertTrend?: boolean;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -16,6 +17,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   color = 'default',
   previousValue,
   formatValue,
+  invertTrend = false,
 }) => {
   const colorMap = {
     default: 'text-foreground',
@@ -24,14 +26,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     danger: 'text-red-400',
   };
 
-  // Trend arrow
   let trend: 'up' | 'down' | 'stable' = 'stable';
   if (previousValue !== undefined && previousValue !== value) {
     trend = value > previousValue ? 'up' : 'down';
   }
 
   const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
-  const trendColor = label === 'Error Rate'
+  const trendColor = invertTrend
     ? (trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-emerald-400' : 'text-slate-500')
     : (trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-amber-400' : 'text-slate-500');
 

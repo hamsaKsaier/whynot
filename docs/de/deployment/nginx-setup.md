@@ -1,3 +1,10 @@
+---
+title: "Nginx-Einrichtung"
+description: "Anleitung zur Nginx-Konfiguration fuer die drei WhyNot-Hostnamen."
+lang: de
+draft: false
+---
+
 # Nginx-Einrichtung
 
 WhyNot verwendet eine einzige Nginx-Konfigurationsdatei fuer drei Hostnamen:

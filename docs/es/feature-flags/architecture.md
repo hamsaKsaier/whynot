@@ -1,3 +1,10 @@
+---
+title: "Arquitectura del sistema de Feature Flags"
+description: "Modelo de dos tablas y resolucion de banderas del sistema de feature flags de WhyNot."
+lang: es
+draft: false
+---
+
 # Arquitectura del sistema de Feature Flags
 
 ## Modelo de dos tablas

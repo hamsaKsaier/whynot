@@ -1,3 +1,10 @@
+---
+title: "Superadmin-Zugang"
+description: "Beschreibung des Superadmin-Bereichs und seiner Zugangssteuerung in WhyNot QA."
+lang: de
+draft: false
+---
+
 # Superadmin-Zugang
 
 ## Uebersicht

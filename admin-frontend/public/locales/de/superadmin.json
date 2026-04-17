@@ -78,6 +78,7 @@
     "workspaceId": "Arbeitsbereich-ID",
     "amount": "Betrag",
     "descriptionLabel": "Beschreibung",
+    "reasonPlaceholder": "Grund für die Guthabengewährung...",
     "noUsers": "Keine Benutzer gefunden",
     "columns": {
       "user": "Benutzer",

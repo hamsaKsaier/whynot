@@ -21,12 +21,12 @@ interface QAMonitor {
 }
 
 const CRON_PRESETS = [
-  { label: 'Every hour', value: '0 * * * *' },
-  { label: 'Every 6 hours', value: '0 */6 * * *' },
-  { label: 'Daily at 9am', value: '0 9 * * *' },
-  { label: 'Weekdays at 9am', value: '0 9 * * 1-5' },
-  { label: 'Weekly (Monday 9am)', value: '0 9 * * 1' },
-  { label: 'Monthly (1st at midnight)', value: '0 0 1 * *' },
+  { labelKey: 'dashboard.monitors.cron.everyHour', value: '0 * * * *' },
+  { labelKey: 'dashboard.monitors.cron.every6Hours', value: '0 */6 * * *' },
+  { labelKey: 'dashboard.monitors.cron.dailyAt9am', value: '0 9 * * *' },
+  { labelKey: 'dashboard.monitors.cron.weekdaysAt9am', value: '0 9 * * 1-5' },
+  { labelKey: 'dashboard.monitors.cron.weeklyMonday9am', value: '0 9 * * 1' },
+  { labelKey: 'dashboard.monitors.cron.monthlyFirst', value: '0 0 1 * *' },
 ];
 
 const statusIcons: Record<string, React.ReactNode> = {
@@ -36,11 +36,11 @@ const statusIcons: Record<string, React.ReactNode> = {
   error: <FiAlertTriangle className="h-4 w-4 text-yellow-500" />,
 };
 
-const statusLabels: Record<string, string> = {
-  pass: 'Passing',
-  fail: 'Failing',
-  running: 'Running',
-  error: 'Error',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  pass: 'dashboard.monitors.statusLabels.pass',
+  fail: 'dashboard.monitors.statusLabels.fail',
+  running: 'dashboard.monitors.statusLabels.running',
+  error: 'dashboard.monitors.statusLabels.error',
 };
 
 export const MonitorsPage: React.FC = () => {
@@ -141,7 +141,7 @@ export const MonitorsPage: React.FC = () => {
 
   const getCronLabel = (expr: string): string => {
     const preset = CRON_PRESETS.find(p => p.value === expr);
-    return preset ? preset.label : expr;
+    return preset ? t(preset.labelKey) : expr;
   };
 
   if (loading) {
@@ -212,7 +212,7 @@ export const MonitorsPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary"
                 >
                   {CRON_PRESETS.map(p => (
-                    <option key={p.value} value={p.value}>{p.label}</option>
+                    <option key={p.value} value={p.value}>{t(p.labelKey)}</option>
                   ))}
                 </select>
               </div>
@@ -320,7 +320,7 @@ export const MonitorsPage: React.FC = () => {
                   {monitor.last_status && (
                     <div className="flex items-center gap-1.5 text-sm">
                       {statusIcons[monitor.last_status]}
-                      <span className="text-muted-foreground">{statusLabels[monitor.last_status]}</span>
+                      <span className="text-muted-foreground">{t(STATUS_LABEL_KEYS[monitor.last_status])}</span>
                       {monitor.last_quality_score !== null && (
                         <span className="text-muted-foreground ms-1">({monitor.last_quality_score})</span>
                       )}

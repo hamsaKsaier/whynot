@@ -1,3 +1,10 @@
+---
+title: "Stripe Setup Guide"
+description: "Complete walkthrough for configuring Stripe payments in WhyNot QA."
+lang: en
+draft: false
+---
+
 # Stripe Setup Guide
 
 Complete walkthrough for configuring Stripe payments in WhyNot QA.

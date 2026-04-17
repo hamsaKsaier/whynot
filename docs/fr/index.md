@@ -1,28 +1,48 @@
-# Documentation française — WhyNot QA
+---
+title: "Documentation WhyNot QA"
+description: "Bienvenue dans la documentation de WhyNot QA — une plateforme d'automatisation de tests propulsee par l'IA."
+lang: fr
+draft: false
+---
 
-## Internationalisation (i18n)
+# Documentation WhyNot QA
 
-- [Comment ajouter une clé de traduction](i18n/how-to-add-a-translation-key.md)
+Bienvenue dans la documentation de WhyNot QA — une plateforme d'automatisation de tests propulsee par l'IA.
 
-## État de la traduction
+## Sections
 
-| Composant | Langues complètes | Namespaces |
-|-----------|-------------------|------------|
-| Frontend | en, ar, fr | 8 (common, auth, dashboard, runner, results, settings, billing, landing) |
-| Admin | en, ar, fr | 5 (common, admin, auth, settings, superadmin) |
+### Tests
+- [Tests IA](testing/) — Fonctionnement de la generation et de l'execution de tests par IA
 
-## Conventions
+### Paiements
+- [Facturation et abonnements](payments/) — Gestion des forfaits, credits et factures
 
-- **Registre** : français formel (vouvoiement), adapté au B2B SaaS
-- **Terminologie** : français de France (pas québécois)
-- **Typographie** : espace insécable avant `: ; ? !`, guillemets français `«\u00a0»`
-- **Dates** : format `fr-FR` via `Intl.DateTimeFormat` (ex. 15 avril 2026)
-- **Nombres** : séparateur de milliers = espace insécable, décimale = virgule (1 234,56)
+### Feature Flags
+- [Gestion des feature flags](feature-flags/) — Controle de la disponibilite des fonctionnalites
 
-## Validation
+### IA
+- [Configuration des fournisseurs d'IA](ai/) — Configuration des cles API pour les fournisseurs d'IA
 
-```bash
-# Tests de complétude et typographie
-cd frontend && npx vitest run src/__tests__/i18n-completeness.test.ts
-cd admin-frontend && npx vitest run src/__tests__/i18n-completeness.test.ts
-```
+### Internationalisation (i18n)
+- [Comment ajouter une cle de traduction](i18n/how-to-add-a-translation-key.md) — Guide pour ajouter des chaines traduisibles
+
+## Langues supportees
+
+WhyNot QA prend en charge les langues suivantes :
+
+| Langue | Code | Direction |
+|--------|------|-----------|
+| Anglais | `en` | Gauche a droite |
+| Arabe | `ar` | Droite a gauche |
+| Francais | `fr` | Gauche a droite |
+| Allemand | `de` | Gauche a droite |
+| Espagnol | `es` | Gauche a droite |
+
+## Support RTL
+
+L'interface prend entierement en charge la direction de texte droite-a-gauche pour l'arabe. Lorsque l'arabe est selectionne :
+
+- `dir="rtl"` est defini sur l'element HTML
+- Les mises en page Flexbox s'inversent automatiquement
+- Les proprietes logiques CSS sont utilisees (`ms-*`, `me-*`, `ps-*`, `pe-*`)
+- Les icones directionnelles sont miroitees avec `rtl:scale-x-[-1]`

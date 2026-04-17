@@ -51,7 +51,7 @@ describe('requireAuth', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: 'Authentication required' }),
+      expect.objectContaining({ error: 'errors:auth.unauthorized' }),
     );
     expect(next).not.toHaveBeenCalled();
   });
@@ -69,7 +69,7 @@ describe('requireAuth', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: 'Invalid or expired token' }),
+      expect.objectContaining({ error: 'errors:auth.invalidToken' }),
     );
   });
 

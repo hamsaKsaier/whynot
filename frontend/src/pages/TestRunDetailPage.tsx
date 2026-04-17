@@ -46,7 +46,7 @@ export const TestRunDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (!executionId) {
-      setError('Execution ID is required');
+      setError(t('results.testRunDetail.executionIdRequired'));
       setLoading(false);
       return;
     }
@@ -73,9 +73,9 @@ export const TestRunDetailPage: React.FC = () => {
         }
       } catch (err: any) {
         if (err.response?.status === 404) {
-          setError('Execution not found');
+          setError(t('results.testRunDetail.notFound'));
         } else {
-          setError(err.response?.data?.error || err.message || 'Failed to fetch execution details');
+          setError(err.response?.data?.error || err.message || t('results.testRunDetail.fetchError'));
         }
       } finally {
         setLoading(false);
@@ -161,7 +161,7 @@ export const TestRunDetailPage: React.FC = () => {
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{t('results.testRunDetail.title')}</h1>
             <p className="text-sm sm:text-base text-muted-foreground mt-1 truncate">
-              {testCase ? testCase.name : `Execution ${execution.execution_id.substring(0, 8)}`}
+              {testCase ? testCase.name : t('results.testRuns.execution', { id: execution.execution_id.substring(0, 8) })}
             </p>
           </div>
           {execution.status === 'running' && (

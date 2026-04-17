@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCopy, FiCheck } from 'react-icons/fi';
 import { useClipboard } from '../../hooks/useClipboard';
 import { Button } from './Button';
@@ -20,6 +21,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   size = 'sm',
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   const { copyToClipboard, copied } = useClipboard();
 
   const handleCopy = () => {
@@ -31,8 +33,8 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
       <button
         onClick={handleCopy}
         className={`p-2 rounded hover:bg-slate-800 transition-colors ${className}`}
-        aria-label="Copy to clipboard"
-        title="Copy to clipboard"
+        aria-label={t('common.aria.copyToClipboard')}
+        title={t('common.aria.copyToClipboard')}
       >
         {copied ? (
           <FiCheck className="h-4 w-4 text-green-600" />
@@ -53,12 +55,12 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
       {copied ? (
         <>
           <FiCheck className="me-2" />
-          Copied!
+          {t('common.actions.copied')}
         </>
       ) : (
         <>
           <FiCopy className="me-2" />
-          Copy
+          {t('common.actions.copy')}
         </>
       )}
     </Button>

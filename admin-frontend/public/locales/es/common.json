@@ -156,7 +156,9 @@
       "choosePlan": "Elegir un plan...",
       "applyPlan": "Aplicar plan",
       "flagOverrides": "Excepciones de flags",
-      "noFlags": "No hay excepciones de flags para el espacio de trabajo de este usuario."
+      "noFlags": "No hay excepciones de flags para el espacio de trabajo de este usuario.",
+      "defaultGrant": "Otorgamiento administrativo",
+      "defaultRevoke": "Revocación administrativa"
     },
     "organizations": {
       "title": "Organizaciones",
@@ -196,7 +198,8 @@
       "periodEnd": "Fin del período",
       "trialEnd": "Fin de la prueba",
       "flagOverrides": "Excepciones de flags",
-      "noFlagOverrides": "No hay excepciones de flags para esta organización."
+      "noFlagOverrides": "No hay excepciones de flags para esta organización.",
+      "none": "Ninguno"
     },
     "plans": {
       "title": "Planes",

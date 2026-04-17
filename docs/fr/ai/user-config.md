@@ -1,3 +1,10 @@
+---
+title: "Configuration IA utilisateur"
+description: "Guide des parametres de fournisseur d'IA du point de vue de l'utilisateur dans WhyNot QA."
+lang: fr
+draft: false
+---
+
 # Configuration IA utilisateur
 
 Ce guide explique le fonctionnement des paramètres de fournisseur d'IA du point de vue de l'utilisateur, y compris les niveaux d'abonnement, la gestion des clés et le repli sur les clés de la plateforme.
@@ -57,3 +64,15 @@ L'option `Personnalisé (compatible OpenAI)` est toujours disponible.
 4. Pour le fournisseur « Personnalisé », entrez l'URL de base
 5. Entrez la clé API
 6. Cliquez sur **Enregistrer**
+
+### Gestion des cles
+
+- **Tester la connexion** : Verifie que la cle API fonctionne en effectuant une requete de test
+- **Definir par defaut** : Definit ce fournisseur comme fournisseur par defaut pour les operations IA
+- **Supprimer** : Supprime la configuration du fournisseur
+
+## Repli sur les cles de la plateforme
+
+Pour les utilisateurs `managed_payg`, la plateforme maintient une chaine de repli de fournisseurs d'IA configuree par l'administrateur. Si le fournisseur principal echoue, le systeme essaie automatiquement le fournisseur suivant dans l'ordre de repli.
+
+L'ordre de repli et le fournisseur par defaut sont configures dans **Admin → Fournisseurs d'IA → Parametres de facturation par defaut**.

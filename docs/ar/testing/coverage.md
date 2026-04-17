@@ -1,3 +1,10 @@
+---
+title: "سياسة تغطية الاختبارات"
+description: "سياسة تغطية الاختبارات 100% لجميع حزم WhyNot QA"
+lang: ar
+draft: false
+---
+
 # سياسة تغطية الاختبارات
 
 ## متطلب التغطية 100%
@@ -44,3 +51,22 @@ docker compose -f docker-compose.test.yml run --rm shared-test npx vitest run --
 ## سياسة `/* istanbul ignore */`
 
 **ممنوع** إلا إذا كان السطر غير قابل للوصول بشكل مثبت ومُشار إليه بتعليق سطر واحد يشرح السبب.
+
+## التكوين
+
+يتم تكوين حدود التغطية في ملف `vitest.config.ts` الخاص بكل حزمة:
+
+```ts
+coverage: {
+  provider: 'v8',
+  reporter: ['text', 'html', 'lcov'],
+  thresholds: {
+    lines: 100,
+    branches: 100,
+    functions: 100,
+    statements: 100,
+  },
+  include: ['src/**'],
+  exclude: [/* see excluded paths above */],
+}
+```

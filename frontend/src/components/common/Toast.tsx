@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiX, FiCheckCircle, FiAlertCircle, FiInfo, FiAlertTriangle } from 'react-icons/fi';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -38,6 +39,7 @@ const iconStyles = {
 };
 
 export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
+  const { t } = useTranslation('common');
   const Icon = icons[toast.type];
   const duration = toast.duration ?? 5000;
 
@@ -67,7 +69,7 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
         <button
           onClick={() => onDismiss(toast.id)}
           className="ms-3 flex-shrink-0 text-current opacity-50 hover:opacity-75 transition-opacity"
-          aria-label="Dismiss notification"
+          aria-label={t('common.aria.dismissNotification')}
         >
           <FiX className="h-4 w-4" />
         </button>

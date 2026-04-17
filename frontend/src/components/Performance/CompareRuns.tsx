@@ -39,12 +39,12 @@ function DeltaCell({ d, unit }: { d: { value: string; direction: string; pct: st
   );
 }
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+function formatDate(date: string, locale: string) {
+  return new Date(date).toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export const CompareRuns: React.FC<CompareRunsProps> = ({ runA, runB, onClose }) => {
-  const { t } = useTranslation('runner');
+  const { t, i18n } = useTranslation('runner');
   const rows = [
     { label: t('runner.performance.totalRequests'), a: runA.total_requests, b: runB.total_requests, unit: '', invert: true },
     { label: t('runner.performance.avgResponseTime'), a: runA.avg_response_time_ms, b: runB.avg_response_time_ms, unit: 'ms', invert: false },
@@ -66,11 +66,11 @@ export const CompareRuns: React.FC<CompareRunsProps> = ({ runA, runB, onClose })
             <th className="text-start py-2 font-medium">{t('runner.performance.metric')}</th>
             <th className="text-end py-2 font-medium">
               <div className="capitalize">{runA.test_type}</div>
-              <div className="text-[10px] text-slate-600">{formatDate(runA.created_at)}</div>
+              <div className="text-[10px] text-slate-600">{formatDate(runA.created_at, i18n.language)}</div>
             </th>
             <th className="text-end py-2 font-medium">
               <div className="capitalize">{runB.test_type}</div>
-              <div className="text-[10px] text-slate-600">{formatDate(runB.created_at)}</div>
+              <div className="text-[10px] text-slate-600">{formatDate(runB.created_at, i18n.language)}</div>
             </th>
             <th className="text-end py-2 font-medium">{t('runner.performance.change')}</th>
           </tr>

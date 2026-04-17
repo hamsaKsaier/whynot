@@ -1,3 +1,10 @@
+---
+title: "User AI Configuration"
+description: "This guide explains how AI provider settings work from the user's perspective, including subscription tiers, key management, and platform key fallback"
+lang: en
+draft: false
+---
+
 # User AI Configuration
 
 This guide explains how AI provider settings work from the user's perspective, including subscription tiers, key management, and platform key fallback.

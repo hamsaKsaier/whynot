@@ -1,53 +1,48 @@
-# Documentación de WhyNot QA (Español)
+---
+title: "Documentacion de WhyNot QA"
+description: "Bienvenido a la documentacion de WhyNot QA — una plataforma de automatizacion de pruebas impulsada por IA."
+lang: es
+draft: false
+---
 
-Bienvenido a la documentación en español de WhyNot QA.
+# Documentacion de WhyNot QA
 
-## Internacionalización (i18n)
+Bienvenido a la documentacion de WhyNot QA — una plataforma de automatizacion de pruebas impulsada por IA.
 
-- [Cómo agregar una clave de traducción](i18n/how-to-add-a-translation-key.md)
+## Secciones
 
-## Convenciones del idioma español
+### Pruebas
+- [Pruebas con IA](testing/) — Como funciona la generacion y ejecucion de pruebas con IA
 
-WhyNot QA usa **español neutro latinoamericano** para la interfaz:
+### Pagos
+- [Facturacion y suscripciones](payments/) — Gestion de planes, creditos y facturas
 
-- **Tratamiento formal**: se usa "usted" en lugar de "tú".
-- **Puntuación invertida**: las preguntas usan `¿...?` y las exclamaciones `¡...!`.
-- **Formato de números**: estilo `es-419` (miles con `,`, decimales con `.`) — ej. `1,234.56`.
-- **Formato de fechas**: `Intl.DateTimeFormat("es-419", ...)` — ej. `15 de abril de 2026`.
-- **Términos técnicos**: se preservan los nombres de tecnologías sin traducir (Playwright, GitHub, Stripe, CI/CD).
+### Feature Flags
+- [Gestion de Feature Flags](feature-flags/) — Control de la disponibilidad de funcionalidades
 
-### Glosario de términos
+### IA
+- [Configuracion de proveedores de IA](ai/) — Configuracion de claves API para proveedores de IA
 
-| Inglés | Español |
-|--------|---------|
-| Test run | Ejecución de prueba |
-| Flaky test | Prueba inestable |
-| Dashboard | Panel de control |
-| Sign in | Iniciar sesión |
-| Sign up | Registrarse |
-| Settings | Configuración |
-| Billing | Facturación |
-| API key | Clave de API |
-| Workspace | Espacio de trabajo |
-| Bug | Error |
-| Monitor | Monitor |
-| Scan | Escaneo |
+### Internacionalizacion (i18n)
+- [Como agregar una clave de traduccion](i18n/how-to-add-a-translation-key.md) — Guia para agregar cadenas traducibles
 
-### Archivos de traducción
+## Idiomas soportados
 
-**Frontend** (`frontend/public/locales/es/`):
-- `common.json` — autenticación, errores, navegación, onboarding
-- `auth.json` — autenticación de dos factores
-- `dashboard.json` — proyectos, entornos, monitores, integraciones
-- `runner.json` — ejecutor de pruebas, QA Loop, rendimiento
-- `results.json` — resultados, casos de prueba, regresión visual
-- `settings.json` — perfil, organización, claves de API, notificaciones
-- `billing.json` — planes, créditos, facturas, checkout
-- `landing.json` — páginas de marketing
+WhyNot QA soporta los siguientes idiomas:
 
-**Admin-frontend** (`admin-frontend/public/locales/es/`):
-- `common.json` — navegación, tablas, formularios, estados
-- `admin.json` — feature flags, proveedores de IA, facturación, auditoría
-- `auth.json` — inicio de sesión del administrador
-- `settings.json` — configuración del sistema
-- `superadmin.json` — planes, suscripciones, créditos
+| Idioma | Codigo | Direccion |
+|----------|------|-----------|
+| Ingles | `en` | Izquierda a derecha |
+| Arabe | `ar` | Derecha a izquierda |
+| Frances | `fr` | Izquierda a derecha |
+| Aleman | `de` | Izquierda a derecha |
+| Espanol | `es` | Izquierda a derecha |
+
+## Soporte RTL
+
+La interfaz soporta completamente la direccion de texto de derecha a izquierda para el arabe. Cuando se selecciona el arabe:
+
+- `dir="rtl"` se establece en el elemento HTML
+- Los diseños flexbox se invierten automaticamente
+- Se usan propiedades logicas de CSS (`ms-*`, `me-*`, `ps-*`, `pe-*`)
+- Los iconos direccionales se reflejan usando `rtl:scale-x-[-1]`

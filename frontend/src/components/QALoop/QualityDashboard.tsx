@@ -332,7 +332,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                   />
                 </div>
                 <div className="text-center text-xs text-muted-foreground mt-1">
-                  {Math.round(costTracking.alertPercentage)}% used
+                  {t('runner.qaLoop.qualityDashboard.percentUsed', { value: Math.round(costTracking.alertPercentage) })}
                 </div>
               </div>
             )}
@@ -391,7 +391,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
               <>
                 <Separator className="mt-3 mb-3" />
                 <div className="text-xs text-muted-foreground text-center">
-                  Total tokens: {costTracking.totalTokens.toLocaleString()}
+                  {t('runner.qaLoop.qualityDashboard.totalTokens', { value: costTracking.totalTokens.toLocaleString() })}
                 </div>
               </>
             )}

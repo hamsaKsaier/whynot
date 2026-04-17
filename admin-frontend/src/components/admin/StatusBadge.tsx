@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Badge } from '../ui/badge'
 import { cn } from '../../lib/utils'
 
@@ -14,17 +15,30 @@ const statusStyles: Record<string, string> = {
   expired: 'bg-muted text-muted-foreground border-border',
 }
 
+const statusKeyMap: Record<string, string> = {
+  active: 'admin.status.active',
+  trialing: 'admin.status.trialing',
+  paused: 'admin.status.paused',
+  past_due: 'admin.status.pastDue',
+  canceled: 'admin.status.canceled',
+  banned: 'admin.status.banned',
+  suspended: 'admin.status.suspended',
+  expired: 'admin.status.expired',
+}
+
 interface StatusBadgeProps {
   status: Status
   className?: string
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const { t } = useTranslation()
   const style = statusStyles[status] ?? 'bg-muted text-muted-foreground border-border'
+  const label = statusKeyMap[status] ? t(statusKeyMap[status]) : status.replace(/_/g, ' ')
 
   return (
     <Badge variant="outline" className={cn('gap-1.5 capitalize', style, className)}>
-      {status.replace(/_/g, ' ')}
+      {label}
     </Badge>
   )
 }

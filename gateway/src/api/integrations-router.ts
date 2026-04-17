@@ -372,12 +372,12 @@ function mapSeverityToClickUpPriority(severity: string): number {
 async function reportBugToClickUp(bug: BugRow, userId: string): Promise<{ externalUrl: string }> {
   const integration = await getUserIntegration(userId, 'clickup');
   if (!integration?.encrypted_token) {
-    throw createError('ClickUp not connected', 400, 'NOT_CONNECTED');
+    throw createError('ClickUp not connected', 400, 'NOT_CONNECTED', undefined, 'errors:integration.clickupNotConnected');
   }
 
   const config = integration.config || {};
   if (!config.listId) {
-    throw createError('ClickUp list not configured', 400, 'NOT_CONFIGURED');
+    throw createError('ClickUp list not configured', 400, 'NOT_CONFIGURED', undefined, 'errors:integration.clickupNotConfigured');
   }
 
   const token = decrypt(integration.encrypted_token);
@@ -399,7 +399,7 @@ async function reportBugToClickUp(bug: BugRow, userId: string): Promise<{ extern
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw createError(`ClickUp API error: ${response.status}`, 502, 'CLICKUP_API_ERROR');
+    throw createError(`ClickUp API error: ${response.status}`, 502, 'CLICKUP_API_ERROR', undefined, 'errors:integration.clickupApiError', { status: String(response.status) });
   }
 
   const result: any = await response.json();
@@ -412,7 +412,7 @@ async function reportBugToGithub(bug: BugRow, userId: string, workspaceId: strin
   const config = integration?.config || {};
 
   if (!config.repoOwner || !config.repoName) {
-    throw createError('GitHub repo not configured', 400, 'NOT_CONFIGURED');
+    throw createError('GitHub repo not configured', 400, 'NOT_CONFIGURED', undefined, 'errors:integration.githubNotConfigured');
   }
 
   // Get the access token from github_repos table
@@ -422,7 +422,7 @@ async function reportBugToGithub(bug: BugRow, userId: string, workspaceId: strin
   );
 
   if (!repos[0]?.access_token) {
-    throw createError('GitHub repo access token not found', 400, 'NO_TOKEN');
+    throw createError('GitHub repo access token not found', 400, 'NO_TOKEN', undefined, 'errors:integration.githubNoToken');
   }
 
   const token = repos[0].access_token;

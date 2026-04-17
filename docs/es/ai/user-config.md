@@ -1,3 +1,10 @@
+---
+title: "Configuracion de IA del usuario"
+description: "Como funcionan los ajustes de proveedor de IA desde la perspectiva del usuario en WhyNot QA."
+lang: es
+draft: false
+---
+
 # Configuración de IA del usuario
 
 Esta guía explica cómo funcionan los ajustes de proveedor de IA desde la perspectiva del usuario, incluyendo niveles de suscripción, gestión de claves y respaldo a claves de la plataforma.
@@ -57,3 +64,15 @@ La opción `Personalizado (compatible con OpenAI)` siempre está disponible.
 4. Para el proveedor "Personalizado", ingresa la URL base
 5. Ingresa la clave API
 6. Haz clic en **Guardar**
+
+### Gestion de claves
+
+- **Probar conexion**: Verifica que la clave API funcione realizando una solicitud de prueba
+- **Establecer como predeterminado**: Hace que este proveedor sea el predeterminado para las operaciones de IA
+- **Eliminar**: Elimina la configuracion del proveedor
+
+## Respaldo a claves de la plataforma
+
+Para usuarios `managed_payg`, la plataforma mantiene una cadena de respaldo de proveedores de IA configurada por el administrador. Si el proveedor principal falla, el sistema intenta automaticamente con el siguiente proveedor en el orden de respaldo.
+
+El orden de respaldo y el proveedor predeterminado se configuran en **Admin → Proveedores de IA → Valores predeterminados de facturacion**.

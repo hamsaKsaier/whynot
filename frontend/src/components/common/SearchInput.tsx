@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiSearch, FiX } from 'react-icons/fi';
 import { Input } from './Input';
 
@@ -13,10 +14,11 @@ interface SearchInputProps {
 export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder,
   className = '',
   debounceMs = 300,
 }) => {
+  const { t } = useTranslation('common');
   const [localValue, setLocalValue] = React.useState(value);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,15 +55,15 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         type="text"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('common.actions.search')}
         className={`w-full ps-10 pe-10 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${className}`}
-        aria-label="Search"
+        aria-label={t('common.aria.search')}
       />
       {localValue && (
         <button
           onClick={handleClear}
           className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          aria-label="Clear search"
+          aria-label={t('common.aria.clearSearch')}
         >
           <FiX className="h-5 w-5" />
         </button>

@@ -5,6 +5,7 @@
  * and recommendations. Designed for clarity and visual impact.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
@@ -36,17 +37,18 @@ interface SynthesisReport {
 }
 
 function QualityBadge({ score }: { score: number }) {
+  const { t } = useTranslation('runner');
   let badgeClass = 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
-  let label = 'Poor';
+  let label = t('runner.qaLoop.report.quality.poor');
   if (score >= 90) {
     badgeClass = 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800';
-    label = 'Excellent';
+    label = t('runner.qaLoop.report.quality.excellent');
   } else if (score >= 70) {
     badgeClass = 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800';
-    label = 'Good';
+    label = t('runner.qaLoop.report.quality.good');
   } else if (score >= 50) {
     badgeClass = 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800';
-    label = 'Needs Work';
+    label = t('runner.qaLoop.report.quality.needsWork');
   }
 
   return (
@@ -57,7 +59,7 @@ function QualityBadge({ score }: { score: number }) {
   );
 }
 
-function AgentSection({ agentType, data }: { agentType: string; data: any }) {
+function AgentSection({ agentType, data, t }: { agentType: string; data: any; t: (key: string, opts?: any) => string }) {
   const icons: Record<string, React.ReactNode> = {
     exploratory: <Globe className="h-4 w-4 text-sky-500 dark:text-sky-400" />,
     security: <Shield className="h-4 w-4 text-red-500 dark:text-red-400" />,
@@ -68,25 +70,25 @@ function AgentSection({ agentType, data }: { agentType: string; data: any }) {
   };
 
   const labels: Record<string, string> = {
-    exploratory: 'Exploratory Tester',
-    security: 'Security Tester',
-    api: 'API Tester',
-    api_tester: 'API Tester',
-    auto: 'Auto Tester',
-    auto_tester: 'Auto Tester',
+    exploratory: t('runner.qaLoop.report.agents.exploratory'),
+    security: t('runner.qaLoop.report.agents.security'),
+    api: t('runner.qaLoop.report.agents.api'),
+    api_tester: t('runner.qaLoop.report.agents.api'),
+    auto: t('runner.qaLoop.report.agents.auto'),
+    auto_tester: t('runner.qaLoop.report.agents.auto'),
   };
 
   const stats: string[] = [];
-  if (data.pages) stats.push(`${data.pages} pages`);
-  if (data.bugs) stats.push(`${data.bugs} bugs`);
-  if (data.tests) stats.push(`${data.tests} tests`);
-  if (data.endpoints) stats.push(`${data.endpoints} endpoints`);
-  if (data.vulnerabilities) stats.push(`${data.vulnerabilities} vulnerabilities`);
-  if (data.headers_missing) stats.push(`${data.headers_missing} missing headers`);
-  if (data.errors) stats.push(`${data.errors} errors`);
-  if (data.tests_generated) stats.push(`${data.tests_generated} tests`);
-  if (data.tests_passed) stats.push(`${data.tests_passed} passed`);
-  if (data.tests_failed) stats.push(`${data.tests_failed} failed`);
+  if (data.pages) stats.push(t('runner.qaLoop.report.stats.pages', { count: data.pages }));
+  if (data.bugs) stats.push(t('runner.qaLoop.report.stats.bugs', { count: data.bugs }));
+  if (data.tests) stats.push(t('runner.qaLoop.report.stats.tests', { count: data.tests }));
+  if (data.endpoints) stats.push(t('runner.qaLoop.report.stats.endpoints', { count: data.endpoints }));
+  if (data.vulnerabilities) stats.push(t('runner.qaLoop.report.stats.vulnerabilities', { count: data.vulnerabilities }));
+  if (data.headers_missing) stats.push(t('runner.qaLoop.report.stats.missingHeaders', { count: data.headers_missing }));
+  if (data.errors) stats.push(t('runner.qaLoop.report.stats.errors', { count: data.errors }));
+  if (data.tests_generated) stats.push(t('runner.qaLoop.report.stats.tests', { count: data.tests_generated }));
+  if (data.tests_passed) stats.push(t('runner.qaLoop.report.stats.passed', { count: data.tests_passed }));
+  if (data.tests_failed) stats.push(t('runner.qaLoop.report.stats.failed', { count: data.tests_failed }));
 
   return {
     agentType,
@@ -140,17 +142,19 @@ interface ReportTabProps {
 }
 
 export const ReportTab: React.FC<ReportTabProps> = ({ report }) => {
+  const { t } = useTranslation('runner');
+
   if (!report) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Target className="w-8 h-8 mx-auto mb-3 opacity-50" />
-        <p className="text-sm">Report will appear after the scan completes.</p>
+        <p className="text-sm">{t('runner.qaLoop.report.pending')}</p>
       </div>
     );
   }
 
   const agentSections = report.findings_by_agent
-    ? Object.entries(report.findings_by_agent).map(([agent, data]) => AgentSection({ agentType: agent, data }))
+    ? Object.entries(report.findings_by_agent).map(([agent, data]) => AgentSection({ agentType: agent, data, t }))
     : [];
 
   return (
@@ -158,7 +162,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({ report }) => {
       {/* Summary + Quality Score */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-foreground mb-1">Scan Report</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-1">{t('runner.qaLoop.report.scanReport')}</h3>
           <p className="text-sm text-muted-foreground">{report.summary}</p>
         </div>
         <QualityBadge score={report.quality_score} />
@@ -167,7 +171,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({ report }) => {
       {/* Findings by Agent */}
       {agentSections.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-foreground mb-3">Findings by Agent</h4>
+          <h4 className="text-sm font-semibold text-foreground mb-3">{t('runner.qaLoop.report.findingsByAgent')}</h4>
           <Accordion type="multiple">
             {agentSections.map((section) => (
               <AccordionItem key={section.agentType} value={section.agentType}>
@@ -196,7 +200,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({ report }) => {
         <div>
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />
-            Critical Areas ({report.critical_clusters.length})
+            {t('runner.qaLoop.report.criticalAreas', { count: report.critical_clusters.length })}
           </h4>
           <div className="space-y-3">
             {report.critical_clusters.map((cluster, i) => (
@@ -209,7 +213,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({ report }) => {
       {/* Recommendations */}
       {report.recommendations && report.recommendations.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-foreground mb-3">Recommendations</h4>
+          <h4 className="text-sm font-semibold text-foreground mb-3">{t('runner.qaLoop.report.recommendations')}</h4>
           <ul className="space-y-2">
             {report.recommendations.map((rec, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">

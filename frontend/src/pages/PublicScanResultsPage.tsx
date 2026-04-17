@@ -213,7 +213,7 @@ export const PublicScanResultsPage: React.FC = () => {
                     <button
                       onClick={() => setShowPreview(true)}
                       className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors duration-150"
-                      title="Show site preview"
+                      title={t('runner.qaLoop.public.showPreview')}
                     >
                       <FiMonitor className="h-4 w-4" />
                     </button>
@@ -484,14 +484,14 @@ export const PublicScanResultsPage: React.FC = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors duration-150"
-                        title="Open in new tab"
+                        title={t('runner.qaLoop.public.openInNewTab')}
                       >
                         <FiExternalLink className="h-4 w-4 rtl:scale-x-[-1]" />
                       </a>
                       <button
                         onClick={() => setShowPreview(false)}
                         className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors duration-150"
-                        title="Hide preview"
+                        title={t('runner.qaLoop.public.hidePreview')}
                       >
                         <FiX className="h-4 w-4" />
                       </button>

@@ -166,5 +166,13 @@
   "results.viewDetails": "Ver detalles",
   "results.fixStep": "Corregir o modificar este paso",
   "results.executionError": "Error de ejecución",
-  "results.visualRegressionLabel": "Regresión visual ({{severity}})"
+  "results.visualRegressionLabel": "Regresión visual ({{severity}})",
+  "results.testRuns.serviceStarting": "No se pueden cargar las ejecuciones de prueba. El servicio puede estar iniciándose — por favor inténtelo de nuevo en un momento.",
+  "results.testRuns.fetchError": "Error al obtener las ejecuciones de prueba",
+  "results.testRuns.execution": "Ejecución {{id}}",
+  "results.testRuns.unknown": "Desconocido",
+  "results.testRunDetail.executionIdRequired": "Se requiere el ID de ejecución",
+  "results.testRunDetail.notFound": "Ejecución no encontrada",
+  "results.testRunDetail.fetchError": "Error al obtener los detalles de ejecución",
+  "results.testCases.stepsCount": "{{count}} pasos"
 }

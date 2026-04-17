@@ -1,3 +1,10 @@
+---
+title: "Service de paiement"
+description: "Documentation de la classe PaymentService, point d'entree unique pour les operations de paiement dans WhyNot."
+lang: fr
+draft: false
+---
+
 # Service de paiement
 
 La classe `PaymentService` (`gateway/src/payments/payment-service.ts`) est le point d'entrée unique pour toutes les opérations de paiement dans whynot. Toute la logique métier appelle `PaymentService` — jamais le fournisseur Stripe directement.

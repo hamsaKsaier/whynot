@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockEnv = vi.hoisted(() => ({ NODE_ENV: 'test' }));
+vi.mock('../../config/env', () => ({ env: mockEnv }));
+
 import { errorHandler, asyncHandler, createError, type AppError } from '../../middleware/error-handler';
 
 function makeMocks() {
@@ -49,8 +53,8 @@ describe('errorHandler', () => {
   });
 
   it('does not include stack/details in production', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
+    const originalNodeEnv = mockEnv.NODE_ENV;
+    mockEnv.NODE_ENV = 'production';
     try {
       const { req, res, next } = makeMocks();
       const err = createError('bad', 400, 'BAD', { field: 'email' });
@@ -60,7 +64,7 @@ describe('errorHandler', () => {
       expect(body.stack).toBeUndefined();
       expect(body.details).toBeUndefined();
     } finally {
-      process.env.NODE_ENV = originalEnv;
+      mockEnv.NODE_ENV = originalNodeEnv;
     }
   });
 

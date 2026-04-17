@@ -23,12 +23,17 @@ const TEXT_BEARING_HTML = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'li'
 
 const TEXT_BEARING_PROPS = ['title', 'placeholder', 'aria-label', 'alt'];
 
+const TOAST_PATTERN = /toast\.(error|success|warning|info)\(\s*['"]([^'"]+)['"]/g;
+const ZOD_MESSAGE_PATTERN = /\.(min|max|email|url|regex)\(\s*\d*\s*,\s*['"]([^'"]+)['"]/g;
+
 const IGNORE_DIRS = [
   'node_modules',
   '__tests__',
+  '__mocks__',
   'components/ui',
   '.test.',
   '.spec.',
+  '.d.ts',
   'DesignSystemPage',
 ];
 
@@ -101,13 +106,29 @@ function scanFile(filePath: string): Array<{ line: number; text: string }> {
           }
         }
       }
+
+      // Check for hardcoded toast messages
+      const toastMatches = line.matchAll(TOAST_PATTERN);
+      for (const match of toastMatches) {
+        if (isEnglishSentence(match[2])) {
+          violations.push({ line: i + 1, text: `toast.${match[1]}("${match[2]}")` });
+        }
+      }
+
+      // Check for hardcoded zod error messages
+      const zodMatches = line.matchAll(ZOD_MESSAGE_PATTERN);
+      for (const match of zodMatches) {
+        if (isEnglishSentence(match[2])) {
+          violations.push({ line: i + 1, text: `zod: "${match[2]}"` });
+        }
+      }
     }
   }
 
   return violations;
 }
 
-function findTsxFiles(dir: string): string[] {
+function findTsAndTsxFiles(dir: string): string[] {
   const files: string[] = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
@@ -115,8 +136,11 @@ function findTsxFiles(dir: string): string[] {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (IGNORE_DIRS.some((d) => fullPath.includes(d))) continue;
-      files.push(...findTsxFiles(fullPath));
-    } else if (entry.name.endsWith('.tsx') && !IGNORE_DIRS.some((d) => entry.name.includes(d))) {
+      files.push(...findTsAndTsxFiles(fullPath));
+    } else if (
+      (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts')) &&
+      !IGNORE_DIRS.some((d) => entry.name.includes(d))
+    ) {
       files.push(fullPath);
     }
   }
@@ -124,10 +148,17 @@ function findTsxFiles(dir: string): string[] {
   return files;
 }
 
-describe('i18n — no hardcoded English strings', () => {
-  const tsxFiles = findTsxFiles(path.join(SRC_DIR, 'pages'));
+const SCAN_DIRS = [
+  path.join(SRC_DIR, 'pages'),
+  path.join(SRC_DIR, 'components'),
+  path.join(SRC_DIR, 'hooks'),
+  path.join(SRC_DIR, 'lib'),
+];
 
-  it('page files should use useTranslation or have no hardcoded English text', () => {
+describe('i18n — no hardcoded English strings', () => {
+  const tsxFiles = SCAN_DIRS.flatMap((dir) => fs.existsSync(dir) ? findTsAndTsxFiles(dir) : []);
+
+  it('scanned files should use useTranslation or have no hardcoded English text', () => {
     const allViolations: Array<{ file: string; line: number; text: string }> = [];
 
     for (const file of tsxFiles) {
@@ -146,7 +177,7 @@ describe('i18n — no hardcoded English strings', () => {
         .map((v) => `  ${v.file}:${v.line} — "${v.text}"`)
         .join('\n');
       expect.fail(
-        `Found ${allViolations.length} hardcoded English string(s) in page files:\n${report}${allViolations.length > 20 ? `\n  ... and ${allViolations.length - 20} more` : ''}`
+        `Found ${allViolations.length} hardcoded English string(s) in scanned files:\n${report}${allViolations.length > 20 ? `\n  ... and ${allViolations.length - 20} more` : ''}`
       );
     }
   });

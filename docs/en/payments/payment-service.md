@@ -1,3 +1,10 @@
+---
+title: "Payment Service"
+description: "The `PaymentService` class (`gateway/src/payments/payment-service.ts`) is the single entry point for all payment operations in whynot. All business lo"
+lang: en
+draft: false
+---
+
 # Payment Service
 
 The `PaymentService` class (`gateway/src/payments/payment-service.ts`) is the single entry point for all payment operations in whynot. All business logic calls `PaymentService` — never the Stripe provider directly.

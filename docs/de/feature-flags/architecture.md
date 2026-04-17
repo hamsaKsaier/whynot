@@ -1,3 +1,10 @@
+---
+title: "Feature-Flag-Architektur"
+description: "Architektur des Feature-Flag-Systems mit Zwei-Tabellen-Modell und Aufloesung."
+lang: de
+draft: false
+---
+
 # Feature-Flag-Architektur
 
 ## Zwei-Tabellen-Modell

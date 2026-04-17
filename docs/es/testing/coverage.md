@@ -1,4 +1,11 @@
-# Política de cobertura de pruebas
+---
+title: "Politica de cobertura de pruebas"
+description: "Requisitos de cobertura del 100% y configuracion para todos los paquetes de WhyNot."
+lang: es
+draft: false
+---
+
+# Politica de cobertura de pruebas
 
 ## Requisito de cobertura del 100%
 
@@ -41,6 +48,25 @@ docker compose -f docker-compose.test.yml run --rm shared-test npx vitest run --
 | `src/server.ts` | Punto de entrada Express |
 | `src/routeTree.gen.ts` | Árbol de rutas autogenerado |
 
-## Política de `/* istanbul ignore */`
+## Politica de `/* istanbul ignore */`
 
-**Prohibido** a menos que la línea sea demostrablemente inalcanzable Y esté anotada con un comentario de una sola línea explicando el motivo.
+**Prohibido** a menos que la linea sea demostrablemente inalcanzable Y este anotada con un comentario de una sola linea explicando el motivo.
+
+## Configuracion
+
+Los umbrales de cobertura se configuran en el archivo `vitest.config.ts` de cada paquete:
+
+```ts
+coverage: {
+  provider: 'v8',
+  reporter: ['text', 'html', 'lcov'],
+  thresholds: {
+    lines: 100,
+    branches: 100,
+    functions: 100,
+    statements: 100,
+  },
+  include: ['src/**'],
+  exclude: [/* see excluded paths above */],
+}
+```

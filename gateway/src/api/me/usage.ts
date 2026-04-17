@@ -15,7 +15,7 @@ function parseDateRange(req: any): { from: Date; to: Date } {
   const from = fromStr ? new Date(fromStr) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   if (isNaN(from.getTime()) || isNaN(to.getTime())) {
-    throw createError('Invalid date range', 400, 'INVALID_DATE_RANGE');
+    throw createError('Invalid date range', 400, 'INVALID_DATE_RANGE', undefined, 'errors:validation.invalidDateRange');
   }
 
   return { from, to };

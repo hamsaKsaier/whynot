@@ -1,3 +1,10 @@
+---
+title: "Nginx Setup"
+description: "WhyNot uses a single Nginx configuration file to serve three hostnames:"
+lang: en
+draft: false
+---
+
 # Nginx Setup
 
 WhyNot uses a single Nginx configuration file to serve three hostnames:

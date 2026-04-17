@@ -1,5 +1,9 @@
 {
   "account.deletionScheduled": "Suppression du compte programmée. Vous disposez de 7 jours pour annuler cette action en vous reconnectant.",
+  "admin.organizationUpdated": "Organisation mise à jour",
+  "admin.passwordResetInitiated": "Réinitialisation du mot de passe initiée",
+  "admin.planUpdated": "Plan défini sur {{planName}}",
+  "admin.userMovedToOrganization": "Utilisateur déplacé vers l'organisation",
   "account.exportQueued": "Demande d'export mise en file d'attente. Vous serez notifié lorsque l'export sera prêt.",
   "auth.loggedOut": "Déconnexion réussie",
   "auth.resetEmailSent": "Si un compte existe, un e-mail de réinitialisation a été envoyé",

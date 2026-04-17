@@ -87,7 +87,7 @@ export async function register(email: string, password: string, name: string): P
   const normalizedEmail = email.trim().toLowerCase();
   const existing = await userRepository.findByEmail(normalizedEmail);
   if (existing) {
-    throw createError('Email already in use', 409, 'EMAIL_IN_USE');
+    throw createError('Email already in use', 409, 'EMAIL_IN_USE', undefined, 'errors:auth.emailInUse');
   }
 
   const password_hash = await bcrypt.hash(password, 10);
@@ -106,12 +106,12 @@ export async function register(email: string, password: string, name: string): P
 export async function login(email: string, password: string): Promise<AuthResult> {
   const user = await userRepository.findByEmail(email.trim().toLowerCase());
   if (!user || !user.password_hash) {
-    throw createError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    throw createError('Invalid email or password', 401, 'INVALID_CREDENTIALS', undefined, 'errors:auth.invalidCredentials');
   }
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
-    throw createError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    throw createError('Invalid email or password', 401, 'INVALID_CREDENTIALS', undefined, 'errors:auth.invalidCredentials');
   }
 
   return { token: generateJWT(user), user: toPublicUser(user) };
@@ -141,7 +141,7 @@ export async function handleGithubCallback(code: string): Promise<AuthResult> {
 
   const accessToken: string = tokenRes.data.access_token;
   if (!accessToken) {
-    throw createError('GitHub OAuth failed', 401, 'OAUTH_FAILED');
+    throw createError('GitHub OAuth failed', 401, 'OAUTH_FAILED', undefined, 'errors:auth.oauthFailed');
   }
 
   // Get user profile
@@ -217,7 +217,7 @@ export async function handleGoogleCallback(code: string): Promise<AuthResult> {
 
   const accessToken: string = tokenRes.data.access_token;
   if (!accessToken) {
-    throw createError('Google OAuth failed', 401, 'OAUTH_FAILED');
+    throw createError('Google OAuth failed', 401, 'OAUTH_FAILED', undefined, 'errors:auth.oauthFailed');
   }
 
   // Get user profile

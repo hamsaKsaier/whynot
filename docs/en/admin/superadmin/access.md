@@ -1,3 +1,10 @@
+---
+title: "Superadmin Access"
+description: "The superadmin area is accessible at `https://superadmin.whynot.skrum.io`. It serves the same admin-frontend application but with a restricted navigat"
+lang: en
+draft: false
+---
+
 # Superadmin Access
 
 ## Overview

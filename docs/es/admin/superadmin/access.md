@@ -1,3 +1,10 @@
+---
+title: "Acceso Superadmin"
+description: "Como funciona el acceso al area de superadmin en WhyNot QA."
+lang: es
+draft: false
+---
+
 # Acceso Superadmin
 
 ## Descripcion general

@@ -3,18 +3,22 @@ import { Request, Response } from 'express';
 import { env } from '../config/env';
 import { createError } from './error-handler';
 
+function t(req: Request, key: string): string {
+  const fn = (req as any).t;
+  return fn ? fn(key) : key;
+}
+
 /**
  * General API rate limiter
  */
 export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: env.RATE_LIMIT_MAX_REQUESTS, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many requests from this IP, please try again later.',
+      t(req, 'errors:rateLimit.apiGeneral'),
       429,
       'RATE_LIMIT_EXCEEDED'
     );
@@ -30,12 +34,11 @@ console.log(`[Rate Limit] Test execution rate limit set to: ${testExecutionMax} 
 export const testExecutionRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: testExecutionMax, // Limit each IP to N test executions per hour
-  message: 'Too many test executions from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many test executions from this IP. Please wait before running more tests.',
+      t(req, 'errors:rateLimit.testExecution'),
       429,
       'RATE_LIMIT_EXCEEDED'
     );
@@ -48,12 +51,11 @@ export const testExecutionRateLimiter = rateLimit({
 export const testGenerationRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: env.RATE_LIMIT_TEST_GENERATION_MAX, // Limit each IP to 20 test generations per 15 minutes
-  message: 'Too many test generation requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many test generation requests from this IP, please try again later.',
+      t(req, 'errors:rateLimit.testGeneration'),
       429,
       'RATE_LIMIT_EXCEEDED'
     );
@@ -68,12 +70,11 @@ export const testGenerationRateLimiter = rateLimit({
 export const qaLoopSessionRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: env.RATE_LIMIT_QA_LOOP_MAX,
-  message: 'Too many QA Loop sessions started. Please wait before starting another session.',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (_req: Request, res: Response) => {
+  handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many QA Loop sessions started from this IP. Please wait before starting another session.',
+      t(req, 'errors:rateLimit.qaLoopSession'),
       429,
       'RATE_LIMIT_EXCEEDED'
     );
@@ -87,13 +88,12 @@ export const qaLoopSessionRateLimiter = rateLimit({
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: env.RATE_LIMIT_LOGIN_MAX,
-  message: 'Too many login attempts. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
-  handler: (_req: Request, res: Response) => {
+  handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many login attempts from this IP. Please wait before trying again.',
+      t(req, 'errors:rateLimit.login'),
       429,
       'RATE_LIMIT_EXCEEDED'
     );
@@ -107,12 +107,11 @@ export const loginRateLimiter = rateLimit({
 export const registerRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: env.RATE_LIMIT_REGISTER_MAX,
-  message: 'Too many accounts created. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (_req: Request, res: Response) => {
+  handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many registration attempts from this IP. Please wait before trying again.',
+      t(req, 'errors:rateLimit.registration'),
       429,
       'RATE_LIMIT_EXCEEDED'
     );
@@ -126,25 +125,13 @@ export const registerRateLimiter = rateLimit({
 export const publicEndpointRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: env.RATE_LIMIT_PUBLIC_MAX,
-  message: 'Too many requests. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (_req: Request, res: Response) => {
+  handler: (req: Request, res: Response) => {
     throw createError(
-      'Too many requests from this IP. Please try again later.',
+      t(req, 'errors:rateLimit.publicEndpoint'),
       429,
       'RATE_LIMIT_EXCEEDED'
     );
   }
 });
-
-
-
-
-
-
-
-
-
-
-

@@ -1,3 +1,10 @@
+---
+title: "Architecture du systeme de Feature Flags"
+description: "Architecture du systeme de feature flags de WhyNot QA avec modele a deux tables et registre."
+lang: fr
+draft: false
+---
+
 # Architecture du système de Feature Flags
 
 ## Modèle à deux tables

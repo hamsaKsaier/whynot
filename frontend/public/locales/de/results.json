@@ -166,5 +166,13 @@
   "results.viewDetails": "Details anzeigen",
   "results.fixStep": "Diesen Schritt korrigieren oder ändern",
   "results.executionError": "Ausführungsfehler",
-  "results.visualRegressionLabel": "Visuelle Regression ({{severity}})"
+  "results.visualRegressionLabel": "Visuelle Regression ({{severity}})",
+  "results.testRuns.serviceStarting": "Testläufe können nicht geladen werden. Der Dienst startet möglicherweise noch — bitte versuchen Sie es in einem Moment erneut.",
+  "results.testRuns.fetchError": "Testläufe konnten nicht abgerufen werden",
+  "results.testRuns.execution": "Ausführung {{id}}",
+  "results.testRuns.unknown": "Unbekannt",
+  "results.testRunDetail.executionIdRequired": "Ausführungs-ID ist erforderlich",
+  "results.testRunDetail.notFound": "Ausführung nicht gefunden",
+  "results.testRunDetail.fetchError": "Ausführungsdetails konnten nicht abgerufen werden",
+  "results.testCases.stepsCount": "{{count}} Schritte"
 }

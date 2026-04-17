@@ -33,31 +33,11 @@ interface TestConfigProps {
 
 type TestType = 'smoke' | 'load' | 'stress' | 'spike';
 
-const TEST_TYPE_INFO: Record<TestType, { label: string; description: string; vus: string; duration: string }> = {
-  smoke: {
-    label: 'Smoke',
-    description: 'Quick validation — 1 user, 30 seconds',
-    vus: '1',
-    duration: '30s',
-  },
-  load: {
-    label: 'Load',
-    description: 'Normal traffic — ramps from 20 to 50 users over 9 minutes',
-    vus: '50',
-    duration: '9m',
-  },
-  stress: {
-    label: 'Stress',
-    description: 'Breaking point — ramps to 150 users over 17 minutes',
-    vus: '150',
-    duration: '17m',
-  },
-  spike: {
-    label: 'Spike',
-    description: 'Sudden surge — spikes to 200 users for 1 minute',
-    vus: '200',
-    duration: '5m',
-  },
+const TEST_TYPE_VUS: Record<TestType, { vus: string; duration: string }> = {
+  smoke: { vus: '1', duration: '30s' },
+  load: { vus: '50', duration: '9m' },
+  stress: { vus: '150', duration: '17m' },
+  spike: { vus: '200', duration: '5m' },
 };
 
 interface HeaderEntry {
@@ -82,8 +62,8 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
     { key: 'Content-Type', value: 'application/json' },
   ]);
   const [requestBody, setRequestBody] = useState('{\n  \n}');
-  const [vus, setVus] = useState(TEST_TYPE_INFO.load.vus);
-  const [duration, setDuration] = useState(TEST_TYPE_INFO.load.duration);
+  const [vus, setVus] = useState(TEST_TYPE_VUS.load.vus);
+  const [duration, setDuration] = useState(TEST_TYPE_VUS.load.duration);
   const [additionalRequests, setAdditionalRequests] = useState<AdditionalRequest[]>([]);
   const [expectedStatus, setExpectedStatus] = useState('200');
   const [bodyError, setBodyError] = useState<string | null>(null);
@@ -121,8 +101,8 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
 
   const handleTestTypeChange = (type: TestType) => {
     setTestType(type);
-    setVus(TEST_TYPE_INFO[type].vus);
-    setDuration(TEST_TYPE_INFO[type].duration);
+    setVus(TEST_TYPE_VUS[type].vus);
+    setDuration(TEST_TYPE_VUS[type].duration);
   };
 
   const handleAddHeader = () => {
@@ -194,7 +174,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-2">{t('runner.performance.testType')}</label>
         <div className="grid grid-cols-4 gap-2">
-          {(Object.keys(TEST_TYPE_INFO) as TestType[]).map((type) => (
+          {(Object.keys(TEST_TYPE_VUS) as TestType[]).map((type) => (
             <button
               key={type}
               onClick={() => handleTestTypeChange(type)}
@@ -204,11 +184,11 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
                   : 'bg-card text-slate-400 border border-border hover:border-slate-500'
               }`}
             >
-              {TEST_TYPE_INFO[type].label}
+              {t(`runner.performance.testType.${type}`)}
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-500 mt-2">{TEST_TYPE_INFO[testType].description}</p>
+        <p className="text-xs text-slate-500 mt-2">{t(`runner.performance.testTypeDescription.${testType}`)}</p>
       </div>
 
       {/* Target URL */}
@@ -231,11 +211,11 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
           onChange={(e) => setMethod(e.target.value)}
           className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:border-sky-500 text-sm"
         >
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="PATCH">PATCH</option>
-          <option value="DELETE">DELETE</option>
+          <option value="GET">{t('runner.performance.httpMethod.get')}</option>
+          <option value="POST">{t('runner.performance.httpMethod.post')}</option>
+          <option value="PUT">{t('runner.performance.httpMethod.put')}</option>
+          <option value="PATCH">{t('runner.performance.httpMethod.patch')}</option>
+          <option value="DELETE">{t('runner.performance.httpMethod.delete')}</option>
         </select>
       </div>
 
@@ -369,10 +349,10 @@ export const TestConfig: React.FC<TestConfigProps> = ({ onRun, isRunning, projec
                 }}
                 className="px-2 py-1 bg-card border border-border rounded text-foreground text-xs"
               >
-                <option>GET</option>
-                <option>POST</option>
-                <option>PUT</option>
-                <option>DELETE</option>
+                <option value="GET">{t('runner.performance.httpMethod.get')}</option>
+                <option value="POST">{t('runner.performance.httpMethod.post')}</option>
+                <option value="PUT">{t('runner.performance.httpMethod.put')}</option>
+                <option value="DELETE">{t('runner.performance.httpMethod.delete')}</option>
               </select>
               <input
                 type="text"

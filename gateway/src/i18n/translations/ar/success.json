@@ -1,5 +1,9 @@
 {
   "account.deletionScheduled": "تم جدولة حذف الحساب. لديك 7 أيام لإلغاء هذا الإجراء عبر تسجيل الدخول.",
+  "admin.organizationUpdated": "تم تحديث المؤسسة",
+  "admin.passwordResetInitiated": "تم بدء إعادة تعيين كلمة المرور",
+  "admin.planUpdated": "تم تعيين الخطة إلى {{planName}}",
+  "admin.userMovedToOrganization": "تم نقل المستخدم إلى المؤسسة",
   "account.exportQueued": "تم وضع طلب التصدير في قائمة الانتظار. سيتم إعلامك عندما يكون التصدير جاهزًا.",
   "auth.loggedOut": "تم تسجيل الخروج بنجاح",
   "auth.resetEmailSent": "إذا كان هناك حساب مرتبط، فقد تم إرسال بريد إعادة التعيين",

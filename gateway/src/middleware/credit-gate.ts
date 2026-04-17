@@ -11,9 +11,10 @@ import { getCreditCost, getCreditDescription, CreditCostKey } from '../payments/
 export function requireCredits(costOrKey: CreditCostKey | number) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const t = (req as any).t ?? ((k: string) => k);
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        res.status(401).json({ success: false, error: 'Workspace not resolved' });
+        res.status(401).json({ success: false, error: t('errors:workspace.notResolved') });
         return;
       }
 
@@ -24,7 +25,7 @@ export function requireCredits(costOrKey: CreditCostKey | number) {
       if (!hasEnough) {
         res.status(402).json({
           success: false,
-          error: 'Insufficient credits',
+          error: t('errors:business.insufficientCredits'),
           code: 'INSUFFICIENT_CREDITS',
           details: {
             required: cost,

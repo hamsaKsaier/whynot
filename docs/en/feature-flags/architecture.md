@@ -1,3 +1,10 @@
+---
+title: "Feature Flag Architecture"
+description: "The feature flag system uses two database tables:"
+lang: en
+draft: false
+---
+
 # Feature Flag Architecture
 
 ## Two-Table Model

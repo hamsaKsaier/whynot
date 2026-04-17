@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -56,6 +57,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
   correlations,
   flakyTests = []
 }) => {
+  const { t } = useTranslation('runner');
   const [expandedAnalysis, setExpandedAnalysis] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'analyses' | 'correlations' | 'flaky'>('analyses');
 
@@ -83,10 +85,10 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
 
   const getCorrelationTypeLabel = (type: string) => {
     switch (type) {
-      case 'same_root_cause': return 'Same Root Cause';
-      case 'same_component': return 'Same Component';
-      case 'same_timing': return 'Timing Related';
-      case 'cascading': return 'Cascading Failures';
+      case 'same_root_cause': return t('runner.qaLoop.analysis.correlations.sameRootCause');
+      case 'same_component': return t('runner.qaLoop.analysis.correlations.sameComponent');
+      case 'same_timing': return t('runner.qaLoop.analysis.correlations.timingRelated');
+      case 'cascading': return t('runner.qaLoop.analysis.correlations.cascadingFailures');
       default: return type;
     }
   };
@@ -103,23 +105,23 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
       <div className="grid grid-cols-5 gap-3">
         <Card className="p-3 text-center">
           <div className="text-xl font-bold text-red-600 dark:text-red-400">{byCategory.bug || 0}</div>
-          <div className="text-xs text-red-500 dark:text-red-400">Bugs</div>
+          <div className="text-xs text-red-500 dark:text-red-400">{t('runner.qaLoop.analysis.summary.bugs')}</div>
         </Card>
         <Card className="p-3 text-center">
           <div className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{byCategory.flaky || 0}</div>
-          <div className="text-xs text-yellow-500 dark:text-yellow-400">Flaky</div>
+          <div className="text-xs text-yellow-500 dark:text-yellow-400">{t('runner.qaLoop.analysis.summary.flaky')}</div>
         </Card>
         <Card className="p-3 text-center">
           <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{byCategory.environment || 0}</div>
-          <div className="text-xs text-blue-500 dark:text-blue-400">Environment</div>
+          <div className="text-xs text-blue-500 dark:text-blue-400">{t('runner.qaLoop.analysis.summary.environment')}</div>
         </Card>
         <Card className="p-3 text-center">
           <div className="text-xl font-bold text-orange-600 dark:text-orange-400">{byCategory.test_issue || 0}</div>
-          <div className="text-xs text-orange-500 dark:text-orange-400">Test Issues</div>
+          <div className="text-xs text-orange-500 dark:text-orange-400">{t('runner.qaLoop.analysis.summary.testIssues')}</div>
         </Card>
         <Card className="p-3 text-center">
           <div className="text-xl font-bold text-sky-600 dark:text-sky-400">{correlations.length}</div>
-          <div className="text-xs text-sky-500 dark:text-sky-400">Correlations</div>
+          <div className="text-xs text-sky-500 dark:text-sky-400">{t('runner.qaLoop.analysis.summary.correlations')}</div>
         </Card>
       </div>
 
@@ -128,15 +130,15 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
         <TabsList>
           <TabsTrigger value="analyses" className="gap-1">
             <Search className="h-3.5 w-3.5" />
-            Root Causes ({analyses.length})
+            {t('runner.qaLoop.analysis.tabs.rootCauses', { count: analyses.length })}
           </TabsTrigger>
           <TabsTrigger value="correlations" className="gap-1">
             <Link className="h-3.5 w-3.5" />
-            Correlations ({correlations.length})
+            {t('runner.qaLoop.analysis.tabs.correlations', { count: correlations.length })}
           </TabsTrigger>
           <TabsTrigger value="flaky" className="gap-1">
             <RefreshCw className="h-3.5 w-3.5" />
-            Flaky Tests ({flakyTests.length})
+            {t('runner.qaLoop.analysis.tabs.flakyTests', { count: flakyTests.length })}
           </TabsTrigger>
         </TabsList>
 
@@ -146,7 +148,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
             {analyses.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Search className="mx-auto h-8 w-8 mb-2" />
-                No failure analyses yet
+                {t('runner.qaLoop.analysis.empty')}
               </div>
             ) : (
               analyses.map((analysis) => (
@@ -189,20 +191,20 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                   {expandedAnalysis === analysis.id && (
                     <div className="mt-3 pt-3 border-t border-border space-y-3">
                       <div>
-                        <div className="text-xs font-medium text-muted-foreground mb-1">Root Cause:</div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">{t('runner.qaLoop.analysis.rootCause')}</div>
                         <p className="text-sm text-foreground">{analysis.rootCause}</p>
                       </div>
 
                       {analysis.hypothesis && (
                         <div>
-                          <div className="text-xs font-medium text-muted-foreground mb-1">Hypothesis:</div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">{t('runner.qaLoop.analysis.hypothesis')}</div>
                           <p className="text-sm text-muted-foreground">{analysis.hypothesis}</p>
                         </div>
                       )}
 
                       {analysis.minimalSteps.length > 0 && (
                         <div>
-                          <div className="text-xs font-medium text-muted-foreground mb-1">Minimal Reproduction:</div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">{t('runner.qaLoop.analysis.minimalReproduction')}</div>
                           <ol className="text-xs text-muted-foreground list-decimal list-inside space-y-1">
                             {analysis.minimalSteps.map((step, i) => (
                               <li key={i}>{step}</li>
@@ -213,7 +215,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
 
                       {analysis.environmentFactors.length > 0 && (
                         <div>
-                          <div className="text-xs font-medium text-muted-foreground mb-1">Environment Factors:</div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">{t('runner.qaLoop.analysis.environmentFactors')}</div>
                           <div className="flex flex-wrap gap-1">
                             {analysis.environmentFactors.map((factor, i) => (
                               <Badge key={i} variant="secondary" className="text-xs">
@@ -227,7 +229,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                       {analysis.fixSuggestion && (
                         <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                           <div className="text-xs font-medium text-green-700 dark:text-green-400 mb-1">
-                            Suggested Fix:
+                            {t('runner.qaLoop.analysis.suggestedFix')}
                           </div>
                           <p className="text-xs text-green-600 dark:text-green-300">{analysis.fixSuggestion}</p>
                         </div>
@@ -236,7 +238,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                       {analysis.testImprovement && (
                         <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                           <div className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">
-                            Test Improvement:
+                            {t('runner.qaLoop.analysis.testImprovement')}
                           </div>
                           <p className="text-xs text-blue-600 dark:text-blue-300">{analysis.testImprovement}</p>
                         </div>
@@ -255,7 +257,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
             {correlations.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Link className="mx-auto h-8 w-8 mb-2" />
-                No failure correlations found
+                {t('runner.qaLoop.analysis.noCorrelations')}
               </div>
             ) : (
               correlations.map((correlation) => (
@@ -269,10 +271,10 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-sky-600 dark:text-sky-400">
-                        {correlation.failureCount} failures linked
+                        {t('runner.qaLoop.analysis.failuresLinked', { count: correlation.failureCount })}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {Math.round(correlation.confidence * 100)}% confidence
+                        {t('runner.qaLoop.analysis.confidence', { value: Math.round(correlation.confidence * 100) })}
                       </span>
                     </div>
                   </div>
@@ -281,12 +283,12 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                   </p>
                   {correlation.sharedRootCause && (
                     <div className="mt-2 text-xs text-muted-foreground">
-                      <span className="font-medium">Shared cause:</span> {correlation.sharedRootCause}
+                      <span className="font-medium">{t('runner.qaLoop.analysis.sharedCause')}</span> {correlation.sharedRootCause}
                     </div>
                   )}
                   {correlation.sharedComponent && (
                     <div className="mt-1 text-xs text-muted-foreground">
-                      <span className="font-medium">Component:</span> {correlation.sharedComponent}
+                      <span className="font-medium">{t('runner.qaLoop.analysis.component')}</span> {correlation.sharedComponent}
                     </div>
                   )}
                 </Card>
@@ -301,7 +303,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
             {flakyTests.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <RefreshCw className="mx-auto h-8 w-8 mb-2" />
-                No flaky tests detected
+                {t('runner.qaLoop.analysis.noFlakyTests')}
               </div>
             ) : (
               flakyTests.map((test, idx) => (
@@ -319,7 +321,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({
                         className="w-24 h-2"
                       />
                       <span className="text-sm text-yellow-600 dark:text-yellow-400">
-                        {Math.round(test.passRate)}% pass rate
+                        {t('runner.qaLoop.analysis.passRate', { value: Math.round(test.passRate) })}
                       </span>
                     </div>
                   </div>

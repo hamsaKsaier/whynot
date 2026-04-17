@@ -1,3 +1,10 @@
+---
+title: "Guide de depannage des paiements"
+description: "Problemes courants et solutions pour l'integration Stripe de WhyNot QA."
+lang: fr
+draft: false
+---
+
 # Guide de depannage des paiements
 
 Problemes courants et solutions pour l'integration Stripe de WhyNot QA.

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle } from 'react-icons/fi';
 import { Button } from './Button';
 
@@ -17,12 +18,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   onConfirm,
   onCancel,
   variant = 'danger',
 }) => {
+  const { t } = useTranslation('common');
+  const resolvedConfirmText = confirmText ?? t('common.actions.confirm');
+  const resolvedCancelText = cancelText ?? t('common.actions.cancel');
   if (!isOpen) return null;
 
   const variantStyles = {
@@ -57,13 +61,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               variant="secondary"
               onClick={onCancel}
             >
-              {cancelText}
+              {resolvedCancelText}
             </Button>
             <Button
               onClick={onConfirm}
               className={buttonStyles[variant]}
             >
-              {confirmText}
+              {resolvedConfirmText}
             </Button>
           </div>
         </div>

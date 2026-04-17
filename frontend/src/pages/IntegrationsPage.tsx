@@ -22,36 +22,36 @@ const INTEGRATION_TYPES = [
   {
     type: 'jira' as const,
     label: 'Jira',
-    description: 'Create bug tickets in Jira from discovered bugs',
+    descriptionKey: 'dashboard.integrations.types.jira.description',
     icon: '/jira-icon.svg',
     color: 'bg-blue-900/200',
     fields: [
-      { key: 'apiUrl', label: 'Jira URL', placeholder: 'https://yourteam.atlassian.net', type: 'text' },
-      { key: 'email', label: 'Email', placeholder: 'you@example.com', type: 'email' },
-      { key: 'apiToken', label: 'API Token', placeholder: 'Your Jira API token', type: 'password' },
-      { key: 'projectKey', label: 'Project Key', placeholder: 'PROJ', type: 'text' },
+      { key: 'apiUrl', labelKey: 'dashboard.integrations.types.jira.apiUrlLabel', placeholder: 'https://yourteam.atlassian.net', type: 'text' },
+      { key: 'email', labelKey: 'dashboard.integrations.types.jira.emailLabel', placeholder: 'you@example.com', type: 'email' },
+      { key: 'apiToken', labelKey: 'dashboard.integrations.types.jira.apiTokenLabel', placeholder: 'dashboard.integrations.types.jira.apiTokenPlaceholder', type: 'password' },
+      { key: 'projectKey', labelKey: 'dashboard.integrations.types.jira.projectKeyLabel', placeholder: 'PROJ', type: 'text' },
     ],
   },
   {
     type: 'clickup' as const,
     label: 'ClickUp',
-    description: 'Create tasks in ClickUp from discovered bugs',
+    descriptionKey: 'dashboard.integrations.types.clickup.description',
     icon: '/clickup-icon.svg',
     color: 'bg-sky-900/200',
     fields: [
-      { key: 'apiToken', label: 'API Token', placeholder: 'Your ClickUp API token', type: 'password' },
-      { key: 'listId', label: 'List ID', placeholder: 'Target list ID for tasks', type: 'text' },
+      { key: 'apiToken', labelKey: 'dashboard.integrations.types.clickup.apiTokenLabel', placeholder: 'dashboard.integrations.types.clickup.apiTokenPlaceholder', type: 'password' },
+      { key: 'listId', labelKey: 'dashboard.integrations.types.clickup.listIdLabel', placeholder: 'dashboard.integrations.types.clickup.listIdPlaceholder', type: 'text' },
     ],
   },
   {
     type: 'linear' as const,
     label: 'Linear',
-    description: 'Create issues in Linear from discovered bugs',
+    descriptionKey: 'dashboard.integrations.types.linear.description',
     icon: '/linear-icon.svg',
     color: 'bg-indigo-500',
     fields: [
-      { key: 'apiKey', label: 'API Key', placeholder: 'Your Linear API key', type: 'password' },
-      { key: 'teamId', label: 'Team ID', placeholder: 'Target team ID', type: 'text' },
+      { key: 'apiKey', labelKey: 'dashboard.integrations.types.linear.apiKeyLabel', placeholder: 'dashboard.integrations.types.linear.apiKeyPlaceholder', type: 'password' },
+      { key: 'teamId', labelKey: 'dashboard.integrations.types.linear.teamIdLabel', placeholder: 'dashboard.integrations.types.linear.teamIdPlaceholder', type: 'text' },
     ],
   },
 ];
@@ -192,7 +192,7 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                     </div>
                     <div>
                       <h3 className="font-medium text-foreground">{integration.name}</h3>
-                      <p className="text-xs text-muted-foreground">{typeInfo?.label} &middot; {integration.is_active ? 'Active' : 'Inactive'}</p>
+                      <p className="text-xs text-muted-foreground">{typeInfo?.label} &middot; {integration.is_active ? t('dashboard.integrations.active') : t('dashboard.integrations.inactive')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -255,7 +255,7 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                 </div>
                 <div>
                   <div className="font-medium text-foreground">{type.label}</div>
-                  <div className="text-sm text-muted-foreground">{type.description}</div>
+                  <div className="text-sm text-muted-foreground">{t(type.descriptionKey)}</div>
                 </div>
               </button>
             ))}
@@ -275,7 +275,7 @@ export const IntegrationsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
             </div>
             {selectedType.fields.map((field) => (
               <div key={field.key}>
-                <label className="block text-sm font-medium text-foreground mb-1">{field.label}</label>
+                <label className="block text-sm font-medium text-foreground mb-1">{t(field.labelKey)}</label>
                 <input
                   type={field.type}
                   value={formData[field.key] || ''}

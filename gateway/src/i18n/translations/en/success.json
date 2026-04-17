@@ -1,5 +1,9 @@
 {
   "account.deletionScheduled": "Account scheduled for deletion. You have 7 days to cancel this action by logging in.",
+  "admin.organizationUpdated": "Organization updated",
+  "admin.passwordResetInitiated": "Password reset initiated",
+  "admin.planUpdated": "Plan set to {{planName}}",
+  "admin.userMovedToOrganization": "User moved to organization",
   "account.exportQueued": "Export request queued. You will be notified when the export is ready.",
   "auth.loggedOut": "Logged out successfully",
   "auth.resetEmailSent": "If an account exists, a reset email has been sent",

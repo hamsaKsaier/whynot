@@ -346,10 +346,10 @@ export function AnnouncementsPage() {
                 <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="success">Success</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="info">{t('admin.announcements.types.info')}</SelectItem>
+                    <SelectItem value="warning">{t('admin.announcements.types.warning')}</SelectItem>
+                    <SelectItem value="success">{t('admin.announcements.types.success')}</SelectItem>
+                    <SelectItem value="error">{t('admin.announcements.types.error')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

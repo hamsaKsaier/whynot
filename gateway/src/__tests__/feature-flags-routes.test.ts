@@ -378,7 +378,7 @@ describe('requireFlag middleware', () => {
     expect(res.body.error).toBe('db connection lost');
   });
 
-  it('returns English fallback when i18n t function is absent', async () => {
+  it('returns key string fallback when i18n t function is absent', async () => {
     (isFlagEnabled as any).mockResolvedValue(false);
 
     const app = express();
@@ -398,7 +398,7 @@ describe('requireFlag middleware', () => {
 
     const res = await request(app).get('/test-no-i18n');
     expect(res.status).toBe(403);
-    expect(res.body.error.message).toBe('This feature is currently disabled');
+    expect(res.body.error.message).toBe('errors:flags.disabled');
   });
 });
 

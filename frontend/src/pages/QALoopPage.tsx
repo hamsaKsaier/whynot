@@ -117,7 +117,7 @@ export const QALoopPage: React.FC = () => {
         const bugs = ctx.known_bugs?.length || 0;
         const scans = ctx.total_scans || 0;
         if (pages > 0 || bugs > 0) {
-          setProjectContextInfo(`AI knows ${pages} pages, ${bugs} bugs from ${scans} previous scans`);
+          setProjectContextInfo(t('runner.qaLoop.projectContextInfo', { pages, bugs, scans }));
         } else {
           setProjectContextInfo(null);
         }
@@ -323,7 +323,7 @@ export const QALoopPage: React.FC = () => {
               size="icon"
               className="h-8 w-8 shrink-0"
               onClick={() => setShowSidebar(v => !v)}
-              title={showSidebar ? 'Collapse sidebar' : 'Expand sidebar'}
+              title={showSidebar ? t('runner.qaLoop.cinema.collapseSidebar') : t('runner.qaLoop.cinema.expandSidebar')}
             >
               <Menu size={16} />
             </Button>
@@ -566,7 +566,7 @@ export const QALoopPage: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={dismissOnboarding}
-                aria-label="Dismiss"
+                aria-label={t('runner.qaLoop.dismiss')}
                 className="shrink-0"
               >
                 {t('runner.qaLoop.onboarding.gotIt')}

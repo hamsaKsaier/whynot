@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ReactFlow, {
   Node,
   Edge,
@@ -69,13 +70,13 @@ const MINIMAP_COLORS: Record<string, string> = {
 };
 
 /** Filter panel configuration */
-const FILTER_ITEMS: { type: FlowNodeType; label: string; color: string; borderColor: string }[] = [
-  { type: 'project', label: 'Project', color: 'bg-sky-900/200', borderColor: 'border-sky-300' },
-  { type: 'folder', label: 'Folder', color: 'bg-indigo-500', borderColor: 'border-indigo-300' },
-  { type: 'userStory', label: 'User Story', color: 'bg-green-900/200', borderColor: 'border-green-800' },
-  { type: 'testSuite', label: 'Test Suite', color: 'bg-orange-500', borderColor: 'border-orange-800' },
-  { type: 'testCase', label: 'Test Case', color: 'bg-sky-900/200', borderColor: 'border-sky-300' },
-  { type: 'testStep', label: 'Test Step', color: 'bg-muted', borderColor: 'border-border' },
+const FILTER_ITEMS: { type: FlowNodeType; labelKey: string; color: string; borderColor: string }[] = [
+  { type: 'project', labelKey: 'dashboard.architectureFlow.filters.project', color: 'bg-sky-900/200', borderColor: 'border-sky-300' },
+  { type: 'folder', labelKey: 'dashboard.architectureFlow.filters.folder', color: 'bg-indigo-500', borderColor: 'border-indigo-300' },
+  { type: 'userStory', labelKey: 'dashboard.architectureFlow.filters.userStory', color: 'bg-green-900/200', borderColor: 'border-green-800' },
+  { type: 'testSuite', labelKey: 'dashboard.architectureFlow.filters.testSuite', color: 'bg-orange-500', borderColor: 'border-orange-800' },
+  { type: 'testCase', labelKey: 'dashboard.architectureFlow.filters.testCase', color: 'bg-sky-900/200', borderColor: 'border-sky-300' },
+  { type: 'testStep', labelKey: 'dashboard.architectureFlow.filters.testStep', color: 'bg-muted', borderColor: 'border-border' },
 ];
 
 // ─── Stat Pill (inline helper component) ────────────────────────────────────
@@ -114,6 +115,7 @@ function makeEdge(
 
 export const ArchitectureFlowPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('dashboard');
 
   // Full (unfiltered) graph
   const [allNodes, setAllNodes] = useState<Node[]>([]);
@@ -209,7 +211,7 @@ export const ArchitectureFlowPage: React.FC = () => {
     async (testCaseId: string) => {
       const testCase = testCasesMap.get(testCaseId);
       if (!testCase) {
-        setError('Test case not found. Please refresh the page.');
+        setError(t('dashboard.architectureFlow.errors.testCaseNotFound'));
         return;
       }
       setRunningTestCases((prev) => new Set(prev).add(testCaseId));
@@ -219,16 +221,16 @@ export const ArchitectureFlowPage: React.FC = () => {
         if ('execution_id' in result) {
           navigate(`/test-runs?execution=${result.execution_id}`);
         } else {
-          setError('Test execution started but no execution ID was returned.');
+          setError(t('dashboard.architectureFlow.errors.noExecutionId'));
         }
       } catch (err: any) {
-        let msg = 'Failed to run test case';
+        let msg = t('dashboard.architectureFlow.errors.runFailed');
         if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-          msg = 'Test execution timed out. Please try again.';
+          msg = t('dashboard.architectureFlow.errors.timeout');
         } else if (err.code === 'ERR_NETWORK' || !err.response) {
-          msg = 'Network error: Unable to connect to the server.';
+          msg = t('dashboard.architectureFlow.errors.network');
         } else if (err.response?.status >= 500) {
-          msg = 'Server error occurred. Please try again later.';
+          msg = t('dashboard.architectureFlow.errors.server');
         } else if (err.response?.data?.error) {
           msg = err.response.data.error;
         } else if (err.message) {
@@ -444,11 +446,11 @@ export const ArchitectureFlowPage: React.FC = () => {
       setFlowData(response.projects);
       buildFlowGraph(response.projects);
     } catch (err: any) {
-      let msg = 'Failed to load architecture flow data';
+      let msg = t('dashboard.architectureFlow.errors.loadFailed');
       if (err.code === 'ERR_NETWORK' || !err.response) {
-        msg = 'Network error: Unable to connect to the server.';
+        msg = t('dashboard.architectureFlow.errors.network');
       } else if (err.response?.status >= 500) {
-        msg = 'Server error occurred. Please try again later.';
+        msg = t('dashboard.architectureFlow.errors.server');
       } else if (err.response?.data?.error) {
         msg = err.response.data.error;
       } else if (err.message) {
@@ -462,7 +464,7 @@ export const ArchitectureFlowPage: React.FC = () => {
 
   const handleFolderSubmit = useCallback(
     async (data: { name: string; color: string }) => {
-      if (!selectedProjectId) throw new Error('No project selected');
+      if (!selectedProjectId) throw new Error(t('dashboard.architectureFlow.errors.noProjectSelected'));
       try {
         if (editingFolder) {
           await updateFolder(editingFolder.id, data);
@@ -471,7 +473,7 @@ export const ArchitectureFlowPage: React.FC = () => {
         }
         await fetchFlowData();
       } catch (err: any) {
-        const msg = editingFolder ? 'Failed to update folder' : 'Failed to create folder';
+        const msg = editingFolder ? t('dashboard.architectureFlow.errors.updateFolderFailed') : t('dashboard.architectureFlow.errors.createFolderFailed');
         throw new Error(err.response?.data?.error || err.message || msg);
       }
     },
@@ -606,24 +608,24 @@ export const ArchitectureFlowPage: React.FC = () => {
       {/* Header */}
       <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border bg-card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">All Tests</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t('dashboard.architectureFlow.title')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Visual map of your testing hierarchy
+            {t('dashboard.architectureFlow.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMobileFiltersOpen((p) => !p)}
             className="p-2 rounded-md border border-border bg-background text-muted-foreground hover:bg-muted transition-colors md:hidden"
-            aria-label="Toggle filters"
+            aria-label={t('dashboard.architectureFlow.toggleFilters')}
           >
             <FiFilter className="h-4 w-4" />
           </button>
           {firstProjectId && (
             <Button onClick={() => openCreateFolderModal(firstProjectId)} variant="primary" size="sm">
               <FiFolderPlus className="inline me-2" />
-              <span className="hidden sm:inline">Create Folder</span>
-              <span className="sm:hidden">Folder</span>
+              <span className="hidden sm:inline">{t('dashboard.architectureFlow.createFolder')}</span>
+              <span className="sm:hidden">{t('dashboard.architectureFlow.folder')}</span>
             </Button>
           )}
         </div>
@@ -631,17 +633,17 @@ export const ArchitectureFlowPage: React.FC = () => {
 
       {/* Stats bar */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:gap-6 px-4 sm:px-5 py-2 sm:py-2.5 bg-background border-b border-border">
-        <StatPill icon={<FiGlobe className="h-3.5 w-3.5" />} label="Projects" value={stats.projects} colorClass="text-sky-500" />
-        <StatPill icon={<FiBook className="h-3.5 w-3.5" />} label="Stories" value={stats.stories} colorClass="text-green-500" />
-        <StatPill icon={<FiPackage className="h-3.5 w-3.5" />} label="Suites" value={stats.suites} colorClass="text-orange-500" />
-        <StatPill icon={<FiFileText className="h-3.5 w-3.5" />} label="Cases" value={stats.cases} colorClass="text-sky-500" />
-        <StatPill icon={<FiActivity className="h-3.5 w-3.5" />} label="Steps" value={stats.steps} colorClass="text-muted-foreground" />
+        <StatPill icon={<FiGlobe className="h-3.5 w-3.5" />} label={t('dashboard.architectureFlow.stats.projects')} value={stats.projects} colorClass="text-sky-500" />
+        <StatPill icon={<FiBook className="h-3.5 w-3.5" />} label={t('dashboard.architectureFlow.stats.stories')} value={stats.stories} colorClass="text-green-500" />
+        <StatPill icon={<FiPackage className="h-3.5 w-3.5" />} label={t('dashboard.architectureFlow.stats.suites')} value={stats.suites} colorClass="text-orange-500" />
+        <StatPill icon={<FiFileText className="h-3.5 w-3.5" />} label={t('dashboard.architectureFlow.stats.cases')} value={stats.cases} colorClass="text-sky-500" />
+        <StatPill icon={<FiActivity className="h-3.5 w-3.5" />} label={t('dashboard.architectureFlow.stats.steps')} value={stats.steps} colorClass="text-muted-foreground" />
       </div>
 
       {/* Mobile small-screen warning */}
       <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-xs border-b border-border sm:hidden">
         <FiMonitor className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>Best viewed on tablet or desktop for full interactivity.</span>
+        <span>{t('dashboard.architectureFlow.mobileWarning')}</span>
       </div>
 
       {/* Flow canvas */}
@@ -675,10 +677,10 @@ export const ArchitectureFlowPage: React.FC = () => {
           {/* Visibility filter panel - hidden on mobile, toggled via button */}
           <Panel position="top-right" className={`bg-card p-3 rounded-lg shadow-sm border border-border ${mobileFiltersOpen ? 'block' : 'hidden'} md:block`}>
             <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Filters
+              {t('dashboard.architectureFlow.filtersTitle')}
             </div>
             <div className="space-y-1.5">
-              {FILTER_ITEMS.map(({ type, label, color }) => (
+              {FILTER_ITEMS.map(({ type, labelKey, color }) => (
                 <label
                   key={type}
                   className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1.5 rounded-lg transition-colors text-sm"
@@ -691,13 +693,13 @@ export const ArchitectureFlowPage: React.FC = () => {
                     className="rounded border-border text-muted-foreground focus:ring-border"
                   />
                   <div className={`w-3 h-3 rounded-sm ${color}`} />
-                  <span className="text-foreground">{label}</span>
+                  <span className="text-foreground">{t(labelKey)}</span>
                 </label>
               ))}
             </div>
             <div className="mt-2.5 pt-2 border-t border-border">
               <p className="text-[11px] text-muted-foreground">
-                Click test cases to expand steps
+                {t('dashboard.architectureFlow.expandHint')}
               </p>
             </div>
           </Panel>

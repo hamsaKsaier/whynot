@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiX } from 'react-icons/fi';
 
 interface ModalProps {
@@ -18,6 +19,7 @@ export const Modal: React.FC<ModalProps> = ({
   size = 'md',
   showCloseButton = true,
 }) => {
+  const { t } = useTranslation('common');
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
@@ -128,7 +130,7 @@ export const Modal: React.FC<ModalProps> = ({
               <button
                 onClick={onClose}
                 className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Close dialog"
+                aria-label={t('common.aria.closeDialog')}
               >
                 <FiX className="h-5 w-5" />
               </button>

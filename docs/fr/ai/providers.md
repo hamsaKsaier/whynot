@@ -1,3 +1,10 @@
+---
+title: "Matrice des fournisseurs d'IA"
+description: "Fournisseurs d'IA pris en charge par WhyNot QA avec configuration et detection automatique."
+lang: fr
+draft: false
+---
+
 # Matrice des fournisseurs d'IA
 
 WhyNot QA prend en charge plusieurs fournisseurs d'IA via une fabrique unifiée dans `gateway/src/utils/ai/select-ai-provider.ts`. Tous les appels IA non-v2 passent par cette fabrique.

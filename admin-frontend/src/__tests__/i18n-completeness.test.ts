@@ -1,67 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { BRAND_ALLOW_LIST } from '@shared/constants/brand-allowlist';
 
 const LOCALES_DIR = path.resolve(__dirname, '../../public/locales');
 const LANGUAGES = ['en', 'ar', 'fr', 'de', 'es'];
 const NON_EN_LANGUAGES = LANGUAGES.filter(l => l !== 'en');
 const NAMESPACES = ['admin', 'auth', 'common', 'settings', 'superadmin'];
-
-const BRAND_ALLOW_LIST = new Set([
-  'WhyNot QA',
-  'QA Loop',
-  'MCP',
-  'Stripe',
-  'GitHub',
-  'Google',
-  'CI/CD',
-  'CSV',
-  'JSON',
-  'UUID',
-  'URL',
-  'ID',
-  'JWT',
-  'MRR',
-  'ARR',
-  'DAU',
-  'MAU',
-  'API',
-  'OpenAI',
-  'Anthropic',
-  'OpenRouter',
-  'admin@example.com',
-  '••••••••',
-  // International cognates — same word in multiple languages
-  'Admin',
-  'Action',
-  'Date',
-  'Actions',
-  'Actor',
-  'Audit',
-  'Dashboard',
-  'Description',
-  'Details',
-  'Enterprise',
-  'Error',
-  'Flag',
-  'Flags',
-  'General',
-  'Name',
-  'Navigation',
-  'Plan',
-  'Plans',
-  'Public',
-  'Rollout',
-  'Slug',
-  'Status',
-  'Super Admin',
-  'System',
-  'Type',
-  'Webhooks',
-  'Page',
-  '{{from}} — {{to}}',
-  '{{price}}/{{interval}}',
-]);
 
 const FULLY_TRANSLATED_LANGUAGES = new Set(['ar', 'fr', 'de', 'es']);
 

@@ -258,7 +258,7 @@ export function OrganizationDetailPage() {
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                {subscription ? <StatusBadge status={subscription.status} /> : <Badge variant="outline">None</Badge>}
+                {subscription ? <StatusBadge status={subscription.status} /> : <Badge variant="outline">{t('admin.orgDetail.none')}</Badge>}
                 <p className="text-xs text-muted-foreground mt-1">{t('admin.orgDetail.tabs.subscription', 'Subscription')}</p>
               </CardContent>
             </Card>
@@ -333,11 +333,11 @@ export function OrganizationDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="trialing">Trialing</SelectItem>
-                      <SelectItem value="past_due">Past Due</SelectItem>
-                      <SelectItem value="canceled">Canceled</SelectItem>
-                      <SelectItem value="paused">Paused</SelectItem>
+                      <SelectItem value="active">{t('admin.status.active')}</SelectItem>
+                      <SelectItem value="trialing">{t('admin.status.trialing')}</SelectItem>
+                      <SelectItem value="past_due">{t('admin.status.pastDue')}</SelectItem>
+                      <SelectItem value="canceled">{t('admin.status.canceled')}</SelectItem>
+                      <SelectItem value="paused">{t('admin.status.paused')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

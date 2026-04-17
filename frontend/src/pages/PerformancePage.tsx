@@ -258,7 +258,7 @@ export const PerformancePage: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground capitalize">
-                          {run.test_type} Test
+                          {t('runner.performance.testTypeLabel', { type: run.test_type })}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {formatDate(run.created_at)}
@@ -271,12 +271,12 @@ export const PerformancePage: React.FC = () => {
                     <div className="text-end flex-shrink-0">
                       {run.total_requests != null && (
                         <div className="text-xs text-muted-foreground">
-                          {run.total_requests.toLocaleString()} req
+                          {t('runner.performance.requestCount', { count: run.total_requests, formattedCount: run.total_requests.toLocaleString() })}
                         </div>
                       )}
                       {run.avg_response_time_ms != null && (
                         <div className="text-xs text-muted-foreground">
-                          {Math.round(run.avg_response_time_ms)}ms avg
+                          {t('runner.performance.avgResponseTime', { ms: Math.round(run.avg_response_time_ms) })}
                         </div>
                       )}
                     </div>

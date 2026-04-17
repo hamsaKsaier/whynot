@@ -78,6 +78,7 @@
     "workspaceId": "Workspace ID",
     "amount": "Amount",
     "descriptionLabel": "Description",
+    "reasonPlaceholder": "Reason for credit grant...",
     "noUsers": "No users found",
     "columns": {
       "user": "User",

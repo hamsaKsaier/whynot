@@ -11,8 +11,9 @@ export function requireInternalNetwork(req: Request, res: Response, next: NextFu
   const isInternal = allowedPrefixes.some(prefix => clientIp.startsWith(prefix));
 
   if (!isInternal) {
+    const t = (req as any).t ?? ((k: string) => k);
     return res.status(403).json({
-      error: 'This endpoint is only accessible from internal network',
+      error: t('errors:network.internalOnly'),
       code: 'INTERNAL_ONLY',
     });
   }

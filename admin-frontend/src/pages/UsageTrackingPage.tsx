@@ -124,11 +124,11 @@ export function UsageTrackingPage() {
   const handleExportCSV = () => {
     const rows = tab === 'events'
       ? [
-          ['Time', 'Workspace', 'User', 'Event Type', 'Credits', 'Metadata'],
+          [t('admin.usage.time'), t('admin.usage.workspace'), t('admin.usage.csvUser'), t('admin.usage.eventType'), t('admin.usage.credits'), t('admin.usage.csvMetadata')],
           ...events.map(e => [e.created_at, e.workspace_id, e.user_id || '', e.event_type, String(e.credits_consumed), JSON.stringify(e.metadata || {})])
         ]
       : [
-          ['Workspace ID', 'Event Count', 'Total Credits'],
+          [t('admin.usage.csvWorkspaceId'), t('admin.usage.csvEventCount'), t('admin.usage.totalCredits')],
           ...byOrg.map(o => [o.workspaceId, String(o.eventCount), String(o.totalCredits)])
         ]
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -269,7 +269,7 @@ export function UsageTrackingPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
                       <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" />
                       <Tooltip />
-                      <Area type="monotone" dataKey="totalCredits" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.15} name="Credits" />
+                      <Area type="monotone" dataKey="totalCredits" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.15} name={t('admin.usage.credits')} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -286,7 +286,7 @@ export function UsageTrackingPage() {
                       <XAxis dataKey="eventType" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
                       <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" />
                       <Tooltip />
-                      <Bar dataKey="totalCredits" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name="Credits" />
+                      <Bar dataKey="totalCredits" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name={t('admin.usage.credits')} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ interface CreateTaskButtonProps {
 }
 
 export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTitle, className = '' }) => {
+  const { t } = useTranslation('runner');
   const [showModal, setShowModal] = useState(false);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [existingTasks, setExistingTasks] = useState<BugTask[]>([]);
@@ -92,7 +94,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
       setResult({ success: true, task: res.data });
       setExistingTasks(prev => [...prev, res.data]);
     } catch (error: any) {
-      setResult({ success: false, error: error.response?.data?.error || 'Failed to create task' });
+      setResult({ success: false, error: error.response?.data?.error || t('runner.qaLoop.createTask.failedToCreate') });
     } finally {
       setCreating(false);
     }
@@ -123,16 +125,16 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
         size="sm"
         onClick={handleOpen}
         className={cn('gap-1 text-xs h-7 px-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300', className)}
-        title="Create task in Jira/ClickUp/Linear"
+        title={t('runner.qaLoop.createTask.tooltip')}
       >
         <Send className="h-3 w-3" />
-        <span>Create Task</span>
+        <span>{t('runner.qaLoop.createTask.title')}</span>
       </Button>
 
       <Dialog open={showModal} onOpenChange={open => { if (!open) setShowModal(false); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Task</DialogTitle>
+            <DialogTitle>{t('runner.qaLoop.createTask.title')}</DialogTitle>
             <DialogDescription className="truncate">Bug: {bugTitle}</DialogDescription>
           </DialogHeader>
 
@@ -140,16 +142,16 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
             {loading ? (
               <div className="text-center py-4 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                Loading...
+                {t('runner.qaLoop.createTask.loading')}
               </div>
             ) : integrations.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-muted-foreground mb-3">No integrations configured</p>
+                <p className="text-muted-foreground mb-3">{t('runner.qaLoop.createTask.noIntegrations')}</p>
                 <a
                   href="/integrations"
                   className="text-primary hover:text-primary/80 text-sm font-medium"
                 >
-                  Go to Integrations to connect Jira, ClickUp, or Linear
+                  {t('runner.qaLoop.createTask.goToIntegrations')}
                 </a>
               </div>
             ) : (
@@ -157,7 +159,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
                 {/* Existing tasks */}
                 {existingTasks.length > 0 && (
                   <div>
-                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">Existing Tasks</div>
+                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">{t('runner.qaLoop.createTask.existingTasks')}</div>
                     <div className="space-y-2">
                       {existingTasks.map((task) => (
                         <div key={task.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
@@ -185,7 +187,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
                 {/* Select integration */}
                 <div className="space-y-1.5">
-                  <Label>Select Integration</Label>
+                  <Label>{t('runner.qaLoop.createTask.selectIntegration')}</Label>
                   <Select value={selectedIntegration} onValueChange={setSelectedIntegration}>
                     <SelectTrigger>
                       <SelectValue />
@@ -211,7 +213,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
                     {result.success ? (
                       <div className="flex items-center gap-2">
                         <Check className="h-4 w-4" />
-                        <span>Task created: <strong>{result.task?.external_id}</strong></span>
+                        <span>{t('runner.qaLoop.createTask.taskCreated')} <strong>{result.task?.external_id}</strong></span>
                         {result.task?.external_url && (
                           <a href={result.task.external_url} target="_blank" rel="noopener noreferrer" className="ms-auto">
                             <ExternalLink className="h-4 w-4 rtl:scale-x-[-1]" />
@@ -232,7 +234,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModal(false)}>
-              Close
+              {t('runner.qaLoop.createTask.close')}
             </Button>
             {integrations.length > 0 && (
               <Button
@@ -242,10 +244,10 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
                 {creating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
+                    {t('runner.qaLoop.createTask.creating')}
                   </>
                 ) : (
-                  'Create Task'
+                  t('runner.qaLoop.createTask.title')
                 )}
               </Button>
             )}

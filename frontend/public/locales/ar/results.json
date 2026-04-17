@@ -166,5 +166,12 @@
   "results.viewDetails": "عرض التفاصيل",
   "results.fixStep": "إصلاح أو تعديل هذه الخطوة",
   "results.executionError": "خطأ في التنفيذ",
-  "results.visualRegressionLabel": "انحدار بصري ({{severity}})"
+  "results.visualRegressionLabel": "انحدار بصري ({{severity}})",
+  "results.testRuns.serviceStarting": "تعذر تحميل تشغيلات الاختبار. قد تكون الخدمة لا تزال في مرحلة البدء — يرجى المحاولة مرة أخرى بعد لحظة.",
+  "results.testRuns.fetchError": "فشل جلب تشغيلات الاختبار",
+  "results.testRuns.execution": "التنفيذ {{id}}",
+  "results.testRuns.unknown": "غير معروف",
+  "results.testRunDetail.executionIdRequired": "معرف التنفيذ مطلوب",
+  "results.testRunDetail.fetchError": "فشل جلب تفاصيل التنفيذ",
+  "results.testCases.stepsCount": "{{count}} خطوات"
 }

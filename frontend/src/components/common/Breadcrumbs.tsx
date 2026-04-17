@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { FiChevronRight, FiHome } from 'react-icons/fi';
 
@@ -14,15 +15,17 @@ interface BreadcrumbsProps {
 }
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className = '' }) => {
+  const { t } = useTranslation('common');
+
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t('common.aria.breadcrumb')}
       className={`flex items-center gap-2 text-sm ${className}`}
     >
       <Link
         to="/app"
         className="text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Home"
+        aria-label={t('common.aria.home')}
       >
         <FiHome className="h-4 w-4" />
       </Link>

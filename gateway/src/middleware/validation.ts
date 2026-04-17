@@ -25,13 +25,18 @@ export function validate(schema: z.ZodSchema) {
             `Validation failed: ${errorMessages.join(', ')}`,
             400,
             'VALIDATION_ERROR',
-            { errors: issues }
+            { errors: issues },
+            'errors:validation.failed',
+            { details: errorMessages.join(', ') }
           );
         } else {
           throw createError(
             `Validation failed: ${zodError.message || 'Invalid request data'}`,
             400,
-            'VALIDATION_ERROR'
+            'VALIDATION_ERROR',
+            undefined,
+            'errors:validation.failed',
+            { details: zodError.message || 'Invalid request data' }
           );
         }
       }
@@ -55,7 +60,10 @@ export function sanitizeUrl(url: string): string {
     throw createError(
       `Invalid URL format: ${error.message}`,
       400,
-      'VALIDATION_ERROR'
+      'VALIDATION_ERROR',
+      undefined,
+      'errors:validation.urlFormatInvalid',
+      { details: error.message }
     );
   }
 }
@@ -65,14 +73,17 @@ export function sanitizeUrl(url: string): string {
  */
 export function sanitizeText(text: string, maxLength: number = 10000): string {
   if (!text || typeof text !== 'string') {
-    throw createError('Text must be a non-empty string', 400, 'VALIDATION_ERROR');
+    throw createError('Text must be a non-empty string', 400, 'VALIDATION_ERROR', undefined, 'errors:validation.textEmpty');
   }
 
   if (text.length > maxLength) {
     throw createError(
       `Text exceeds maximum length of ${maxLength} characters`,
       400,
-      'VALIDATION_ERROR'
+      'VALIDATION_ERROR',
+      undefined,
+      'errors:validation.textTooLong',
+      { maxLength: String(maxLength) }
     );
   }
 

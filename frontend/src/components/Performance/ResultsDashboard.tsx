@@ -28,8 +28,7 @@ function formatTime(secs: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** Generate a plain-English summary for stakeholders */
-function getVerdict(summary: PerfSummary): {
+function getVerdict(summary: PerfSummary, t: (key: string, opts?: Record<string, unknown>) => string): {
   status: 'pass' | 'warning' | 'fail';
   headline: string;
   details: string[];
@@ -47,43 +46,40 @@ function getVerdict(summary: PerfSummary): {
 
   if (errorRate > 5) {
     status = 'fail';
-    issues.push(`${errorRate.toFixed(1)}% of requests returned an unexpected status — your API is failing under load.`);
+    issues.push(t('runner.performance.verdict.highErrorRate', { errorPct: errorRate.toFixed(1) }));
   } else if (errorRate > 1) {
     status = status === 'pass' ? 'warning' : status;
-    issues.push(`${errorRate.toFixed(1)}% of requests returned an unexpected status. Investigate if this increases under higher load.`);
+    issues.push(t('runner.performance.verdict.moderateErrorRate', { errorPct: errorRate.toFixed(1) }));
   }
 
-  // Check response time
   if (summary.p95ResponseTimeMs > 5000) {
     status = 'fail';
-    issues.push(`95% of requests take over ${(summary.p95ResponseTimeMs / 1000).toFixed(1)}s — users will experience timeouts. Optimize your API or add caching.`);
+    issues.push(t('runner.performance.verdict.slowP95', { seconds: (summary.p95ResponseTimeMs / 1000).toFixed(1) }));
   } else if (summary.p95ResponseTimeMs > 2000) {
     status = status === 'pass' ? 'warning' : status;
-    issues.push(`95% of requests take ${Math.round(summary.p95ResponseTimeMs)}ms — slow for a good user experience. Target under 1 second.`);
+    issues.push(t('runner.performance.verdict.moderateP95', { ms: Math.round(summary.p95ResponseTimeMs) }));
   }
 
-  // Check p99 spikes
   if (summary.p99ResponseTimeMs > summary.p95ResponseTimeMs * 3 && summary.p99ResponseTimeMs > 1000) {
     status = status === 'pass' ? 'warning' : status;
-    issues.push(`Occasional spikes up to ${Math.round(summary.p99ResponseTimeMs)}ms — some users will experience very slow responses.`);
+    issues.push(t('runner.performance.verdict.spikyP99', { ms: Math.round(summary.p99ResponseTimeMs) }));
   }
 
-  // Generate headline
   let headline: string;
   if (status === 'pass') {
-    headline = `Your API handles ${rpsLabel} req/s with ${Math.round(summary.avgResponseTimeMs)}ms average response time — looking good!`;
+    headline = t('runner.performance.verdict.okLatency', { rps: rpsLabel, avgMs: Math.round(summary.avgResponseTimeMs) });
   } else if (status === 'warning') {
-    headline = `Your API works but has performance concerns that should be addressed before scaling.`;
+    headline = t('runner.performance.verdict.warningHeadline');
   } else {
-    headline = `Your API has critical performance issues that will affect users.`;
+    headline = t('runner.performance.verdict.failHeadline');
   }
 
   if (issues.length === 0) {
-    issues.push(`Average response time: ${Math.round(summary.avgResponseTimeMs)}ms — well within acceptable range.`);
+    issues.push(t('runner.performance.verdict.goodAvg', { avgMs: Math.round(summary.avgResponseTimeMs) }));
     const successPct = summary.totalRequests > 0
       ? Math.round(((summary.successfulRequests || 0) / summary.totalRequests) * 100)
       : 0;
-    issues.push(`${summary.totalRequests.toLocaleString()} requests — ${successPct}% returned the expected status.`);
+    issues.push(t('runner.performance.verdict.successRate', { totalRequests: summary.totalRequests.toLocaleString(), successPct }));
   }
 
   return { status, headline, details: issues };
@@ -101,7 +97,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   onStop,
   onRunAgain,
 }) => {
-  const { t } = useTranslation('runner');
+  const { t, i18n } = useTranslation('runner');
 
   // Live elapsed timer
   const [elapsed, setElapsed] = useState(0);
@@ -129,7 +125,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   const rtColor = avgRt > 2000 ? 'danger' : avgRt > 500 ? 'warning' : 'success';
   const errorColor = errorRate > 5 ? 'danger' : errorRate > 1 ? 'warning' : 'success';
   const label = testType.charAt(0).toUpperCase() + testType.slice(1);
-  const verdict = isComplete && summary ? getVerdict(summary) : null;
+  const verdict = isComplete && summary ? getVerdict(summary, t) : null;
 
   // ── Empty state
   if (!isRunning && !isComplete && metricHistory.length === 0) {
@@ -184,7 +180,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           )}
           {isComplete && startedAt && (
             <span className="text-xs text-slate-500">
-              {new Date(startedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+              {new Date(startedAt).toLocaleString(i18n.language, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </span>
           )}
         </div>
@@ -242,6 +238,7 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           color={errorColor}
           previousValue={prev?.errorRate}
           formatValue={(v) => (Math.round(v * 100) / 100).toString()}
+          invertTrend
         />
       </div>
 

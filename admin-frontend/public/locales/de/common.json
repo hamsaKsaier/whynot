@@ -156,7 +156,9 @@
       "choosePlan": "Tarif auswählen...",
       "applyPlan": "Tarif anwenden",
       "flagOverrides": "Feature-Flag-Überschreibungen",
-      "noFlags": "Keine Flag-Überschreibungen für den Arbeitsbereich dieses Benutzers."
+      "noFlags": "Keine Flag-Überschreibungen für den Arbeitsbereich dieses Benutzers.",
+      "defaultGrant": "Admin-Gutschrift",
+      "defaultRevoke": "Admin-Widerruf"
     },
     "organizations": {
       "title": "Organisationen",
@@ -196,7 +198,8 @@
       "periodEnd": "Periodenende",
       "trialEnd": "Testende",
       "flagOverrides": "Feature-Flag-Überschreibungen",
-      "noFlagOverrides": "Keine Flag-Überschreibungen für diese Organisation."
+      "noFlagOverrides": "Keine Flag-Überschreibungen für diese Organisation.",
+      "none": "Keine"
     },
     "plans": {
       "title": "Tarife",

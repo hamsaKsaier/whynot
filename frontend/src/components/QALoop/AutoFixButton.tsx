@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -65,16 +66,16 @@ interface AutoFixButtonProps {
   className?: string;
 }
 
-const STATUS_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
-  pending: { label: 'Starting...', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-  analyzing: { label: 'Analyzing code...', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-  generating: { label: 'Generating fix...', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-  pr_created: { label: 'PR Created', icon: <GitPullRequest className="h-3 w-3" /> },
-  merging: { label: 'Merging PR...', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-  retesting: { label: 'Retesting...', icon: <RefreshCw className="h-3 w-3 animate-spin" /> },
-  verified: { label: 'Verified', icon: <Check className="h-3 w-3" /> },
-  needs_review: { label: 'Needs Review', icon: <AlertTriangle className="h-3 w-3" /> },
-  failed: { label: 'Failed', icon: <X className="h-3 w-3" /> },
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  pending: <Loader2 className="h-3 w-3 animate-spin" />,
+  analyzing: <Loader2 className="h-3 w-3 animate-spin" />,
+  generating: <Loader2 className="h-3 w-3 animate-spin" />,
+  pr_created: <GitPullRequest className="h-3 w-3" />,
+  merging: <Loader2 className="h-3 w-3 animate-spin" />,
+  retesting: <RefreshCw className="h-3 w-3 animate-spin" />,
+  verified: <Check className="h-3 w-3" />,
+  needs_review: <AlertTriangle className="h-3 w-3" />,
+  failed: <X className="h-3 w-3" />,
 };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
@@ -90,12 +91,11 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 };
 
 const LOOP_STEPS = ['analyzing', 'generating', 'pr_created', 'merging', 'retesting', 'verified'];
-const LOOP_STEP_LABELS = ['Analyze', 'Generate', 'PR', 'Merge', 'Retest', 'Verified'];
 
 const SIMPLE_STEPS = ['analyzing', 'generating', 'pr_created'];
-const SIMPLE_STEP_LABELS = ['Analyze', 'Generate', 'PR'];
 
 export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, className = '' }) => {
+  const { t } = useTranslation('runner');
   const [showModal, setShowModal] = useState(false);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
@@ -108,6 +108,33 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
   const [maxIterations, setMaxIterations] = useState(3);
   const [qualityThreshold, setQualityThreshold] = useState(80);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const STATUS_LABELS: Record<string, string> = {
+    pending: t('runner.qaLoop.autoFix.status.starting'),
+    analyzing: t('runner.qaLoop.autoFix.status.analyzing'),
+    generating: t('runner.qaLoop.autoFix.status.generating'),
+    pr_created: t('runner.qaLoop.autoFix.status.prCreated'),
+    merging: t('runner.qaLoop.autoFix.status.merging'),
+    retesting: t('runner.qaLoop.autoFix.status.retesting'),
+    verified: t('runner.qaLoop.autoFix.status.verified'),
+    needs_review: t('runner.qaLoop.autoFix.status.needsReview'),
+    failed: t('runner.qaLoop.autoFix.status.failed'),
+  };
+
+  const LOOP_STEP_LABELS = [
+    t('runner.qaLoop.autoFix.steps.analyze'),
+    t('runner.qaLoop.autoFix.steps.generate'),
+    t('runner.qaLoop.autoFix.steps.pr'),
+    t('runner.qaLoop.autoFix.steps.merge'),
+    t('runner.qaLoop.autoFix.steps.retest'),
+    t('runner.qaLoop.autoFix.steps.verified'),
+  ];
+
+  const SIMPLE_STEP_LABELS = [
+    t('runner.qaLoop.autoFix.steps.analyze'),
+    t('runner.qaLoop.autoFix.steps.generate'),
+    t('runner.qaLoop.autoFix.steps.pr'),
+  ];
 
   const workspaceId = localStorage.getItem('active_workspace_id') || '';
 
@@ -166,7 +193,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
       setCurrentAttempt(res.data);
       startPolling(res.data.id);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to start auto-fix');
+      alert(error.response?.data?.error || t('runner.qaLoop.autoFix.startFailed'));
     } finally {
       setStarting(false);
     }
@@ -226,12 +253,12 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
         size="sm"
         onClick={handleOpen}
         className={cn('gap-1 text-xs h-7 px-2 text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300', className)}
-        title="Auto-fix: Generate a PR to fix this bug"
+        title={t('runner.qaLoop.autoFix.tooltip')}
       >
         <GitPullRequest className="h-3 w-3" />
         <span>Auto-Fix</span>
         <Badge variant="outline" className="text-[10px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 leading-none">
-          Experimental
+          {t('runner.qaLoop.autoFix.experimental')}
         </Badge>
       </Button>
 
@@ -240,7 +267,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <GitPullRequest className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-              Auto-Fix Bug
+              {t('runner.qaLoop.autoFix.title')}
               <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800">
                 Experimental
               </Badge>
@@ -253,16 +280,16 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
             {loading ? (
               <div className="text-center py-4 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                Loading...
+                {t('runner.qaLoop.autoFix.loading')}
               </div>
             ) : repos.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-muted-foreground mb-3">No GitHub repositories connected</p>
+                <p className="text-muted-foreground mb-3">{t('runner.qaLoop.autoFix.noRepos')}</p>
                 <a
                   href="/github-repos"
                   className="text-primary hover:text-primary/80 text-sm font-medium"
                 >
-                  Go to GitHub Repos to connect your repository
+                  {t('runner.qaLoop.autoFix.goToRepos')}
                 </a>
               </div>
             ) : (
@@ -270,10 +297,10 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                 {/* Previous attempts */}
                 {attempts.length > 0 && !currentAttempt && (
                   <div>
-                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">Previous Attempts</div>
+                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">{t('runner.qaLoop.autoFix.previousAttempts')}</div>
                     <div className="space-y-2">
                       {attempts.slice(0, 5).map((attempt) => {
-                        const statusInfo = STATUS_LABELS[attempt.status] || STATUS_LABELS.pending;
+                        const statusInfo = { label: STATUS_LABELS[attempt.status] || STATUS_LABELS.pending, icon: STATUS_ICONS[attempt.status] || STATUS_ICONS.pending };
                         return (
                           <div key={attempt.id} className="p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center justify-between">
@@ -356,7 +383,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                         <div className="mb-3">
                           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                             <RefreshCw className="h-3 w-3" />
-                            Iteration {currentAttempt.iteration_count} of {currentAttempt.max_iterations}
+                            {t('runner.qaLoop.autoFix.iterationOf', { current: currentAttempt.iteration_count, max: currentAttempt.max_iterations })}
                           </div>
                           <Progress
                             value={(currentAttempt.iteration_count / currentAttempt.max_iterations) * 100}
@@ -368,7 +395,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       {isInProgress && (
                         <div className="flex items-center justify-center gap-2 text-primary">
                           <Loader2 className="h-5 w-5 animate-spin" />
-                          <span className="font-medium">{STATUS_LABELS[currentAttempt.status]?.label}</span>
+                          <span className="font-medium">{STATUS_LABELS[currentAttempt.status]}</span>
                         </div>
                       )}
                     </div>
@@ -378,18 +405,18 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
                         <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold mb-2">
                           <Check className="h-5 w-5" />
-                          Bug Verified Fixed!
+                          {t('runner.qaLoop.autoFix.bugVerifiedFixed')}
                         </div>
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           {currentAttempt.quality_score_before !== null && (
                             <div className="text-center p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg">
-                              <div className="text-xs text-green-600 dark:text-green-400">Before</div>
+                              <div className="text-xs text-green-600 dark:text-green-400">{t('runner.qaLoop.autoFix.before')}</div>
                               <div className="text-lg font-bold text-green-700 dark:text-green-300">{currentAttempt.quality_score_before}</div>
                             </div>
                           )}
                           {currentAttempt.quality_score_after !== null && (
                             <div className="text-center p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg">
-                              <div className="text-xs text-green-600 dark:text-green-400">After</div>
+                              <div className="text-xs text-green-600 dark:text-green-400">{t('runner.qaLoop.autoFix.after')}</div>
                               <div className="text-lg font-bold text-green-700 dark:text-green-300">{currentAttempt.quality_score_after}</div>
                             </div>
                           )}
@@ -398,13 +425,13 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
                             <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
-                              View PR #{currentAttempt.pr_number} on GitHub
+                              {t('runner.qaLoop.autoFix.viewPr', { number: currentAttempt.pr_number })}
                             </a>
                           </Button>
                         )}
                         {currentAttempt.claude_reasoning && (
                           <div className="mt-3">
-                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Fix Explanation:</div>
+                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">{t('runner.qaLoop.autoFix.fixExplanation')}</div>
                             <p className="text-sm text-green-600 dark:text-green-300">{currentAttempt.claude_reasoning}</p>
                           </div>
                         )}
@@ -416,25 +443,25 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
                         <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium mb-2">
                           <Check className="h-5 w-5" />
-                          Pull Request Created!
+                          {t('runner.qaLoop.autoFix.prCreated')}
                         </div>
                         {currentAttempt.pr_url && (
                           <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
                             <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
-                              View PR #{currentAttempt.pr_number} on GitHub
+                              {t('runner.qaLoop.autoFix.viewPr', { number: currentAttempt.pr_number })}
                             </a>
                           </Button>
                         )}
                         {currentAttempt.claude_reasoning && (
                           <div className="mt-3">
-                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Fix Explanation:</div>
+                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">{t('runner.qaLoop.autoFix.fixExplanation')}</div>
                             <p className="text-sm text-green-600 dark:text-green-300">{currentAttempt.claude_reasoning}</p>
                           </div>
                         )}
                         {currentAttempt.relevant_files && currentAttempt.relevant_files.length > 0 && (
                           <div className="mt-3">
-                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Files Modified:</div>
+                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">{t('runner.qaLoop.autoFix.filesModified')}</div>
                             <div className="space-y-1">
                               {(Array.isArray(currentAttempt.relevant_files) ? currentAttempt.relevant_files : []).map((f: string) => (
                                 <div key={f} className="text-xs font-mono bg-green-100/50 dark:bg-green-900/30 px-2 py-1 rounded-md text-green-700 dark:text-green-300">{f}</div>
@@ -450,23 +477,23 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
                         <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-semibold mb-2">
                           <AlertTriangle className="h-5 w-5" />
-                          Manual Review Needed
+                          {t('runner.qaLoop.autoFix.manualReviewNeeded')}
                         </div>
                         <p className="text-sm text-yellow-600 dark:text-yellow-300 mb-3">
                           {currentAttempt.verification_status === 'regression'
-                            ? 'The fix may have introduced new issues. Quality score decreased.'
-                            : `Auto-fix reached ${currentAttempt.iteration_count}/${currentAttempt.max_iterations} iterations without fully resolving the bug.`}
+                            ? t('runner.qaLoop.autoFix.regressionWarning')
+                            : t('runner.qaLoop.autoFix.maxIterationsReached', { current: currentAttempt.iteration_count, max: currentAttempt.max_iterations })}
                         </p>
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           {currentAttempt.quality_score_before !== null && (
                             <div className="text-center p-2 bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg">
-                              <div className="text-xs text-yellow-600 dark:text-yellow-400">Before</div>
+                              <div className="text-xs text-yellow-600 dark:text-yellow-400">{t('runner.qaLoop.autoFix.before')}</div>
                               <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{currentAttempt.quality_score_before}</div>
                             </div>
                           )}
                           {currentAttempt.quality_score_after !== null && (
                             <div className="text-center p-2 bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg">
-                              <div className="text-xs text-yellow-600 dark:text-yellow-400">After</div>
+                              <div className="text-xs text-yellow-600 dark:text-yellow-400">{t('runner.qaLoop.autoFix.after')}</div>
                               <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{currentAttempt.quality_score_after}</div>
                             </div>
                           )}
@@ -475,7 +502,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           <Button asChild variant="default" className="bg-yellow-600 hover:bg-yellow-700 text-primary-foreground">
                             <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
-                              Review PR #{currentAttempt.pr_number} on GitHub
+                              {t('runner.qaLoop.autoFix.reviewPr', { number: currentAttempt.pr_number })}
                             </a>
                           </Button>
                         )}
@@ -487,9 +514,9 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
                         <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-medium mb-1">
                           <X className="h-5 w-5" />
-                          Auto-Fix Failed
+                          {t('runner.qaLoop.autoFix.autoFixFailed')}
                         </div>
-                        <p className="text-sm text-red-600 dark:text-red-300">{currentAttempt.error_message || 'An unknown error occurred'}</p>
+                        <p className="text-sm text-red-600 dark:text-red-300">{currentAttempt.error_message || t('runner.qaLoop.autoFix.unknownError')}</p>
                       </div>
                     )}
                   </div>
@@ -498,7 +525,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                   <div className="space-y-4">
                     {/* Repo selector */}
                     <div className="space-y-1.5">
-                      <Label>Target Repository</Label>
+                      <Label>{t('runner.qaLoop.autoFix.targetRepository')}</Label>
                       <Select value={selectedRepo} onValueChange={setSelectedRepo}>
                         <SelectTrigger>
                           <SelectValue />
@@ -513,7 +540,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                     {/* Mode selector */}
                     <div className="space-y-2">
-                      <Label>Fix Mode</Label>
+                      <Label>{t('runner.qaLoop.autoFix.fixMode')}</Label>
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
@@ -528,11 +555,11 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           <div className="flex items-center gap-2 mb-1">
                             <Zap className={cn('h-4 w-4', mode === 'loop' ? 'text-primary' : 'text-muted-foreground')} />
                             <span className={cn('text-sm font-semibold', mode === 'loop' ? 'text-primary' : 'text-foreground')}>
-                              Fix + Merge + Verify
+                              {t('runner.qaLoop.autoFix.mode.fixMergeVerify')}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Fix &rarr; PR &rarr; Merge &rarr; Retest &rarr; Iterate until quality met
+                            {t('runner.qaLoop.autoFix.mode.fixMergeVerifyDesc')}
                           </p>
                         </button>
                         <button
@@ -548,11 +575,11 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                           <div className="flex items-center gap-2 mb-1">
                             <Code className={cn('h-4 w-4', mode === 'simple' ? 'text-primary' : 'text-muted-foreground')} />
                             <span className={cn('text-sm font-semibold', mode === 'simple' ? 'text-primary' : 'text-foreground')}>
-                              PR Only
+                              {t('runner.qaLoop.autoFix.mode.prOnly')}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Generate fix and create PR (no retest)
+                            {t('runner.qaLoop.autoFix.mode.prOnlyDesc')}
                           </p>
                         </button>
                       </div>
@@ -563,8 +590,8 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                       <div className="space-y-3">
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg min-h-[44px]">
                           <div>
-                            <div className="text-sm font-medium text-foreground">Auto-merge PRs</div>
-                            <div className="text-xs text-muted-foreground">Automatically merge PRs into the default branch</div>
+                            <div className="text-sm font-medium text-foreground">{t('runner.qaLoop.autoFix.autoMergePrs')}</div>
+                            <div className="text-xs text-muted-foreground">{t('runner.qaLoop.autoFix.autoMergePrsDesc')}</div>
                           </div>
                           <Switch
                             checked={autoMerge}
@@ -573,7 +600,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <Label className="text-xs">Max Iterations</Label>
+                            <Label className="text-xs">{t('runner.qaLoop.autoFix.maxIterations')}</Label>
                             <Select value={String(maxIterations)} onValueChange={v => setMaxIterations(Number(v))}>
                               <SelectTrigger>
                                 <SelectValue />
@@ -581,22 +608,22 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                               <SelectContent>
                                 <SelectItem value="1">1</SelectItem>
                                 <SelectItem value="2">2</SelectItem>
-                                <SelectItem value="3">3 (recommended)</SelectItem>
+                                <SelectItem value="3">{t('runner.qaLoop.autoFix.threeRecommended')}</SelectItem>
                                 <SelectItem value="5">5</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-xs">Quality Target</Label>
+                            <Label className="text-xs">{t('runner.qaLoop.autoFix.qualityTarget')}</Label>
                             <Select value={String(qualityThreshold)} onValueChange={v => setQualityThreshold(Number(v))}>
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="60">60% (lenient)</SelectItem>
+                                <SelectItem value="60">{t('runner.qaLoop.autoFix.qualityLenient')}</SelectItem>
                                 <SelectItem value="70">70%</SelectItem>
-                                <SelectItem value="80">80% (recommended)</SelectItem>
-                                <SelectItem value="90">90% (strict)</SelectItem>
+                                <SelectItem value="80">{t('runner.qaLoop.autoFix.qualityRecommended')}</SelectItem>
+                                <SelectItem value="90">{t('runner.qaLoop.autoFix.qualityStrict')}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -606,16 +633,16 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
                     {/* How it works */}
                     <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 p-4 rounded-lg text-sm text-sky-700 dark:text-sky-300">
-                      <p className="font-medium mb-1">How it works:</p>
+                      <p className="font-medium mb-1">{t('runner.qaLoop.autoFix.howItWorks')}</p>
                       <ol className="list-decimal list-inside space-y-1 text-xs">
-                        <li>AI analyzes the bug report and finds relevant source files</li>
-                        <li>Claude generates a code fix based on the bug context</li>
-                        <li>A pull request is created on a new branch</li>
+                        <li>{t('runner.qaLoop.autoFix.instructions.analyze')}</li>
+                        <li>{t('runner.qaLoop.autoFix.instructions.generate')}</li>
+                        <li>{t('runner.qaLoop.autoFix.instructions.createPr')}</li>
                         {mode === 'loop' && (
                           <>
-                            {autoMerge && <li>PR is auto-merged into the default branch</li>}
-                            <li>QA Loop retests the live app to verify the fix</li>
-                            <li>If not fixed, Claude iterates with improved fix until quality target met</li>
+                            {autoMerge && <li>{t('runner.qaLoop.autoFix.instructions.autoMerge')}</li>}
+                            <li>{t('runner.qaLoop.autoFix.instructions.retest')}</li>
+                            <li>{t('runner.qaLoop.autoFix.instructions.iterate')}</li>
                           </>
                         )}
                       </ol>
@@ -629,7 +656,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
           {/* Footer */}
           <DialogFooter>
             <Button variant="outline" onClick={handleClose}>
-              Close
+              {t('runner.qaLoop.autoFix.close')}
             </Button>
             {repos.length > 0 && !currentAttempt && (
               <Button
@@ -639,17 +666,17 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
                 {starting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Starting...
+                    {t('runner.qaLoop.autoFix.status.starting')}
                   </>
                 ) : mode === 'loop' ? (
                   <>
                     <Zap className="h-4 w-4" />
-                    Fix + Merge + Verify
+                    {t('runner.qaLoop.autoFix.mode.fixMergeVerify')}
                   </>
                 ) : (
                   <>
                     <Code className="h-4 w-4" />
-                    Generate Fix
+                    {t('runner.qaLoop.autoFix.generateFix')}
                   </>
                 )}
               </Button>

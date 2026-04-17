@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiMoreVertical, FiEdit, FiTrash2, FiCopy, FiShare2 } from 'react-icons/fi';
 
 export interface QuickAction {
@@ -22,6 +23,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   position = 'bottom-right',
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -142,7 +144,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           setIsOpen(!isOpen);
         }}
         className="p-2 rounded-lg hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-        aria-label="More actions"
+        aria-label={t('common.aria.moreActions')}
         aria-haspopup="true"
         aria-expanded={isOpen}
       >

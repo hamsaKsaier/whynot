@@ -1,3 +1,10 @@
+---
+title: "Environment Variables Reference"
+description: "This document is the authoritative reference for every environment variable used by the WhyNot platform."
+lang: en
+draft: false
+---
+
 # Environment Variables Reference
 
 This document is the authoritative reference for every environment variable used by the WhyNot platform.

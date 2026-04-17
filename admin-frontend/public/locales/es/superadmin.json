@@ -78,6 +78,7 @@
     "workspaceId": "ID del espacio de trabajo",
     "amount": "Monto",
     "descriptionLabel": "Descripción",
+    "reasonPlaceholder": "Razón para otorgar créditos...",
     "noUsers": "No se encontraron usuarios",
     "columns": {
       "user": "Usuario",

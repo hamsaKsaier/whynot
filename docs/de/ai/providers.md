@@ -1,3 +1,10 @@
+---
+title: "KI-Anbieter-Matrix"
+description: "Uebersicht der unterstuetzten KI-Anbieter und deren Konfiguration in WhyNot QA."
+lang: de
+draft: false
+---
+
 # KI-Anbieter-Matrix
 
 WhyNot QA unterstützt mehrere KI-Anbieter über eine einheitliche Fabrik in `gateway/src/utils/ai/select-ai-provider.ts`. Alle Nicht-v2-KI-Aufrufe werden über diese Fabrik geleitet.

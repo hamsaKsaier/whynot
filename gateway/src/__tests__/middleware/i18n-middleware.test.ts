@@ -60,4 +60,38 @@ describe('i18nMiddleware', () => {
     i18nMiddleware(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
   });
+
+  it('resolves ar from regional Arabic variant with quality values', () => {
+    const { req, res, next } = makeMocks('ar-SA, en;q=0.8');
+    i18nMiddleware(req, res, next);
+
+    expect(req.lang).toBe('ar');
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('falls back to en for completely unknown locale', () => {
+    const { req, res, next } = makeMocks('zz-ZZ');
+    i18nMiddleware(req, res, next);
+
+    expect(req.lang).toBe('en');
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('falls back to en when Accept-Language header is missing', () => {
+    const req = { headers: {} } as any;
+    const res = {} as any;
+    const next = vi.fn();
+    i18nMiddleware(req, res, next);
+
+    expect(req.lang).toBe('en');
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('does not throw on malformed Accept-Language and falls back to en', () => {
+    const { req, res, next } = makeMocks('!!!garbage///');
+
+    expect(() => i18nMiddleware(req, res, next)).not.toThrow();
+    expect(req.lang).toBe('en');
+    expect(next).toHaveBeenCalled();
+  });
 });

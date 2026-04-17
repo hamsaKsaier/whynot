@@ -1,3 +1,10 @@
+---
+title: "Resolution des cles de plateforme"
+description: "Gestion centralisee des cles API d'IA pour les operations de niveau gere dans WhyNot QA."
+lang: fr
+draft: false
+---
+
 # Resolution des cles de plateforme
 
 La resolution des cles de plateforme fournit une gestion centralisee des cles API d'IA pour toutes les operations de niveau gere. Au lieu de stocker les cles dans des variables d'environnement, les administrateurs configurent et effectuent la rotation des cles via le tableau de bord d'administration.

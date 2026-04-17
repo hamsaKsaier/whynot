@@ -1,3 +1,10 @@
+---
+title: "Platform Key Resolution"
+description: "Platform key resolution provides centralized AI API key management for all managed-tier operations. Instead of storing keys in environment variables, "
+lang: en
+draft: false
+---
+
 # Platform Key Resolution
 
 Platform key resolution provides centralized AI API key management for all managed-tier operations. Instead of storing keys in environment variables, administrators configure and rotate keys through the admin dashboard.

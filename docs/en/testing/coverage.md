@@ -1,3 +1,10 @@
+---
+title: "Test Coverage Policy"
+description: "All four packages (`frontend/`, `admin-frontend/`, `gateway/`, `shared/`) enforce **100% coverage** for lines, branches, functions, and statements."
+lang: en
+draft: false
+---
+
 # Test Coverage Policy
 
 ## 100% Coverage Requirement

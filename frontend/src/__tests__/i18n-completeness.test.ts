@@ -1,120 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { BRAND_ALLOW_LIST } from '@shared/constants/brand-allowlist';
 
 const LOCALES_DIR = path.resolve(__dirname, '../../public/locales');
 const LANGUAGES = ['en', 'ar', 'fr', 'de', 'es'];
 const NON_EN_LANGUAGES = LANGUAGES.filter(l => l !== 'en');
 const NAMESPACES = ['common', 'auth', 'dashboard', 'runner', 'results', 'settings', 'billing', 'landing'];
-
-const BRAND_ALLOW_LIST = new Set([
-  'WhyNot QA',
-  'WhyNot',
-  'QA Loop',
-  'MCP',
-  'Stripe',
-  'GitHub',
-  'Google',
-  'CI/CD',
-  'CSV',
-  'JSON',
-  'UUID',
-  'URL',
-  'JWT',
-  'MRR',
-  'ARR',
-  'API',
-  'DOM',
-  'Slack',
-  'Webhook',
-  'Playwright',
-  'Gemini',
-  'you@example.com',
-  'admin@example.com',
-  '••••••••',
-  'https://example.com',
-  'https://example.com/webhook',
-  'or',
-  // International cognates — same word in multiple languages
-  'Actual',
-  'Action',
-  'Actions',
-  'Assertions',
-  'Blog',
-  'BrowserStack',
-  'Budget',
-  'Bugs',
-  'Bugs ({{count}})',
-  'Configuration',
-  'Console',
-  'Contact',
-  'Cypress',
-  'Dashboard',
-  'Date',
-  'Description',
-  'Descriptions',
-  'Downgrade',
-  'LambdaTest',
-  'Menu',
-  'Notifications',
-  'Page',
-  'Pages',
-  'Pages ({{count}})',
-  'Pause',
-  'Performance',
-  'Permissions',
-  'Selenium',
-  'Status',
-  'Support',
-  'System',
-  'Tests',
-  'Tests ({{count}})',
-  'Trace',
-  'Type',
-  'Upgrade',
-  'Version {{version}}',
-  '{{count}} bugs',
-  '{{count}} pages',
-  '{{count}} tests',
-  '{{count}} user stories',
-  // German/English cognates — identical loan words
-  'Branch',
-  'Browser',
-  'CTO',
-  'Community',
-  'Credits',
-  'Element',
-  'Headless',
-  'Iteration',
-  'Name',
-  'Legal',
-  'No',
-  'Repository',
-  'Screenshots',
-  'Screenshot',
-  'Screenshot {{index}}',
-  'Screenshots ({{count}})',
-  'User Story',
-  'Website',
-  'https://example.com (optional)',
-  'optional',
-  // Testimonial proper names
-  'Sarah Chen',
-  'ShopFlow',
-  'Marcus Johnson',
-  'LaunchPad AI',
-  'Elena Rodriguez',
-  'Meridian Health',
-  // Spanish/English cognates
-  'Color',
-  'Error',
-  'Iter',
-  'DOM',
-  'Endpoint',
-  'Selector',
-  'Slack',
-  'Webhook',
-]);
 
 const FULLY_TRANSLATED_LANGUAGES = new Set(['ar', 'fr', 'de', 'es']);
 
@@ -373,7 +265,7 @@ describe('i18n completeness — frontend', () => {
   });
 
   describe('German (de) — full coverage', () => {
-    const GERMAN_MARKERS = /[äöüßÄÖÜ]|\b(der|die|das|und|sie|ist|ein|eine|es|so|wo|da|ob|für|mit|von|nicht|oder|auf|den|dem|des|wird|sind|als|nach|bei|zum|zur|aus|über|ihre|ihrem|ihren|ihr|auch|noch|nur|aber|wenn|wie|alle|keine|kein|kann|werden|diese|mehr|zu|um|am|im|ab|unter|vor|ohne|durch|hier|sehr|dieser|diesem|jetzt|bereits|erneut|bitte|diesen|einen|einem|einer|wirklich|wurde|noch|dann|neue|neuer|neues|neuen|neuem|muss|sein|lang|pro|Tage|aktiv|generieren|bereit|gestartet|schnell)\b/i;
+    const GERMAN_MARKERS = /[äöüßÄÖÜ]|\b(der|die|das|und|sie|ist|ein|eine|es|so|wo|da|ob|für|mit|von|nicht|oder|auf|den|dem|des|wird|sind|als|nach|bei|zum|zur|aus|über|ihre|ihrem|ihren|ihr|auch|noch|nur|aber|wenn|wie|alle|keine|kein|kann|werden|diese|mehr|zu|um|am|im|ab|unter|vor|ohne|durch|hier|sehr|dieser|diesem|jetzt|bereits|erneut|bitte|diesen|einen|einem|einer|wirklich|wurde|noch|dann|neue|neuer|neues|neuen|neuem|muss|sein|lang|pro|Tage|aktiv|generieren|bereit|gestartet|schnell|visuelle)\b/i;
 
     for (const ns of NAMESPACES) {
       it(`de/${ns}.json — every non-brand value contains German markers`, () => {

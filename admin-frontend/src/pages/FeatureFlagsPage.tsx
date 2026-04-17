@@ -357,7 +357,7 @@ export function FeatureFlagsPage() {
                                     : ''
                                 }
                               >
-                                {row.default_enabled ? 'On' : 'Off'}
+                                {row.default_enabled ? t('admin.featureFlags.on') : t('admin.featureFlags.off')}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-start">

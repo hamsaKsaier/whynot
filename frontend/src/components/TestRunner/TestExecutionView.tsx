@@ -180,7 +180,7 @@ export const TestExecutionView: React.FC<TestExecutionViewProps> = ({
       // No fallback page reload — UI updates via state
     } catch (error: any) {
       console.error('Failed to update test case:', error);
-      alert(`Failed to update test case: ${error.message}`);
+      alert(t('runner.execution.updateFailed', { error: error.message }));
     }
   };
 

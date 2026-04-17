@@ -1,3 +1,10 @@
+---
+title: "Testabdeckungsrichtlinie"
+description: "Richtlinie zur 100%-Testabdeckung fuer alle WhyNot-QA-Pakete."
+lang: de
+draft: false
+---
+
 # Testabdeckungsrichtlinie
 
 ## 100% Abdeckungsanforderung
@@ -44,3 +51,22 @@ docker compose -f docker-compose.test.yml run --rm shared-test npx vitest run --
 ## `/* istanbul ignore */`-Richtlinie
 
 **Verboten**, es sei denn, die Zeile ist nachweislich unerreichbar UND mit einem einzeiligen Kommentar versehen, der erklärt warum.
+
+## Konfiguration
+
+Abdeckungsschwellenwerte werden in der `vitest.config.ts` jedes Pakets konfiguriert:
+
+```ts
+coverage: {
+  provider: 'v8',
+  reporter: ['text', 'html', 'lcov'],
+  thresholds: {
+    lines: 100,
+    branches: 100,
+    functions: 100,
+    statements: 100,
+  },
+  include: ['src/**'],
+  exclude: [/* see excluded paths above */],
+}
+```

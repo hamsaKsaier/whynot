@@ -1,3 +1,10 @@
+---
+title: "Configuracion de Nginx"
+description: "Configuracion del servidor Nginx para servir los nombres de host de WhyNot."
+lang: es
+draft: false
+---
+
 # Configuracion de Nginx
 
 WhyNot utiliza un unico archivo de configuracion de Nginx para servir tres nombres de host:

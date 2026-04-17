@@ -78,6 +78,7 @@
     "workspaceId": "ID de l'espace de travail",
     "amount": "Montant",
     "descriptionLabel": "Description",
+    "reasonPlaceholder": "Raison de l'attribution de cr\u00e9dits\u2026",
     "noUsers": "Aucun utilisateur trouv\u00e9",
     "columns": {
       "user": "Utilisateur",

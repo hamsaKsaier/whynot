@@ -1,3 +1,10 @@
+---
+title: "كيفية إضافة مفتاح ترجمة"
+description: "دليل سير العمل الكامل لإضافة نص قابل للترجمة إلى WhyNot QA"
+lang: ar
+draft: false
+---
+
 # كيفية إضافة مفتاح ترجمة
 
 يشرح هذا الدليل سير العمل الكامل لإضافة نص قابل للترجمة إلى WhyNot QA.
@@ -18,6 +25,18 @@
 | `landing` | صفحات التسويق (البطل، الميزات، الأسعار، الأسئلة الشائعة، التذييل) |
 
 **مساحات أسماء واجهة الإدارة:** `common`، `admin`، `auth`، `settings`، `superadmin`.
+
+### شجرة قرار مساحة الاسم
+
+1. هل النص مُستخدم في 3 ميزات أو أكثر؟ → `common`
+2. هل هو نص مصادقة/تسجيل دخول/إنشاء حساب؟ → `common` (تحت بادئة `auth.*`)
+3. هل هو نص مُشغّل الاختبار أو QA Loop أو التنفيذ؟ → `runner`
+4. هل هو نص مشروع أو بيئة أو مراقب أو تكامل؟ → `dashboard`
+5. هل هو نص نتائج اختبار أو حالة اختبار أو ملحق؟ → `results`
+6. هل هو نص إعدادات/ملف شخصي/منظمة/مفتاح API؟ → `settings`
+7. هل هو نص فواتير أو خطة أو رصيد أو دفع؟ → `billing`
+8. هل هو نص صفحة هبوط/تسويق؟ → `landing`
+9. هل هو نص مصادقة ثنائية العامل؟ → `auth`
 
 ## 2. تسمية المفتاح
 
@@ -96,6 +115,39 @@ t("runner.progress", { current: 3, total: 10 })
 // JSON: "الخطوة {{current}} من {{total}}"
 ```
 
+**قواعد تسمية العناصر النائبة:**
+- استخدم **camelCase** بشكل متسق: `{{userName}}`، وليس `{{user_name}}`
+- اجعل الأسماء قصيرة ولكن وصفية: `{{count}}`، `{{name}}`، `{{error}}`
+- استخدم نفس اسم العنصر النائب في جميع اللغات لنفس المتغير
+- يجب أن يحتوي كل ملف لغة على نفس `{{العناصر النائبة}}` الموجودة في الإنجليزية بالضبط
+
+### صيغ الجمع
+
+يدعم i18next صيغ الجمع عبر `{{count}}`. للغات ذات قواعد جمع معقدة (مثل العربية)، استخدم اللواحق `_zero`، `_one`، `_two`، `_few`، `_many`، `_other`:
+
+```json
+// en/common.json
+{
+  "common.items": "{{count}} item",
+  "common.items_plural": "{{count}} items"
+}
+
+// ar/common.json (العربية لديها 6 صيغ جمع)
+{
+  "common.items_zero": "لا عناصر",
+  "common.items_one": "عنصر واحد",
+  "common.items_two": "عنصران",
+  "common.items_few": "{{count}} عناصر",
+  "common.items_many": "{{count}} عنصرًا",
+  "common.items_other": "{{count}} عنصر"
+}
+```
+
+الاستخدام في المكوّنات:
+```tsx
+t("common.items", { count: items.length })
+```
+
 ### رسائل التحقق من Zod
 
 أنشئ المخططات داخل المكوّن أو استخدم دالة مصنع:
@@ -128,6 +180,23 @@ const MSG = t("dashboard.projects.createSuccess")
 toast.success(MSG)
 ```
 
+### مكوّنات الأصناف (ErrorBoundary)
+
+استخدم مكوّن الترتيب الأعلى `withTranslation`:
+
+```tsx
+import { withTranslation, WithTranslation } from "react-i18next"
+
+class ErrorBoundaryInner extends React.Component<Props & WithTranslation> {
+  render() {
+    const { t } = this.props
+    return <h1>{t("error.boundary.title")}</h1>
+  }
+}
+
+export const ErrorBoundary = withTranslation("common")(ErrorBoundaryInner)
+```
+
 ## 5. إضافة بذور للغات الأخرى
 
 بعد إضافة المفاتيح الإنجليزية، زامن شجرة المفاتيح مع اللغات الأخرى:
@@ -148,7 +217,10 @@ make shell-client npm run typecheck
 make shell-client npm run lint
 
 # اختبارات i18n
-make shell-client npm test -- i18n
+make test-frontend
+
+# التحقق من تخطيط RTL
+make rtl-check
 ```
 
 يتحقق اختبار `i18n-completeness` من:
@@ -156,9 +228,92 @@ make shell-client npm test -- i18n
 - جميع مساحات الأسماء لديها أشجار مفاتيح متطابقة عبر اللغات.
 - جميع القيم الإنجليزية غير فارغة.
 - القيم المترجمة (عند وجودها) تختلف عن الإنجليزية.
-- القيم العربية تحتوي على أحرف عربية.
 
-يفحص اختبار `i18n-no-hardcoded-strings` ملفات الصفحات بحثًا عن نصوص إنجليزية ثابتة يجب أن تستخدم `t()`.
+يفحص اختبار `i18n-no-hardcoded-strings` **جميع** ملفات المكوّنات والصفحات (`src/**/*.{ts,tsx}`) بحثًا عن نصوص إنجليزية ثابتة يجب أن تستخدم `t()`. يتحقق من:
+- محتوى نص JSX (مثل `>نص ما<`)
+- خصائص حاملة للنص: `title`، `placeholder`، `aria-label`، `alt`
+- رسائل الإشعارات: `toast.error("...")`، `toast.success("...")`
+- رسائل التحقق من Zod: `.min(3, "يجب أن...")`
+
+يجب أن تبقي طلبات السحب الجديدة اختباري `i18n-completeness` و`i18n-no-hardcoded-strings` خضراء (ناجحة).
+
+## توطين الخادم الخلفي (Backend)
+
+واجهة برمجة التطبيقات (API) الخاصة بالبوابة (Gateway) مُوطّنة بالكامل. جميع استجابات API تحترم ترويسة `Accept-Language` المُرسلة من العميل.
+
+### عقد `Accept-Language`
+
+كل استجابة API تُرجع رسائل خطأ ونجاح مُوطّنة بناءً على ترويسة `Accept-Language` في الطلب. القيم المدعومة: `en`، `ar`، `fr`، `de`، `es`. إذا كانت الترويسة مفقودة أو تحتوي على لغة غير معروفة، تعود API إلى `en` كلغة افتراضية.
+
+### كيف يعمل `req.t()`
+
+البرمجية الوسيطة (middleware) للتوطين في `gateway/src/middleware/i18n.ts` تُحلل ترويسة `Accept-Language`، وتُهيئ مُترجمًا لكل طلب، وتُرفقه كـ `req.t()`. الاستخدام في مُعالجات المسارات:
+
+```typescript
+// بحث بسيط عن مفتاح
+req.t('errors:auth.unauthorized')
+
+// مع الاستيفاء
+req.t('success:admin.planUpdated', { planName })
+```
+
+### أين توجد ترجمات الخادم الخلفي
+
+```
+gateway/src/i18n/translations/
+  en/    ar/    fr/    de/    es/
+    errors.json
+    success.json
+    validation.json
+    emails.json
+    billing.json
+```
+
+كل مجلد فرعي يعكس نفس ملفات مساحات الأسماء. كل مفتاح في `en/` يجب أن يكون موجودًا في جميع مجلدات اللغات الأخرى.
+
+### إضافة مفتاح خطأ أو نجاح جديد
+
+1. أضف المفتاح إلى `en/{namespace}.json` (مثلاً `en/errors.json`).
+2. أضف الترجمة المقابلة إلى ملفات `ar/`، `fr/`، `de/`، و`es/` لنفس مساحة الاسم.
+3. استخدم `req.t('namespace:key')` في مُعالج المسار:
+   ```typescript
+   res.status(403).json({
+     error: { code: 'auth.forbidden', message: req.t('errors:auth.forbidden') }
+   });
+   ```
+4. للدوال المساعدة التي لا تملك وصولاً إلى `req`، استخدم `createError` مع مفتاح i18n:
+   ```typescript
+   createError(msg, code, status, details, 'errors:auth.forbidden')
+   ```
+5. شغّل اختبار `i18n-backend-completeness.test.ts` للتحقق من أن جميع اللغات تحتوي على المفتاح الجديد.
+
+### توطين قوالب البريد الإلكتروني
+
+تستخدم قوالب البريد الإلكتروني `i18n.getFixedT(recipientLocale, 'emails')` لترجمة المحتوى. اللغة تأتي من تفضيل اللغة المُخزّن للمستخدم (سجل المستخدم)، وليس من ترويسة `Accept-Language` في الطلب. هذا يضمن أن المستخدمين يتلقون رسائل البريد الإلكتروني بلغتهم المفضلة بغض النظر عن العميل الذي أطلق الإجراء.
+
+### شكل استجابة الخطأ
+
+أخطاء API تتبع أحد شكلين:
+
+```json
+{
+  "error": {
+    "code": "auth.invalidCredentials",
+    "message": "<نص مُوطّن>"
+  }
+}
+```
+
+أو:
+
+```json
+{
+  "success": false,
+  "error": "<نص مُوطّن>"
+}
+```
+
+قيمة `message` / `error` تكون دائمًا مُوطّنة بناءً على ترويسة `Accept-Language` في الطلب (أو لغة المستخدم المُخزّنة في حالة رسائل البريد الإلكتروني).
 
 ## قائمة التحقق
 

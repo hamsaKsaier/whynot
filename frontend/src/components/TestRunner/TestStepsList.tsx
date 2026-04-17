@@ -264,7 +264,7 @@ export const TestStepsList: React.FC<TestStepsListProps> = ({
                     <div className="mt-2 pt-2 border-t border-border">
                       <div className="text-xs font-medium text-green-600 mb-1">{t('runner.stepsList.recoverySuccessful')}</div>
                       <div className="text-xs text-foreground">
-                        Using: {stepUpdate.recoverySuccess.successfulSelector.type} = "{stepUpdate.recoverySuccess.successfulSelector.value}"
+                        {t('runner.stepsList.using')}: {stepUpdate.recoverySuccess.successfulSelector.type} = "{stepUpdate.recoverySuccess.successfulSelector.value}"
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {t('runner.stepsList.strategy')}: {stepUpdate.recoverySuccess.strategyUsed}

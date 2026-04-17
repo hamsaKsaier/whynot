@@ -21,21 +21,21 @@ interface AuditEntry {
   details?: Record<string, unknown>
 }
 
-const actionOptions = [
-  { label: 'Role Change', value: 'user.role_change' },
-  { label: 'User Suspend', value: 'user.suspend' },
-  { label: 'User Unsuspend', value: 'user.unsuspend' },
-  { label: 'Impersonate', value: 'user.impersonate' },
-  { label: 'Credits Grant', value: 'credits.grant' },
-  { label: 'Credits Revoke', value: 'credits.revoke' },
-  { label: 'Plan Archive', value: 'plan.archive' },
-  { label: 'Plan Restore', value: 'plan.restore' },
-  { label: 'Settings Update', value: 'settings.update' },
-  { label: 'Billing Config', value: 'billing_config.update' },
-  { label: 'Feature Flag Override', value: 'feature_flag.override_set' },
-  { label: 'Announcement Create', value: 'announcement.create' },
-  { label: 'Announcement Update', value: 'announcement.update' },
-  { label: 'Announcement Delete', value: 'announcement.delete' },
+const actionValues = [
+  { key: 'admin.audit.actionLabels.roleChange', value: 'user.role_change' },
+  { key: 'admin.audit.actionLabels.userSuspend', value: 'user.suspend' },
+  { key: 'admin.audit.actionLabels.userUnsuspend', value: 'user.unsuspend' },
+  { key: 'admin.audit.actionLabels.impersonate', value: 'user.impersonate' },
+  { key: 'admin.audit.actionLabels.creditsGrant', value: 'credits.grant' },
+  { key: 'admin.audit.actionLabels.creditsRevoke', value: 'credits.revoke' },
+  { key: 'admin.audit.actionLabels.planArchive', value: 'plan.archive' },
+  { key: 'admin.audit.actionLabels.planRestore', value: 'plan.restore' },
+  { key: 'admin.audit.actionLabels.settingsUpdate', value: 'settings.update' },
+  { key: 'admin.audit.actionLabels.billingConfig', value: 'billing_config.update' },
+  { key: 'admin.audit.actionLabels.featureFlagOverride', value: 'feature_flag.override_set' },
+  { key: 'admin.audit.actionLabels.announcementCreate', value: 'announcement.create' },
+  { key: 'admin.audit.actionLabels.announcementUpdate', value: 'announcement.update' },
+  { key: 'admin.audit.actionLabels.announcementDelete', value: 'announcement.delete' },
 ]
 
 const actionStyles: Record<string, string> = {
@@ -66,6 +66,7 @@ function JsonViewer({ data, label }: { data: unknown; label: string }) {
 }
 
 function DetailsCell({ details }: { details?: Record<string, unknown> }) {
+  const { t } = useTranslation('admin')
   if (!details || Object.keys(details).length === 0) return <span className="text-muted-foreground">-</span>
 
   const hasBefore = 'before' in details
@@ -80,13 +81,13 @@ function DetailsCell({ details }: { details?: Record<string, unknown> }) {
       <CollapsibleContent>
         {hasBefore || hasAfter ? (
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <JsonViewer data={details.before} label="Before" />
-            <JsonViewer data={details.after} label="After" />
+            <JsonViewer data={details.before} label={t('admin.audit.before')} />
+            <JsonViewer data={details.after} label={t('admin.audit.after')} />
             {Object.keys(details).filter(k => k !== 'before' && k !== 'after').length > 0 && (
               <div className="col-span-2">
                 <JsonViewer
                   data={Object.fromEntries(Object.entries(details).filter(([k]) => k !== 'before' && k !== 'after'))}
-                  label="Metadata"
+                  label={t('admin.audit.metadata')}
                 />
               </div>
             )}
@@ -103,6 +104,9 @@ function DetailsCell({ details }: { details?: Record<string, unknown> }) {
 
 export function AuditLogPage() {
   const { t } = useTranslation('admin')
+
+  const actionOptions = actionValues.map(a => ({ label: t(a.key), value: a.value }))
+
   const [entries, setEntries] = useState<AuditEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [actionFilter, setActionFilter] = useState('__all__')
@@ -167,10 +171,10 @@ export function AuditLogPage() {
   }
 
   const handleExportCSV = () => {
-    const headers = ['Time', 'Actor', 'Action', 'Target Type', 'Target ID', 'Details']
+    const headers = [t('admin.audit.time'), t('admin.audit.actor'), t('admin.audit.action'), t('admin.audit.csvTargetType'), t('admin.audit.csvTargetId'), t('admin.audit.details')]
     const rows = entries.map(e => [
       e.created_at,
-      e.actor_email || e.actor_id || 'System',
+      e.actor_email || e.actor_id || t('admin.audit.system'),
       e.action,
       e.target_type || '',
       e.target_id || '',
@@ -195,7 +199,7 @@ export function AuditLogPage() {
     {
       key: 'actor',
       header: t('admin.audit.actor', 'Actor'),
-      render: (r) => <span className="text-sm">{r.actor_email || r.actor_id?.slice(0, 8) || 'System'}</span>,
+      render: (r) => <span className="text-sm">{r.actor_email || r.actor_id?.slice(0, 8) || t('admin.audit.system')}</span>,
     },
     {
       key: 'action',

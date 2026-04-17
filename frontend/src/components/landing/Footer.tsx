@@ -94,7 +94,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
-                aria-label="GitHub"
+                aria-label={t('footer.github')}
               >
                 <GithubIcon className="h-5 w-5" />
               </a>
@@ -103,7 +103,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
-                aria-label="X (Twitter)"
+                aria-label={t('footer.twitter')}
               >
                 <TwitterIcon className="h-5 w-5" />
               </a>

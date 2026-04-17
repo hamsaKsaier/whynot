@@ -5,6 +5,81 @@ Sequentially executes all .md prompts in a target folder using either
 Claude Code CLI (claude -p) or OpenCode CLI (opencode run), auto-detected
 from the --model argument.
 
+Execution modes (four top-level CLI verbs + doctor):
+
+    run        — foreground, one-shot. Exits when the folder is done.
+    start      — background daemon, one-shot. Same as run but daemonized.
+    schedule   — one-shot fire at a future wall-clock time (--at) or
+                 relative offset (--in 2h30m). Jobs persist across reboots
+                 in the shared job store and are owned by the
+                 scheduler-daemon process.
+    cron       — recurring fire on a standard 5-field cron expression
+                 ("m h dom mon dow", e.g. "0 9 * * 1-5"). Also persisted
+                 in the job store and driven by the scheduler-daemon.
+    doctor     — non-destructive log analyzer. Parses the existing .log
+                 and _failures.log files, classifies each failure into a
+                 category (MCP_ERROR / SKILL_ERROR / RATE_LIMIT / QUOTA /
+                 TIMEOUT / EXTERNAL / UNRECOVERABLE / TRANSIENT), and
+                 writes a markdown fix-plan next to the logs with a
+                 per-prompt recommendation. Never edits prompts or this
+                 script — it is advisory only.
+
+How schedule / cron work:
+
+    `schedule` and `cron add` write a job record into
+    prompt-executor/.prompt_executor_jobs.json and, if the
+    scheduler-daemon is not already running, auto-spawn it (same double
+    fork + PID file + fsync log pattern as `start`). The scheduler-daemon
+    wakes every minute, computes the next-fire time for every job, and
+    when a job is due it `subprocess.Popen`s
+    `prompt_executor.py run <folder> ...` — reusing every existing retry,
+    logging, and _done-tracking code path. One-shot schedules are removed
+    from the store after firing; cron jobs update last_run_iso /
+    next_run_iso in place and stay scheduled forever.
+
+    The scheduler itself has its own PID/log pair keyed as "scheduler":
+    .prompt_executor_scheduler.pid and .prompt_executor_scheduler.log.
+    It survives crashes via resilient_run-style restart (MAX_CRASHES=5).
+    `stop` with no args and no --*-only flag kills the scheduler too.
+
+How the stop argument works:
+
+    `stop <folder>`                 — legacy behaviour, stops exactly one
+                                      running instance by folder slug.
+                                      Prompts for confirmation if that
+                                      folder is also in schedule/cron.
+    `stop` (no folder)              — prints a plan of every running
+                                      instance + every scheduled job +
+                                      every cron job, then prompts
+                                      "Stop N running + disable M
+                                      scheduled + disable K cron? [y/N]".
+                                      Only proceeds on "y".
+    `stop --yes`                    — same plan, no prompt, proceed
+                                      immediately. Safe for scripts.
+    `stop --running-only`           — only kills PIDs, leaves
+                                      schedule/cron jobs intact.
+    `stop --scheduled-only`         — only removes one-shot schedule
+                                      jobs, leaves running PIDs and
+                                      crons intact.
+    `stop --cron-only`              — only removes recurring cron jobs.
+    All --*-only flags can be combined with --yes.
+
+Self-healing via `doctor`:
+
+    doctor is intentionally conservative. It classifies but does not
+    auto-edit. That preserves the 100%-coverage + immutable-executor
+    invariants the repo relies on. Recommended workflow:
+        1. `stop` to halt execution
+        2. `doctor` to produce a fix plan
+        3. Read the generated .prompt_executor_{slug}_fixplan.md
+        4. Apply the recommendations by hand (increase --retry-wait,
+           switch model, fix MCP server, etc.)
+        5. `run` or `schedule` / `cron` again
+
+Backend selection:
+    Anthropic models (opus, sonnet, haiku, claude-*) → Claude Code CLI
+    All other models (glm-*, zai/*, etc.)           → OpenCode CLI
+
 Backend selection:
     Anthropic models (opus, sonnet, haiku, claude-*) → Claude Code CLI
     All other models (glm-*, zai/*, etc.)           → OpenCode CLI
@@ -70,8 +145,19 @@ Features:
 Usage:
     python3 prompt-executor/prompt_executor.py start - --model opus --period 1 --max-retries 30 --retry-wait 1
     python3 prompt-executor/prompt_executor.py run   <folder> --model <model> [--period MINUTES] [--max-retries N] [--retry-wait MINUTES]
-    python3 prompt-executor/prompt_executor.py stop  [<folder>]
+    python3 prompt-executor/prompt_executor.py stop  [<folder>] [--yes] [--running-only] [--scheduled-only] [--cron-only]
     python3 prompt-executor/prompt_executor.py status [<folder>]
+
+    python3 prompt-executor/prompt_executor.py schedule <folder> --at "2026-04-17 09:00" --model <model>
+    python3 prompt-executor/prompt_executor.py schedule <folder> --in 2h30m --model <model>
+    python3 prompt-executor/prompt_executor.py schedule list
+    python3 prompt-executor/prompt_executor.py schedule remove <job-id>
+
+    python3 prompt-executor/prompt_executor.py cron <folder> --expr "0 9 * * 1-5" --model <model>
+    python3 prompt-executor/prompt_executor.py cron list
+    python3 prompt-executor/prompt_executor.py cron remove <job-id>
+
+    python3 prompt-executor/prompt_executor.py doctor [<folder>]
 
 Parallel execution:
     Multiple instances can run simultaneously on different folders.
@@ -102,18 +188,51 @@ Examples:
 
     # Stop a specific instance
     python3 prompt_executor.py stop prompts/blog-system
+
+    # Schedule a one-shot run at a specific time
+    python3 prompt_executor.py schedule prompts/blog-system --at "2026-04-17 09:00" -m opus
+
+    # Schedule a one-shot run 90 seconds from now
+    python3 prompt_executor.py schedule prompts/blog-system --in 90s -m flash
+
+    # List all scheduled jobs
+    python3 prompt_executor.py schedule list
+
+    # Remove a scheduled job by ID
+    python3 prompt_executor.py schedule remove sch_01HZ...
+
+    # Recurring cron: every weekday at 09:00
+    python3 prompt_executor.py cron prompts/blog-system --expr "0 9 * * 1-5" -m sonnet
+
+    # Recurring cron: every minute (smoke test)
+    python3 prompt_executor.py cron prompts/blog-system --expr "* * * * *" -m flash
+
+    # Stop everything (prompts for confirmation)
+    python3 prompt_executor.py stop
+
+    # Stop everything without confirmation (CI-safe)
+    python3 prompt_executor.py stop --yes
+
+    # Only remove scheduled jobs; leave running daemons + crons alone
+    python3 prompt_executor.py stop --scheduled-only --yes
+
+    # Analyze logs and produce a fix plan
+    python3 prompt_executor.py doctor prompts/blog-system
 """
 
 import argparse
 import atexit
+import json
 import os
+import re
+import secrets
 import signal
 import subprocess
 import sys
 import time
 import traceback as tb_module
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # ── Path Configuration ──────────────────────────────────────────────────────
@@ -197,6 +316,24 @@ def init_runtime_files(target_folder: Path) -> str:
     LOG_FILE = SCRIPT_DIR / f".prompt_executor_{slug}.log"
     FAILURES_FILE = SCRIPT_DIR / f".prompt_executor_{slug}_failures.log"
     return slug
+
+
+# ── Scheduler / Cron Paths ──────────────────────────────────────────────────
+#
+# The scheduler-daemon owns its own PID + log pair, keyed as "scheduler",
+# so that `status` / `stop` can reason about it uniformly with per-folder
+# daemons. The jobs file is a single JSON document shared by add / list /
+# remove / scheduler-daemon (atomic read/modify/write via os.replace()).
+
+JOBS_FILE = SCRIPT_DIR / ".prompt_executor_jobs.json"
+SCHEDULER_SLUG = "scheduler"
+SCHEDULER_PID_FILE = SCRIPT_DIR / f".prompt_executor_{SCHEDULER_SLUG}.pid"
+SCHEDULER_LOG_FILE = SCRIPT_DIR / f".prompt_executor_{SCHEDULER_SLUG}.log"
+
+# Scheduler wake-up cadence (seconds). The loop recomputes the next-due
+# trigger on every tick; 30 s is more than enough granularity for cron's
+# 1-minute resolution and for --in / --at schedules.
+SCHEDULER_TICK_SECONDS = 30
 
 
 # ── Execution Configuration ─────────────────────────────────────────────────
@@ -1179,14 +1316,12 @@ def execute_prompt(
 
     child_env = os.environ.copy()
 
+    # Claude CLI uses OAuth/subscription auth by default. A leftover
+    # ANTHROPIC_API_KEY (often a placeholder from the project .env) overrides
+    # OAuth and makes the CLI reject every call with "Invalid API key".
     if backend == BACKEND_CLAUDE:
-        # Anthropic models always use the Claude CLI subscription (OAuth from
-        # ~/.claude/.credentials.json). Strip any external Anthropic auth env
-        # vars that _load_dotenv() may have injected from .env — claude CLI
-        # prefers them over OAuth and fails with "Invalid API key" when the
-        # .env value is a placeholder or stale key.
-        for _var in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL"):
-            child_env.pop(_var, None)
+        for key in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL"):
+            child_env.pop(key, None)
 
     if backend == BACKEND_OPENCODE and os.environ.get("ZAI_API_KEY"):
         child_env["ZAI_API_KEY"] = os.environ["ZAI_API_KEY"]
@@ -1566,6 +1701,791 @@ def setup_signals() -> None:
     signal.signal(signal.SIGINT, handle_sigterm)
 
 
+# ── Job Store (schedule + cron persistence) ─────────────────────────────────
+#
+# Single JSON document at JOBS_FILE. Writes are atomic: we serialize to a
+# sibling ".tmp" file with fsync, then os.replace() to the target path.
+# Reads tolerate a missing file (returns the empty-store skeleton) and a
+# corrupted file (logs to stderr, returns the empty skeleton — the operator
+# can recover from .prompt_executor_jobs.json.bak which we also write).
+#
+# Schema:
+#   {
+#     "version": 1,
+#     "schedules": [ <schedule_job>, ... ],
+#     "crons":     [ <cron_job>, ... ]
+#   }
+#
+# A schedule_job has: id, folder, model, agent, period, max_retries,
+# retry_wait, working_dir, at_iso, created_at_iso.
+# A cron_job additionally has: expr, last_run_iso, next_run_iso.
+
+JOB_STORE_VERSION = 1
+
+
+def _empty_store() -> dict:
+    return {"version": JOB_STORE_VERSION, "schedules": [], "crons": []}
+
+
+def _make_job_id(prefix: str) -> str:
+    """Time-prefixed, lexicographically-sortable, URL-safe ID."""
+    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    rand = secrets.token_hex(4)
+    return f"{prefix}_{ts}_{rand}"
+
+
+class JobStore:
+    """
+    Atomic JSON-backed job persistence. Instances are cheap — always
+    construct fresh before read/modify/write cycles (the daemon re-reads
+    on every tick so operator adds/removes take effect without a restart).
+    """
+
+    def __init__(self, path: Path = JOBS_FILE) -> None:
+        self.path = path
+
+    def read(self) -> dict:
+        if not self.path.exists():
+            return _empty_store()
+        try:
+            raw = self.path.read_text(encoding="utf-8")
+        except OSError as e:
+            print(
+                f"[prompt_executor] WARNING: failed to read {self.path}: {e}",
+                file=sys.stderr,
+            )
+            return _empty_store()
+        if not raw.strip():
+            return _empty_store()
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
+            backup = self.path.with_suffix(self.path.suffix + ".corrupt")
+            try:
+                self.path.rename(backup)
+            except OSError:
+                pass
+            print(
+                f"[prompt_executor] WARNING: corrupt job store "
+                f"({e}); moved to {backup}. Starting fresh.",
+                file=sys.stderr,
+            )
+            return _empty_store()
+        # Be forgiving about minor schema drift.
+        if not isinstance(data, dict):
+            return _empty_store()
+        data.setdefault("version", JOB_STORE_VERSION)
+        data.setdefault("schedules", [])
+        data.setdefault("crons", [])
+        return data
+
+    def write(self, data: dict) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+        body = json.dumps(data, indent=2, sort_keys=True)
+        # Atomic: write tmp → fsync → rename.
+        with tmp.open("w", encoding="utf-8") as f:
+            f.write(body)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
+        os.replace(tmp, self.path)
+
+    # ── Convenience mutators (read / modify / write cycles) ──────────────
+
+    def add_schedule(self, job: dict) -> dict:
+        data = self.read()
+        data["schedules"].append(job)
+        self.write(data)
+        return job
+
+    def add_cron(self, job: dict) -> dict:
+        data = self.read()
+        data["crons"].append(job)
+        self.write(data)
+        return job
+
+    def remove(self, job_id: str) -> bool:
+        """Remove a job by ID from either list. Returns True if found."""
+        data = self.read()
+        before = len(data["schedules"]) + len(data["crons"])
+        data["schedules"] = [j for j in data["schedules"] if j.get("id") != job_id]
+        data["crons"] = [j for j in data["crons"] if j.get("id") != job_id]
+        after = len(data["schedules"]) + len(data["crons"])
+        if after != before:
+            self.write(data)
+            return True
+        return False
+
+    def update_cron_run(
+        self, job_id: str, last_run_iso: str, next_run_iso: str
+    ) -> None:
+        data = self.read()
+        for j in data["crons"]:
+            if j.get("id") == job_id:
+                j["last_run_iso"] = last_run_iso
+                j["next_run_iso"] = next_run_iso
+                break
+        self.write(data)
+
+    def remove_schedule(self, job_id: str) -> None:
+        data = self.read()
+        data["schedules"] = [j for j in data["schedules"] if j.get("id") != job_id]
+        self.write(data)
+
+
+# ── Cron Expression Parser ──────────────────────────────────────────────────
+#
+# A minimal, dependency-free 5-field cron parser supporting:
+#   *        — every value
+#   N        — single integer
+#   N,M,P    — comma-separated list
+#   N-M      — inclusive range
+#   N-M/S    — range with step
+#   */S      — every S values starting from the minimum of the range
+#
+# Fields (order matches POSIX cron):
+#   minute       0-59
+#   hour         0-23
+#   day-of-month 1-31
+#   month        1-12
+#   day-of-week  0-6    (0 = Sunday)
+#
+# No named aliases (@hourly, JAN, MON, ...) — those are out of scope for
+# the minimal parser. next_fire_after(dt) returns the next datetime
+# strictly greater than dt that matches the expression, in local time.
+
+
+_CRON_RANGES = [(0, 59), (0, 23), (1, 31), (1, 12), (0, 6)]
+_CRON_FIELD_NAMES = ["minute", "hour", "day-of-month", "month", "day-of-week"]
+
+
+def _parse_cron_field(field: str, lo: int, hi: int, name: str) -> set[int]:
+    """Expand a single cron field into the set of matching integers."""
+    out: set[int] = set()
+    for part in field.split(","):
+        part = part.strip()
+        if not part:
+            raise ValueError(f"empty component in {name} field: {field!r}")
+        step = 1
+        if "/" in part:
+            base, _, step_s = part.partition("/")
+            try:
+                step = int(step_s)
+            except ValueError:
+                raise ValueError(f"bad step in {name}: {part!r}")
+            if step < 1:
+                raise ValueError(f"step must be >= 1 in {name}: {part!r}")
+        else:
+            base = part
+        if base == "*":
+            start, end = lo, hi
+        elif "-" in base:
+            a, _, b = base.partition("-")
+            try:
+                start, end = int(a), int(b)
+            except ValueError:
+                raise ValueError(f"bad range in {name}: {base!r}")
+        else:
+            try:
+                start = end = int(base)
+            except ValueError:
+                raise ValueError(f"bad value in {name}: {base!r}")
+        if start < lo or end > hi or start > end:
+            raise ValueError(
+                f"{name} value out of range [{lo},{hi}]: {base!r}"
+            )
+        for v in range(start, end + 1, step):
+            out.add(v)
+    if not out:
+        raise ValueError(f"{name} field produced no values: {field!r}")
+    return out
+
+
+def parse_cron_expr(expr: str) -> dict:
+    """
+    Parse a 5-field cron expression. Returns a dict with per-field sets:
+        {"minute": {...}, "hour": {...}, "dom": {...},
+         "month": {...}, "dow": {...}}
+    Raises ValueError on any malformed field.
+    """
+    parts = expr.split()
+    if len(parts) != 5:
+        raise ValueError(
+            f"cron expression must have exactly 5 fields "
+            f"(minute hour dom month dow), got {len(parts)}: {expr!r}"
+        )
+    field_sets = [
+        _parse_cron_field(parts[i], lo, hi, _CRON_FIELD_NAMES[i])
+        for i, (lo, hi) in enumerate(_CRON_RANGES)
+    ]
+    return {
+        "minute": field_sets[0],
+        "hour": field_sets[1],
+        "dom": field_sets[2],
+        "month": field_sets[3],
+        "dow": field_sets[4],
+    }
+
+
+def next_fire_after(expr: str | dict, after: datetime) -> datetime:
+    """
+    Return the earliest datetime strictly > `after` that matches `expr`.
+
+    Standard POSIX cron semantics: when BOTH dom and dow are restricted
+    (not "*"), the match is the union — either matching dom OR matching
+    dow triggers the job. When only one is restricted, only that one
+    applies. This matches crontab(5) on Linux / BSD.
+
+    Search is bounded to 4 * 366 * 24 * 60 minutes (~4 years) to guarantee
+    termination for impossible combinations like "0 0 30 2 *".
+    """
+    fields = expr if isinstance(expr, dict) else parse_cron_expr(expr)
+    # Start from the next minute boundary after `after`.
+    cand = (after + timedelta(minutes=1)).replace(second=0, microsecond=0)
+    # Detect whether dom / dow are restricted (compared to full ranges).
+    dom_full = fields["dom"] == set(range(1, 32))
+    dow_full = fields["dow"] == set(range(0, 7))
+    for _ in range(4 * 366 * 24 * 60):
+        if cand.month not in fields["month"]:
+            # Jump to first day of next month.
+            if cand.month == 12:
+                cand = cand.replace(year=cand.year + 1, month=1, day=1, hour=0, minute=0)
+            else:
+                cand = cand.replace(month=cand.month + 1, day=1, hour=0, minute=0)
+            continue
+        # Day-of-month / day-of-week matching.
+        # crontab(5): when both restricted → union; otherwise intersection.
+        python_dow = (cand.weekday() + 1) % 7  # Mon=0..Sun=6 → Sun=0..Sat=6
+        dom_ok = cand.day in fields["dom"]
+        dow_ok = python_dow in fields["dow"]
+        if dom_full and dow_full:
+            day_ok = True
+        elif dom_full:
+            day_ok = dow_ok
+        elif dow_full:
+            day_ok = dom_ok
+        else:
+            day_ok = dom_ok or dow_ok
+        if not day_ok:
+            cand = (cand + timedelta(days=1)).replace(hour=0, minute=0)
+            continue
+        if cand.hour not in fields["hour"]:
+            cand = (cand + timedelta(hours=1)).replace(minute=0)
+            continue
+        if cand.minute not in fields["minute"]:
+            cand = cand + timedelta(minutes=1)
+            continue
+        return cand
+    raise ValueError(f"cron expression never fires within 4 years: {expr!r}")
+
+
+# ── Duration Parser (for --in) ──────────────────────────────────────────────
+#
+# Accepts "2h30m", "45m", "90s", "1d", "1h5m10s", "1.5h" (floats are
+# rounded to the nearest second). At least one unit is required.
+
+_DURATION_RE = re.compile(
+    r"^\s*(?:(\d+(?:\.\d+)?)d)?\s*"
+    r"(?:(\d+(?:\.\d+)?)h)?\s*"
+    r"(?:(\d+(?:\.\d+)?)m)?\s*"
+    r"(?:(\d+(?:\.\d+)?)s)?\s*$",
+    re.IGNORECASE,
+)
+
+
+def parse_duration(s: str) -> timedelta:
+    """Parse '2h30m' style strings into a timedelta. Raises ValueError."""
+    if not s or not s.strip():
+        raise ValueError("empty duration")
+    m = _DURATION_RE.match(s)
+    if not m or not any(m.groups()):
+        raise ValueError(
+            f"bad duration: {s!r} "
+            f"(expected combinations of Nd/Nh/Nm/Ns, e.g. '2h30m')"
+        )
+    days, hours, mins, secs = m.groups()
+    total = 0.0
+    if days:
+        total += float(days) * 86400
+    if hours:
+        total += float(hours) * 3600
+    if mins:
+        total += float(mins) * 60
+    if secs:
+        total += float(secs)
+    if total <= 0:
+        raise ValueError(f"duration must be positive: {s!r}")
+    return timedelta(seconds=round(total))
+
+
+# ── Failure Classifier + Doctor ─────────────────────────────────────────────
+#
+# Extends the existing _classify_stderr() (which recognises MCP_ERROR and
+# SKILL_ERROR) with additional categories. The doctor command groups log
+# + _failures.log entries by prompt path, classifies each failure, and
+# writes .prompt_executor_{slug}_fixplan.md with per-prompt recommendations.
+#
+# Categories (most specific first):
+#   MCP_ERROR       — MCP server failures, timeouts, auth issues
+#   SKILL_ERROR     — skill not found, validation failures, permission denied
+#   RATE_LIMIT      — 429 / "rate limit"
+#   QUOTA           — "quota exceeded" / "insufficient_quota"
+#   AUTH            — 401/403 / "invalid api key"
+#   TIMEOUT         — subprocess TimeoutExpired / elapsed >= TIMEOUT_SECONDS
+#   UNRECOVERABLE   — matches the existing unrecoverable skip list
+#   EXTERNAL        — DNS failures / 5xx from provider
+#   TRANSIENT       — default (covered by --max-retries)
+
+DOCTOR_CATEGORY_MCP = "MCP_ERROR"
+DOCTOR_CATEGORY_SKILL = "SKILL_ERROR"
+DOCTOR_CATEGORY_RATE_LIMIT = "RATE_LIMIT"
+DOCTOR_CATEGORY_QUOTA = "QUOTA"
+DOCTOR_CATEGORY_AUTH = "AUTH"
+DOCTOR_CATEGORY_TIMEOUT = "TIMEOUT"
+DOCTOR_CATEGORY_UNRECOVERABLE = "UNRECOVERABLE"
+DOCTOR_CATEGORY_EXTERNAL = "EXTERNAL"
+DOCTOR_CATEGORY_TRANSIENT = "TRANSIENT"
+
+_DOCTOR_RECOMMENDATIONS = {
+    DOCTOR_CATEGORY_MCP: (
+        "MCP server error. Run the `mcp-manager` skill "
+        "or `mcp__context-mode__doctor` to diagnose. Restart the affected "
+        "MCP server before re-running this prompt."
+    ),
+    DOCTOR_CATEGORY_SKILL: (
+        "Skill not found or invalid. Re-run "
+        "`scripts/validate_skills.py` and confirm the skill is installed "
+        "under `.opencode/` or `.claude/skills/`. Fix by hand — never "
+        "edit the prompt silently."
+    ),
+    DOCTOR_CATEGORY_RATE_LIMIT: (
+        "Provider rate-limited the request. Bump `--retry-wait` "
+        "(default 10 min) or switch to a cheaper/faster model "
+        "(flash / haiku) for this folder."
+    ),
+    DOCTOR_CATEGORY_QUOTA: (
+        "Account quota exhausted. Skip this prompt, top up "
+        "credits in the provider dashboard, then re-queue."
+    ),
+    DOCTOR_CATEGORY_AUTH: (
+        "Authentication failed. Verify ZAI_API_KEY / "
+        "ANTHROPIC_API_KEY in the root .env. Do NOT check keys into git."
+    ),
+    DOCTOR_CATEGORY_TIMEOUT: (
+        "Subprocess exceeded the per-prompt timeout "
+        "(default 1 h). Split the prompt into smaller phases or raise "
+        "TIMEOUT_SECONDS."
+    ),
+    DOCTOR_CATEGORY_UNRECOVERABLE: (
+        "Already flagged as unrecoverable by the executor "
+        "(autocompact thrashing, missing model, etc.). Edit the prompt or "
+        "pick a different model."
+    ),
+    DOCTOR_CATEGORY_EXTERNAL: (
+        "External service degraded (DNS / 5xx / connection "
+        "refused). Wait it out — not an executor bug."
+    ),
+    DOCTOR_CATEGORY_TRANSIENT: (
+        "Transient error — already handled by the normal "
+        "`--max-retries` loop. No action needed unless the failure count "
+        "is unusually high."
+    ),
+}
+
+
+def _classify_failure_reason(
+    stderr: str | None,
+    exit_code: int | None = None,
+    elapsed_s: float | None = None,
+) -> str:
+    """
+    Extended classifier used by the doctor. Returns one of the
+    DOCTOR_CATEGORY_* constants. Never returns None — defaults to
+    TRANSIENT so every failure gets a recommendation.
+    """
+    s = (stderr or "").lower()
+
+    # Timeouts first (explicit signal), before any pattern matching.
+    if "timeoutexpired" in s or "timed out" in s:
+        return DOCTOR_CATEGORY_TIMEOUT
+    if elapsed_s is not None and elapsed_s >= TIMEOUT_SECONDS:
+        return DOCTOR_CATEGORY_TIMEOUT
+
+    # Existing MCP / skill patterns (reuse the module-level classifier).
+    existing = _classify_stderr(stderr or "")
+    if existing == "MCP_ERROR":
+        return DOCTOR_CATEGORY_MCP
+    if existing == "SKILL_ERROR":
+        return DOCTOR_CATEGORY_SKILL
+
+    # Rate-limit / quota / auth — string contains is enough; we're not
+    # trying to match every possible phrasing.
+    if "rate limit" in s or "rate-limit" in s or "429 too many" in s:
+        return DOCTOR_CATEGORY_RATE_LIMIT
+    if "quota" in s or "insufficient_quota" in s or "exceeded quota" in s:
+        return DOCTOR_CATEGORY_QUOTA
+    if (
+        "invalid api key" in s
+        or "authentication failed" in s
+        or "unauthori" in s  # covers unauthorised / unauthorized
+        or "401 " in s
+        or "403 " in s
+    ):
+        return DOCTOR_CATEGORY_AUTH
+
+    # Unrecoverable keywords the executor itself already flags.
+    if (
+        "autocompact is thrashing" in s
+        or "providermodelnotfounderror" in s
+        or "no such model" in s
+    ):
+        return DOCTOR_CATEGORY_UNRECOVERABLE
+
+    # External / infrastructure.
+    if (
+        "name or service not known" in s
+        or "temporary failure in name resolution" in s
+        or "connection refused" in s
+        or "connection reset" in s
+        or "502 bad gateway" in s
+        or "503 service unavailable" in s
+        or "504 gateway timeout" in s
+    ):
+        return DOCTOR_CATEGORY_EXTERNAL
+
+    return DOCTOR_CATEGORY_TRANSIENT
+
+
+# Failure log format (see log_failure at line ~600):
+#   [iso-timestamp] SKIPPED: <path>  attempts=<n>  last_error=<...>
+# Each entry is one line. The doctor parses these to reconstruct a map
+# prompt_path -> (attempts, last_error).
+_FAILURE_LINE_RE = re.compile(
+    r"^\[(?P<ts>[^\]]+)\]\s*SKIPPED:\s*(?P<path>[^\s]+)\s+"
+    r"attempts=(?P<attempts>\d+)\s+last_error=(?P<err>.*)$"
+)
+
+
+def _parse_failure_log(path: Path) -> list[dict]:
+    """Parse a failures log into a list of dicts. Missing file → []."""
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    for line in text.splitlines():
+        m = _FAILURE_LINE_RE.match(line.strip())
+        if not m:
+            continue
+        out.append(
+            {
+                "ts": m.group("ts"),
+                "path": m.group("path"),
+                "attempts": int(m.group("attempts")),
+                "last_error": m.group("err"),
+            }
+        )
+    return out
+
+
+def _generate_fix_plan(slug: str, failures: list[dict]) -> str:
+    """Render a markdown fix-plan for the given slug + failures list."""
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lines: list[str] = [
+        f"# Prompt Executor Doctor Report — {slug}",
+        "",
+        f"Generated: {ts}",
+        f"Failures analyzed: {len(failures)}",
+        "",
+        "This file is **advisory only**. The executor never edits prompts "
+        "or `prompt_executor.py` itself — apply the recommendations by hand.",
+        "",
+    ]
+    if not failures:
+        lines.append("No skipped prompts found. Nothing to fix.")
+        return "\n".join(lines) + "\n"
+
+    # Aggregate by category first, so the operator sees the shape of the
+    # problem before drilling into individual prompts.
+    by_category: dict[str, list[dict]] = {}
+    for f in failures:
+        cat = _classify_failure_reason(f.get("last_error", ""))
+        f["_category"] = cat
+        by_category.setdefault(cat, []).append(f)
+
+    lines.append("## Category summary")
+    lines.append("")
+    lines.append("| Category | Count | Recommendation |")
+    lines.append("|---|---|---|")
+    for cat in sorted(by_category.keys()):
+        count = len(by_category[cat])
+        rec = _DOCTOR_RECOMMENDATIONS.get(cat, "").split(".")[0]
+        lines.append(f"| `{cat}` | {count} | {rec} |")
+    lines.append("")
+    lines.append("## Per-prompt detail")
+    lines.append("")
+    for f in failures:
+        cat = f["_category"]
+        rec = _DOCTOR_RECOMMENDATIONS.get(cat, "")
+        lines.append(f"### `{f['path']}`")
+        lines.append("")
+        lines.append(f"- **Category:** `{cat}`")
+        lines.append(f"- **Attempts:** {f['attempts']}")
+        lines.append(f"- **Last error:** `{f['last_error']}`")
+        lines.append(f"- **Timestamp:** {f['ts']}")
+        lines.append(f"- **Recommendation:** {rec}")
+        lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def run_doctor(target_folder: Path | None) -> Path | None:
+    """
+    Run the doctor against one folder (or, if target_folder is None,
+    every failures log in SCRIPT_DIR). Writes a .prompt_executor_{slug}
+    _fixplan.md next to the failures log and returns the fix-plan path
+    (or None if no failures logs exist).
+    """
+    if target_folder is None:
+        failure_files = sorted(SCRIPT_DIR.glob(".prompt_executor_*_failures.log"))
+    else:
+        slug = target_folder.name
+        failure_files = [SCRIPT_DIR / f".prompt_executor_{slug}_failures.log"]
+    written: list[Path] = []
+    for ff in failure_files:
+        if not ff.exists():
+            continue
+        slug = ff.stem.replace(".prompt_executor_", "").replace("_failures", "")
+        failures = _parse_failure_log(ff)
+        report = _generate_fix_plan(slug, failures)
+        out_path = SCRIPT_DIR / f".prompt_executor_{slug}_fixplan.md"
+        out_path.write_text(report, encoding="utf-8")
+        written.append(out_path)
+    return written[0] if written else None
+
+
+# ── Scheduler Daemon ────────────────────────────────────────────────────────
+#
+# Long-lived background process that owns the schedule/cron job store.
+# Reads the store on every tick (so adds/removes take effect live), fires
+# any due jobs by Popen-ing "prompt_executor.py run ..." as a subprocess,
+# then sleeps SCHEDULER_TICK_SECONDS.
+#
+# One-shot schedules are deleted from the store immediately after they
+# fire so they never run twice — even if the daemon crashes mid-tick,
+# worst case the job fires a second time on recovery (idempotency is up
+# to the prompt author).
+#
+# Cron jobs update last_run_iso / next_run_iso in place and stay in the
+# store forever (until explicitly removed via `cron remove`).
+
+
+def _spawn_run(
+    folder: str,
+    model: str,
+    agent: str | None,
+    period: int,
+    max_retries: int,
+    retry_wait: int,
+    working_dir: str | None,
+) -> int:
+    """
+    Fire off a single `prompt_executor.py run` subprocess. Returns the
+    child PID. The subprocess inherits our env (so ZAI_API_KEY etc. flow
+    through), its stdout/stderr are redirected to the per-folder log via
+    the `run` command's own logging.
+    """
+    cmd: list[str] = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "run",
+        folder,
+        "--model",
+        model,
+        "--period",
+        str(period),
+        "--max-retries",
+        str(max_retries),
+        "--retry-wait",
+        str(retry_wait),
+    ]
+    if agent:
+        cmd.extend(["--agent", agent])
+    if working_dir:
+        cmd.extend(["--working-dir", working_dir])
+    # Detach so the child survives if the scheduler daemon exits.
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return proc.pid
+
+
+def _scheduler_log(msg: str) -> None:
+    """Write to the scheduler's own log file (fsync'd)."""
+    SCHEDULER_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{ts}] {msg}\n"
+    with SCHEDULER_LOG_FILE.open("a", encoding="utf-8") as f:
+        f.write(line)
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except OSError:
+            pass
+
+
+def _scheduler_is_running() -> bool:
+    """True if the scheduler daemon's PID file points at a live process."""
+    pid = _read_pid_from_file(SCHEDULER_PID_FILE)
+    if not pid:
+        return False
+    return _pid_alive(pid)
+
+
+def _scheduler_tick(now: datetime | None = None) -> int:
+    """
+    Single scheduler pass. Returns the number of jobs fired.
+
+    Exposed at module level so tests can drive it deterministically with
+    a frozen `now`.
+    """
+    if now is None:
+        now = datetime.now()
+    store = JobStore()
+    data = store.read()
+    fired = 0
+
+    # One-shot schedules: fire every job whose at_iso <= now, then remove.
+    remaining_schedules: list[dict] = []
+    for job in data.get("schedules", []):
+        try:
+            at = datetime.fromisoformat(job["at_iso"])
+        except (KeyError, ValueError):
+            _scheduler_log(f"ERROR: schedule {job.get('id')} has bad at_iso; dropping.")
+            continue
+        if at <= now:
+            try:
+                pid = _spawn_run(
+                    job["folder"],
+                    job["model"],
+                    job.get("agent"),
+                    int(job.get("period", WAIT_MINUTES)),
+                    int(job.get("max_retries", MAX_RETRIES)),
+                    int(job.get("retry_wait", RETRY_WAIT_MINUTES)),
+                    job.get("working_dir"),
+                )
+                _scheduler_log(
+                    f"FIRED schedule {job['id']} → pid {pid} "
+                    f"folder={job['folder']} model={job['model']}"
+                )
+                fired += 1
+            except Exception as e:  # pragma: no cover — defensive
+                _scheduler_log(f"ERROR firing schedule {job.get('id')}: {e}")
+                remaining_schedules.append(job)
+        else:
+            remaining_schedules.append(job)
+    data["schedules"] = remaining_schedules
+
+    # Cron jobs: fire when next_run_iso <= now, then advance next_run_iso.
+    for job in data.get("crons", []):
+        expr = job.get("expr")
+        if not expr:
+            continue
+        next_run_iso = job.get("next_run_iso")
+        if not next_run_iso:
+            # Freshly added, compute from scratch.
+            try:
+                job["next_run_iso"] = next_fire_after(expr, now).isoformat()
+            except ValueError:
+                _scheduler_log(
+                    f"ERROR: cron {job.get('id')} has bad expr {expr!r}; dropping next_run."
+                )
+            continue
+        try:
+            due = datetime.fromisoformat(next_run_iso)
+        except ValueError:
+            _scheduler_log(
+                f"ERROR: cron {job.get('id')} has bad next_run_iso; recomputing."
+            )
+            job["next_run_iso"] = next_fire_after(expr, now).isoformat()
+            continue
+        if due <= now:
+            try:
+                pid = _spawn_run(
+                    job["folder"],
+                    job["model"],
+                    job.get("agent"),
+                    int(job.get("period", WAIT_MINUTES)),
+                    int(job.get("max_retries", MAX_RETRIES)),
+                    int(job.get("retry_wait", RETRY_WAIT_MINUTES)),
+                    job.get("working_dir"),
+                )
+                job["last_run_iso"] = now.isoformat()
+                job["next_run_iso"] = next_fire_after(expr, now).isoformat()
+                _scheduler_log(
+                    f"FIRED cron {job['id']} → pid {pid} "
+                    f"folder={job['folder']} next={job['next_run_iso']}"
+                )
+                fired += 1
+            except Exception as e:  # pragma: no cover — defensive
+                _scheduler_log(f"ERROR firing cron {job.get('id')}: {e}")
+    store.write(data)
+    return fired
+
+
+def _scheduler_main_loop() -> None:
+    """Wake every SCHEDULER_TICK_SECONDS, fire due jobs, repeat forever."""
+    _scheduler_log(
+        f"scheduler-daemon started (tick={SCHEDULER_TICK_SECONDS}s, "
+        f"jobs={JOBS_FILE})"
+    )
+    while True:
+        try:
+            fired = _scheduler_tick()
+            if fired:
+                _scheduler_log(f"tick complete, fired {fired} job(s)")
+        except Exception as e:
+            _scheduler_log(f"CRASH in tick: {type(e).__name__}: {e}")
+            _scheduler_log(tb_module.format_exc())
+        time.sleep(SCHEDULER_TICK_SECONDS)
+
+
+def _start_scheduler_daemon_if_needed() -> None:
+    """
+    Idempotent: no-op if the scheduler daemon is already running. Else
+    spawn ourselves with `scheduler-daemon` and return once the child has
+    daemonized. Used by `schedule` / `cron` add paths so the operator
+    never has to think about the daemon lifecycle.
+    """
+    if _scheduler_is_running():
+        return
+    # Clean stale PID file, then spawn.
+    if SCHEDULER_PID_FILE.exists():
+        try:
+            SCHEDULER_PID_FILE.unlink()
+        except OSError:
+            pass
+    cmd = [sys.executable, str(Path(__file__).resolve()), "scheduler-daemon"]
+    subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    # Wait briefly for PID file to appear so `status` immediately reflects it.
+    for _ in range(20):
+        if _scheduler_is_running():
+            return
+        time.sleep(0.1)
+
+
 # ── Commands ────────────────────────────────────────────────────────────────
 
 
@@ -1839,29 +2759,199 @@ def _stop_pid_file(pid_file: Path) -> bool:
     return True
 
 
+def _confirm_stop_plan(
+    pid_files: list[Path],
+    schedules: list[dict],
+    crons: list[dict],
+    auto_yes: bool,
+) -> bool:
+    """
+    Print the 'what's about to be stopped' plan and prompt for confirmation.
+
+    Returns True if the user approved (or auto_yes is set).
+    """
+    print("Found:")
+    if pid_files:
+        slugs = [pf.stem.replace(".prompt_executor_", "") for pf in pid_files]
+        print(f"  Running   : {len(pid_files)} instance(s)   [{', '.join(slugs)}]")
+    else:
+        print("  Running   : 0")
+    if schedules:
+        first = schedules[0]
+        label = (
+            f"{first.get('id')}: {first.get('folder')} "
+            f"at {first.get('at_iso')}"
+        )
+        extra = "" if len(schedules) == 1 else f" (+{len(schedules) - 1} more)"
+        print(f"  Scheduled : {len(schedules)} one-shot      [{label}{extra}]")
+    else:
+        print("  Scheduled : 0")
+    if crons:
+        first = crons[0]
+        label = (
+            f"{first.get('id')}: {first.get('folder')} "
+            f"every \"{first.get('expr')}\""
+        )
+        extra = "" if len(crons) == 1 else f" (+{len(crons) - 1} more)"
+        print(f"  Cron      : {len(crons)} recurring     [{label}{extra}]")
+    else:
+        print("  Cron      : 0")
+
+    if auto_yes:
+        print("--yes supplied, proceeding without prompt.")
+        return True
+
+    running_part = f"stop {len(pid_files)} running"
+    sched_part = f"disable {len(schedules)} scheduled" if schedules else ""
+    cron_part = f"disable {len(crons)} cron" if crons else ""
+    parts = [p for p in (running_part, sched_part, cron_part) if p]
+    question = " + ".join(parts) + "? [y/N]: "
+    try:
+        reply = input(question).strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return reply in ("y", "yes")
+
+
+def _gather_all_running_pid_files() -> list[Path]:
+    """Every .pid file in SCRIPT_DIR, including the scheduler."""
+    return sorted(SCRIPT_DIR.glob(".prompt_executor_*.pid"))
+
+
 def cmd_stop(args: argparse.Namespace) -> None:
     folder_arg = getattr(args, "folder", None)
+    auto_yes = bool(getattr(args, "yes", False))
+    running_only = bool(getattr(args, "running_only", False))
+    scheduled_only = bool(getattr(args, "scheduled_only", False))
+    cron_only = bool(getattr(args, "cron_only", False))
+
+    # Mutually exclusive scope flags — argparse already enforces, but we
+    # keep a defensive check in case callers construct argparse.Namespace
+    # by hand (tests do).
+    scope_flags = sum(
+        [
+            1 if running_only else 0,
+            1 if scheduled_only else 0,
+            1 if cron_only else 0,
+        ]
+    )
+    if scope_flags > 1:
+        print("ERROR: --running-only / --scheduled-only / --cron-only are mutually exclusive.")
+        return
+
+    store = JobStore()
+    store_data = store.read()
+    schedules = store_data.get("schedules", [])
+    crons = store_data.get("crons", [])
 
     if folder_arg:
-        # Stop a specific instance
+        # Legacy single-folder path: stop the running instance, and if the
+        # folder ALSO has a scheduled or cron job, confirm before removing.
         target = resolve_target_folder(folder_arg)
+        slug = target.name
         init_runtime_files(target)
         pid = read_pid()
-        if not pid:
-            print(f"Not running for [{target.name}].")
+
+        matching_schedules = [j for j in schedules if Path(j.get("folder", "")).name == slug]
+        matching_crons = [j for j in crons if Path(j.get("folder", "")).name == slug]
+
+        stopped_anything = False
+
+        # Running process.
+        if pid and not (scheduled_only or cron_only):
+            _stop_pid_file(PID_FILE)
+            stopped_anything = True
+        elif not pid and not (scheduled_only or cron_only):
+            print(f"Not running for [{slug}].")
             clean_stale_pid()
-            return
-        _stop_pid_file(PID_FILE)
-    else:
-        # Stop all running instances
-        pid_files = sorted(SCRIPT_DIR.glob(".prompt_executor_*.pid"))
-        if not pid_files:
-            print("No running instances found.")
-            return
+
+        # Scheduled / cron deletions for this folder need confirmation.
+        if matching_schedules and not (running_only or cron_only):
+            if auto_yes or _confirm_stop_plan(
+                [], matching_schedules, [], auto_yes
+            ):
+                for j in matching_schedules:
+                    store.remove_schedule(j["id"])
+                    print(f"  Removed schedule {j['id']}.")
+                    stopped_anything = True
+        if matching_crons and not (running_only or scheduled_only):
+            if auto_yes or _confirm_stop_plan(
+                [], [], matching_crons, auto_yes
+            ):
+                for j in matching_crons:
+                    store.remove(j["id"])
+                    print(f"  Removed cron {j['id']}.")
+                    stopped_anything = True
+
+        if not stopped_anything:
+            print(f"Nothing to stop for [{slug}].")
+        return
+
+    # No folder arg — global scope.
+    pid_files = _gather_all_running_pid_files()
+
+    # Filter each list by the --*-only scope.
+    do_running = not (scheduled_only or cron_only)
+    do_scheduled = not (running_only or cron_only)
+    do_cron = not (running_only or scheduled_only)
+
+    if not pid_files and not schedules and not crons:
+        print("No running instances, no scheduled jobs, no cron jobs.")
+        return
+
+    if not _confirm_stop_plan(
+        pid_files if do_running else [],
+        schedules if do_scheduled else [],
+        crons if do_cron else [],
+        auto_yes,
+    ):
+        print("Aborted.")
+        return
+
+    if do_running and pid_files:
         print(f"Stopping {len(pid_files)} instance(s)...")
         for pf in pid_files:
             _stop_pid_file(pf)
-        print("All stopped.")
+        print("All running instances stopped.")
+
+    if do_scheduled and schedules:
+        for j in schedules:
+            store.remove_schedule(j["id"])
+        print(f"Removed {len(schedules)} scheduled job(s).")
+
+    if do_cron and crons:
+        for j in crons:
+            store.remove(j["id"])
+        print(f"Removed {len(crons)} cron job(s).")
+
+
+def _print_scheduled_cron_status() -> None:
+    """Print the Scheduled + Cron sections shared by all status views."""
+    store = JobStore()
+    data = store.read()
+    schedules = data.get("schedules", [])
+    crons = data.get("crons", [])
+    if schedules:
+        print(f"{len(schedules)} scheduled job(s):")
+        for j in schedules:
+            print(
+                f"  [{j.get('id')}] {j.get('folder')} "
+                f"model={j.get('model')} at={j.get('at_iso')}"
+            )
+    else:
+        print("0 scheduled job(s).")
+    if crons:
+        print(f"{len(crons)} cron job(s):")
+        for j in crons:
+            last = j.get("last_run_iso") or "never"
+            print(
+                f"  [{j.get('id')}] {j.get('folder')} "
+                f"model={j.get('model')} expr={j.get('expr')!r} "
+                f"next={j.get('next_run_iso')} last={last}"
+            )
+    else:
+        print("0 cron job(s).")
 
 
 def cmd_status(args: argparse.Namespace) -> None:
@@ -1881,6 +2971,29 @@ def cmd_status(args: argparse.Namespace) -> None:
         print(f"  Log: {LOG_FILE}")
         print(f"  Failures: {FAILURES_FILE}")
         _show_failures_summary()
+        # Also show any schedule/cron jobs targeting this folder.
+        store = JobStore()
+        data = store.read()
+        slug = target.name
+        matching_sched = [
+            j for j in data.get("schedules", [])
+            if Path(j.get("folder", "")).name == slug
+        ]
+        matching_cron = [
+            j for j in data.get("crons", [])
+            if Path(j.get("folder", "")).name == slug
+        ]
+        if matching_sched:
+            print(f"  Scheduled: {len(matching_sched)} job(s)")
+            for j in matching_sched:
+                print(f"    [{j.get('id')}] at={j.get('at_iso')}")
+        if matching_cron:
+            print(f"  Cron: {len(matching_cron)} job(s)")
+            for j in matching_cron:
+                print(
+                    f"    [{j.get('id')}] expr={j.get('expr')!r} "
+                    f"next={j.get('next_run_iso')}"
+                )
     else:
         pid_files = sorted(SCRIPT_DIR.glob(".prompt_executor_*.pid"))
         if not pid_files:
@@ -1899,6 +3012,7 @@ def cmd_status(args: argparse.Namespace) -> None:
                     except FileNotFoundError:  # pragma: no cover
                         pass
         print()
+        _print_scheduled_cron_status()
         return
 
     # Dead code — resolve_target_folder already validated at line 1560.
@@ -1989,6 +3103,191 @@ def _show_failures_summary() -> None:
             pass
 
 
+# ── Schedule / Cron / Doctor Commands ───────────────────────────────────────
+
+
+def _build_job_from_args(args: argparse.Namespace) -> dict:
+    """Common job-field extraction shared by schedule + cron add paths."""
+    target = resolve_target_folder(args.folder)
+    # Validate backend early so typos are caught at add-time, not fire-time.
+    _ = detect_backend(args.model)
+    working_dir_arg = getattr(args, "working_dir", None)
+    return {
+        "folder": str(target),
+        "model": args.model,
+        "agent": getattr(args, "agent", None),
+        "period": int(getattr(args, "period", WAIT_MINUTES)),
+        "max_retries": int(getattr(args, "max_retries", MAX_RETRIES)),
+        "retry_wait": int(getattr(args, "retry_wait", RETRY_WAIT_MINUTES)),
+        "working_dir": str(working_dir_arg) if working_dir_arg else None,
+        "created_at_iso": datetime.now().isoformat(),
+    }
+
+
+def cmd_schedule_add(args: argparse.Namespace) -> None:
+    at_str = getattr(args, "at", None)
+    in_str = getattr(args, "in_", None)
+    if not (at_str or in_str):
+        print("ERROR: supply exactly one of --at \"YYYY-MM-DD HH:MM\" or --in <duration>.")
+        return
+    if at_str and in_str:
+        print("ERROR: --at and --in are mutually exclusive.")
+        return
+
+    if in_str:
+        delta = parse_duration(in_str)
+        at_dt = datetime.now() + delta
+    else:
+        # Accept either ISO ("2026-04-17T09:00") or "YYYY-MM-DD HH:MM".
+        try:
+            at_dt = datetime.fromisoformat(at_str)
+        except ValueError:
+            try:
+                at_dt = datetime.strptime(at_str, "%Y-%m-%d %H:%M")
+            except ValueError:
+                try:
+                    at_dt = datetime.strptime(at_str, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    print(f"ERROR: cannot parse --at value: {at_str!r}")
+                    return
+    if at_dt <= datetime.now():
+        print(f"ERROR: --at must be in the future; got {at_dt.isoformat()}")
+        return
+
+    job = _build_job_from_args(args)
+    job["id"] = _make_job_id("sch")
+    job["at_iso"] = at_dt.isoformat()
+    store = JobStore()
+    store.add_schedule(job)
+    print(f"Scheduled job {job['id']} for {at_dt.isoformat()}")
+    print(f"  folder={job['folder']} model={job['model']}")
+    _start_scheduler_daemon_if_needed()
+    print("  scheduler-daemon is running.")
+
+
+def cmd_schedule_list(_args: argparse.Namespace) -> None:
+    store = JobStore()
+    data = store.read()
+    schedules = data.get("schedules", [])
+    if not schedules:
+        print("No scheduled jobs.")
+        return
+    print(f"{len(schedules)} scheduled job(s):")
+    for j in schedules:
+        print(
+            f"  [{j.get('id')}] {j.get('folder')} "
+            f"model={j.get('model')} at={j.get('at_iso')}"
+        )
+
+
+def cmd_schedule_remove(args: argparse.Namespace) -> None:
+    job_id = args.job_id
+    store = JobStore()
+    if store.remove(job_id):
+        print(f"Removed job {job_id}.")
+    else:
+        print(f"Job {job_id} not found.")
+
+
+def cmd_cron_add(args: argparse.Namespace) -> None:
+    expr = args.expr
+    try:
+        parse_cron_expr(expr)  # validation only
+    except ValueError as e:
+        print(f"ERROR: invalid cron expression: {e}")
+        return
+    job = _build_job_from_args(args)
+    job["id"] = _make_job_id("cron")
+    job["expr"] = expr
+    now = datetime.now()
+    job["last_run_iso"] = None
+    job["next_run_iso"] = next_fire_after(expr, now).isoformat()
+    store = JobStore()
+    store.add_cron(job)
+    print(f"Cron job {job['id']} registered.")
+    print(f"  folder={job['folder']} model={job['model']} expr={expr!r}")
+    print(f"  next fire: {job['next_run_iso']}")
+    _start_scheduler_daemon_if_needed()
+    print("  scheduler-daemon is running.")
+
+
+def cmd_cron_list(_args: argparse.Namespace) -> None:
+    store = JobStore()
+    data = store.read()
+    crons = data.get("crons", [])
+    if not crons:
+        print("No cron jobs.")
+        return
+    print(f"{len(crons)} cron job(s):")
+    for j in crons:
+        last = j.get("last_run_iso") or "never"
+        print(
+            f"  [{j.get('id')}] {j.get('folder')} "
+            f"model={j.get('model')} expr={j.get('expr')!r} "
+            f"next={j.get('next_run_iso')} last={last}"
+        )
+
+
+def cmd_cron_remove(args: argparse.Namespace) -> None:
+    job_id = args.job_id
+    store = JobStore()
+    if store.remove(job_id):
+        print(f"Removed cron job {job_id}.")
+    else:
+        print(f"Cron job {job_id} not found.")
+
+
+def cmd_scheduler_daemon(args: argparse.Namespace) -> None:
+    """Entry point for the scheduler daemon itself."""
+    # Per-instance runtime files already hold None at this point; set our
+    # own slug so log() / remove_pid() paths work when we borrow them.
+    global PID_FILE, LOG_FILE, FAILURES_FILE
+    PID_FILE = SCHEDULER_PID_FILE
+    LOG_FILE = SCHEDULER_LOG_FILE
+    FAILURES_FILE = SCRIPT_DIR / f".prompt_executor_{SCHEDULER_SLUG}_failures.log"
+
+    if _scheduler_is_running():
+        print("scheduler-daemon already running.")
+        return
+
+    foreground = bool(getattr(args, "foreground", False))
+    if not foreground:
+        daemonize()
+    install_crash_handlers()
+    setup_signals()
+    # Clean any stale PID file first.
+    if SCHEDULER_PID_FILE.exists():
+        try:
+            SCHEDULER_PID_FILE.unlink()
+        except OSError:
+            pass
+    write_pid(os.getpid())
+    try:
+        _scheduler_main_loop()
+    finally:
+        remove_pid()
+
+
+def cmd_doctor(args: argparse.Namespace) -> None:
+    folder_arg = getattr(args, "folder", None)
+    target: Path | None = None
+    if folder_arg:
+        try:
+            target = resolve_target_folder(folder_arg)
+        except SystemExit:
+            return
+    out = run_doctor(target)
+    if out is None:
+        print("No failure logs found. Nothing to analyze.")
+        return
+    print(f"Fix plan written to: {out}")
+    try:
+        print()
+        print(out.read_text(encoding="utf-8"))
+    except OSError:
+        pass
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 
@@ -2038,6 +3337,25 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_schedule_cron_common_args(parser: argparse.ArgumentParser) -> None:
+    """Subset of add_common_args that schedule/cron add need (no positional folder)."""
+    parser.add_argument(
+        "folder",
+        help="Target folder to execute (relative to project root or absolute path)",
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        required=True,
+        help="Model to use (REQUIRED). Same semantics as run/start.",
+    )
+    parser.add_argument("-a", "--agent", default=None)
+    parser.add_argument("-p", "--period", type=int, default=WAIT_MINUTES)
+    parser.add_argument("--max-retries", type=int, default=MAX_RETRIES)
+    parser.add_argument("--retry-wait", type=int, default=RETRY_WAIT_MINUTES)
+    parser.add_argument("--working-dir", type=Path, default=None)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Prompt Executor — sequential prompt runner using Claude Code CLI or OpenCode CLI"
@@ -2052,16 +3370,45 @@ def main() -> None:
     add_common_args(run_p)
     run_p.set_defaults(func=cmd_run)
 
-    stop_p = sub.add_parser("stop", help="Stop instance(s) — specific folder or all")
+    stop_p = sub.add_parser(
+        "stop",
+        help="Stop running daemons and/or remove scheduled/cron jobs. "
+        "Prompts for confirmation unless --yes is supplied.",
+    )
     stop_p.add_argument(
         "folder",
         nargs="?",
         default=None,
         help="Optional: stop only the instance running this folder (default: stop all)",
     )
+    stop_p.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip the confirmation prompt (safe for scripts).",
+    )
+    stop_group = stop_p.add_mutually_exclusive_group()
+    stop_group.add_argument(
+        "--running-only",
+        action="store_true",
+        help="Only kill running daemons; leave scheduled and cron jobs intact.",
+    )
+    stop_group.add_argument(
+        "--scheduled-only",
+        action="store_true",
+        help="Only remove one-shot scheduled jobs.",
+    )
+    stop_group.add_argument(
+        "--cron-only",
+        action="store_true",
+        help="Only remove recurring cron jobs.",
+    )
     stop_p.set_defaults(func=cmd_stop)
 
-    status_p = sub.add_parser("status", help="Check status and progress")
+    status_p = sub.add_parser(
+        "status",
+        help="Check status — running daemons, scheduled jobs, cron jobs.",
+    )
     status_p.add_argument(
         "folder",
         nargs="?",
@@ -2069,6 +3416,104 @@ def main() -> None:
         help="Optional: target folder to show progress for",
     )
     status_p.set_defaults(func=cmd_status)
+
+    # ── schedule ──
+    schedule_p = sub.add_parser(
+        "schedule",
+        help="Schedule a one-shot run at a future time (--at) or relative offset (--in).",
+    )
+    schedule_sub = schedule_p.add_subparsers(dest="schedule_cmd", required=True)
+
+    schedule_add_p = schedule_sub.add_parser(
+        "add", help="Register a new one-shot scheduled run."
+    )
+    _add_schedule_cron_common_args(schedule_add_p)
+    when_group = schedule_add_p.add_mutually_exclusive_group(required=True)
+    when_group.add_argument(
+        "--at",
+        dest="at",
+        default=None,
+        help="Absolute time, e.g. \"2026-04-17 09:00\" or \"2026-04-17T09:00:00\".",
+    )
+    when_group.add_argument(
+        "--in",
+        dest="in_",
+        default=None,
+        help="Relative offset, e.g. \"2h30m\", \"45m\", \"90s\".",
+    )
+    schedule_add_p.set_defaults(func=cmd_schedule_add)
+
+    schedule_list_p = schedule_sub.add_parser("list", help="List scheduled jobs.")
+    schedule_list_p.set_defaults(func=cmd_schedule_list)
+
+    schedule_remove_p = schedule_sub.add_parser(
+        "remove", help="Remove a scheduled job by ID."
+    )
+    schedule_remove_p.add_argument("job_id")
+    schedule_remove_p.set_defaults(func=cmd_schedule_remove)
+
+    # Bare `schedule <folder> --at ...` without `add` — friendly shortcut.
+    # We defer to the add subparser if the first arg after `schedule` is
+    # not one of {add, list, remove}.
+    #
+    # Implemented by inspecting sys.argv before parse_args().
+    # (argparse can't express "optional subcommand" cleanly.)
+
+    # ── cron ──
+    cron_p = sub.add_parser(
+        "cron",
+        help="Register a recurring cron-driven run (standard 5-field expression).",
+    )
+    cron_sub = cron_p.add_subparsers(dest="cron_cmd", required=True)
+
+    cron_add_p = cron_sub.add_parser("add", help="Register a new cron job.")
+    _add_schedule_cron_common_args(cron_add_p)
+    cron_add_p.add_argument(
+        "--expr",
+        required=True,
+        help="5-field cron expression: \"minute hour dom month dow\".",
+    )
+    cron_add_p.set_defaults(func=cmd_cron_add)
+
+    cron_list_p = cron_sub.add_parser("list", help="List cron jobs.")
+    cron_list_p.set_defaults(func=cmd_cron_list)
+
+    cron_remove_p = cron_sub.add_parser("remove", help="Remove a cron job by ID.")
+    cron_remove_p.add_argument("job_id")
+    cron_remove_p.set_defaults(func=cmd_cron_remove)
+
+    # ── scheduler-daemon ──
+    sd_p = sub.add_parser(
+        "scheduler-daemon",
+        help="Internal: run the scheduler daemon. Auto-spawned by schedule/cron add.",
+    )
+    sd_p.add_argument(
+        "--foreground",
+        action="store_true",
+        help="Run in the foreground (for debugging). Default: daemonize.",
+    )
+    sd_p.set_defaults(func=cmd_scheduler_daemon)
+
+    # ── doctor ──
+    doctor_p = sub.add_parser(
+        "doctor",
+        help="Analyze failure logs and write a fix-plan markdown. Advisory only.",
+    )
+    doctor_p.add_argument(
+        "folder",
+        nargs="?",
+        default=None,
+        help="Optional: target folder. Default: every failures log in prompt-executor/.",
+    )
+    doctor_p.set_defaults(func=cmd_doctor)
+
+    # Rewrite argv so `schedule <folder> --at ...` implicitly means
+    # `schedule add <folder> --at ...`. Same treatment for `cron`.
+    _argv = sys.argv[1:]
+    if len(_argv) >= 2 and _argv[0] in ("schedule", "cron"):
+        verbs = {"add", "list", "remove"}
+        if _argv[1] not in verbs and not _argv[1].startswith("-"):
+            sys.argv = [sys.argv[0], _argv[0], "add"] + _argv[1:]
 
     args = parser.parse_args()
     args.func(args)

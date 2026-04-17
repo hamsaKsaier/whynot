@@ -1,3 +1,10 @@
+---
+title: "Resolucion de claves de plataforma"
+description: "Gestion centralizada de claves API de IA para operaciones del nivel gestionado en WhyNot."
+lang: es
+draft: false
+---
+
 # Resolucion de claves de plataforma
 
 La resolucion de claves de plataforma proporciona una gestion centralizada de claves API de IA para todas las operaciones del nivel gestionado. En lugar de almacenar claves en variables de entorno, los administradores configuran y rotan claves a traves del panel de administracion.

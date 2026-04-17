@@ -15,7 +15,7 @@ import {
 import { Feature } from '@/components/Feature';
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('common');
   const currentLang = (i18n.resolvedLanguage ?? 'en') as SupportedLanguage;
 
   const handleLanguageChange = (lang: SupportedLanguage) => {
@@ -33,7 +33,7 @@ export function LanguageSwitcher() {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            aria-label="Change language"
+            aria-label={t('common.aria.changeLanguage')}
           >
             <Globe className="h-4 w-4" />
           </Button>

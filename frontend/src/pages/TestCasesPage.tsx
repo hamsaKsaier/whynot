@@ -473,7 +473,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                       <Separator className="mb-3" />
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          {testCase.steps.length} step{testCase.steps.length !== 1 ? 's' : ''}
+                          {t('results.testCases.stepsCount', { count: testCase.steps.length })}
                         </span>
                         <div className="flex items-center gap-1">
                           <Button

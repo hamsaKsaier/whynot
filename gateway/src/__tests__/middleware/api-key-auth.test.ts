@@ -75,7 +75,7 @@ describe('requireApiKeyAuth', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: expect.stringContaining('Missing or invalid API key') }),
+      expect.objectContaining({ error: 'errors:auth.apiKeyMissing' }),
     );
   });
 
@@ -93,7 +93,7 @@ describe('requireApiKeyAuth', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: 'Invalid or deactivated API key' }),
+      expect.objectContaining({ error: 'errors:auth.apiKeyInvalid' }),
     );
   });
 
@@ -130,6 +130,6 @@ describe('requireApiKeyAuth', () => {
     await requireApiKeyAuth(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Authentication error' }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'errors:auth.error' }));
   });
 });

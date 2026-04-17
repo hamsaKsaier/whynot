@@ -484,11 +484,11 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                         </span>
                       ))}
                       <span className="text-xs text-muted-foreground">
-                        • {key.rate_limit_per_hour}/hr limit
+                        • {t('dashboard.webhooks.rateLimitPerHour', { count: key.rate_limit_per_hour })}
                       </span>
                       {key.expires_at && (
                         <span className="text-xs text-muted-foreground">
-                          • Expires {new Date(key.expires_at).toLocaleDateString()}
+                          • {t('dashboard.webhooks.expiresOn', { date: new Date(key.expires_at).toLocaleDateString() })}
                         </span>
                       )}
                     </div>

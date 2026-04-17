@@ -26,7 +26,7 @@ describe('requireAdmin', () => {
     await requireAdmin(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Authentication required' }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'errors:auth.unauthorized' }));
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -36,7 +36,7 @@ describe('requireAdmin', () => {
     await requireAdmin(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Admin access required' }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'errors:auth.adminRequired' }));
   });
 
   it('returns 403 if user not found in DB', async () => {
@@ -88,7 +88,7 @@ describe('requireSuperAdmin', () => {
     await requireSuperAdmin(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Super admin access required' }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'errors:auth.superAdminRequired' }));
   });
 
   it('returns 403 for regular user', async () => {

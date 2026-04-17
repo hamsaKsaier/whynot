@@ -153,7 +153,7 @@ export function CreditsPage() {
                 id="desc"
                 value={grantForm.description}
                 onChange={(e) => setGrantForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Reason for credit grant..."
+                placeholder={t('credits.reasonPlaceholder')}
                 rows={2}
               />
             </div>

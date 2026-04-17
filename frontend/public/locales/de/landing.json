@@ -297,7 +297,9 @@
     "legal": "Rechtliches",
     "privacy": "Datenschutzrichtlinie",
     "terms": "Nutzungsbedingungen",
-    "copyright": "© {{year}} WhyNot. Alle Rechte vorbehalten."
+    "copyright": "© {{year}} WhyNot. Alle Rechte vorbehalten.",
+    "github": "GitHub",
+    "twitter": "X (Twitter)"
   },
   "seo": {
     "title": "WhyNot — Autonomes KI-gestütztes QA-Testing",

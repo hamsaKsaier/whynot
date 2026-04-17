@@ -1,5 +1,9 @@
 {
   "account.deletionScheduled": "Konto zur Löschung vorgemerkt. Sie haben 7 Tage, um diese Aktion durch erneutes Anmelden rückgängig zu machen.",
+  "admin.organizationUpdated": "Organisation aktualisiert",
+  "admin.passwordResetInitiated": "Passwortzurücksetzung eingeleitet",
+  "admin.planUpdated": "Plan auf {{planName}} gesetzt",
+  "admin.userMovedToOrganization": "Benutzer zur Organisation verschoben",
   "account.exportQueued": "Exportanfrage in die Warteschlange gestellt. Sie werden benachrichtigt, sobald der Export bereit ist.",
   "auth.loggedOut": "Erfolgreich abgemeldet",
   "auth.resetEmailSent": "Falls ein Konto existiert, wurde eine E-Mail zum Zurücksetzen gesendet",

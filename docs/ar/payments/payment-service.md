@@ -1,3 +1,10 @@
+---
+title: "خدمة الدفع"
+description: "نقطة الدخول الوحيدة لجميع عمليات الدفع في WhyNot"
+lang: ar
+draft: false
+---
+
 # خدمة الدفع
 
 فئة `PaymentService` (`gateway/src/payments/payment-service.ts`) هي نقطة الدخول الوحيدة لجميع عمليات الدفع في whynot. جميع عمليات الأعمال تستدعي `PaymentService` — لا يتم استدعاء مزود Stripe مباشرةً.

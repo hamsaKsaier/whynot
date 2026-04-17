@@ -156,7 +156,9 @@
       "choosePlan": "Choose a plan...",
       "applyPlan": "Apply Plan",
       "flagOverrides": "Feature Flag Overrides",
-      "noFlags": "No flag overrides for this user's workspace."
+      "noFlags": "No flag overrides for this user's workspace.",
+      "defaultGrant": "Admin grant",
+      "defaultRevoke": "Admin revoke"
     },
     "organizations": {
       "title": "Organizations",
@@ -196,7 +198,8 @@
       "periodEnd": "Period End",
       "trialEnd": "Trial End",
       "flagOverrides": "Feature Flag Overrides",
-      "noFlagOverrides": "No flag overrides set for this organization."
+      "noFlagOverrides": "No flag overrides set for this organization.",
+      "none": "None"
     },
     "plans": {
       "title": "Plans",

@@ -47,7 +47,7 @@ export const RPSChart: React.FC<RPSChartProps> = ({ data }) => {
                 fontSize: 12,
               }}
               labelFormatter={(v) => `${v}s`}
-              formatter={(value: any) => [`${value} req/s`, t('runner.performance.throughput')]}
+              formatter={(value: any) => [`${value} ${t('runner.performance.chart.unit.rps')}`, t('runner.performance.throughput')]}
             />
             <Area
               type="monotone"

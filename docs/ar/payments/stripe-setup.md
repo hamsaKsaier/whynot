@@ -1,3 +1,10 @@
+---
+title: "دليل إعداد Stripe"
+description: "دليل شامل لتهيئة مدفوعات Stripe في منصة WhyNot QA"
+lang: ar
+draft: false
+---
+
 # دليل إعداد Stripe
 
 دليل شامل لتهيئة مدفوعات Stripe في منصة WhyNot QA.

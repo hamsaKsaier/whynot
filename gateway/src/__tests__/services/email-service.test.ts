@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockQuery } = vi.hoisted(() => ({
+const { mockQuery, mockEnv } = vi.hoisted(() => ({
   mockQuery: vi.fn(),
+  mockEnv: {
+    RESEND_API_KEY: 'test-resend-key',
+    EMAIL_FROM_ADDRESS: 'WhyNot <notifications@whynot.qa>',
+    FRONTEND_URL: 'http://localhost:5173',
+  } as Record<string, string>,
 }));
+
 vi.mock('../../../shared/database/connection', () => ({
   query: (...args: any[]) => mockQuery(...args),
 }));
@@ -13,6 +19,19 @@ vi.mock('../../../shared/logger/logger', () => ({
     warn: vi.fn(),
     error: vi.fn(),
   }),
+}));
+
+// Mock env so RESEND_API_KEY is controllable
+vi.mock('../../config/env', () => ({
+  env: mockEnv,
+}));
+
+// Mock i18n — getFixedT returns a function that echoes back the key
+const mockT = vi.fn((key: string) => key);
+vi.mock('../../i18n', () => ({
+  default: {
+    getFixedT: () => mockT,
+  },
 }));
 
 // Mock global fetch
@@ -30,7 +49,7 @@ import {
 describe('email-service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.RESEND_API_KEY = 'test-resend-key';
+    mockEnv.RESEND_API_KEY = 'test-resend-key';
   });
 
   describe('sendScanCompleteEmail', () => {
@@ -63,7 +82,8 @@ describe('email-service', () => {
     it('sends email via Resend when everything is valid', async () => {
       mockQuery
         .mockResolvedValueOnce([]) // notification enabled (default)
-        .mockResolvedValueOnce([{ email: 'user@test.com' }]);
+        .mockResolvedValueOnce([{ email: 'user@test.com' }]) // getUserEmail
+        .mockResolvedValueOnce([{ preferred_language: 'en' }]); // getUserLocale
       mockFetch.mockResolvedValue({ ok: true });
 
       await sendScanCompleteEmail('u-1', {
@@ -78,17 +98,18 @@ describe('email-service', () => {
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: 'Bearer test-resend-key',
+            Authorization: `Bearer ${mockEnv.RESEND_API_KEY}`,
           }),
         }),
       );
     });
 
     it('skips when RESEND_API_KEY is not set', async () => {
-      delete process.env.RESEND_API_KEY;
+      mockEnv.RESEND_API_KEY = '';
       mockQuery
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ email: 'user@test.com' }]);
+        .mockResolvedValueOnce([]) // notification enabled (default)
+        .mockResolvedValueOnce([{ email: 'user@test.com' }]) // getUserEmail
+        .mockResolvedValueOnce([{ preferred_language: 'en' }]); // getUserLocale
 
       await sendScanCompleteEmail('u-1', {
         projectName: 'Test',
@@ -104,8 +125,9 @@ describe('email-service', () => {
   describe('sendCriticalBugEmail', () => {
     it('sends email for critical bug', async () => {
       mockQuery
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ email: 'user@test.com' }]);
+        .mockResolvedValueOnce([]) // notification enabled (default)
+        .mockResolvedValueOnce([{ email: 'user@test.com' }]) // getUserEmail
+        .mockResolvedValueOnce([{ preferred_language: 'en' }]); // getUserLocale
       mockFetch.mockResolvedValue({ ok: true });
 
       await sendCriticalBugEmail('u-1', {
@@ -117,15 +139,16 @@ describe('email-service', () => {
 
       expect(mockFetch).toHaveBeenCalled();
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(body.subject).toContain('Critical bug');
+      expect(body.subject).toBe('notification.criticalBug.subject');
     });
   });
 
   describe('sendMonitorAlertEmail', () => {
     it('sends monitor alert email', async () => {
       mockQuery
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ email: 'user@test.com' }]);
+        .mockResolvedValueOnce([]) // notification enabled (default)
+        .mockResolvedValueOnce([{ email: 'user@test.com' }]) // getUserEmail
+        .mockResolvedValueOnce([{ preferred_language: 'en' }]); // getUserLocale
       mockFetch.mockResolvedValue({ ok: true });
 
       await sendMonitorAlertEmail('u-1', {
@@ -142,8 +165,9 @@ describe('email-service', () => {
   describe('sendAutoFixPREmail', () => {
     it('sends auto-fix PR email', async () => {
       mockQuery
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ email: 'user@test.com' }]);
+        .mockResolvedValueOnce([]) // notification enabled (default)
+        .mockResolvedValueOnce([{ email: 'user@test.com' }]) // getUserEmail
+        .mockResolvedValueOnce([{ preferred_language: 'en' }]); // getUserLocale
       mockFetch.mockResolvedValue({ ok: true });
 
       await sendAutoFixPREmail('u-1', {
@@ -164,7 +188,7 @@ describe('email-service', () => {
 
       expect(mockFetch).toHaveBeenCalled();
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(body.subject).toContain('Reset your WhyNot password');
+      expect(body.subject).toBe('notification.passwordReset.heading');
       expect(body.html).toContain('reset-token-123');
     });
   });

@@ -42,7 +42,7 @@ describe('requireCredits', () => {
     await requireCredits('TEST_GENERATION')(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Workspace not resolved' }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'errors:workspace.notResolved' }));
   });
 
   it('returns 402 if insufficient credits', async () => {
@@ -53,7 +53,7 @@ describe('requireCredits', () => {
     expect(res.status).toHaveBeenCalledWith(402);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        error: 'Insufficient credits',
+        error: 'errors:business.insufficientCredits',
         code: 'INSUFFICIENT_CREDITS',
         details: expect.objectContaining({ required: 3, available: 1 }),
       }),

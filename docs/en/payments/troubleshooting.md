@@ -1,3 +1,10 @@
+---
+title: "Payment Troubleshooting Guide"
+description: "Common issues and solutions for WhyNot QA's Stripe payment integration."
+lang: en
+draft: false
+---
+
 # Payment Troubleshooting Guide
 
 Common issues and solutions for WhyNot QA's Stripe payment integration.

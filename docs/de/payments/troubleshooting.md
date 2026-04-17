@@ -1,3 +1,10 @@
+---
+title: "Fehlerbehebung bei Zahlungen"
+description: "Haeufige Probleme und Loesungen fuer die Stripe-Zahlungsintegration von WhyNot QA."
+lang: de
+draft: false
+---
+
 # Fehlerbehebung bei Zahlungen
 
 Haeufige Probleme und Loesungen fuer die Stripe-Zahlungsintegration von WhyNot QA.

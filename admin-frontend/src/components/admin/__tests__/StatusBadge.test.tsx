@@ -5,22 +5,22 @@ import { StatusBadge } from '../StatusBadge';
 describe('StatusBadge', () => {
   it('renders active status', () => {
     render(<StatusBadge status="active" />);
-    expect(screen.getByText('active')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
   it('renders trialing status', () => {
     render(<StatusBadge status="trialing" />);
-    expect(screen.getByText('trialing')).toBeInTheDocument();
+    expect(screen.getByText('Trialing')).toBeInTheDocument();
   });
 
-  it('renders past_due status with underscores replaced by spaces', () => {
+  it('renders past_due status with translated label', () => {
     render(<StatusBadge status="past_due" />);
-    expect(screen.getByText('past due')).toBeInTheDocument();
+    expect(screen.getByText('Past Due')).toBeInTheDocument();
   });
 
   it('renders canceled status', () => {
     render(<StatusBadge status="canceled" />);
-    expect(screen.getByText('canceled')).toBeInTheDocument();
+    expect(screen.getByText('Canceled')).toBeInTheDocument();
   });
 
   it('renders unknown status with fallback styling', () => {

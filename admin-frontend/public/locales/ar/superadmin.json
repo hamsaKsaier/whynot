@@ -78,6 +78,7 @@
     "workspaceId": "معرّف مساحة العمل",
     "amount": "المبلغ",
     "descriptionLabel": "الوصف",
+    "reasonPlaceholder": "سبب منح الأرصدة...",
     "noUsers": "لم يتم العثور على مستخدمين",
     "columns": {
       "user": "المستخدم",

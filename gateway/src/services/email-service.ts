@@ -8,15 +8,35 @@
 import { createLogger } from '../../shared/logger/logger';
 import { query } from '../../shared/database/connection';
 import { env } from '../config/env';
+import i18n from '../i18n';
 
 const logger = createLogger('email-service');
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const FROM_ADDRESS = env.EMAIL_FROM_ADDRESS;
 
+const RTL_LOCALES = ['ar'];
+
+async function getUserLocale(userId: string): Promise<string> {
+  try {
+    const rows = await query<{ preferred_language: string | null }>('SELECT preferred_language FROM users WHERE id = $1', [userId]);
+    return rows[0]?.preferred_language || 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+function getT(locale: string) {
+  return i18n.getFixedT(locale, 'emails');
+}
+
 // ── Template helper ──────────────────────────────────────────────────────────
 
-function emailLayout(content: string, ctaUrl?: string, ctaText?: string): string {
+function emailLayout(content: string, ctaUrl?: string, ctaText?: string, locale: string = 'en'): string {
+  const direction = RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr';
+  const lang = RTL_LOCALES.includes(locale) ? 'ar' : 'en';
+  const t = getT(locale);
+
   const ctaBlock = ctaUrl && ctaText
     ? `<div style="text-align:center;margin:24px 0">
          <a href="${ctaUrl}" style="display:inline-block;padding:12px 28px;background-color:#0f172a;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">${ctaText}</a>
@@ -24,7 +44,7 @@ function emailLayout(content: string, ctaUrl?: string, ctaText?: string): string
     : '';
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${lang}" dir="${direction}">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f1f5f9">
   <div style="max-width:560px;margin:0 auto;padding:24px 16px">
@@ -39,7 +59,7 @@ function emailLayout(content: string, ctaUrl?: string, ctaText?: string): string
     </div>
     <!-- Footer -->
     <div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px">
-      You're receiving this because you have notifications enabled in WhyNot.
+      ${t('notification.footer')}
     </div>
   </div>
 </body>
@@ -90,10 +110,9 @@ async function isNotificationEnabled(userId: string, triggerType: string): Promi
        WHERE user_id = $1 AND trigger_type = $2 AND channel = 'email'`,
       [userId, triggerType],
     );
-    // Default to enabled if no row exists
     return rows.length === 0 ? true : rows[0].enabled;
   } catch {
-    return true; // default to enabled if table doesn't exist yet
+    return true;
   }
 }
 
@@ -120,17 +139,24 @@ export async function sendScanCompleteEmail(userId: string, data: ScanCompleteDa
   const to = await getUserEmail(userId);
   if (!to) return;
 
-  const subject = `Scan complete: ${data.projectName}`;
+  const locale = await getUserLocale(userId);
+  const t = getT(locale);
+
+  const subject = t('notification.scanComplete.subject', { projectName: data.projectName });
+  const criticalInfo = data.criticalCount > 0
+    ? ` (<span style="color:#dc2626">${t('notification.scanComplete.criticalInfo', { criticalCount: data.criticalCount })}</span>)`
+    : '';
   const html = emailLayout(
-    `<h2 style="margin:0 0 12px;font-size:18px;color:#0f172a">Scan Complete</h2>
+    `<h2 style="margin:0 0 12px;font-size:18px;color:#0f172a">${t('notification.scanComplete.heading')}</h2>
      <p style="margin:0 0 8px;color:#334155;font-size:14px;line-height:1.5">
-       Your QA scan for <strong>${data.projectName}</strong> has finished.
+       ${t('notification.scanComplete.body', { projectName: `<strong>${data.projectName}</strong>` })}
      </p>
      <p style="margin:0;color:#334155;font-size:14px;line-height:1.5">
-       Found <strong>${data.bugCount}</strong> bug${data.bugCount !== 1 ? 's' : ''}${data.criticalCount > 0 ? ` (<span style="color:#dc2626">${data.criticalCount} critical</span>)` : ''}.
+       ${t('notification.scanComplete.bugsFound', { bugCount: data.bugCount })}${criticalInfo}
      </p>`,
     data.scanUrl,
-    'View Results',
+    t('notification.scanComplete.cta'),
+    locale,
   );
   await sendEmail(to, subject, html);
 }
@@ -147,17 +173,21 @@ export async function sendCriticalBugEmail(userId: string, data: CriticalBugData
   const to = await getUserEmail(userId);
   if (!to) return;
 
-  const subject = `Critical bug found in ${data.projectName}`;
+  const locale = await getUserLocale(userId);
+  const t = getT(locale);
+
+  const subject = t('notification.criticalBug.subject', { projectName: data.projectName });
   const html = emailLayout(
-    `<h2 style="margin:0 0 12px;font-size:18px;color:#dc2626">Critical Bug Found</h2>
+    `<h2 style="margin:0 0 12px;font-size:18px;color:#dc2626">${t('notification.criticalBug.heading')}</h2>
      <p style="margin:0 0 8px;color:#334155;font-size:14px;line-height:1.5">
-       A <strong style="color:#dc2626">${data.severity}</strong> severity bug was found in <strong>${data.projectName}</strong>.
+       ${t('notification.criticalBug.body', { severity: `<strong style="color:#dc2626">${data.severity}</strong>`, projectName: `<strong>${data.projectName}</strong>` })}
      </p>
      <p style="margin:0;color:#334155;font-size:14px;line-height:1.5">
        <strong>${data.bugTitle}</strong>
      </p>`,
     data.bugUrl,
-    'View Bug',
+    t('notification.criticalBug.cta'),
+    locale,
   );
   await sendEmail(to, subject, html);
 }
@@ -174,17 +204,21 @@ export async function sendMonitorAlertEmail(userId: string, data: MonitorAlertDa
   const to = await getUserEmail(userId);
   if (!to) return;
 
-  const subject = `Monitor alert: ${data.monitorName}`;
+  const locale = await getUserLocale(userId);
+  const t = getT(locale);
+
+  const subject = t('notification.monitorAlert.subject', { monitorName: data.monitorName });
   const html = emailLayout(
-    `<h2 style="margin:0 0 12px;font-size:18px;color:#f59e0b">Monitor Alert</h2>
+    `<h2 style="margin:0 0 12px;font-size:18px;color:#f59e0b">${t('notification.monitorAlert.heading')}</h2>
      <p style="margin:0 0 8px;color:#334155;font-size:14px;line-height:1.5">
-       Monitor <strong>${data.monitorName}</strong> triggered an alert: <strong>${data.alertType}</strong>.
+       ${t('notification.monitorAlert.body', { monitorName: `<strong>${data.monitorName}</strong>`, alertType: `<strong>${data.alertType}</strong>` })}
      </p>
      <p style="margin:0;color:#334155;font-size:14px;line-height:1.5">
-       URL: ${data.url}
+       ${t('notification.monitorAlert.urlLabel', { url: data.url })}
      </p>`,
     data.dashboardUrl,
-    'View Dashboard',
+    t('notification.monitorAlert.cta'),
+    locale,
   );
   await sendEmail(to, subject, html);
 }
@@ -200,35 +234,41 @@ export async function sendAutoFixPREmail(userId: string, data: AutoFixPRData): P
   const to = await getUserEmail(userId);
   if (!to) return;
 
-  const subject = `Auto-fix PR created for ${data.projectName}`;
+  const locale = await getUserLocale(userId);
+  const t = getT(locale);
+
+  const subject = t('notification.autoFixPr.subject', { projectName: data.projectName });
   const html = emailLayout(
-    `<h2 style="margin:0 0 12px;font-size:18px;color:#0f172a">Auto-Fix PR Ready</h2>
+    `<h2 style="margin:0 0 12px;font-size:18px;color:#0f172a">${t('notification.autoFixPr.heading')}</h2>
      <p style="margin:0 0 8px;color:#334155;font-size:14px;line-height:1.5">
-       A pull request has been created to fix <strong>${data.bugTitle}</strong> in <strong>${data.projectName}</strong>.
+       ${t('notification.autoFixPr.body', { bugTitle: `<strong>${data.bugTitle}</strong>`, projectName: `<strong>${data.projectName}</strong>` })}
      </p>`,
     data.prUrl,
-    'Review PR',
+    t('notification.autoFixPr.cta'),
+    locale,
   );
   await sendEmail(to, subject, html);
 }
 
 // ── Password Reset Email ─────────────────────────────────────────────────────
 
-export async function sendPasswordResetEmail(to: string, resetToken: string): Promise<void> {
+export async function sendPasswordResetEmail(to: string, resetToken: string, locale: string = 'en'): Promise<void> {
   const frontendUrl = env.FRONTEND_URL;
   const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+  const t = getT(locale);
 
-  const subject = 'Reset your WhyNot password';
+  const subject = t('notification.passwordReset.heading');
   const html = emailLayout(
-    `<h2 style="margin:0 0 12px;font-size:18px;color:#0f172a">Password Reset</h2>
+    `<h2 style="margin:0 0 12px;font-size:18px;color:#0f172a">${t('notification.passwordReset.heading')}</h2>
      <p style="margin:0 0 8px;color:#334155;font-size:14px;line-height:1.5">
-       We received a request to reset your password. Click the button below to choose a new one.
+       ${t('notification.passwordReset.body')}
      </p>
      <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.5">
-       This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
+       ${t('notification.passwordReset.expiry')}
      </p>`,
     resetUrl,
-    'Reset Password',
+    t('notification.passwordReset.cta'),
+    locale,
   );
   await sendEmail(to, subject, html);
 }

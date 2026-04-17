@@ -45,7 +45,10 @@ function checkScanRateLimit(ip: string): void {
     throw createError(
       `Rate limit exceeded. You can run ${MAX_SCANS_PER_DAY} free scans per day. Sign up for unlimited access.`,
       429,
-      'RATE_LIMIT_EXCEEDED'
+      'RATE_LIMIT_EXCEEDED',
+      undefined,
+      'errors:rateLimit.scanLimitExceeded',
+      { maxScans: String(MAX_SCANS_PER_DAY) }
     );
   }
 
@@ -69,11 +72,11 @@ const ALLOW_INTERNAL = env.NODE_ENV !== 'production' ||
 function validatePublicUrl(url: string): void {
   let parsed: URL;
   try { parsed = new URL(url); } catch {
-    throw createError('targetUrl must be a valid URL', 400, 'VALIDATION_ERROR');
+    throw createError('targetUrl must be a valid URL', 400, 'VALIDATION_ERROR', undefined, 'errors:validation.urlInvalid');
   }
 
   if (!['http:', 'https:'].includes(parsed.protocol)) {
-    throw createError('targetUrl must use http or https', 400, 'VALIDATION_ERROR');
+    throw createError('targetUrl must use http or https', 400, 'VALIDATION_ERROR', undefined, 'errors:validation.urlProtocolRequired');
   }
 
   const host = parsed.hostname.toLowerCase();
@@ -82,12 +85,12 @@ function validatePublicUrl(url: string): void {
   if (ALLOW_INTERNAL) return;
 
   if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') {
-    throw createError('Cannot scan localhost', 400, 'VALIDATION_ERROR');
+    throw createError('Cannot scan localhost', 400, 'VALIDATION_ERROR', undefined, 'errors:validation.cannotScanLocalhost');
   }
 
   const privateRanges = [/^10\./, /^192\.168\./, /^172\/(1[6-9]|2\d|3[01])\./, /^169\.254\./, /^0\./, /^127\./];
   if (privateRanges.some(r => r.test(host))) {
-    throw createError('Cannot scan private network addresses', 400, 'VALIDATION_ERROR');
+    throw createError('Cannot scan private network addresses', 400, 'VALIDATION_ERROR', undefined, 'errors:validation.cannotScanPrivateNetwork');
   }
 }
 

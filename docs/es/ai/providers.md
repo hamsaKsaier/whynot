@@ -1,3 +1,10 @@
+---
+title: "Matriz de proveedores de IA"
+description: "Proveedores de IA soportados por WhyNot QA y su configuracion."
+lang: es
+draft: false
+---
+
 # Matriz de proveedores de IA
 
 WhyNot QA admite múltiples proveedores de IA a través de una fábrica unificada en `gateway/src/utils/ai/select-ai-provider.ts`. Todas las llamadas de IA no-v2 pasan por esta fábrica.

@@ -113,7 +113,7 @@ export function UserDetailPage() {
   const handleGrant = async (wsId: string) => {
     const amount = parseInt(creditAmount)
     if (!amount || amount <= 0) return
-    await grantCredits(wsId, amount, creditDescription || 'Admin grant')
+    await grantCredits(wsId, amount, creditDescription || t('admin.userDetail.defaultGrant'))
     setCreditAmount('')
     setCreditDescription('')
     await fetchUser()
@@ -122,7 +122,7 @@ export function UserDetailPage() {
   const handleRevoke = async (wsId: string) => {
     const amount = parseInt(creditAmount)
     if (!amount || amount <= 0) return
-    await revokeCredits(wsId, amount, creditDescription || 'Admin revoke')
+    await revokeCredits(wsId, amount, creditDescription || t('admin.userDetail.defaultRevoke'))
     setCreditAmount('')
     setCreditDescription('')
     await fetchUser()

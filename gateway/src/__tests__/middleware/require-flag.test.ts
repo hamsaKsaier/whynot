@@ -27,7 +27,7 @@ describe('requireFlag', () => {
     await requireFlag('ci_integration' as any)(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Workspace not resolved' }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'errors:workspace.notResolved' }));
   });
 
   it('returns 403 if flag is disabled', async () => {
@@ -59,7 +59,7 @@ describe('requireFlag', () => {
     expect(body.error.message).toBe('translated:errors:flags.disabled');
   });
 
-  it('falls back to English message when t is not available', async () => {
+  it('falls back to key string when t is not available', async () => {
     mockIsFlagEnabled.mockResolvedValue(false);
     const req = { workspaceId: 'ws-1' } as any; // no t function
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
@@ -67,7 +67,7 @@ describe('requireFlag', () => {
     await requireFlag('ci_integration' as any)(req, res, next);
 
     const body = res.json.mock.calls[0][0];
-    expect(body.error.message).toBe('This feature is currently disabled');
+    expect(body.error.message).toBe('errors:flags.disabled');
   });
 
   it('calls next(err) on thrown error', async () => {

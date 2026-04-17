@@ -5,19 +5,19 @@ import { isFlagEnabled } from '../utils/feature-flags';
 export function requireFlag(key: PlatformFeatureKey) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const t = (req as any).t ?? ((k: string) => k);
       const orgId = req.workspaceId;
       if (!orgId) {
-        res.status(401).json({ success: false, error: 'Workspace not resolved' });
+        res.status(401).json({ success: false, error: t('errors:workspace.notResolved') });
         return;
       }
 
       if (!(await isFlagEnabled(orgId, key))) {
-        const t = (req as any).t;
         res.status(403).json({
           success: false,
           error: {
             code: 'FEATURE_DISABLED',
-            message: t ? t('errors:flags.disabled') : 'This feature is currently disabled',
+            message: t('errors:flags.disabled'),
           },
         });
         return;

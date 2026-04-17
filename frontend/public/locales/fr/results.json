@@ -166,5 +166,13 @@
   "results.viewDetails": "Voir les détails",
   "results.fixStep": "Corriger ou modifier cette étape",
   "results.executionError": "Erreur d'exécution",
-  "results.visualRegressionLabel": "Régression visuelle ({{severity}})"
+  "results.visualRegressionLabel": "Régression visuelle ({{severity}})",
+  "results.testRuns.serviceStarting": "Impossible de charger les exécutions de test. Le service est peut-être encore en cours de démarrage — veuillez réessayer dans un instant.",
+  "results.testRuns.fetchError": "Échec de la récupération des exécutions de test",
+  "results.testRuns.execution": "Exécution {{id}}",
+  "results.testRuns.unknown": "Inconnu",
+  "results.testRunDetail.executionIdRequired": "L'ID d'exécution est requis",
+  "results.testRunDetail.notFound": "Exécution introuvable",
+  "results.testRunDetail.fetchError": "Échec de la récupération des détails d'exécution",
+  "results.testCases.stepsCount": "{{count}} étapes"
 }

@@ -166,5 +166,12 @@
   "results.viewDetails": "View Details",
   "results.fixStep": "Fix or modify this step",
   "results.executionError": "Execution Error",
-  "results.visualRegressionLabel": "Visual Regression ({{severity}})"
+  "results.visualRegressionLabel": "Visual Regression ({{severity}})",
+  "results.testRuns.serviceStarting": "Unable to load test runs. The service may still be starting up — please try again in a moment.",
+  "results.testRuns.fetchError": "Failed to fetch test runs",
+  "results.testRuns.execution": "Execution {{id}}",
+  "results.testRuns.unknown": "Unknown",
+  "results.testRunDetail.executionIdRequired": "Execution ID is required",
+  "results.testRunDetail.fetchError": "Failed to fetch execution details",
+  "results.testCases.stepsCount": "{{count}} steps"
 }

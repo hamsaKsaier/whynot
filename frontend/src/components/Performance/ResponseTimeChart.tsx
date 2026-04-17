@@ -54,8 +54,8 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) =>
               }}
               labelFormatter={(v) => `${v}s`}
               formatter={(value: any, name: any) => [
-                `${value}ms`,
-                name === 'p50' ? 'p50 (median)' : name,
+                `${value} ${t('runner.performance.chart.unit.ms')}`,
+                name,
               ]}
             />
             <Legend
@@ -64,6 +64,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) =>
             <Area
               type="monotone"
               dataKey="p50"
+              name={t('runner.performance.chart.legend.p50')}
               fill="#0ea5e9"
               fillOpacity={0.08}
               stroke="none"
@@ -73,6 +74,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) =>
             <Line
               type="monotone"
               dataKey="p50"
+              name={t('runner.performance.chart.legend.p50')}
               stroke="#0ea5e9"
               strokeWidth={2}
               dot={false}
@@ -81,6 +83,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) =>
             <Line
               type="monotone"
               dataKey="p95"
+              name={t('runner.performance.chart.legend.p95')}
               stroke="#f59e0b"
               strokeWidth={2}
               dot={false}
@@ -89,6 +92,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ data }) =>
             <Line
               type="monotone"
               dataKey="p99"
+              name={t('runner.performance.chart.legend.p99')}
               stroke="#ef4444"
               strokeWidth={1.5}
               strokeDasharray="4 2"

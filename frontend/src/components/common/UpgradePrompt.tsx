@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiX, FiArrowRight } from 'react-icons/fi';
 
 interface UpgradePromptProps {
@@ -14,29 +15,31 @@ interface UpgradePromptProps {
 }
 
 export const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, type, details }) => {
+  const { t } = useTranslation('common');
+
   if (!isOpen) return null;
 
   const messages = {
     credits: {
-      title: 'Insufficient Credits',
+      title: t('common.upgrade.credits.title'),
       description: details
-        ? `This operation requires ${details.required} credits but you only have ${details.available} remaining.`
-        : 'You don\'t have enough credits for this operation.',
-      action: 'Upgrade Plan',
+        ? t('common.upgrade.credits.descriptionDetailed', { required: details.required, available: details.available })
+        : t('common.upgrade.credits.description'),
+      action: t('common.upgrade.credits.action'),
     },
     feature: {
-      title: 'Feature Not Available',
+      title: t('common.upgrade.feature.title'),
       description: details?.feature
-        ? `The "${details.feature}" feature is not included in your current plan.`
-        : 'This feature is not available on your current plan.',
-      action: 'View Plans',
+        ? t('common.upgrade.feature.descriptionDetailed', { feature: details.feature })
+        : t('common.upgrade.feature.description'),
+      action: t('common.upgrade.feature.action'),
     },
     subscription: {
-      title: 'Subscription Required',
+      title: t('common.upgrade.subscription.title'),
       description: details?.status === 'TRIAL_EXPIRED'
-        ? 'Your free trial has expired. Upgrade to continue using the platform.'
-        : 'An active subscription is required to use this feature.',
-      action: 'Upgrade Now',
+        ? t('common.upgrade.subscription.descriptionTrialExpired')
+        : t('common.upgrade.subscription.description'),
+      action: t('common.upgrade.subscription.action'),
     },
   };
 
@@ -64,7 +67,7 @@ export const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, t
             onClick={onClose}
             className="px-4 py-2 text-sm text-foreground hover:bg-accent rounded-lg"
           >
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button
             onClick={() => {

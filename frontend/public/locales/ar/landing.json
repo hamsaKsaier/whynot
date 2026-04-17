@@ -297,7 +297,9 @@
     "legal": "قانوني",
     "privacy": "سياسة الخصوصية",
     "terms": "شروط الخدمة",
-    "copyright": "© {{year}} WhyNot. جميع الحقوق محفوظة."
+    "copyright": "© {{year}} WhyNot. جميع الحقوق محفوظة.",
+    "github": "GitHub",
+    "twitter": "X (Twitter)"
   },
   "seo": {
     "title": "WhyNot — اختبار ضمان الجودة الذاتي بالذكاء الاصطناعي",

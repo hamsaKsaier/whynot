@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Toast, ToastType } from './Toast';
 
 export type { ToastType };
@@ -31,13 +32,15 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   onDismiss,
   position = 'top-right',
 }) => {
+  const { t } = useTranslation('common');
+
   if (toasts.length === 0) return null;
 
   return (
     <div
       className={`fixed z-50 ${positionClasses[position]} pointer-events-none`}
       aria-live="polite"
-      aria-label="Notifications"
+      aria-label={t('common.aria.notifications')}
     >
       <div className="pointer-events-auto">
         {toasts.map((toast) => (

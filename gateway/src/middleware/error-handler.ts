@@ -5,6 +5,8 @@ export interface AppError extends Error {
   statusCode?: number;
   code?: string;
   details?: any;
+  messageKey?: string;
+  messageParams?: Record<string, any>;
 }
 
 export function errorHandler(
@@ -25,9 +27,15 @@ export function errorHandler(
   const statusCode = (err as AppError).statusCode || 500;
   const t = (req as any).t ?? ((key: string) => key);
 
+  const appErr = err as AppError;
+  let message = err.message || t('errors:server.internal');
+  if (appErr.messageKey) {
+    message = t(appErr.messageKey, appErr.messageParams || {});
+  }
+
   const errorResponse: any = {
     success: false,
-    error: err.message || t('errors:server.internal'),
+    error: message,
     timestamp: new Date().toISOString(),
     path: req.path
   };
@@ -62,11 +70,15 @@ export function createError(
   message: string,
   statusCode: number = 500,
   code?: string,
-  details?: any
+  details?: any,
+  messageKey?: string,
+  messageParams?: Record<string, any>
 ): AppError {
   const error = new Error(message) as AppError;
   error.statusCode = statusCode;
   error.code = code;
   error.details = details;
+  error.messageKey = messageKey;
+  error.messageParams = messageParams;
   return error;
 }

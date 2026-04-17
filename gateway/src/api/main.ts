@@ -1850,7 +1850,7 @@ app.post('/api/test-cases/:testCaseId/baselines', asyncHandler(async (req, res) 
     res.status(201).json({ success: true, baseline });
   } catch (baselineErr: any) {
     logger.warn('Failed to create visual baseline (non-critical)', { error: baselineErr.message });
-    res.status(201).json({ success: true, baseline: null, warning: 'Baseline creation failed but is non-critical' });
+    res.status(201).json({ success: true, baseline: null, warning: (req as any).t('errors:service.baselineNonCritical') });
   }
 }));
 
@@ -2798,7 +2798,7 @@ app.post('/api/admin/users/:id/impersonate', requireAuth, requireSuperAdmin, asy
 app.post('/api/admin/users/:id/reset-password', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
   const user = await adminUserRepository.findById(req.params.id);
   if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
-  if (!user.email) throw createError('User has no email address', 400, 'NO_EMAIL');
+  if (!user.email) throw createError((req as any).t('errors:auth.noEmailAddress'), 400, 'NO_EMAIL');
 
   const crypto = await import('crypto');
   const resetToken = crypto.randomBytes(32).toString('hex');
@@ -2810,20 +2810,20 @@ app.post('/api/admin/users/:id/reset-password', requireAuth, requireSuperAdmin, 
   );
 
   auditLog(req, 'user.reset_password', 'user', req.params.id, { email: user.email });
-  res.json({ success: true, message: 'Password reset initiated', resetToken });
+  res.json({ success: true, message: (req as any).t('success:admin.passwordResetInitiated'), resetToken });
 }));
 
 // --- Admin: Move User to Organization ---
 
 app.patch('/api/admin/users/:id/organization', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
   const { workspaceId } = req.body;
-  if (!workspaceId) throw createError('workspaceId is required', 400, 'VALIDATION_ERROR');
+  if (!workspaceId) throw createError((req as any).t('errors:validation.workspaceIdBodyRequired'), 400, 'VALIDATION_ERROR');
 
   const user = await adminUserRepository.findById(req.params.id);
   if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
 
   const targetWorkspace = await workspaceRepository.findById(workspaceId);
-  if (!targetWorkspace) throw createError('Target workspace not found', 404, 'WORKSPACE_NOT_FOUND');
+  if (!targetWorkspace) throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'WORKSPACE_NOT_FOUND');
 
   const previousWorkspaces = await workspaceRepository.findAllByUserId(user.id);
   const previousIds = previousWorkspaces.map(w => w.id);
@@ -2842,23 +2842,23 @@ app.patch('/api/admin/users/:id/organization', requireAuth, requireSuperAdmin, a
     after: { workspaceId },
   });
 
-  res.json({ success: true, message: 'User moved to organization' });
+  res.json({ success: true, message: (req as any).t('success:admin.userMovedToOrganization') });
 }));
 
 // --- Admin: Force Set Plan ---
 
 app.patch('/api/admin/users/:id/plan', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
   const { planId } = req.body;
-  if (!planId) throw createError('planId is required', 400, 'VALIDATION_ERROR');
+  if (!planId) throw createError((req as any).t('errors:validation.planIdRequired'), 400, 'VALIDATION_ERROR');
 
   const user = await adminUserRepository.findById(req.params.id);
   if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
 
   const plan = await planRepository.findById(planId);
-  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
 
   const workspaces = await workspaceRepository.findAllByUserId(user.id);
-  if (workspaces.length === 0) throw createError('User has no workspace', 400, 'NO_WORKSPACE');
+  if (workspaces.length === 0) throw createError((req as any).t('errors:workspace.noWorkspace'), 400, 'NO_WORKSPACE');
 
   const primaryWs = workspaces[0];
   const existingSub = await subscriptionRepository.findByWorkspaceId(primaryWs.id);
@@ -2876,7 +2876,7 @@ app.patch('/api/admin/users/:id/plan', requireAuth, requireSuperAdmin, asyncHand
     planName: plan.name,
   });
 
-  res.json({ success: true, message: `Plan set to ${plan.name}` });
+  res.json({ success: true, message: (req as any).t('success:admin.planUpdated', { planName: plan.name }) });
 }));
 
 // --- Admin: Organizations (Workspaces) ---
@@ -2948,7 +2948,7 @@ app.get('/api/admin/organizations', requireAuth, requireSuperAdmin, asyncHandler
 
 app.get('/api/admin/organizations/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
   const org = await workspaceRepository.findById(req.params.id);
-  if (!org) throw createError('Organization not found', 404, 'ORG_NOT_FOUND');
+  if (!org) throw createError((req as any).t('errors:resource.organizationNotFound'), 404, 'ORG_NOT_FOUND');
 
   const owner = await adminUserRepository.findById(org.owner_id);
   const sub = await subscriptionRepository.findByWorkspaceId(org.id);
@@ -3003,7 +3003,7 @@ app.get('/api/admin/organizations/:id', requireAuth, requireSuperAdmin, asyncHan
 
 app.patch('/api/admin/organizations/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
   const org = await workspaceRepository.findById(req.params.id);
-  if (!org) throw createError('Organization not found', 404, 'ORG_NOT_FOUND');
+  if (!org) throw createError((req as any).t('errors:resource.organizationNotFound'), 404, 'ORG_NOT_FOUND');
 
   const before: Record<string, any> = { name: org.name };
   const after: Record<string, any> = {};
@@ -3024,7 +3024,7 @@ app.patch('/api/admin/organizations/:id', requireAuth, requireSuperAdmin, asyncH
 
   if (req.body.planId) {
     const plan = await planRepository.findById(req.body.planId);
-    if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+    if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
     const sub = await subscriptionRepository.findByWorkspaceId(org.id);
     if (sub) {
       before.planId = sub.plan_id;
@@ -3039,7 +3039,7 @@ app.patch('/api/admin/organizations/:id', requireAuth, requireSuperAdmin, asyncH
   }
 
   auditLog(req, 'organization.update', 'organization', org.id, { before, after });
-  res.json({ success: true, message: 'Organization updated' });
+  res.json({ success: true, message: (req as any).t('success:admin.organizationUpdated') });
 }));
 
 app.post('/api/admin/organizations/:id/flags/:key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
@@ -3047,11 +3047,11 @@ app.post('/api/admin/organizations/:id/flags/:key', requireAuth, requireSuperAdm
   const { enabled } = req.body;
 
   if (!isValidFeatureKey(key)) {
-    throw createError('Unknown feature flag key', 400, 'UNKNOWN_FLAG_KEY');
+    throw createError((req as any).t('errors:flags.unknownKey'), 400, 'UNKNOWN_FLAG_KEY');
   }
 
   const org = await workspaceRepository.findById(orgId);
-  if (!org) throw createError('Organization not found', 404, 'ORG_NOT_FOUND');
+  if (!org) throw createError((req as any).t('errors:resource.organizationNotFound'), 404, 'ORG_NOT_FOUND');
 
   const before = await featureFlagRepository.getOrgOverride(orgId, key);
   await featureFlagRepository.upsertOverride(orgId, key, enabled, req.user?.id || '');
@@ -3265,7 +3265,7 @@ app.put('/api/admin/feature-flags/:orgId/:key', requireAuth, requireSuperAdmin, 
 
   const { enabled } = req.body;
   if (typeof enabled !== 'boolean') {
-    throw createError('enabled must be a boolean', 400, 'INVALID_BODY');
+    throw createError((req as any).t('errors:validation.enabledMustBeBoolean'), 400, 'INVALID_BODY');
   }
 
   const before = await featureFlagRepository.getOrgOverride(orgId, key);
@@ -3321,23 +3321,23 @@ app.patch('/api/admin/billing-config', requireAuth, requireSuperAdmin, asyncHand
   const updates = req.body as Record<string, string>;
 
   if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
-    throw createError('Body must be a JSON object of key-value pairs', 400, 'INVALID_BODY');
+    throw createError(req.t('errors:validation.bodyMustBeJsonObject'), 400, 'INVALID_BODY');
   }
 
   const changes: Record<string, { before: string | null; after: string }> = {};
 
   for (const [key, value] of Object.entries(updates)) {
     if (!BILLING_CONFIG_KEYS.includes(key as any)) {
-      throw createError(`Unknown billing config key: ${key}`, 400, 'UNKNOWN_KEY');
+      throw createError(req.t('errors:validation.unknownBillingConfigKey', { key }), 400, 'UNKNOWN_KEY');
     }
     if (typeof value !== 'string') {
-      throw createError(`Value for "${key}" must be a string`, 400, 'INVALID_VALUE');
+      throw createError(req.t('errors:validation.valueMustBeString', { key }), 400, 'INVALID_VALUE');
     }
 
     if (key === 'trial_days' || key === 'grace_period_days') {
       const parsed = parseInt(value, 10);
       if (isNaN(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
-        throw createError(`${key} must be a non-negative integer`, 400, 'INVALID_VALUE');
+        throw createError(req.t('errors:validation.mustBeNonNegativeInteger', { key }), 400, 'INVALID_VALUE');
       }
     }
 
@@ -3346,7 +3346,7 @@ app.patch('/api/admin/billing-config', requireAuth, requireSuperAdmin, asyncHand
         const n = BigInt(value);
         if (n < 0n) throw new Error();
       } catch {
-        throw createError(`${key} must be a non-negative bigint string`, 400, 'INVALID_VALUE');
+        throw createError(req.t('errors:validation.mustBeNonNegativeBigint', { key }), 400, 'INVALID_VALUE');
       }
     }
 
@@ -3360,13 +3360,13 @@ app.patch('/api/admin/billing-config', requireAuth, requireSuperAdmin, asyncHand
           if (n < 0n) throw new Error();
         }
       } catch {
-        throw createError('payg_rates must be a JSON object mapping event types to non-negative bigint values', 400, 'INVALID_VALUE');
+        throw createError(req.t('errors:validation.paygRatesMustBeValid'), 400, 'INVALID_VALUE');
       }
     }
 
     if (key === 'currency') {
       if (!/^[a-z]{3}$/.test(value)) {
-        throw createError('currency must be a 3-letter lowercase ISO code (e.g., "usd")', 400, 'INVALID_VALUE');
+        throw createError(req.t('errors:validation.currencyMustBeValid'), 400, 'INVALID_VALUE');
       }
     }
 
@@ -3431,7 +3431,7 @@ app.patch('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandle
 
   for (const entry of providers) {
     if (!entry || typeof entry !== 'object') {
-      throw createError('Each provider entry must be an object', 400, 'INVALID_ENTRY');
+      throw createError(req.t('errors:validation.providerEntryInvalid'), 400, 'INVALID_ENTRY');
     }
     if (typeof entry.provider !== 'string' || !isKnownProvider(entry.provider)) {
       throw createError(req.t('errors:ai.unknownProvider', { provider: entry.provider }) || 'Unknown provider', 400, 'INVALID_ENTRY');
@@ -3740,7 +3740,7 @@ app.get('/api/me/ai-providers', requireAuth, asyncHandler(async (req: any, res) 
 app.get('/api/me/flags', requireAuth, asyncHandler(async (req: any, res) => {
   const orgId = req.workspaceId;
   if (!orgId) {
-    throw createError('Workspace not resolved', 401, 'WORKSPACE_REQUIRED');
+    throw createError((req as any).t('errors:workspace.notResolved'), 401, 'WORKSPACE_REQUIRED');
   }
   const flags = await resolveAllFlags(orgId);
   res.json({ success: true, flags });

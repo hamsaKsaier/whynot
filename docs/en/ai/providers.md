@@ -1,3 +1,10 @@
+---
+title: "AI Provider Matrix"
+description: "WhyNot QA supports multiple AI providers through a unified factory at `gateway/src/utils/ai/select-ai-provider.ts`. All non-v2 AI calls route through "
+lang: en
+draft: false
+---
+
 # AI Provider Matrix
 
 WhyNot QA supports multiple AI providers through a unified factory at `gateway/src/utils/ai/select-ai-provider.ts`. All non-v2 AI calls route through this factory.

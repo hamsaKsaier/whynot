@@ -1,3 +1,10 @@
+---
+title: "Plattform-Schluessel-Aufloesung"
+description: "Zentralisierte Verwaltung von KI-API-Schluesseln fuer verwaltete Tier-Operationen."
+lang: de
+draft: false
+---
+
 # Plattform-Schluessel-Auflosung
 
 Die Plattform-Schluessel-Auflosung bietet eine zentralisierte Verwaltung von KI-API-Schluesseln fuer alle verwalteten Tier-Operationen. Anstatt Schluessel in Umgebungsvariablen zu speichern, konfigurieren und rotieren Administratoren Schluessel ueber das Admin-Dashboard.

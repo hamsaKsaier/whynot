@@ -47,7 +47,7 @@ export const VirtualUsersChart: React.FC<VirtualUsersChartProps> = ({ data }) =>
                 fontSize: 12,
               }}
               labelFormatter={(v) => `${v}s`}
-              formatter={(value: any) => [`${value} VUs`, t('runner.performance.virtualUsers')]}
+              formatter={(value: any) => [`${value} ${t('runner.performance.chart.unit.vus')}`, t('runner.performance.virtualUsers')]}
             />
             <Area
               type="monotone"

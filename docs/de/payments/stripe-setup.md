@@ -1,3 +1,10 @@
+---
+title: "Stripe-Einrichtungsanleitung"
+description: "Vollstaendige Anleitung zur Konfiguration von Stripe-Zahlungen in WhyNot QA."
+lang: de
+draft: false
+---
+
 # Stripe-Einrichtungsanleitung
 
 Vollstaendige Anleitung zur Konfiguration von Stripe-Zahlungen in WhyNot QA.

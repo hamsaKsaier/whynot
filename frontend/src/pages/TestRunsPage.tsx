@@ -52,7 +52,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
       const raw = err.response?.data?.error || err.message || '';
       // Never expose internal stack traces or function errors to the user
       const isTechnical = raw.includes('is not a function') || raw.includes('TypeError') || raw.includes('Cannot read') || raw.includes('undefined');
-      setError(isTechnical ? 'Unable to load test runs. The service may still be starting up — please try again in a moment.' : raw || 'Failed to fetch test runs');
+      setError(isTechnical ? t('results.testRuns.serviceStarting') : raw || t('results.testRuns.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -334,10 +334,10 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                         {getStatusBadge(execution.status)}
                         <div>
                           <div className="font-medium text-foreground">
-                            Execution {execution.execution_id?.substring(0, 8) || 'N/A'}
+                            {t('results.testRuns.execution', { id: execution.execution_id?.substring(0, 8) || 'N/A' })}
                           </div>
                           <div className="text-sm text-muted-foreground" title={execution.started_at ? formatAbsoluteTime(execution.started_at) : ''}>
-                            {execution.started_at ? formatRelativeTime(execution.started_at) : 'Unknown'}
+                            {execution.started_at ? formatRelativeTime(execution.started_at) : t('results.testRuns.unknown')}
                           </div>
                         </div>
                       </div>
@@ -382,7 +382,7 @@ export const TestRunsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => 
                           </span>
                         </div>
                         <span className="text-xs text-muted-foreground shrink-0" title={execution.started_at ? formatAbsoluteTime(execution.started_at) : ''}>
-                          {execution.started_at ? formatRelativeTime(execution.started_at) : 'Unknown'}
+                          {execution.started_at ? formatRelativeTime(execution.started_at) : t('results.testRuns.unknown')}
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">

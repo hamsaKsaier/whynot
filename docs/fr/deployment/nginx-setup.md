@@ -1,3 +1,10 @@
+---
+title: "Configuration Nginx"
+description: "Configuration Nginx pour servir les trois noms d'hotes de WhyNot QA."
+lang: fr
+draft: false
+---
+
 # Configuration Nginx
 
 WhyNot utilise un seul fichier de configuration Nginx pour servir trois noms d'hôtes :

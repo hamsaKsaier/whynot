@@ -2,12 +2,13 @@
  * i18n-no-hardcoded-strings.test.ts
  *
  * Lint test that fails if hardcoded English error/success strings are found
- * in API route handlers instead of using req.t().
+ * in API route handlers or middleware instead of using req.t().
  *
- * Scans gateway/src/api/**\/*.ts for patterns like:
+ * Scans gateway/src/api/**\/*.ts and gateway/src/middleware/**\/*.ts for patterns like:
  *   res.status(4xx).json({ error: "literal" })
  *   res.json({ error: "literal" })
  *   res.json({ message: "literal" })
+ *   createError('literal', ...) without messageKey
  */
 
 import { describe, it, expect } from 'vitest';
@@ -15,6 +16,7 @@ import fs from 'fs';
 import path from 'path';
 
 const API_DIR = path.resolve(__dirname, '../api');
+const MIDDLEWARE_DIR = path.resolve(__dirname, '../middleware');
 
 /**
  * Files/patterns to exclude from the check.
@@ -22,7 +24,6 @@ const API_DIR = path.resolve(__dirname, '../api');
  */
 const EXCLUDED_FILES = [
   'webhooks/stripe.ts',   // Runs before i18n middleware (system-to-system)
-  'main.ts',              // Admin-only endpoints — separate migration scope
 ];
 
 /**
@@ -45,7 +46,7 @@ const ALLOWED_PATTERNS = [
  * Lines inside standalone utility functions (without access to `req`)
  * that validate input before the route handler catches the error.
  * These throw errors caught by asyncHandler -> errorHandler, which has req.t().
- * TODO: Refactor to use messageKey pattern in error handler.
+ * These now use messageKey for i18n but still have English fallback in the message param.
  */
 const UTILITY_FUNCTION_PATTERNS = [
   /targetUrl must be a valid URL/,
@@ -60,16 +61,24 @@ const UTILITY_FUNCTION_PATTERNS = [
   /ClickUp API error:/,             // reportBugToClickUp helper (no req)
   /ClickUp not connected/,          // reportBugToClickUp helper (no req)
   /ClickUp list not configured/,    // reportBugToClickUp helper (no req)
+  /Validation failed:/,             // Zod validation wrapper (uses messageKey)
+  /Invalid URL format:/,            // sanitizeUrl utility (uses messageKey)
+  /Text must be a non-empty/,       // sanitizeText utility (uses messageKey)
+  /Text exceeds maximum/,           // sanitizeText utility (uses messageKey)
+  /Invalid protocol/,               // sanitizeUrl utility (uses messageKey)
+  /Rate limit exceeded/,            // checkScanRateLimit utility (uses messageKey)
+  /No workspace found/,             // resolveWorkspace utility (uses messageKey)
 ];
 
-function findApiFiles(dir: string): string[] {
+function findTsFiles(dir: string, basePath: string): string[] {
   const results: string[] = [];
+  if (!fs.existsSync(dir)) return results;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      results.push(...findApiFiles(fullPath));
+      results.push(...findTsFiles(fullPath, basePath));
     } else if (entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts') && !entry.name.endsWith('.d.ts')) {
-      const relativePath = path.relative(API_DIR, fullPath);
+      const relativePath = path.relative(basePath, fullPath);
       if (!EXCLUDED_FILES.includes(relativePath)) {
         results.push(fullPath);
       }
@@ -107,13 +116,10 @@ function checkForHardcodedStrings(filePath: string): HardcodedMatch[] {
     if (line.trim().startsWith('//') || line.trim().startsWith('*') || line.trim().startsWith('import')) continue;
 
     // Pattern: res.status(4xx or 5xx).json({ error: 'literal' })
-    // Match: error: 'Some text' or error: "Some text" but NOT error: req.t(...) or error: (req as any).t(...)
     const errorPattern = /\.json\(\s*\{\s*error:\s*['"]([^'"]+)['"]/;
     const errorMatch = errorPattern.exec(line);
     if (errorMatch) {
-      // Check it's not already using req.t() on the same line or the preceding expression
       if (!line.includes('.t(') && !line.includes('error.response') && !line.includes('error.message')) {
-        // Check if it's an allowed pattern
         if (!ALLOWED_PATTERNS.some(p => p.test(line))) {
           matches.push({
             file: relativePath,
@@ -125,19 +131,21 @@ function checkForHardcodedStrings(filePath: string): HardcodedMatch[] {
     }
 
     // Pattern: createError('literal string', ...) where first arg is a plain string
-    // Should be createError(req.t('...'), ...) or createError((req as any).t('...'), ...)
     const createErrorPattern = /createError\(\s*['"]([^'"]+)['"]/;
     const createErrorMatch = createErrorPattern.exec(line);
     if (createErrorMatch) {
-      // Not using req.t()
       if (!line.includes('.t(')) {
-        // Skip environment variable errors and encryption key errors (developer-facing)
         const msg = createErrorMatch[1];
+        // Skip environment variable errors and encryption key errors (developer-facing)
         if (msg.includes('environment variable') || msg.includes('ENCRYPTION_KEY') || msg.includes('not set')) {
           continue;
         }
-        // Skip utility function validation messages (no req access)
+        // Skip utility function validation messages (they use messageKey for i18n)
         if (UTILITY_FUNCTION_PATTERNS.some(p => p.test(msg))) {
+          continue;
+        }
+        // Skip createError calls that have messageKey parameter (5th arg or later)
+        if (/createError\([^)]*,\s*'errors:/.test(line)) {
           continue;
         }
         matches.push({
@@ -167,13 +175,16 @@ function checkForHardcodedStrings(filePath: string): HardcodedMatch[] {
   return matches;
 }
 
-describe('i18n — no hardcoded English strings in API handlers', () => {
+describe('i18n — no hardcoded English strings in API handlers and middleware', () => {
   it('no hardcoded error strings in res.json() or createError() calls', () => {
-    const apiFiles = findApiFiles(API_DIR);
-    expect(apiFiles.length).toBeGreaterThan(0);
+    const apiFiles = findTsFiles(API_DIR, API_DIR);
+    const middlewareFiles = findTsFiles(MIDDLEWARE_DIR, MIDDLEWARE_DIR);
+    const allFiles = [...apiFiles, ...middlewareFiles];
+
+    expect(allFiles.length).toBeGreaterThan(0);
 
     const allMatches: HardcodedMatch[] = [];
-    for (const file of apiFiles) {
+    for (const file of allFiles) {
       allMatches.push(...checkForHardcodedStrings(file));
     }
 
@@ -182,7 +193,7 @@ describe('i18n — no hardcoded English strings in API handlers', () => {
         .map(m => `  ${m.file}:${m.line} — ${m.text}`)
         .join('\n');
       expect.fail(
-        `Found ${allMatches.length} hardcoded English string(s) in API handlers.\n` +
+        `Found ${allMatches.length} hardcoded English string(s) in API handlers/middleware.\n` +
         `These should use req.t() for i18n:\n${report}`
       );
     }

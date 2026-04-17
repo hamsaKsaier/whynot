@@ -1,3 +1,10 @@
+---
+title: "Zahlungsservice"
+description: "Dokumentation der PaymentService-Klasse als zentraler Einstiegspunkt fuer alle Zahlungsoperationen."
+lang: de
+draft: false
+---
+
 # Zahlungsservice
 
 Die Klasse `PaymentService` (`gateway/src/payments/payment-service.ts`) ist der einzige Einstiegspunkt für alle Zahlungsoperationen in whynot. Jede Geschäftslogik ruft `PaymentService` auf — niemals den Stripe-Provider direkt.

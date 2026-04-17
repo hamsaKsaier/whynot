@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiCheckCircle, FiInfo, FiX } from 'react-icons/fi';
 import { Button } from './Button';
 
@@ -43,6 +44,7 @@ export const Alert: React.FC<AlertProps> = ({
     info: FiInfo,
   };
 
+  const { t } = useTranslation('common');
   const Icon = icons[type];
 
   return (
@@ -84,7 +86,7 @@ export const Alert: React.FC<AlertProps> = ({
           <button
             onClick={onClose}
             className="ms-4 flex-shrink-0 text-current opacity-50 hover:opacity-75 transition-opacity"
-            aria-label="Close"
+            aria-label={t('common.aria.close')}
           >
             <FiX className="h-5 w-5" />
           </button>

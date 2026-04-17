@@ -1,3 +1,10 @@
+---
+title: "إعداد Nginx"
+description: "تكوين Nginx لخدمة أسماء مضيفين WhyNot المتعددة"
+lang: ar
+draft: false
+---
+
 # إعداد Nginx
 
 يستخدم WhyNot ملف إعداد Nginx واحد لخدمة ثلاثة أسماء مضيفين:

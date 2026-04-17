@@ -1,3 +1,10 @@
+---
+title: "Acces Superadmin"
+description: "Configuration et fonctionnement de l'espace superadmin de WhyNot QA."
+lang: fr
+draft: false
+---
+
 # Acces Superadmin
 
 ## Apercu

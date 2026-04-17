@@ -1,3 +1,10 @@
+---
+title: "Guia de configuracion de Stripe"
+description: "Instrucciones completas para configurar los pagos de Stripe en WhyNot QA."
+lang: es
+draft: false
+---
+
 # Guia de configuracion de Stripe
 
 Instrucciones completas para configurar los pagos de Stripe en WhyNot QA.

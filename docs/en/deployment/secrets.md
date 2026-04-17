@@ -1,3 +1,10 @@
+---
+title: "Secret Management"
+description: "This document describes how WhyNot handles sensitive configuration values across environments."
+lang: en
+draft: false
+---
+
 # Secret Management
 
 This document describes how WhyNot handles sensitive configuration values across environments.

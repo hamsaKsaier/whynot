@@ -1,5 +1,9 @@
 {
   "account.deletionScheduled": "Cuenta programada para eliminación. Tiene 7 días para cancelar esta acción iniciando sesión.",
+  "admin.organizationUpdated": "Organización actualizada",
+  "admin.passwordResetInitiated": "Restablecimiento de contraseña iniciado",
+  "admin.planUpdated": "Plan establecido a {{planName}}",
+  "admin.userMovedToOrganization": "Usuario movido a la organización",
   "account.exportQueued": "Solicitud de exportación en cola. Se le notificará cuando la exportación esté lista.",
   "auth.loggedOut": "Sesión cerrada con éxito",
   "auth.resetEmailSent": "Si existe una cuenta, se ha enviado un correo de restablecimiento",

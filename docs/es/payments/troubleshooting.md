@@ -1,3 +1,10 @@
+---
+title: "Guia de solucion de problemas de pagos"
+description: "Problemas comunes y soluciones para la integracion de pagos con Stripe en WhyNot QA."
+lang: es
+draft: false
+---
+
 # Guia de solucion de problemas de pagos
 
 Problemas comunes y soluciones para la integracion de pagos con Stripe en WhyNot QA.
