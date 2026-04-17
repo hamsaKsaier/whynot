@@ -37,6 +37,7 @@ import { Badge } from '../ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
 import { useAuth } from '../../contexts/AuthContext'
 import { useThemeContext } from '../ThemeProvider'
+import { useDirectionContext } from '../DirectionProvider'
 import { cn } from '../../lib/utils'
 import { getHostnameMode } from '../../lib/hostname'
 import { LanguageSwitcher } from '../LanguageSwitcher'
@@ -134,6 +135,7 @@ function SidebarNav({
   const { t } = useTranslation('admin')
   const navSections = getNavSections()
   const hostnameMode = getHostnameMode()
+  const { direction } = useDirectionContext()
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
@@ -143,6 +145,7 @@ function SidebarNav({
   return (
     <TooltipProvider delayDuration={0}>
       <div
+        dir={direction}
         className={cn(
           'flex h-full flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-150',
           collapsed ? 'w-16' : 'w-60'

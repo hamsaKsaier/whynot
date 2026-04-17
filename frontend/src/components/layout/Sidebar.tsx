@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { Logo } from "@/components/ui/Logo"
+import { useDirectionContext } from "@/components/DirectionProvider"
 
 interface SidebarProps {
   collapsed: boolean
@@ -99,10 +100,12 @@ function NavItem({
 export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarProps) {
   const { t } = useTranslation("common")
   const { pathname } = useLocation()
+  const { direction } = useDirectionContext()
 
   return (
     <TooltipProvider>
       <aside
+        dir={direction}
         className={cn(
           "flex h-full flex-col border-e bg-sidebar-background text-sidebar-foreground transition-[width] duration-150",
           collapsed ? "w-16" : "w-60"
