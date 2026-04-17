@@ -1,14 +1,104 @@
-.claude/worktrees
+# Version control
 .git
+.gitignore
+.gitattributes
+
+# Dependencies (reinstalled in image)
 node_modules
 **/node_modules
+
+# Build output
+dist
 **/dist
-*.md
+dist-ssr
+**/dist-ssr
+build
+**/build
+.next
+.turbo
+.cache
+*.tsbuildinfo
+
+# Test & coverage (never needed in runtime image)
+coverage
+**/coverage
+.nyc_output
+**/.nyc_output
+htmlcov
+**/htmlcov
+.coverage
+.coverage.*
+coverage.xml
+*.lcov
+lcov.info
+playwright-report
+**/playwright-report
+test-results
+**/test-results
+e2e
+**/e2e
+tests
+**/tests
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Python caches
+__pycache__
+**/__pycache__
+*.py[cod]
+.pytest_cache
+**/.pytest_cache
+.mypy_cache
+.ruff_cache
+.tox
+.venv
+**/.venv
+venv
+env
+ENV
+
+# Environment files (inject at runtime)
 .env
 .env.*
-tests
-assets
+!.env.example
+
+# Logs & pids
+*.log
+**/*.log
+.prompt_executor_*.log
+.prompt_executor_*.pid
+.prompt_executor_*_failures.log
+
+# Docs / examples / prompts (not needed at runtime)
+*.md
 docs
 examples
+prompts
+README*
+CHANGELOG*
+
+# Editor / tool state
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Agent tool configs
+.claude
 .cursor
+.cursorrules
+.windsurfrules
+.opencode
+.opencode.json
+.mcp.json
 .github
+AGENTS.md
+GEMINI.md
+
+# Knowledge graph
+.code-review-graph
+
+# Screenshots
+screenshots

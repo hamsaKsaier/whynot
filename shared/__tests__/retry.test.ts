@@ -38,6 +38,7 @@ describe('retryWithBackoff', () => {
     const fn = vi.fn().mockRejectedValue({ code: 'ETIMEDOUT' });
 
     const promise = retryWithBackoff(fn, { maxRetries: 2, initialDelayMs: 10 });
+    promise.catch(() => {});
     await vi.runAllTimersAsync();
     await expect(promise).rejects.toEqual({ code: 'ETIMEDOUT' });
     expect(fn).toHaveBeenCalledTimes(3);
