@@ -194,6 +194,23 @@ export abstract class BaseAgent {
   protected sumHistoryChars = 0;
   protected sumProjectContextChars = 0;
   protected sumToolDefsChars = 0;
+  // Priority 2 / Option C — residual between real usage.inputTokens and our
+  // char-based estimate. Captures the tool-result accumulation that generateText
+  // appends internally between maxSteps (our char sums only see call-start state).
+  protected sumToolResultsAccumulatedTokens = 0;
+
+  // ─── Priority 1: watchdog plumbing ─────────────────────────────────────
+  // Orchestrator polls `lastActivityAt` every 30s. If Date.now()-lastActivityAt
+  // > MAX_AGENT_IDLE_MIN*60_000 the orchestrator aborts the passed signal,
+  // which unblocks any in-flight generateText() call via AbortController.
+  // The orchestrator also reads `killedIdle` to distinguish normal errors
+  // from externally-enforced idle-kills (no retry for killed_idle).
+  public lastActivityAt: number = Date.now();
+  public abortSignal?: AbortSignal;
+  public killedIdle = false;
+  protected markActivity(): void {
+    this.lastActivityAt = Date.now();
+  }
 
   // Task 4 support: snapshot of the board at agent start. Agents can read
   // this in getInitialPrompt() to embed board-derived data in the USER
@@ -231,11 +248,15 @@ export abstract class BaseAgent {
    */
   async run(): Promise<AgentResult> {
     const startTime = Date.now();
+    // Priority 1: initial heartbeat so the watchdog doesn't trip during
+    // the first slow setup step (board init, system prompt build, etc.).
+    this.markActivity();
 
     try {
       // Initialize board entry
       await this.board.initialize(this.sessionId, this.agentType);
       await this.board.updateStatus(this.sessionId, this.agentType, 'working', 'Starting...');
+      this.markActivity();
 
       emitToSession(this.sessionId, {
         type: 'status_update',
@@ -339,19 +360,48 @@ export abstract class BaseAgent {
         sumHistoryChars: this.sumHistoryChars,
         sumProjectContextChars: this.sumProjectContextChars,
         sumToolDefsChars: this.sumToolDefsChars,
+        // Priority 2: residual tool-result accumulation tokens
+        sumToolResultsAccumulatedTokens: this.sumToolResultsAccumulatedTokens,
       };
     } catch (err: any) {
-      logger.error(`${this.agentType} agent failed`, {
-        sessionId: this.sessionId,
-        error: err.message,
-        stack: err.stack?.slice(0, 300),
-      });
+      // Priority 1: watchdog kill is NOT a normal agent failure. Log it
+      // differently, tag status as killed_idle so orchestrator knows to
+      // continue rather than retry, and surface the partial metrics we
+      // accumulated so cost accounting stays honest.
+      const isWatchdogKill = this.killedIdle
+        || err?.name === 'AbortError'
+        || err?.name === 'AI_AbortError'
+        || !!this.abortSignal?.aborted;
 
-      await this.board.updateStatus(this.sessionId, this.agentType, 'error', err.message).catch(() => {});
+      if (isWatchdogKill) {
+        logger.warn(`${this.agentType} agent killed by watchdog (idle timeout)`, {
+          sessionId: this.sessionId,
+          agentType: this.agentType,
+          lastActivityAt: new Date(this.lastActivityAt).toISOString(),
+          idleMs: Date.now() - this.lastActivityAt,
+          llmCallsMadeBeforeKill: this.llmCallCount,
+          toolCallsBeforeKill: this.totalToolCalls,
+        });
+      } else {
+        logger.error(`${this.agentType} agent failed`, {
+          sessionId: this.sessionId,
+          error: err.message,
+          stack: err.stack?.slice(0, 300),
+        });
+      }
+
+      const boardStatus: 'error' | 'killed_idle' = isWatchdogKill ? 'killed_idle' : 'error';
+      await this.board.updateStatus(this.sessionId, this.agentType, boardStatus, err.message).catch(() => {});
 
       emitToSession(this.sessionId, {
         type: 'status_update',
-        data: { agent: this.agentType, status: 'error', message: `${this.agentType} error: ${err.message}` },
+        data: {
+          agent: this.agentType,
+          status: boardStatus,
+          message: isWatchdogKill
+            ? `${this.agentType} killed by watchdog (idle)`
+            : `${this.agentType} error: ${err.message}`,
+        },
       });
 
       const errorCostCents = computeCostCents(
@@ -363,7 +413,7 @@ export abstract class BaseAgent {
 
       return {
         agentType: this.agentType,
-        status: 'error',
+        status: isWatchdogKill ? 'killed_idle' : 'error',
         pagesExplored: this.pagesExplored,
         testsGenerated: this.testsGenerated,
         bugsFound: this.bugsFound,
@@ -377,7 +427,7 @@ export abstract class BaseAgent {
         modelUsed: this.modelIdUsed,
         toolCallCount: this.totalToolCalls,
         durationMs: Date.now() - startTime,
-        completionReason: 'error',
+        completionReason: isWatchdogKill ? 'killed_idle' : 'error',
         // Task 1–3 instrumentation passthrough
         llmCallCount: this.llmCallCount,
         maxSingleCallInputTokens: this.maxSingleCallInputTokens,
@@ -385,6 +435,7 @@ export abstract class BaseAgent {
         sumHistoryChars: this.sumHistoryChars,
         sumProjectContextChars: this.sumProjectContextChars,
         sumToolDefsChars: this.sumToolDefsChars,
+        sumToolResultsAccumulatedTokens: this.sumToolResultsAccumulatedTokens,
       };
     }
   }
@@ -463,6 +514,9 @@ export abstract class BaseAgent {
       await this.board.updateStatus(this.sessionId, this.agentType, 'working', undefined, progressPct).catch(() => {});
 
       try {
+        // Priority 1: heartbeat right before the blocking LLM call so the
+        // watchdog sees progress even if the first step takes a while.
+        this.markActivity();
         const result = await generateText({
           model,
           // System prompt via the top-level `system:` parameter. The AI SDK
@@ -472,6 +526,10 @@ export abstract class BaseAgent {
           system: systemPrompt,
           messages,
           tools,
+          // Priority 1: propagate orchestrator's AbortController so the
+          // watchdog can cancel an in-flight LLM call (and the HTTP request
+          // under it) when an agent has been silent for too long.
+          abortSignal: this.abortSignal,
           // Anthropic prompt caching: cache the system prompt + tool definitions
           // as a stable prefix. Only applied for Claude models — other providers
           // would silently ignore it but cleaner to guard explicitly.
@@ -488,6 +546,10 @@ export abstract class BaseAgent {
           stopWhen: stepCountIs(20),
           maxOutputTokens: 2048,
           onStepFinish: async (event) => {
+            // Priority 1: each step = agent making progress. Reset the
+            // idle timer so long-running tool calls + multi-step loops
+            // don't look idle to the watchdog.
+            this.markActivity();
             // Emit tool calls for WebSocket
             if (event.toolCalls) {
               for (const tc of event.toolCalls) {
@@ -513,6 +575,8 @@ export abstract class BaseAgent {
             }
           },
         });
+        // Priority 1: successful LLM call completion is unambiguous activity.
+        this.markActivity();
 
         // Fix D: accumulate token usage per generateText call for cost tracking.
         // AI SDK v6 LanguageModelUsage shape: inputTokens, outputTokens,
@@ -574,6 +638,18 @@ export abstract class BaseAgent {
         this.sumProjectContextChars += projectContextChars;
         this.sumToolDefsChars += approxToolOverheadChars;
 
+        // Priority 2 / Option C — residual = (real tokens billed) − (our chars/4 estimates).
+        // Our char-based sums measure the messages array BEFORE generateText runs.
+        // generateText with stopWhen=stepCountIs(20) internally appends tool-result
+        // messages between steps, so the provider sees a much bigger payload by the
+        // final step. usage.inputTokens reflects that final state. The delta is
+        // exactly the tool-result accumulation we need to quantify for Part 2.
+        const estimatedInputTokens = Math.round(
+          (systemPromptChars + historyChars + projectContextChars + approxToolOverheadChars) / 4,
+        );
+        const toolResultsResidualTokens = Math.max(0, callInput - estimatedInputTokens);
+        this.sumToolResultsAccumulatedTokens += toolResultsResidualTokens;
+
         logger.info('generateText usage', {
           sessionId: this.sessionId,
           agentType: this.agentType,
@@ -594,6 +670,11 @@ export abstract class BaseAgent {
             projectContextTokensApprox: Math.round(projectContextChars / 4),
             toolDefsCharsApprox: approxToolOverheadChars,
             toolDefsTokensApprox: Math.round(approxToolOverheadChars / 4),
+            // Priority 2 residual: tokens present in the call that our
+            // char-based estimate didn't account for. High values mean
+            // tool-result accumulation across steps is dominating cost.
+            toolResultsResidualTokens,
+            estimatedInputTokens,
             messageCount: messages.length,
           },
         });
@@ -630,6 +711,17 @@ export abstract class BaseAgent {
         }
 
       } catch (err: any) {
+        // Priority 1: watchdog aborted us mid-call. Don't retry, don't swallow
+        // — propagate so run() can return a killed_idle result with the
+        // partial metrics we've already accumulated.
+        if (
+          err?.name === 'AbortError' ||
+          err?.name === 'AI_AbortError' ||
+          this.abortSignal?.aborted
+        ) {
+          this.killedIdle = true;
+          throw err;
+        }
         if (err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED')) {
           logger.warn('Rate limited — waiting 30s', { sessionId: this.sessionId, agent: this.agentType });
           await new Promise(r => setTimeout(r, 30_000));

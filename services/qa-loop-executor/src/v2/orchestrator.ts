@@ -25,6 +25,7 @@ import { ExploratoryTesterAgent } from './agents/exploratory-tester';
 import { SecurityTesterAgent } from './agents/security-tester';
 import { APITesterAgent } from './agents/api-tester';
 import { AutoTesterAgent } from './agents/auto-tester';
+import { BaseAgent } from './agents/base-agent';
 
 const logger = createLogger('v2-orchestrator');
 
@@ -36,6 +37,19 @@ const logger = createLogger('v2-orchestrator');
 // comparing to the cap so we stop BEFORE we blow the real-cost budget.
 const MAX_SESSION_COST_CENTS = 500;       // $5.00 real cost cap
 const COST_UNDERCOUNT_FACTOR = 5;         // Real cost ≈ DB-tracked × 5
+
+// ─── Priority 1: agent idle watchdog ────────────────────────────────────
+// If an agent makes no progress (no LLM call, no tool call step, no status
+// emission) for longer than this many minutes, the orchestrator aborts the
+// agent via AbortController, marks its result status as 'killed_idle',
+// and continues to the next agent. Tuned default of 10 min covers slow
+// MCP browser ops + model latency spikes without letting a stuck agent
+// hold the whole scan hostage for hours.
+const MAX_AGENT_IDLE_MIN = parseInt(process.env.MAX_AGENT_IDLE_MIN || '10', 10);
+// How often the watchdog polls the agent's lastActivityAt. Needs to be
+// shorter than MAX_AGENT_IDLE_MIN so we detect hangs promptly but long
+// enough to avoid spinning — 30s strikes the right balance.
+const WATCHDOG_POLL_MS = 30_000;
 
 export class V2Orchestrator {
   private sessionId: string;
@@ -284,12 +298,16 @@ export class V2Orchestrator {
           sumHistoryChars: acc.sumHistoryChars + (r.sumHistoryChars || 0),
           sumProjectContextChars: acc.sumProjectContextChars + (r.sumProjectContextChars || 0),
           sumToolDefsChars: acc.sumToolDefsChars + (r.sumToolDefsChars || 0),
+          // Priority 2 / Option C residual: tool-result accumulation tokens
+          sumToolResultsAccumulatedTokens:
+            acc.sumToolResultsAccumulatedTokens + (r.sumToolResultsAccumulatedTokens || 0),
         }),
         {
           llmCalls: 0, toolCalls: 0, inputTokens: 0, outputTokens: 0,
           cachedInputTokens: 0, costCents: 0,
           sumSystemPromptChars: 0, sumHistoryChars: 0,
           sumProjectContextChars: 0, sumToolDefsChars: 0,
+          sumToolResultsAccumulatedTokens: 0,
         },
       );
       const avgInputTokensPerLlmCall = costSummary.llmCalls > 0
@@ -315,7 +333,17 @@ export class V2Orchestrator {
         historyAvg: Math.round(costSummary.sumHistoryChars / costSummary.llmCalls / 4),
         projectContextAvg: Math.round(costSummary.sumProjectContextChars / costSummary.llmCalls / 4),
         toolDefsAvg: Math.round(costSummary.sumToolDefsChars / costSummary.llmCalls / 4),
-      } : { systemPromptAvg: 0, historyAvg: 0, projectContextAvg: 0, toolDefsAvg: 0 };
+        // Priority 2 / Option C: average tool-result tokens the SDK
+        // accumulates between maxSteps inside a single generateText call.
+        // Computed as (real usage.inputTokens) − (sum of our char-estimates).
+        // If this dominates, Task 6 should target tool-result truncation
+        // rather than conversation windowing.
+        toolResultsAccumulatedAvg:
+          Math.round(costSummary.sumToolResultsAccumulatedTokens / costSummary.llmCalls),
+      } : {
+        systemPromptAvg: 0, historyAvg: 0, projectContextAvg: 0,
+        toolDefsAvg: 0, toolResultsAccumulatedAvg: 0,
+      };
 
       // Task 3: worst-case single LLM call across all agents.
       let maxSingleCallInputTokens = 0;
@@ -326,6 +354,12 @@ export class V2Orchestrator {
           maxCallAgent = r.agentType;
         }
       }
+
+      // Priority 1: report watchdog policy + any agents it killed so
+      // cost/time anomalies are easy to attribute when reviewing a scan.
+      const killedAgents = allResults
+        .filter(r => r.status === 'killed_idle')
+        .map(r => r.agentType);
 
       logger.info('Scan cost breakdown', {
         sessionId: this.sessionId,
@@ -341,6 +375,12 @@ export class V2Orchestrator {
         avgToolCallsPerLlmCall,
         cacheHitRateOverall,
         compressionMode,
+        // Priority 1: watchdog visibility
+        watchdog: {
+          maxAgentIdleMin: MAX_AGENT_IDLE_MIN,
+          pollMs: WATCHDOG_POLL_MS,
+          killedAgents,
+        },
         // Task 2: token composition
         tokenComposition,
         // Task 3: worst-case LLM call
@@ -563,7 +603,7 @@ export class V2Orchestrator {
       data: { agent: agentType, status: 'starting', message: `${agentType} agent starting...` },
     });
 
-    let agent: { run(): Promise<AgentResult> };
+    let agent: BaseAgent;
 
     switch (agentType) {
       case 'exploratory':
@@ -592,7 +632,43 @@ export class V2Orchestrator {
         };
     }
 
-    const result = await agent.run();
+    // ─── Priority 1: agent idle watchdog ────────────────────────────────
+    // Poll every WATCHDOG_POLL_MS. If `lastActivityAt` hasn't moved for
+    // MAX_AGENT_IDLE_MIN minutes, abort the agent's AbortController — this
+    // unwinds the in-flight generateText call, the agent's catch-block
+    // detects the AbortError, and returns a status='killed_idle' result.
+    // Orchestrator swallows the outcome and proceeds to the next agent.
+    const abortController = new AbortController();
+    agent.abortSignal = abortController.signal;
+    const idleBudgetMs = MAX_AGENT_IDLE_MIN * 60_000;
+    let watchdogTripped = false;
+    const watchdog = setInterval(() => {
+      const idleMs = Date.now() - agent.lastActivityAt;
+      if (idleMs > idleBudgetMs && !watchdogTripped) {
+        watchdogTripped = true;
+        logger.warn('AGENT_WATCHDOG_TRIGGERED', {
+          sessionId: this.sessionId,
+          agentType,
+          idleMs,
+          idleBudgetMs,
+          lastActivityAt: new Date(agent.lastActivityAt).toISOString(),
+          policy: 'abort, mark killed_idle, continue to next agent (no retry)',
+        });
+        agent.killedIdle = true;
+        abortController.abort();
+      }
+    }, WATCHDOG_POLL_MS);
+    // Prevent the interval from keeping Node alive after the agent resolves.
+    if (typeof (watchdog as any).unref === 'function') {
+      (watchdog as any).unref();
+    }
+
+    let result: AgentResult;
+    try {
+      result = await agent.run();
+    } finally {
+      clearInterval(watchdog);
+    }
 
     // Fix D: persist per-agent cost + usage to qa_loop_iterations
     // so v2 sessions have the same cost visibility as v1.
