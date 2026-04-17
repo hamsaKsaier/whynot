@@ -226,20 +226,28 @@ export abstract class BaseAgent {
     this.boardTools = new BoardTools(config.sessionId, config.agentType);
     this.lastBoardPollTime = new Date().toISOString();
 
+    const loopConfig = {
+      targetUrl: config.targetUrl,
+      mode: 'explore' as const,
+      qualityThreshold: 80,
+      maxIterations: 1,
+      maxDurationHours: 1,
+      loginCredentials: config.loginCredentials,
+    };
+
     if (mcpBrowser) {
       this.mcpBrowser = mcpBrowser;
-      this.toolExecutor = new ToolExecutor(
-        config.sessionId,
-        {
-          targetUrl: config.targetUrl,
-          mode: 'explore',
-          qualityThreshold: 80,
-          maxIterations: 1,
-          maxDurationHours: 1,
-          loginCredentials: config.loginCredentials,
-        },
-        mcpBrowser
-      );
+      this.toolExecutor = new ToolExecutor(config.sessionId, loopConfig, mcpBrowser);
+    } else {
+      // Agents without a browser (auto_tester, qa_lead) still need state +
+      // report tools (save_test_case, get_session_state, etc.) which are
+      // purely DB operations. Instantiate a ToolExecutor backed by an
+      // unstarted MCPBrowser — browser_* tool calls would return "MCP
+      // browser not connected" but those agents never call them.
+      // Without this bootstrap, every tool call returned
+      // "Tool not available for auto_tester: save_test_case" → 0 tests saved.
+      const headlessBrowser = new MCPBrowser(config.sessionId);
+      this.toolExecutor = new ToolExecutor(config.sessionId, loopConfig, headlessBrowser);
     }
   }
 

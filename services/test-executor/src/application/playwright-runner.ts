@@ -393,7 +393,30 @@ async function executePlaywrightRun(
     const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
     const testFn = new AsyncFunction('page', 'browser', 'context', rewrittenCode);
 
-    await testFn(page, browser, context);
+    // Inner hard-deadline (timeoutMs) around testFn itself. Complements the
+    // outer Promise.race in runPlaywrightCode: if testFn hangs internally,
+    // this rejects inside the try/finally so the browser-close in finally
+    // runs cleanly. Without this, the outer 45s timer would reject up-stack
+    // but the in-flight testFn keeps awaiting, leaking the chromium subprocess
+    // because the finally never executes.
+    let hardTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const hardDeadline = new Promise<never>((_, reject) => {
+      hardTimeoutHandle = setTimeout(
+        () => reject(new Error(`Hard timeout: test execution exceeded ${timeoutMs}ms`)),
+        timeoutMs,
+      );
+    });
+
+    // Suppress the unhandled rejection that fires when the browser is closed
+    // (in the finally block below) while testFn is still awaiting internally.
+    const testExecution = testFn(page, browser, context) as Promise<void>;
+    testExecution.catch(() => {});
+
+    try {
+      await Promise.race([testExecution, hardDeadline]);
+    } finally {
+      clearTimeout(hardTimeoutHandle);
+    }
 
     // Capture after screenshot on success
     await page.screenshot({ path: afterScreenshot, fullPage: true }).catch(() => {});
