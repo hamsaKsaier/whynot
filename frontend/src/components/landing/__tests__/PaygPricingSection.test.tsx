@@ -160,7 +160,9 @@ describe('PaygPricingSection', () => {
     await user.type(firstInput, '10');
 
     const totalEl = screen.getByTestId('total-credits');
-    expect(totalEl.textContent).not.toBe('0');
+    await vi.waitFor(() => {
+      expect(totalEl.textContent).not.toBe('0');
+    });
   });
 
   it('recommended pack shows when total > 0', async () => {

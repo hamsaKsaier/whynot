@@ -227,7 +227,7 @@
   "admin.announcements.edit": "Edit",
   "admin.announcements.delete": "Delete",
   "admin.announcements.deleteTitle": "Delete Announcement",
-  "admin.announcements.deleteConfirm": "Are you sure you want to delete this announcement? This cannot be undone.",
+  "admin.announcements.deleteConfirm": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
   "admin.announcements.deleteBtn": "Delete",
 
   "admin.usage.title": "Usage Tracking",

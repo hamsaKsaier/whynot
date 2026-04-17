@@ -1,3 +1,10 @@
+---
+title: "Tarife und Preise"
+description: "Vergleichen Sie die Tarife Free, Pro BYO und Pro Managed von WhyNot und erfahren Sie, wie Abrechnung, Upgrade und Downgrade funktionieren."
+lang: de
+draft: false
+---
+
 # Tarife und Preise
 
 ## Unsere Tarife im Vergleich

@@ -223,7 +223,7 @@
   "admin.announcements.edit": "Editar",
   "admin.announcements.delete": "Eliminar",
   "admin.announcements.deleteTitle": "Eliminar anuncio",
-  "admin.announcements.deleteConfirm": "¿Está seguro de que desea eliminar este anuncio? Esta acción no se puede deshacer.",
+  "admin.announcements.deleteConfirm": "¿Está seguro de que desea eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
   "admin.announcements.deleteBtn": "Eliminar",
   "admin.usage.title": "Seguimiento de uso",
   "admin.usage.noData": "No hay datos de uso disponibles aún",

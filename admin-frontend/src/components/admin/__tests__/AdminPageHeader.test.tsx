@@ -48,8 +48,8 @@ describe('AdminPageHeader', () => {
     const usersLink = screen.getByRole('link', { name: 'Users' });
     expect(usersLink).toHaveAttribute('href', '/users');
 
-    // Last breadcrumb has no link
-    expect(screen.getByText('User Details')).toBeInTheDocument();
+    // Last breadcrumb has no link (title h1 also renders "User Details")
+    expect(screen.getAllByText('User Details').length).toBeGreaterThanOrEqual(1);
     const allLinks = screen.getAllByRole('link');
     expect(allLinks).toHaveLength(2);
   });

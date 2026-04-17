@@ -26,6 +26,8 @@ i18n
     supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],
     fallbackLng: 'en',
     load: 'languageOnly',
+    keySeparator: false,
+    nsSeparator: ':',
     interpolation: { escapeValue: false },
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',

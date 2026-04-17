@@ -1,6 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, AlertTriangle, Globe } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface BrowserFrameProps {
@@ -16,14 +16,15 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
   error,
   url,
 }) => {
+  const { t } = useTranslation('common');
   return (
     <div className="flex-1 bg-muted/30 flex items-center justify-center overflow-auto p-4">
       {isLoading && !imageUrl && (
         <div className="flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-          <p className="text-sm text-muted-foreground">Connecting to browser stream...</p>
+          <p className="text-sm text-muted-foreground">{t('browserFrame.connecting', 'Connecting to browser stream...')}</p>
           {url && (
-            <p className="text-xs text-muted-foreground/70">URL: {url}</p>
+            <p className="text-xs text-muted-foreground/70">{t('browserFrame.urlLabel', 'URL')}: {url}</p>
           )}
         </div>
       )}
@@ -34,7 +35,7 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
           <AlertDescription>
             <p className="font-medium">{error}</p>
             <p className="text-xs mt-2 opacity-80">
-              Check browser console for more details. Make sure WebSocket server is running.
+              {t('browserFrame.errorHint', 'Check browser console for more details. Make sure WebSocket server is running.')}
             </p>
           </AlertDescription>
         </Alert>
@@ -44,7 +45,7 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
         <div className="relative max-w-full">
           <img
             src={imageUrl}
-            alt="Browser preview"
+            alt={t('browserFrame.previewAlt', 'Browser preview')}
             className="max-w-full h-auto rounded-lg border border-border"
             style={{ maxHeight: 'calc(100vh - 200px)' }}
           />
@@ -60,15 +61,15 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
         <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
           <Globe className="h-10 w-10 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">
-            Waiting for browser frames...
+            {t('browserFrame.waiting', 'Waiting for browser frames...')}
           </p>
           {url && (
             <p className="text-xs text-muted-foreground/70 mt-1">
-              URL: {url}
+              {t('browserFrame.urlLabel', 'URL')}: {url}
             </p>
           )}
           <p className="text-xs text-muted-foreground/70 mt-1">
-            Frames will appear here once WebSocket connection is established and test execution begins
+            {t('browserFrame.waitingHint', 'Frames will appear here once WebSocket connection is established and test execution begins')}
           </p>
         </div>
       )}

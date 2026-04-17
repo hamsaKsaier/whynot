@@ -65,7 +65,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
           <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('back')}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('back')} aria-label={t('runner.browser.back', 'Back')}>
                   <ChevronLeft className="h-4 w-4 rtl:scale-x-[-1]" />
                 </Button>
               </TooltipTrigger>
@@ -73,7 +73,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('forward')}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('forward')} aria-label={t('runner.browser.forward', 'Forward')}>
                   <ChevronRight className="h-4 w-4 rtl:scale-x-[-1]" />
                 </Button>
               </TooltipTrigger>
@@ -81,7 +81,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('refresh')}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('refresh')} aria-label={t('runner.browser.refresh', 'Refresh')}>
                   <RefreshCw className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -89,7 +89,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('home')}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onNavigate?.('home')} aria-label={t('runner.browser.home', 'Home')}>
                   <Home className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -116,7 +116,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
             <span className="text-xs text-muted-foreground tabular-nums">{currentZoom}%</span>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onZoomChange?.(Math.max(25, currentZoom - 25))}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onZoomChange?.(Math.max(25, currentZoom - 25))} aria-label={t('runner.browser.zoomOut', 'Zoom out')}>
                   <ZoomOut className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -124,7 +124,7 @@ export const BrowserControls: React.FC<BrowserControlsProps> = ({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onZoomChange?.(Math.min(200, currentZoom + 25))}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onZoomChange?.(Math.min(200, currentZoom + 25))} aria-label={t('runner.browser.zoomIn', 'Zoom in')}>
                   <ZoomIn className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>

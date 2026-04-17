@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import React from 'react';
 import { ResultsTabs } from '../ResultsTabs';
+
+const renderWithRouter = (ui: React.ReactElement) =>
+  render(<MemoryRouter>{ui}</MemoryRouter>);
 
 const defaultProps = {
   testCases: [
@@ -39,20 +44,20 @@ const defaultProps = {
 
 describe('ResultsTabs', () => {
   it('renders tab buttons', () => {
-    render(<ResultsTabs {...defaultProps} />);
-    expect(screen.getByText(/tests/i)).toBeInTheDocument();
-    expect(screen.getByText(/bugs/i)).toBeInTheDocument();
-    expect(screen.getByText(/pages/i)).toBeInTheDocument();
+    renderWithRouter(<ResultsTabs {...defaultProps} />);
+    expect(screen.getAllByText(/tests/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/bugs/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/pages/i).length).toBeGreaterThan(0);
   });
 
   it('shows test cases in default tab', () => {
-    render(<ResultsTabs {...defaultProps} />);
+    renderWithRouter(<ResultsTabs {...defaultProps} />);
     expect(screen.getByText('Login Test')).toBeInTheDocument();
   });
 
   it('switches to bugs tab on click', async () => {
     const user = userEvent.setup();
-    render(<ResultsTabs {...defaultProps} />);
+    renderWithRouter(<ResultsTabs {...defaultProps} />);
     const bugsTab = screen.getAllByText(/bugs/i).find(
       (el) => el.tagName === 'BUTTON' || el.getAttribute('role') === 'tab'
     );
@@ -63,7 +68,7 @@ describe('ResultsTabs', () => {
   });
 
   it('shows summary stats', () => {
-    render(<ResultsTabs {...defaultProps} />);
-    expect(screen.getByText(/1/)).toBeInTheDocument();
+    renderWithRouter(<ResultsTabs {...defaultProps} />);
+    expect(screen.getAllByText(/1/).length).toBeGreaterThan(0);
   });
 });

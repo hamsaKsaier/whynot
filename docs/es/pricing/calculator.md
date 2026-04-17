@@ -1,3 +1,10 @@
+---
+title: "Calculadora de Creditos"
+description: "Estime su consumo mensual de creditos y elija el plan adecuado con escenarios de ejemplo y consejos de optimizacion."
+lang: es
+draft: false
+---
+
 # Calculadora de Creditos
 
 La calculadora de creditos de WhyNot le permite estimar el consumo mensual de su equipo y seleccionar el paquete de creditos mas adecuado. Esta guia explica como utilizarla y presenta escenarios de ejemplo para equipos de diferentes tamanos.
@@ -6,16 +13,9 @@ La calculadora de creditos de WhyNot le permite estimar el consumo mensual de su
 
 ## Como Utilizar la Calculadora
 
-### Paso 1: Acceda a la Calculadora
+### Paso 1: Ingrese los Parametros de su Equipo
 
-Acceda a la calculadora de creditos desde:
-
-- **Panel de control > Facturacion > Calculadora de creditos**
-- O directamente desde la pagina de precios en el sitio web de WhyNot
-
-### Paso 2: Ingrese los Parametros de su Equipo
-
-Complete los siguientes campos:
+Acceda a la calculadora desde **Panel de control > Facturacion > Calculadora de creditos** o desde la pagina de precios en el sitio web. Complete los siguientes campos:
 
 | Campo | Descripcion | Ejemplo |
 |---|---|---|
@@ -29,7 +29,7 @@ Complete los siguientes campos:
 | **Sesiones de QA Monitor/mes** | Sesiones de monitoreo continuo al mes | 10 |
 | **CI Scans por mes** | Analisis de CI/CD ejecutados al mes | 20 |
 
-### Paso 3: Revise el Resultado
+### Paso 2: Revise el Resultado y Ajuste
 
 La calculadora mostrara:
 
@@ -38,9 +38,7 @@ La calculadora mostrara:
 - **Paquete recomendado** basado en su consumo estimado
 - **Costo mensual estimado** en dolares
 
-### Paso 4: Ajuste y Optimice
-
-Modifique los parametros para explorar diferentes escenarios:
+Despues, modifique los parametros para explorar diferentes escenarios:
 
 - Reduzca la frecuencia de operaciones costosas (QA Monitor, CI Scan)
 - Aumente las ejecuciones de prueba (bajo costo) para mayor cobertura
@@ -155,18 +153,6 @@ Una organizacion empresarial con mas de 50 ingenieros, multiples productos, pipe
 
 ---
 
-## Comparativa de Escenarios
-
-| Metrica | Equipo Pequeno (5) | Equipo Mediano (20) | Equipo Grande (50+) |
-|---|---|---|---|
-| Creditos / mes | 11.000 | 67.400 | 233.500 |
-| Paquete recomendado | Growth + Starter | Scale | Scale x3 (o empresarial) |
-| Costo estimado / mes | $90 | $600 | $1.800 (o personalizado) |
-| Costo por ingeniero / mes | $18 | $30 | $36 (o menor con plan empresarial) |
-| Operacion de mayor consumo | Generacion de pruebas (34%) | Ejecucion de pruebas (36%) | Ejecucion de pruebas (43%) |
-
----
-
 ## Consejos para Optimizar el Consumo de Creditos
 
 ### 1. Priorice las Ejecuciones sobre las Generaciones
@@ -203,7 +189,19 @@ Acceda a **Configuracion > Facturacion > Historial de uso** al menos una vez al 
 
 ---
 
-## Referencia Rapida de Costos por Operacion
+## Resumen
+
+**Comparativa de escenarios:**
+
+| Metrica | Equipo Pequeno (5) | Equipo Mediano (20) | Equipo Grande (50+) |
+|---|---|---|---|
+| Creditos / mes | 11.000 | 67.400 | 233.500 |
+| Paquete recomendado | Growth + Starter | Scale | Scale x3 (o empresarial) |
+| Costo estimado / mes | $90 | $600 | $1.800 (o personalizado) |
+| Costo por ingeniero / mes | $18 | $30 | $36 (o menor con plan empresarial) |
+| Operacion de mayor consumo | Generacion de pruebas (34%) | Ejecucion de pruebas (36%) | Ejecucion de pruebas (43%) |
+
+**Referencia rapida de costos por operacion:**
 
 | Operacion | Creditos | Costo con Starter ($0,0100) | Costo con Growth ($0,0080) | Costo con Scale ($0,0060) |
 |---|---|---|---|---|

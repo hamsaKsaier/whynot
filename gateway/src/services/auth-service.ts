@@ -120,9 +120,9 @@ export async function login(email: string, password: string): Promise<AuthResult
 // ─── GitHub OAuth ────────────────────────────────────────────────────────────
 
 export function getGithubAuthUrl(): string {
-  const clientId = env.GITHUB_CLIENT_ID;
+  const clientId = process.env.GITHUB_CLIENT_ID || env.GITHUB_CLIENT_ID;
   if (!clientId) throw new Error('GITHUB_CLIENT_ID not set');
-  const callbackUrl = encodeURIComponent(env.GITHUB_CALLBACK_URL);
+  const callbackUrl = encodeURIComponent(process.env.GITHUB_CALLBACK_URL || env.GITHUB_CALLBACK_URL);
   return `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${callbackUrl}&scope=user:email`;
 }
 
@@ -196,9 +196,9 @@ export async function handleGithubCallback(code: string): Promise<AuthResult> {
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 
 export function getGoogleAuthUrl(): string {
-  const clientId = env.GOOGLE_CLIENT_ID;
+  const clientId = process.env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID;
   if (!clientId) throw new Error('GOOGLE_CLIENT_ID not set');
-  const callbackUrl = encodeURIComponent(env.GOOGLE_CALLBACK_URL);
+  const callbackUrl = encodeURIComponent(process.env.GOOGLE_CALLBACK_URL || env.GOOGLE_CALLBACK_URL);
   return (
     `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${clientId}&redirect_uri=${callbackUrl}&response_type=code&scope=email%20profile`

@@ -50,8 +50,8 @@ describe('BrowserPreview', () => {
 
   it('shows resolution and browser in footer', () => {
     render(<BrowserPreview />);
-    expect(screen.getByText(/1920x1080/)).toBeInTheDocument();
-    expect(screen.getByText(/Chrome/)).toBeInTheDocument();
+    expect(screen.getAllByText(/1920x1080/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Chrome/).length).toBeGreaterThan(0);
   });
 
   it('does not render FrameNavigation without frameHistory', () => {

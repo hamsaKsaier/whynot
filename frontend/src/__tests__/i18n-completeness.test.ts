@@ -80,7 +80,9 @@ describe('i18n completeness — frontend', () => {
             if (langValue.trim().length === 0) continue;
           }
 
-          if (!BRAND_ALLOW_LIST.has(enValue.trim())) {
+          // Prices like "$10" or "$10.99" are currency-agnostic shorthand and often intentionally identical across locales
+          const isPriceShorthand = /^\$\d+(\.\d+)?$/.test(enValue.trim());
+          if (!BRAND_ALLOW_LIST.has(enValue.trim()) && !isPriceShorthand) {
             expect(langValue, `${lang}/${ns}.json key "${key}" is still English: "${langValue}"`).not.toBe(enValue);
           }
         }
@@ -169,6 +171,7 @@ describe('i18n completeness — frontend', () => {
           if (BRAND_ALLOW_LIST.has(enValue.trim())) continue;
           if (/^\{\{.*\}\}$/.test(enValue.trim())) continue;
           if (/^https?:\/\//.test(enValue.trim())) continue;
+          if (/^\$\d+(\.\d+)?$/.test(enValue.trim())) continue;
 
           expect(
             ARABIC_GLYPH.test(arValue),

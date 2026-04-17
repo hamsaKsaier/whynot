@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
@@ -87,10 +88,15 @@ export function PaginatedTable<T>({
   const mobileColumns = columns.filter((col) => !col.hideOnMobile)
   const actionColumn = columns.find((col) => col.key === 'actions')
 
+  // Use a media query hook to render only one view (avoids duplicate DOM in tests
+  // and serves content more efficiently at runtime).
+  const isDesktop = useIsDesktop()
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Desktop table view */}
-      <div className="hidden md:block rounded-lg border bg-card">
+      {isDesktop && (
+      <div className="rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -165,9 +171,11 @@ export function PaginatedTable<T>({
           </TableBody>
         </Table>
       </div>
+      )}
 
       {/* Mobile card view */}
-      <div className="md:hidden space-y-3">
+      {!isDesktop && (
+      <div className="space-y-3">
         {loading ? (
           Array.from({ length: skeletonRows }).map((_, i) => (
             <Card key={i}>
@@ -231,6 +239,7 @@ export function PaginatedTable<T>({
           })
         )}
       </div>
+      )}
 
       {(hasPrevPage || hasNextPage || pageInfo) && (
         <div className="flex items-center justify-between">
@@ -259,4 +268,26 @@ export function PaginatedTable<T>({
       )}
     </div>
   )
+}
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return true
+    return window.matchMedia('(min-width: 768px)').matches
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mql = window.matchMedia('(min-width: 768px)')
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    setIsDesktop(mql.matches)
+    if (mql.addEventListener) mql.addEventListener('change', onChange)
+    else mql.addListener(onChange)
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', onChange)
+      else mql.removeListener(onChange)
+    }
+  }, [])
+
+  return isDesktop
 }

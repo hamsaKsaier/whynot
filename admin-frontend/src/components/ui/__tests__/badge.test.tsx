@@ -33,8 +33,8 @@ describe('Badge', () => {
     expect(container.firstChild).toHaveClass('custom');
   });
 
-  it('has rounded-full class', () => {
+  it('has rounded-md class (Uncodixify standards)', () => {
     const { container } = render(<Badge>Test</Badge>);
-    expect(container.firstChild).toHaveClass('rounded-full');
+    expect(container.firstChild).toHaveClass('rounded-md');
   });
 });

@@ -1,3 +1,10 @@
+---
+title: "Credits pay-as-you-go"
+description: "Achetez des credits supplementaires au-dela du quota de votre plan. Decouvrez le fonctionnement des credits, le cout des operations et les packs disponibles."
+lang: fr
+draft: false
+---
+
 # Credits pay-as-you-go
 
 ## Principe de fonctionnement
@@ -51,31 +58,17 @@ Trois packs de credits sont disponibles, avec des reductions progressives pour l
 
 ## Comment les credits fonctionnent
 
-### 1. Achat de credits
+### Achat de credits
 
-Vous pouvez acheter des packs de credits a tout moment depuis la section **Parametres > Facturation > Credits** de votre tableau de bord. Le paiement est immediat et les credits sont disponibles instantanement.
+Vous pouvez acheter des packs de credits a tout moment depuis la section **Parametres > Facturation > Credits** de votre tableau de bord. Le paiement est immediat et les credits sont disponibles instantanement. Les credits achetes via differents packs se cumulent dans votre solde : par exemple, un pack Starter plus un pack Growth donnent un solde total de 11 000 credits.
 
-### 2. Consommation
+### Consommation et solde insuffisant
 
-Chaque operation declenchee sur la plateforme debite automatiquement le nombre de credits correspondant de votre solde. Vous pouvez consulter votre consommation en temps reel dans le tableau de bord.
+Chaque operation declenchee sur la plateforme debite automatiquement le nombre de credits correspondant de votre solde. Si votre solde est insuffisant, l'operation est bloquee et vous recevez une notification pour recharger. Aucune operation n'est executee a credit negatif — aucune mauvaise surprise de facturation.
 
-### 3. Solde insuffisant
+### Suivi, alertes et notifications
 
-Si votre solde de credits est insuffisant pour effectuer une operation, celle-ci est bloquee. Vous recevez une notification vous invitant a recharger votre compte. Aucune operation n'est executee a credit negatif.
-
-### 4. Cumul des credits
-
-Les credits achetes via differents packs se cumulent dans votre solde. Par exemple, si vous achetez un pack Starter puis un pack Growth, votre solde total sera de 11 000 credits.
-
-### 5. Suivi de la consommation
-
-Un historique detaille de toutes les operations et de leur cout en credits est disponible dans la section **Parametres > Facturation > Historique d'utilisation**. Vous pouvez filtrer par type d'operation, par projet et par periode.
-
----
-
-## Alertes et notifications
-
-WhyNot vous envoie des notifications automatiques lorsque votre solde atteint certains seuils :
+Un historique detaille de toutes les operations et de leur cout en credits est disponible dans **Parametres > Facturation > Historique d'utilisation**, avec filtres par type d'operation, projet et periode. WhyNot envoie egalement des notifications automatiques lorsque le solde atteint certains seuils :
 
 | Seuil | Notification |
 |---|---|

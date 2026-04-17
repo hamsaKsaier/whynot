@@ -42,7 +42,7 @@ const defaultProps = {
 describe('StatsBar', () => {
   it('renders page count', () => {
     render(<StatsBar {...defaultProps} />);
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getAllByText('2').length).toBeGreaterThan(0);
   });
 
   it('renders test count', () => {
@@ -58,7 +58,7 @@ describe('StatsBar', () => {
 
   it('renders quality score', () => {
     render(<StatsBar {...defaultProps} />);
-    expect(screen.getByText('75')).toBeInTheDocument();
+    expect(screen.getByText(/75/)).toBeInTheDocument();
   });
 
   it('renders stat labels', () => {

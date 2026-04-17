@@ -1,22 +1,42 @@
+---
+title: "Plans et tarification"
+description: "Comparez les plans Free, Pro BYO et Pro Managed de WhyNot et decouvrez le fonctionnement de la facturation, des upgrades et des annulations."
+lang: fr
+draft: false
+---
+
 # Plans et tarification
 
 ## Apercu des plans
 
-WhyNot propose trois plans adaptes a vos besoins, que vous debutiez ou que vous geriez une infrastructure a grande echelle.
+WhyNot propose trois plans adaptes a vos besoins, que vous debutiez ou que vous geriez une infrastructure a grande echelle. Tous les plans donnent acces a la plateforme de base — les differences portent sur le perimetre fonctionnel, la gestion de l'infrastructure et les credits inclus.
+
+---
+
+## Tableau comparatif
 
 | Caracteristique | Free | Pro BYO | Pro Managed |
 |---|---|---|---|
 | **Prix mensuel** | $0 | $29/mois | $49/mois |
 | **Prix annuel** | $0 | $23,20/mois | $39,20/mois |
 | **Reduction annuelle** | -- | 20 % | 20 % |
+| **Credits inclus** | 500/mois | 2 000/mois | 5 000/mois |
+| **Projets** | 1 | Illimites | Illimites |
+| **Utilisateurs** | 1 | Jusqu'a 10 | Jusqu'a 25 |
+| **Historique** | 7 jours | 90 jours | 365 jours |
+| **Cles API** | Non applicable | Vos propres cles | Gerees par WhyNot |
+| **Support** | Communautaire | Email prioritaire | Chat premium (SLA 4h) |
+| **Regression visuelle** | Non | Incluse | Incluse |
+| **Monitoring QA** | Non | Non | Inclus |
+| **Correction automatique** | Non | Non | Incluse |
 
 ---
 
-## Plan Free -- $0/mois
+## Details des plans
+
+### Plan Free -- $0/mois
 
 Le plan Free vous permet de decouvrir WhyNot sans aucun engagement financier.
-
-### Fonctionnalites incluses
 
 | Fonctionnalite | Detail |
 |---|---|
@@ -29,19 +49,11 @@ Le plan Free vous permet de decouvrir WhyNot sans aucun engagement financier.
 | Support | Communautaire (forum) |
 | Utilisateurs | 1 utilisateur |
 
-### Ideal pour
+Ideal pour les developpeurs individuels souhaitant evaluer la plateforme, les projets personnels ou experimentaux et la decouverte des fonctionnalites de base.
 
-- Les developpeurs individuels souhaitant evaluer la plateforme
-- Les projets personnels ou experimentaux
-- La decouverte des fonctionnalites de base
-
----
-
-## Plan Pro BYO (Bring Your Own) -- $29/mois
+### Plan Pro BYO (Bring Your Own) -- $29/mois
 
 Le plan Pro BYO est concu pour les equipes qui disposent deja de leur propre infrastructure et souhaitent y integrer WhyNot.
-
-### Fonctionnalites incluses
 
 | Fonctionnalite | Detail |
 |---|---|
@@ -58,19 +70,11 @@ Le plan Pro BYO est concu pour les equipes qui disposent deja de leur propre inf
 | Regression visuelle | Incluse |
 | Boucles QA automatisees | Incluses |
 
-### Ideal pour
+Ideal pour les equipes de developpement de taille moyenne, les organisations disposant de leur propre infrastructure cloud et les equipes souhaitant garder le controle de leurs cles API.
 
-- Les equipes de developpement de taille moyenne
-- Les organisations disposant de leur propre infrastructure cloud
-- Les equipes souhaitant garder le controle de leurs cles API
-
----
-
-## Plan Pro Managed -- $49/mois
+### Plan Pro Managed -- $49/mois
 
 Le plan Pro Managed offre une experience entierement geree : WhyNot prend en charge l'infrastructure, les cles API et la maintenance.
-
-### Fonctionnalites incluses
 
 | Fonctionnalite | Detail |
 |---|---|
@@ -84,32 +88,12 @@ Le plan Pro Managed offre une experience entierement geree : WhyNot prend en cha
 | Utilisateurs | Jusqu'a 25 utilisateurs |
 | Cles API | Gerees par WhyNot |
 | Integrations CI/CD | Toutes les integrations disponibles |
-| Regression visuelle | Incluse |
-| Boucles QA automatisees | Incluses |
 | Monitoring QA continu | Inclus |
 | Correction automatique | Incluse |
 | Tableau de bord analytique | Avance |
 | SSO / SAML | Disponible |
 
-### Ideal pour
-
-- Les equipes qui souhaitent une solution cle en main
-- Les organisations ne disposant pas de ressources DevOps dediees
-- Les entreprises ayant besoin d'un SLA et d'un support premium
-
----
-
-## Reduction annuelle -- 20 %
-
-En optant pour la facturation annuelle, vous beneficiez d'une reduction de 20 % sur le prix mensuel :
-
-| Plan | Mensuel | Annuel (par mois) | Economie annuelle |
-|---|---|---|---|
-| Free | $0 | $0 | -- |
-| Pro BYO | $29 | $23,20 | $69,60/an |
-| Pro Managed | $49 | $39,20 | $117,60/an |
-
-> **Remarque :** la facturation annuelle est engagee pour une duree de 12 mois. Vous pouvez passer d'un plan mensuel a un plan annuel a tout moment.
+Ideal pour les equipes qui souhaitent une solution cle en main, les organisations sans ressources DevOps dediees et les entreprises ayant besoin d'un SLA et d'un support premium.
 
 ---
 
@@ -144,27 +128,33 @@ Pour vous aider a selectionner le plan le plus adapte, posez-vous les questions 
 
 ## Informations de facturation
 
-### Modes de paiement acceptes
-
-- Carte bancaire (Visa, Mastercard, American Express)
-- Prelevement SEPA (pour les clients europeens)
-
 ### Cycle de facturation
 
 - **Mensuel :** vous etes facture le meme jour chaque mois. La premiere facture est emise immediatement lors de la souscription.
 - **Annuel :** vous etes facture une fois par an, a la date de souscription. Le montant total de l'annee est debite en une seule fois.
 
-### Changement de plan
+### Reduction annuelle -- 20 %
+
+En optant pour la facturation annuelle, vous beneficiez d'une reduction de 20 % sur le prix mensuel :
+
+| Plan | Mensuel | Annuel (par mois) | Economie annuelle |
+|---|---|---|---|
+| Free | $0 | $0 | -- |
+| Pro BYO | $29 | $23,20 | $69,60/an |
+| Pro Managed | $49 | $39,20 | $117,60/an |
+
+La facturation annuelle est engagee pour une duree de 12 mois.
+
+### Modes de paiement acceptes
+
+- Carte bancaire (Visa, Mastercard, American Express)
+- Prelevement SEPA (pour les clients europeens)
+
+### Changement de plan et annulation
 
 - Vous pouvez passer a un plan superieur a tout moment. La difference de prix est calculee au prorata pour la periode restante.
 - Le passage a un plan inferieur prend effet au debut du cycle de facturation suivant.
-- Le passage du plan mensuel au plan annuel est immediat ; la reduction de 20 % s'applique des la prochaine facture.
-
-### Annulation
-
-- Vous pouvez annuler votre abonnement a tout moment depuis les parametres de votre compte.
-- Pour les abonnements mensuels, l'acces est maintenu jusqu'a la fin du mois en cours.
-- Pour les abonnements annuels, l'acces est maintenu jusqu'a la fin de la periode annuelle. Aucun remboursement partiel n'est effectue.
+- Vous pouvez annuler votre abonnement a tout moment depuis les parametres de votre compte. Pour les abonnements mensuels, l'acces est maintenu jusqu'a la fin du mois en cours ; pour les abonnements annuels, jusqu'a la fin de la periode. Aucun remboursement partiel n'est effectue.
 
 ### Factures et reçus
 
@@ -182,3 +172,9 @@ Non, les credits pour les operations pay-as-you-go sont factures separement. Con
 
 **Puis-je ajouter des utilisateurs supplementaires ?**
 Au-dela de la limite de votre plan, des utilisateurs supplementaires sont disponibles moyennant un supplement. Contactez notre equipe pour obtenir un devis personnalise.
+
+**Les credits non utilises sont-ils reportes ?**
+Non. Les credits inclus dans chaque plan expirent a la fin du cycle de facturation. Les credits pay-as-you-go achetes separement suivent leurs propres regles d'expiration — voir la [documentation des credits](payg.md).
+
+**Existe-t-il une duree minimale d'engagement ?**
+Non pour la facturation mensuelle : vous pouvez annuler a tout moment. La facturation annuelle engage pour 12 mois.

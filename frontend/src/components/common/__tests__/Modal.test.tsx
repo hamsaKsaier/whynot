@@ -49,8 +49,9 @@ describe('Modal', () => {
   it('calls onClose when backdrop is clicked', () => {
     const onClose = vi.fn();
     render(<Modal {...defaultProps} onClose={onClose} />);
-    // The backdrop is the first fixed div
-    const backdrop = document.querySelector('.fixed.inset-0.bg-black');
+    // The backdrop has class names including bg-black/50
+    const backdrop = document.querySelector('.fixed.inset-0[class*="bg-black"]');
+    expect(backdrop).not.toBeNull();
     if (backdrop) fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalled();
   });

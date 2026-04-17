@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React from 'react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../ui/select';
@@ -16,29 +16,6 @@ interface TabsProps {
 }
 
 export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabChange }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showStartFade, setShowStartFade] = useState(false);
-  const [showEndFade, setShowEndFade] = useState(false);
-
-  const updateFades = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const isRtl = document.documentElement.dir === 'rtl';
-    const scrollStart = isRtl ? Math.abs(el.scrollLeft) : el.scrollLeft;
-    const maxScroll = el.scrollWidth - el.clientWidth;
-    setShowStartFade(scrollStart > 4);
-    setShowEndFade(maxScroll - scrollStart > 4);
-  };
-
-  useEffect(() => {
-    updateFades();
-    const el = scrollRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(updateFades);
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [tabs]);
-
   const activeLabel = tabs.find((t) => t.id === activeTab)?.label ?? activeTab;
 
   return (
@@ -62,16 +39,9 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabChange }) => {
         </Select>
       </div>
 
-      {/* Tablet+Desktop: scrollable horizontal tab strip with fade edges */}
+      {/* Tablet+Desktop: scrollable horizontal tab strip */}
       <div className="hidden sm:block relative border-b border-border">
-        {showStartFade && (
-          <div className="absolute start-0 top-0 bottom-0 w-8 z-10 pointer-events-none ltr:bg-gradient-to-r rtl:bg-gradient-to-l from-background to-transparent" />
-        )}
-        <div
-          ref={scrollRef}
-          onScroll={updateFades}
-          className="overflow-x-auto scrollbar-none"
-        >
+        <div className="overflow-x-auto scrollbar-none">
           <nav className="flex gap-x-6 px-1 min-w-max" aria-label="Tabs">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -94,9 +64,6 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabChange }) => {
             })}
           </nav>
         </div>
-        {showEndFade && (
-          <div className="absolute end-0 top-0 bottom-0 w-8 z-10 pointer-events-none ltr:bg-gradient-to-l rtl:bg-gradient-to-r from-background to-transparent" />
-        )}
       </div>
     </>
   );

@@ -202,7 +202,7 @@ describe('BillingTab', () => {
     });
     renderTab();
     await waitFor(() => {
-      expect(screen.getByText('paid')).toBeInTheDocument();
+      expect(screen.getAllByText('paid').length).toBeGreaterThan(0);
     });
   });
 

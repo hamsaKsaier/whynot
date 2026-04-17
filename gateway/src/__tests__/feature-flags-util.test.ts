@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../shared/database/repositories/feature-flag-repository', () => {
+vi.mock('../../shared/database/repositories/feature-flag-repository', () => {
   const getOrgOverride = vi.fn();
   const getByKey = vi.fn();
   const listAllOrgOverridesWithFlags = vi.fn();
@@ -16,7 +16,7 @@ vi.mock('../../../shared/database/repositories/feature-flag-repository', () => {
 
 import { isFlagEnabled, invalidateFlag, invalidateOrg, resolveAllFlags, _cache } from '../utils/feature-flags';
 // @ts-expect-error vitest mock-injected export
-import { __mocks } from '../../../shared/database/repositories/feature-flag-repository';
+import { __mocks } from '../../shared/database/repositories/feature-flag-repository';
 
 const { getOrgOverride, getByKey, listAllOrgOverridesWithFlags } = __mocks as any;
 

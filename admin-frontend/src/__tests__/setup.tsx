@@ -10,6 +10,29 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
+// jsdom doesn't implement matchMedia; default to desktop breakpoints matching.
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query: string) => ({
+    matches: /min-width:\s*(\d+)px/.test(query),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+});
+
+// jsdom doesn't implement scrollTo
+if (!window.scrollTo) {
+  Object.defineProperty(window, 'scrollTo', { writable: true, value: () => {} });
+}
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 const localesDir = path.resolve(__dirname, '../../public/locales/en');
 const namespaces = ['admin', 'auth', 'common', 'settings', 'superadmin'];
 

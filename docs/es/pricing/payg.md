@@ -1,4 +1,13 @@
+---
+title: "Creditos Pay-As-You-Go"
+description: "Adquiera creditos adicionales ademas del cupo de su plan. Conozca como funcionan los creditos, el costo de cada operacion y que paquete elegir."
+lang: es
+draft: false
+---
+
 # Creditos Pay-As-You-Go
+
+## Descripcion General
 
 Los creditos son la unidad de consumo de WhyNot. Cada operacion que realice en la plataforma consume una cantidad especifica de creditos. Este modelo le permite pagar unicamente por lo que utiliza, sin compromisos fijos por operacion.
 
@@ -64,16 +73,12 @@ Con el paquete **Scale** ($600 / 100.000 creditos) puede realizar aproximadament
 3. Complete el pago con su metodo de pago registrado.
 4. Los creditos se acreditan de forma inmediata en su cuenta.
 
-### Consumo
+### Consumo y Notificaciones
 
 - Los creditos se descuentan automaticamente al ejecutar cada operacion.
 - Puede consultar el saldo disponible en todo momento desde el panel de facturacion.
 - El historial detallado de consumo esta disponible en **Configuracion > Facturacion > Historial de uso**.
-
-### Notificaciones
-
-- Recibira una notificacion por correo electronico cuando su saldo alcance el 20% del total adquirido.
-- Recibira una segunda notificacion cuando su saldo alcance el 5%.
+- Recibira una notificacion por correo electronico cuando su saldo alcance el 20% del total adquirido, y una segunda notificacion al llegar al 5%.
 - Puede configurar umbrales de notificacion personalizados en la seccion de configuracion.
 
 ### Recarga Automatica (Opcional)
@@ -111,16 +116,6 @@ No. Los creditos estan vinculados a la cuenta en la que fueron adquiridos y no p
 
 - Si cancela su plan de pago, los creditos restantes permanecen disponibles hasta su fecha de vencimiento.
 - Si su cuenta se elimina, los creditos pendientes se pierden y no son reembolsables.
-
-### Se pueden obtener creditos de forma gratuita?
-
-Ocasionalmente, WhyNot ofrece creditos de bonificacion a traves de:
-
-- Programas de referidos
-- Promociones especiales
-- Eventos y hackathones patrocinados
-
-Los creditos de bonificacion tienen las mismas condiciones de vencimiento que los creditos adquiridos, salvo que se indique lo contrario en la promocion correspondiente.
 
 ### Como se cobran las operaciones que fallan?
 

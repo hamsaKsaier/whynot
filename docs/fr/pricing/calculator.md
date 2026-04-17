@@ -1,20 +1,19 @@
-# Calculateur de credits
-
-## Presentation
-
-Le calculateur de credits WhyNot vous permet d'estimer votre consommation mensuelle et de determiner le pack de credits le mieux adapte a votre equipe. Cet outil prend en compte le nombre de developpeurs, la frequence des operations et les types de tests utilises.
-
 ---
+title: "Calculateur de credits"
+description: "Estimez votre consommation mensuelle de credits et trouvez le plan adapte avec des scenarios d'exemple et des conseils d'optimisation."
+lang: fr
+draft: false
+---
+
+# Calculateur de credits
 
 ## Comment utiliser le calculateur
 
-### Etape 1 -- Renseigner la taille de votre equipe
+Le calculateur de credits WhyNot vous permet d'estimer votre consommation mensuelle et de determiner le pack de credits le mieux adapte a votre equipe. Cet outil prend en compte le nombre de developpeurs, la frequence des operations et les types de tests utilises.
 
-Indiquez le nombre de developpeurs actifs dans votre equipe. Le calculateur utilise cette donnee pour multiplier les operations individuelles par le nombre de membres.
+### Etape 1 -- Renseigner l'utilisation mensuelle
 
-### Etape 2 -- Definir la frequence des operations
-
-Pour chaque type d'operation, precisez la frequence estimee par developpeur et par mois :
+Indiquez le nombre de developpeurs actifs et, pour chaque type d'operation, la frequence estimee par developpeur et par mois :
 
 | Operation | Credits/unite | Frequence a renseigner |
 |---|---|---|
@@ -28,7 +27,7 @@ Pour chaque type d'operation, precisez la frequence estimee par developpeur et p
 
 > **Remarque :** les operations de monitoring QA et de scan CI sont generalement definies au niveau de l'equipe (et non par developpeur), car elles sont declenchees par les pipelines CI/CD partages.
 
-### Etape 3 -- Consulter l'estimation
+### Etape 2 -- Consulter l'estimation
 
 Le calculateur affiche :
 
@@ -158,9 +157,13 @@ Consultez le tableau de bord de consommation au moins une fois par semaine. Iden
 
 Utilisez les scenarios ci-dessus comme reference pour estimer votre consommation initiale. Il est plus economique d'acheter un pack Scale ($0,006/credit) que plusieurs packs Starter ($0,01/credit) -- l'economie atteint 40 %.
 
+### 7. Exploitez la facturation annuelle
+
+Si vous etes confiant dans votre usage a long terme, la facturation annuelle reduit de 20 % le cout du plan (soit $117,60 d'economies par an sur le plan Pro Managed). Combinez-la avec un pack Scale pour un avantage financier maximal.
+
 ---
 
-## Formule de calcul
+## Recapitulatif
 
 Le calculateur utilise la formule suivante :
 
@@ -172,16 +175,9 @@ Credits mensuels = SUM(
 )
 ```
 
-Ou :
+Ou `operations_par_developpeur[i]` represente la frequence mensuelle de chaque operation individuelle, `nombre_developpeurs` correspond au nombre de developpeurs actifs, `operations_equipe[j]` represente les operations partagees (monitoring QA, scans CI) et `credits_par_operation` correspond au cout en credits de chaque type d'operation.
 
-- `operations_par_developpeur[i]` represente la frequence mensuelle de chaque operation individuelle
-- `nombre_developpeurs` correspond au nombre de developpeurs actifs
-- `operations_equipe[j]` represente les operations partagees (monitoring QA, scans CI)
-- `credits_par_operation` correspond au cout en credits de chaque type d'operation
-
----
-
-## Ressources complementaires
+Ressources complementaires :
 
 - [Documentation des plans](plans.md) -- comparaison detaillee des plans Free, Pro BYO et Pro Managed
 - [Credits pay-as-you-go](payg.md) -- fonctionnement des credits, packs et FAQ

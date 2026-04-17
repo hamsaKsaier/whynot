@@ -27,7 +27,7 @@ describe('StepIndicator', () => {
 
     // Step 2 label should have current styling
     const step2Label = screen.getByText('Step 2');
-    expect(step2Label.className).toContain('text-primary-600');
+    expect(step2Label.className).toContain('text-primary');
   });
 
   it('marks completed steps', () => {

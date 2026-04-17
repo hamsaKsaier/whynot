@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">88.88% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>8/9</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -82,44 +82,44 @@
 <a name='L17'></a><a href='#L17'>17</a>
 <a name='L18'></a><a href='#L18'>18</a>
 <a name='L19'></a><a href='#L19'>19</a>
-<a name='L20'></a><a href='#L20'>20</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L20'></a><a href='#L20'>20</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">82x</span>
+<span class="cline-any cline-yes">82x</span>
+<span class="cline-any cline-yes">82x</span>
+<span class="cline-any cline-yes">82x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">111x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">111x</span>
+<span class="cline-any cline-yes">77x</span>
+<span class="cline-any cline-yes">77x</span>
+<span class="cline-any cline-yes">77x</span>
+<span class="cline-any cline-yes">77x</span>
+<span class="cline-any cline-yes">111x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import { useEffect, useState } from 'react';</span></span></span>
+<span class="cline-any cline-yes">111x</span>
+<span class="cline-any cline-yes">111x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useEffect, useState } from 'react';
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function getDir(): 'ltr' | 'rtl' {</span>
-<span class="cstat-no" title="statement not covered" >  if (typeof document === 'undefined') return 'ltr';</span>
-<span class="cstat-no" title="statement not covered" >  return (document.documentElement.dir as 'ltr' | 'rtl') || 'ltr';</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+function getDir(): 'ltr' | 'rtl' {
+  if (typeof document === 'undefined') <span class="branch-0 cbranch-no" title="branch not covered" >return 'ltr';</span>
+  return (document.documentElement.dir as 'ltr' | 'rtl') || 'ltr';
+}
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export function useMotionDirection(): 1 | -1 {</span>
-<span class="cstat-no" title="statement not covered" >  const [dir, setDir] = useState&lt;'ltr' | 'rtl'&gt;(getDir);</span>
+export function useMotionDirection(): 1 | -1 {
+  const [dir, setDir] = useState&lt;'ltr' | 'rtl'&gt;(getDir);
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  useEffect(() =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    const el = document.documentElement;</span>
-<span class="cstat-no" title="statement not covered" >    const observer = new MutationObserver(() =&gt; setDir(getDir()));</span>
-<span class="cstat-no" title="statement not covered" >    observer.observe(el, { attributes: true, attributeFilter: ['dir'] });</span>
-<span class="cstat-no" title="statement not covered" >    return () =&gt; observer.disconnect();</span>
-<span class="cstat-no" title="statement not covered" >  }, []);</span>
+  useEffect(() =&gt; {
+    const el = document.documentElement;
+    const observer = new MutationObserver(() =&gt; setDir(getDir()));
+    observer.observe(el, { attributes: true, attributeFilter: ['dir'] });
+    return () =&gt; observer.disconnect();
+  }, []);
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  return dir === 'rtl' ? -1 : 1;</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+  return dir === 'rtl' ? -1 : 1;
+}
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -127,7 +127,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-17T09:38:01.858Z
+                at 2026-04-17T14:37:39.584Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

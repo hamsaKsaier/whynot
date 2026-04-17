@@ -1,6 +1,15 @@
+---
+title: "Planes y Precios"
+description: "Compare los planes Free, Pro BYO y Pro Managed de WhyNot y descubra como funcionan la facturacion, las actualizaciones y las cancelaciones."
+lang: es
+draft: false
+---
+
 # Planes y Precios
 
-Elija el plan que mejor se adapte a las necesidades de su equipo. Todos los planes incluyen acceso a la plataforma principal de WhyNot y pueden actualizarse o cancelarse en cualquier momento.
+## Nuestros Planes
+
+Elija el plan que mejor se adapte a las necesidades de su equipo. WhyNot ofrece tres planes disenados para distintas fases de crecimiento. Todos los planes incluyen acceso a la plataforma principal y pueden actualizarse o cancelarse en cualquier momento — las diferencias estan en el alcance de las funciones, la gestion de la infraestructura y los creditos incluidos.
 
 ---
 
@@ -93,20 +102,9 @@ La opcion mas conveniente para equipos que desean una experiencia completamente 
 
 ---
 
-## Descuento por Facturacion Anual
-
-Todos los planes de pago ofrecen un **descuento del 20%** cuando se elige la facturacion anual:
-
-| Plan | Mensual | Anual (por mes) | Ahorro anual |
-|---|---|---|---|
-| Pro BYO | $29/mes | $23,20/mes | $69,60 |
-| Pro Managed | $49/mes | $39,20/mes | $117,60 |
-
-Para cambiar a facturacion anual, acceda a **Configuracion > Facturacion > Cambiar a plan anual** dentro de su panel de control.
-
----
-
 ## Como Elegir el Plan Adecuado
+
+Todos los planes de pago ofrecen un **descuento del 20%** con facturacion anual: Pro BYO pasa de $29 a $23,20/mes ($69,60 de ahorro anual) y Pro Managed pasa de $49 a $39,20/mes ($117,60 de ahorro anual).
 
 ### Elija **Free** si:
 
@@ -130,6 +128,16 @@ Para cambiar a facturacion anual, acceda a **Configuracion > Facturacion > Cambi
 - Necesita soporte prioritario con tiempos de respuesta rapidos
 - Desea delegar la gestion de modelos de IA a WhyNot
 - Requiere retencion extendida de historiales (180 dias)
+
+### Guia de decision
+
+| Criterio | Free | Pro BYO | Pro Managed |
+|---|---|---|---|
+| Presupuesto | Sin presupuesto | Moderado | Mayor |
+| Tamano de equipo | 1 persona | 2-10 personas | 10-25 personas |
+| Claves propias de IA | N/A | Requeridas | Gestionadas |
+| Retencion | 7 dias | 90 dias | 180 dias |
+| Soporte | Comunidad | Correo 24 h | Prioritario 4 h |
 
 ---
 
@@ -164,18 +172,14 @@ Si su organizacion requiere facturacion personalizada, ordenes de compra o contr
 
 ## Preguntas Frecuentes
 
-### Puedo cambiar de plan en cualquier momento?
-
+**Puedo cambiar de plan en cualquier momento?**
 Si. Puede actualizar o reducir su plan desde la seccion de facturacion en su panel de control. Las actualizaciones se aplican de inmediato; las reducciones, al final del ciclo vigente.
 
-### Que sucede si supero los limites del plan Free?
-
+**Que sucede si supero los limites del plan Free?**
 Recibira una notificacion cuando alcance el 80% de su cuota mensual. Al llegar al limite, las operaciones se pausan hasta el inicio del siguiente ciclo o hasta que actualice su plan.
 
-### Los creditos estan incluidos en los planes Pro?
-
+**Los creditos estan incluidos en los planes Pro?**
 Los planes Pro incluyen acceso a todas las funciones, pero las operaciones consumen creditos. Consulte la documentacion de [creditos pay-as-you-go](payg.md) para conocer los costos y los paquetes disponibles.
 
-### Ofrecen descuentos para organizaciones sin fines de lucro o educativas?
-
+**Ofrecen descuentos para organizaciones sin fines de lucro o educativas?**
 Si. Contacte a nuestro equipo en **support@whynot.com** con documentacion que acredite su organizacion para solicitar un descuento especial.

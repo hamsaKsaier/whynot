@@ -405,7 +405,10 @@ export function AnnouncementsPage() {
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         title={t('admin.announcements.deleteTitle', 'Delete Announcement')}
-        description={t('admin.announcements.deleteConfirm', `Are you sure you want to delete "${deleteTarget?.title}"? This cannot be undone.`)}
+        description={t('admin.announcements.deleteConfirm', {
+          defaultValue: `Are you sure you want to delete "${deleteTarget?.title ?? ''}"? This cannot be undone.`,
+          title: deleteTarget?.title ?? '',
+        })}
         confirmText={t('admin.announcements.deleteBtn', 'Delete')}
         variant="destructive"
         onConfirm={handleDelete}

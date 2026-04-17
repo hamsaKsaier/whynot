@@ -98,7 +98,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
         <div className="flex items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToFirstFrame} disabled={!canGoPrev}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToFirstFrame} disabled={!canGoPrev} aria-label={t('runner.browser.firstFrame', 'First frame')}>
                 <SkipBack className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>
@@ -106,7 +106,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToPrevFrame} disabled={!canGoPrev}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToPrevFrame} disabled={!canGoPrev} aria-label={t('runner.browser.previousFrame', 'Previous frame')}>
                 <ChevronLeft className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>
@@ -114,7 +114,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToNextFrame} disabled={!canGoNext}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToNextFrame} disabled={!canGoNext} aria-label={t('runner.browser.nextFrame', 'Next frame')}>
                 <ChevronRight className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>
@@ -122,7 +122,7 @@ export const FrameNavigation: React.FC<FrameNavigationProps> = ({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToLastFrame} disabled={!canGoNext}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGoToLastFrame} disabled={!canGoNext} aria-label={t('runner.browser.lastFrame', 'Last frame')}>
                 <SkipForward className="h-3.5 w-3.5 rtl:scale-x-[-1]" />
               </Button>
             </TooltipTrigger>

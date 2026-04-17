@@ -12,7 +12,7 @@ describe('DocumentUpload', () => {
         onToggle={vi.fn()}
       />
     );
-    expect(screen.getByText(/drag|drop|upload|browse/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/drag|drop|upload|browse/i).length).toBeGreaterThan(0);
   });
 
   it('renders uploaded documents list', () => {
@@ -21,11 +21,13 @@ describe('DocumentUpload', () => {
         documents={[
           {
             id: 'doc-1',
-            name: 'test-spec.md',
-            size: 1024,
-            type: 'text/markdown',
-            active: true,
-            tokenEstimate: 500,
+            filename: 'test-spec.md',
+            fileSizeBytes: 1024,
+            fileType: 'text/markdown',
+            isActive: true,
+            chunkCount: 1,
+            estimatedTokens: 500,
+            createdAt: '2026-01-01T00:00:00Z',
           },
         ]}
         onUpload={vi.fn()}

@@ -223,7 +223,7 @@
   "admin.announcements.edit": "Bearbeiten",
   "admin.announcements.delete": "Löschen",
   "admin.announcements.deleteTitle": "Ankündigung löschen",
-  "admin.announcements.deleteConfirm": "Möchten Sie diese Ankündigung wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+  "admin.announcements.deleteConfirm": "Möchten Sie \"{{title}}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
   "admin.announcements.deleteBtn": "Löschen",
   "admin.usage.title": "Nutzungsverfolgung",
   "admin.usage.noData": "Noch keine Nutzungsdaten verfügbar",

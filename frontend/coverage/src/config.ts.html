@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">82.6% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/23</span>
+                <span class='fraction'>19/23</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">25% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>2/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">82.6% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/23</span>
+                <span class='fraction'>19/23</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -112,41 +112,41 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
  * Centralized frontend configuration.
  *
@@ -154,41 +154,41 @@
  * This ensures a single place to manage defaults and types.
  */
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function getWsUrl(): string {</span>
-<span class="cstat-no" title="statement not covered" >  const explicit = import.meta.env.VITE_WS_URL;</span>
-<span class="cstat-no" title="statement not covered" >  if (explicit) return explicit;</span>
+function getWsUrl(): string {
+  const explicit = import.meta.env.VITE_WS_URL;
+  if (explicit) <span class="branch-0 cbranch-no" title="branch not covered" >return explicit;</span>
   // Auto-promote to wss:// when served over HTTPS
-<span class="cstat-no" title="statement not covered" >  if (typeof window !== 'undefined' &amp;&amp; window.location.protocol === 'https:') {</span>
+  if (typeof window !== 'undefined' &amp;&amp; window.location.protocol === 'https:') <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >    return `wss://${window.location.host}/ws`;</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >  return 'ws://localhost:3011';</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+  return 'ws://localhost:3011';
+}
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function getQaLoopWsUrl(): string {</span>
-<span class="cstat-no" title="statement not covered" >  const explicit = import.meta.env.VITE_QA_LOOP_WS_URL;</span>
-<span class="cstat-no" title="statement not covered" >  if (explicit) return explicit;</span>
-<span class="cstat-no" title="statement not covered" >  if (typeof window !== 'undefined' &amp;&amp; window.location.protocol === 'https:') {</span>
+function getQaLoopWsUrl(): string {
+  const explicit = import.meta.env.VITE_QA_LOOP_WS_URL;
+  if (explicit) <span class="branch-0 cbranch-no" title="branch not covered" >return explicit;</span>
+  if (typeof window !== 'undefined' &amp;&amp; window.location.protocol === 'https:') <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >    return `wss://${window.location.host}`;</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >  return 'ws://localhost:3012';</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+  return 'ws://localhost:3012';
+}
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export const config = {</span>
+export const config = {
   /** Backend API base URL (relative path works behind a reverse proxy). */
-<span class="cstat-no" title="statement not covered" >  apiUrl: import.meta.env.VITE_API_URL || '/api',</span>
+  apiUrl: import.meta.env.<span class="branch-0 cbranch-no" title="branch not covered" >VITE_API_URL || '/api',</span>
 &nbsp;
   /** WebSocket URL for test executor streaming. */
-<span class="cstat-no" title="statement not covered" >  wsUrl: getWsUrl(),</span>
+  wsUrl: getWsUrl(),
 &nbsp;
   /** WebSocket URL for QA Loop real-time events. */
-<span class="cstat-no" title="statement not covered" >  qaLoopWsUrl: getQaLoopWsUrl(),</span>
+  qaLoopWsUrl: getQaLoopWsUrl(),
 &nbsp;
   /** Application version shown in the footer. */
-<span class="cstat-no" title="statement not covered" >  appVersion: import.meta.env.VITE_APP_VERSION || '2.0.0',</span>
+  appVersion: import.meta.env.VITE_APP_VERSION || '2.0.0',
 &nbsp;
   /** True when running in Vite dev mode. */
-<span class="cstat-no" title="statement not covered" >  isDev: import.meta.env.DEV ?? import.meta.env.MODE === 'development',</span>
-<span class="cstat-no" title="statement not covered" >} as const;</span>
+  isDev: import.meta.env.<span class="branch-0 cbranch-no" title="branch not covered" >DEV ?? import.meta.env.MODE === 'development',</span>
+} as const;
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -196,7 +196,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-17T09:38:01.652Z
+                at 2026-04-17T14:37:39.463Z
             </div>
         <script src="../prettify.js"></script>
         <script>

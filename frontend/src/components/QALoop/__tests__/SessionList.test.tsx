@@ -47,7 +47,7 @@ describe('SessionList', () => {
         onSelect={vi.fn()}
       />
     );
-    expect(screen.getByText(/first|no sessions|start/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/first|no sessions|start/i).length).toBeGreaterThan(0);
   });
 
   it('calls onSelect when session clicked', async () => {

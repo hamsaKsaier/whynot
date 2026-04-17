@@ -71,7 +71,7 @@ describe('ConfirmDialog', () => {
       render(
         <ConfirmDialog {...defaultProps} typeToConfirm="DELETE" />
       );
-      expect(screen.getByText('DELETE')).toBeInTheDocument();
+      expect(screen.getByText(/DELETE/)).toBeInTheDocument();
       expect(screen.getByLabelText(/Type.*DELETE.*to confirm/)).toBeInTheDocument();
     });
 

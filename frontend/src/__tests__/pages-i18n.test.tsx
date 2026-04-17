@@ -387,6 +387,7 @@ describe('pages-i18n — frontend', () => {
               .replace(/<style[\s\S]*?<\/style>/gi, ' ')
               .replace(/<script[\s\S]*?<\/script>/gi, ' ')
               .replace(/<[^>]*>/g, ' ')
+              .replace(/&[a-z]+;/gi, ' ')
               .replace(/\s+/g, ' ')
               .trim();
             const latinRuns = text.match(LATIN_RUN_RE) || [];

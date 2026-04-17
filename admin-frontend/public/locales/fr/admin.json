@@ -223,7 +223,7 @@
   "admin.announcements.edit": "Modifier",
   "admin.announcements.delete": "Supprimer",
   "admin.announcements.deleteTitle": "Supprimer l'annonce",
-  "admin.announcements.deleteConfirm": "Voulez-vous vraiment supprimer cette annonce\u00a0? Cette action est irr\u00e9versible.",
+  "admin.announcements.deleteConfirm": "Voulez-vous vraiment supprimer \"{{title}}\"\u00a0? Cette action est irr\u00e9versible.",
   "admin.announcements.deleteBtn": "Supprimer",
   "admin.usage.title": "Suivi de consommation",
   "admin.usage.noData": "Aucune donn\u00e9e de consommation disponible",

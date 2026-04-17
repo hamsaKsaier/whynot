@@ -206,4 +206,24 @@ export const BRAND_ALLOW_LIST = new Set([
   'No',
   'ms',
   'or',
+
+  // ── Punctuation / symbol-only values (universal) ─────────────────────
+  '+',
+  '%',
+  '—',
+  '-',
+
+  // ── Price strings (universal currency amounts) ───────────────────────
+  '$10',
+  '$25',
+  '$50',
+  '$100',
+  '$500',
+
+  // ── Tier badges ──────────────────────────────────────────────────────
+  'Pro',
+  'Starter',
+  'Growth',
+  'Scale',
+  'Free',
 ]);

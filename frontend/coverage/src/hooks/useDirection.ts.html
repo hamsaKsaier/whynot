@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/20</span>
+                <span class='fraction'>20/20</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">87.5% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>7/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/20</span>
+                <span class='fraction'>20/20</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -92,64 +92,64 @@
 <a name='L27'></a><a href='#L27'>27</a>
 <a name='L28'></a><a href='#L28'>28</a>
 <a name='L29'></a><a href='#L29'>29</a>
-<a name='L30'></a><a href='#L30'>30</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L30'></a><a href='#L30'>30</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-yes">18x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import { useCallback, useEffect, useState } from 'react';</span></span></span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RTL_LANGUAGES, type SupportedLanguage } from '@/i18n';
 &nbsp;
 type Direction = 'ltr' | 'rtl';
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function resolveDirection(lang: string): Direction {</span>
-<span class="cstat-no" title="statement not covered" >  return RTL_LANGUAGES.includes(lang.split('-')[0] as SupportedLanguage) ? 'rtl' : 'ltr';</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+function resolveDirection(lang: string): Direction {
+  return RTL_LANGUAGES.includes(lang.split('-')[0] as SupportedLanguage) ? 'rtl' : 'ltr';
+}
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export function useDirection() {</span>
-<span class="cstat-no" title="statement not covered" >  const { i18n } = useTranslation();</span>
-<span class="cstat-no" title="statement not covered" >  const lang = (i18n.resolvedLanguage ?? 'en') as SupportedLanguage;</span>
-<span class="cstat-no" title="statement not covered" >  const [direction, setDirectionState] = useState&lt;Direction&gt;(() =&gt; resolveDirection(lang));</span>
+export function useDirection() {
+  const { i18n } = useTranslation();
+  const lang = (i18n.<span class="branch-0 cbranch-no" title="branch not covered" >resolvedLanguage ?? 'en') as SupportedLanguage;</span>
+  const [direction, setDirectionState] = useState&lt;Direction&gt;(() =&gt; resolveDirection(lang));
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  const setDirection = useCallback((dir: Direction) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    setDirectionState(dir);</span>
-<span class="cstat-no" title="statement not covered" >    document.documentElement.setAttribute('dir', dir);</span>
-<span class="cstat-no" title="statement not covered" >  }, []);</span>
+  const setDirection = useCallback((dir: Direction) =&gt; {
+    setDirectionState(dir);
+    document.documentElement.setAttribute('dir', dir);
+  }, []);
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  useEffect(() =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    const dir = resolveDirection(lang);</span>
-<span class="cstat-no" title="statement not covered" >    setDirectionState(dir);</span>
-<span class="cstat-no" title="statement not covered" >    document.documentElement.setAttribute('dir', dir);</span>
-<span class="cstat-no" title="statement not covered" >    document.documentElement.setAttribute('lang', lang);</span>
-<span class="cstat-no" title="statement not covered" >  }, [lang]);</span>
+  useEffect(() =&gt; {
+    const dir = resolveDirection(lang);
+    setDirectionState(dir);
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+  }, [lang]);
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  return { direction, setDirection, isRtl: direction === 'rtl' };</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+  return { direction, setDirection, isRtl: direction === 'rtl' };
+}
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -157,7 +157,7 @@ type Direction = 'ltr' | 'rtl';
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-17T09:38:01.652Z
+                at 2026-04-17T14:37:39.463Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

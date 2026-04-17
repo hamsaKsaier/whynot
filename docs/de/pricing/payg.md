@@ -1,3 +1,10 @@
+---
+title: "Pay-as-you-go Credits"
+description: "Kaufen Sie zusaetzliche Credits ueber Ihr Tarif-Kontingent hinaus. Erfahren Sie, wie Credits funktionieren und welches Paket zu Ihnen passt."
+lang: de
+draft: false
+---
+
 # Pay-as-you-go Credits
 
 ## Ueberblick

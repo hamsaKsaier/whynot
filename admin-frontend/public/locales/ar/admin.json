@@ -223,7 +223,7 @@
   "admin.announcements.edit": "تعديل",
   "admin.announcements.delete": "حذف",
   "admin.announcements.deleteTitle": "حذف الإعلان",
-  "admin.announcements.deleteConfirm": "هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع.",
+  "admin.announcements.deleteConfirm": "هل أنت متأكد من حذف \"{{title}}\"؟ لا يمكن التراجع.",
   "admin.announcements.deleteBtn": "حذف",
   "admin.usage.title": "تتبع الاستخدام",
   "admin.usage.noData": "لا تتوفر بيانات استخدام بعد",

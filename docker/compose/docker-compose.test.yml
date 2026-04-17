@@ -31,32 +31,34 @@ services:
     volumes:
       - ../../gateway/src:/app/gateway/src:ro
       - ../../shared:/app/shared:ro
+      - ../../docs:/app/docs:ro
       - ../../gateway/vitest.config.ts:/app/gateway/vitest.config.ts:ro
-      - ../../gateway/coverage:/app/gateway/coverage
 
   frontend-test:
     image: node:20-slim
-    working_dir: /app
+    working_dir: /app/frontend
     env_file:
       - ../../.env.test
     environment:
       NODE_ENV: test
     volumes:
-      - ../../frontend:/app
-      - frontend_node_modules:/app/node_modules
+      - ../../frontend:/app/frontend
+      - ../../shared:/app/shared
+      - frontend_node_modules:/app/frontend/node_modules
     command: >
       sh -c "npm install --prefer-offline && npx vitest run --coverage"
 
   admin-frontend-test:
     image: node:20-slim
-    working_dir: /app
+    working_dir: /app/admin-frontend
     env_file:
       - ../../.env.test
     environment:
       NODE_ENV: test
     volumes:
-      - ../../admin-frontend:/app
-      - admin_frontend_node_modules:/app/node_modules
+      - ../../admin-frontend:/app/admin-frontend
+      - ../../shared:/app/shared
+      - admin_frontend_node_modules:/app/admin-frontend/node_modules
     command: >
       sh -c "npm install --prefer-offline && npx vitest run --coverage"
 

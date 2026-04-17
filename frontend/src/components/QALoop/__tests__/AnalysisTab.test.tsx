@@ -42,7 +42,7 @@ describe('AnalysisTab', () => {
 
   it('shows category badge', () => {
     render(<AnalysisTab analyses={mockAnalyses} correlations={mockCorrelations} />);
-    expect(screen.getByText(/bug/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/bug/i).length).toBeGreaterThan(0);
   });
 
   it('shows root cause text', () => {

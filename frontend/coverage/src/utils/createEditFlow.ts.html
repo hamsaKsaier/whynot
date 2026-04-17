@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/16</span>
+                <span class='fraction'>16/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/16</span>
+                <span class='fraction'>16/16</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -109,22 +109,22 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
  * Helpers for Create/Edit flow detection and prerequisite steps.
  * Used when the user story describes creating or editing entities (CRUD forms in dialogs).
@@ -140,22 +140,22 @@ export interface PrerequisiteStep {
  * Detect if the user story describes a Create or Edit flow that requires
  * opening a dialog/modal before we can capture the form for test generation.
  */
-<span class="cstat-no" title="statement not covered" >export function isCreateOrEditFlow(story: string): boolean {</span>
-<span class="cstat-no" title="statement not covered" >  if (!story || typeof story !== 'string') return false;</span>
-<span class="cstat-no" title="statement not covered" >  const lower = story.toLowerCase();</span>
-<span class="cstat-no" title="statement not covered" >  const patterns = [</span>
-<span class="cstat-no" title="statement not covered" >    /\bcreate\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\badd\s+(a\s+)?new\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\bnew\s+[\w\s]+\s+form\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\bedit\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\bupdate\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\bmodify\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\bopen\s+(the\s+)?(create|edit|add)\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\bcreation\s+(form|dialog|modal|popup)\b/,</span>
-<span class="cstat-no" title="statement not covered" >    /\bedit\s+(form|dialog|modal|popup)\b/,</span>
-<span class="cstat-no" title="statement not covered" >  ];</span>
-<span class="cstat-no" title="statement not covered" >  return patterns.some((p) =&gt; p.test(lower));</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+export function isCreateOrEditFlow(story: string): boolean {
+  if (!story || typeof story !== 'string') return false;
+  const lower = story.toLowerCase();
+  const patterns = [
+    /\bcreate\b/,
+    /\badd\s+(a\s+)?new\b/,
+    /\bnew\s+[\w\s]+\s+form\b/,
+    /\bedit\b/,
+    /\bupdate\b/,
+    /\bmodify\b/,
+    /\bopen\s+(the\s+)?(create|edit|add)\b/,
+    /\bcreation\s+(form|dialog|modal|popup)\b/,
+    /\bedit\s+(form|dialog|modal|popup)\b/,
+  ];
+  return patterns.some((p) =&gt; p.test(lower));
+}
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -163,7 +163,7 @@ export interface PrerequisiteStep {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-17T09:38:01.652Z
+                at 2026-04-17T14:37:39.463Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

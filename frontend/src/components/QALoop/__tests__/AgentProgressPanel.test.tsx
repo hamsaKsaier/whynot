@@ -27,16 +27,22 @@ const mockAgents = [
   },
 ];
 
+const mockGet = vi.fn();
+
+vi.mock('../../../services/api', () => ({
+  apiClient: {
+    get: (...args: unknown[]) => mockGet(...args),
+  },
+}));
+
 describe('AgentProgressPanel', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockAgents),
-    });
+    mockGet.mockResolvedValue({ data: { agents: mockAgents } });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    mockGet.mockReset();
   });
 
   it('renders without crashing', () => {
@@ -47,7 +53,7 @@ describe('AgentProgressPanel', () => {
   it('fetches and displays agents when running', async () => {
     render(<AgentProgressPanel sessionId="session-1" isRunning />);
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
+      expect(mockGet).toHaveBeenCalled();
     });
   });
 

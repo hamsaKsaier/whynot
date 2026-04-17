@@ -42,7 +42,7 @@ describe('ToastContainer', () => {
     render(<ToastContainer toasts={toasts} onDismiss={vi.fn()} />);
     const container = screen.getByLabelText('Notifications');
     expect(container.className).toContain('top-4');
-    expect(container.className).toContain('right-4');
+    expect(container.className).toContain('end-4');
   });
 
   it('applies custom position', () => {
@@ -55,6 +55,6 @@ describe('ToastContainer', () => {
     );
     const container = screen.getByLabelText('Notifications');
     expect(container.className).toContain('bottom-4');
-    expect(container.className).toContain('left-4');
+    expect(container.className).toContain('start-4');
   });
 });

@@ -1,3 +1,10 @@
+---
+title: "Credit-Rechner"
+description: "Schaetzen Sie Ihren monatlichen Credit-Verbrauch und finden Sie den passenden Tarif mit Beispielszenarien und Optimierungstipps."
+lang: de
+draft: false
+---
+
 # Credit-Rechner
 
 ## So nutzen Sie den Credit-Rechner

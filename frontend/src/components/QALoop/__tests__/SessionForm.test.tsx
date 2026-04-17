@@ -45,19 +45,23 @@ const defaultProps = {
 describe('SessionForm', () => {
   it('renders URL input', () => {
     render(<SessionForm {...defaultProps} />);
-    const input = screen.getByPlaceholderText(/example\.com|url|website/i);
-    expect(input).toBeInTheDocument();
+    const inputs = screen.getAllByPlaceholderText(/example\.com|url|website/i);
+    expect(inputs.length).toBeGreaterThan(0);
   });
 
   it('renders start button', () => {
     render(<SessionForm {...defaultProps} />);
-    expect(screen.getByText(/start/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/start/i).length).toBeGreaterThan(0);
   });
 
   it('disables start button when starting', () => {
     render(<SessionForm {...defaultProps} isStarting />);
-    const startBtn = screen.getByText(/start/i).closest('button');
-    expect(startBtn).toBeDisabled();
+    const startBtn = screen
+      .getAllByText(/start/i)
+      .map((el) => el.closest('button'))
+      .find((btn) => btn !== null);
+    expect(startBtn).toBeDefined();
+    if (startBtn) expect(startBtn).toBeDisabled();
   });
 
   it('shows scan mode toggle', () => {

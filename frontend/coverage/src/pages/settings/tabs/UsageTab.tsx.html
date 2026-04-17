@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">2.02% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/346</span>
+                <span class='fraction'>7/346</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">2.02% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/346</span>
+                <span class='fraction'>7/346</span>
             </div>
         
             
@@ -505,7 +505,7 @@
 <a name='L440'></a><a href='#L440'>440</a>
 <a name='L441'></a><a href='#L441'>441</a>
 <a name='L442'></a><a href='#L442'>442</a>
-<a name='L443'></a><a href='#L443'>443</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L443'></a><a href='#L443'>443</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -565,17 +565,17 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -947,7 +947,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import React, { useState, useEffect, useCallback, useMemo } from 'react';</span></span></span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -995,7 +995,7 @@ interface RecentEvent {
 &nbsp;
 type DateRange = '7d' | '30d' | '90d' | 'custom';
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function getDateRange(range: DateRange): { from: Date; to: Date } {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function getDateRange(range: DateRange): { from: Date; to: Date } {</span></span>
 <span class="cstat-no" title="statement not covered" >  const to = new Date();</span>
 <span class="cstat-no" title="statement not covered" >  const from = new Date();</span>
 <span class="cstat-no" title="statement not covered" >  switch (range) {</span>
@@ -1007,17 +1007,17 @@ type DateRange = '7d' | '30d' | '90d' | 'custom';
 <span class="cstat-no" title="statement not covered" >  return { from, to };</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >const EVENT_TYPE_COLORS: Record&lt;string, string&gt; = {</span>
-<span class="cstat-no" title="statement not covered" >  test_generation: '#0ea5e9',</span>
-<span class="cstat-no" title="statement not covered" >  test_execution: '#f59e0b',</span>
-<span class="cstat-no" title="statement not covered" >  qa_loop_iteration: '#8b5cf6',</span>
-<span class="cstat-no" title="statement not covered" >};</span>
+const EVENT_TYPE_COLORS: Record&lt;string, string&gt; = {
+  test_generation: '#0ea5e9',
+  test_execution: '#f59e0b',
+  qa_loop_iteration: '#8b5cf6',
+};
 &nbsp;
-<span class="cstat-no" title="statement not covered" >function getEventColor(eventType: string): string {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function getEventColor(eventType: string): string {</span></span>
 <span class="cstat-no" title="statement not covered" >  return EVENT_TYPE_COLORS[eventType] || '#64748b';</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export const UsageTab: React.FC = () =&gt; {</span>
+export const UsageTab: React.FC = <span class="fstat-no" title="function not covered" >() =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  const { t, i18n } = useTranslation('settings');</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  const [dateRange, setDateRange] = useState&lt;DateRange&gt;('30d');</span>
@@ -1396,7 +1396,7 @@ type DateRange = '7d' | '30d' | '90d' | 'custom';
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-17T09:38:01.652Z
+                at 2026-04-17T14:37:39.463Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>
