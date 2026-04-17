@@ -1,13 +1,11 @@
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Globe } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Stagger } from '@/components/motion/Stagger'
+import { useReducedMotion } from '@/lib/motion/prefers-reduced-motion'
+import { fadeInVariants } from '@/lib/motion/presets'
+import { motion } from 'framer-motion'
 import {
   SUPPORTED_LANGUAGES,
   LANGUAGE_META,
@@ -34,13 +32,17 @@ export function Footer() {
   const { t, i18n } = useTranslation('landing')
   const currentLang = (i18n.resolvedLanguage ?? 'en') as SupportedLanguage
   const year = new Date().getFullYear()
+  const reduced = useReducedMotion()
 
-  const handleLanguageChange = (lang: SupportedLanguage) => {
-    i18n.changeLanguage(lang)
-    const { dir } = LANGUAGE_META[lang]
-    document.documentElement.setAttribute('dir', dir)
-    document.documentElement.setAttribute('lang', lang)
-  }
+  const handleLanguageChange = useCallback(
+    (lang: SupportedLanguage) => {
+      i18n.changeLanguage(lang)
+      const { dir } = LANGUAGE_META[lang]
+      document.documentElement.setAttribute('dir', dir)
+      document.documentElement.setAttribute('lang', lang)
+    },
+    [i18n]
+  )
 
   const columns = [
     {
@@ -72,6 +74,7 @@ export function Footer() {
       links: [
         { label: t('footer.privacy'), href: '#' },
         { label: t('footer.terms'), href: '#' },
+        { label: t('footer.security'), href: '#' },
       ],
     },
   ]
@@ -79,8 +82,8 @@ export function Footer() {
   return (
     <footer className="border-t border-border" role="contentinfo">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
-          <div>
+        <Stagger className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+          <motion.div variants={reduced ? undefined : fadeInVariants}>
             <div className="mb-4 flex items-center gap-2">
               <Logo size="sm" />
               <span className="font-semibold text-foreground">WhyNot</span>
@@ -108,56 +111,77 @@ export function Footer() {
                 <TwitterIcon className="h-5 w-5" />
               </a>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Globe className="h-4 w-4" />
-                  {LANGUAGE_META[currentLang].nativeName}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                {SUPPORTED_LANGUAGES.map((lang) => {
-                  const meta = LANGUAGE_META[lang]
-                  return (
-                    <DropdownMenuItem
-                      key={lang}
-                      onClick={() => handleLanguageChange(lang)}
-                      className={currentLang === lang ? 'bg-accent' : undefined}
-                    >
-                      <span className="me-2">{meta.flag}</span>
-                      {meta.nativeName}
-                    </DropdownMenuItem>
-                  )
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+
+            <div
+              className="inline-flex items-center rounded-md border border-border"
+              role="radiogroup"
+              aria-label={t('nav.changeLanguage')}
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const meta = LANGUAGE_META[lang]
+                const isActive = currentLang === lang
+                return (
+                  <button
+                    key={lang}
+                    role="radio"
+                    aria-checked={isActive}
+                    aria-current={isActive ? 'true' : undefined}
+                    onClick={() => handleLanguageChange(lang)}
+                    className={cn(
+                      'px-2 py-1 text-xs transition-colors duration-150',
+                      isActive
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    )}
+                  >
+                    <span className="me-1">{meta.flag}</span>
+                    {lang.toUpperCase()}
+                  </button>
+                )
+              })}
+            </div>
+          </motion.div>
 
           {columns.map((col) => (
-            <div key={col.title}>
+            <motion.div key={col.title} variants={reduced ? undefined : fadeInVariants}>
               <h3 className="mb-3 text-sm font-semibold text-foreground">
                 {col.title}
               </h3>
               <ul className="space-y-2">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
+                {col.links.map((link) => {
+                  const isExternal = link.href.startsWith('mailto:')
+                  return (
+                    <li key={link.label}>
+                      <a
+                        href={link.href}
+                        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                        className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  )
+                })}
               </ul>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </Stagger>
 
-        <div className="mt-12 border-t border-border pt-6">
-          <p className="text-center text-xs text-muted-foreground">
-            {t('footer.copyright', { year })}
-          </p>
+        <div className="mt-12 flex flex-col items-center gap-4 border-t border-border pt-6 sm:flex-row sm:justify-between">
+          <small className="text-xs text-muted-foreground">
+            &copy; {year} WhyNot. {t('footer.allRightsReserved')}
+          </small>
+          <div className="flex items-center gap-4">
+            <a href="#" className="text-xs text-muted-foreground transition-colors duration-150 hover:text-foreground">
+              {t('footer.terms')}
+            </a>
+            <a href="#" className="text-xs text-muted-foreground transition-colors duration-150 hover:text-foreground">
+              {t('footer.privacy')}
+            </a>
+            <a href="#" className="text-xs text-muted-foreground transition-colors duration-150 hover:text-foreground">
+              {t('footer.security')}
+            </a>
+          </div>
         </div>
       </div>
     </footer>

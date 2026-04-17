@@ -1,30 +1,48 @@
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { EmailCapture } from './EmailCapture'
+import { ArrowRight, CheckCircle, CreditCard, Shield } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Reveal } from '@/components/motion/Reveal'
+import { useReducedMotion } from '@/lib/motion/prefers-reduced-motion'
+
+const trustSignals = [
+  { icon: CheckCircle, key: 'cta.trustSignals.freeTier' },
+  { icon: CreditCard, key: 'cta.trustSignals.noCard' },
+  { icon: Shield, key: 'cta.trustSignals.moneyBack' },
+] as const
 
 export function CTASection() {
   const { t } = useTranslation('landing')
+  const navigate = useNavigate()
+  const reduced = useReducedMotion()
+
+  const content = (
+    <div className="mx-auto max-w-2xl text-center">
+      <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+        {t('cta.heading')}
+      </h2>
+      <p className="mt-4 text-lg text-muted-foreground">{t('cta.subheading')}</p>
+      <div className="mt-8">
+        <Button size="lg" onClick={() => navigate('/signup')}>
+          {t('cta.getStarted')}
+          <ArrowRight className="ms-2 h-5 w-5 rtl:scale-x-[-1]" />
+        </Button>
+      </div>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+        {trustSignals.map(({ icon: Icon, key }) => (
+          <span key={key} className="flex items-center gap-1.5">
+            <Icon className="h-4 w-4 text-primary" />
+            {t(key)}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
-    <section className="py-20 sm:py-28 bg-background border-y border-border/50">
+    <section className="bg-muted py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-4">
-            {t('cta.heading')}
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8">
-            {t('cta.subheading')}
-          </p>
-          <EmailCapture
-            variant="inline"
-            ctaText={t('cta.getStarted')}
-            source="landing_cta"
-          />
-          <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm text-muted-foreground">
-            <span>{t('cta.trustSignals.freeTier')}</span>
-            <span>{t('cta.trustSignals.noCard')}</span>
-            <span>{t('cta.trustSignals.moneyBack')}</span>
-          </div>
-        </div>
+        {reduced ? content : <Reveal>{content}</Reveal>}
       </div>
     </section>
   )

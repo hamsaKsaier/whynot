@@ -1,116 +1,70 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Shield, Lock, RefreshCw, Clock } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useScrollReveal } from '@/hooks/useScrollReveal'
-
-const TECH_LOGOS = [
-  'Playwright',
-  'Cypress',
-  'Selenium',
-  'React',
-  'Next.js',
-  'Vue',
-  'Angular',
-  'Svelte',
-  'Node.js',
-  'Django',
-  'Rails',
-  'Laravel',
-  'WordPress',
-  'Shopify',
-  'Webflow',
-]
-
-function MarqueeRow() {
-  const duplicated = [...TECH_LOGOS, ...TECH_LOGOS]
-
-  return (
-    <div className="relative overflow-hidden">
-      <div className="flex gap-6 sm:gap-8 w-max motion-safe:animate-marquee">
-        {duplicated.map((tech, index) => (
-          <div
-            key={`${tech}-${index}`}
-            className="flex-shrink-0 px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg border bg-card/30 grayscale hover:grayscale-0 transition-colors duration-150 select-none"
-          >
-            <span className="font-mono font-bold text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
-              {tech}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+import { Marquee } from '@/components/motion/Marquee'
+import { CountUp } from '@/components/motion/CountUp'
+import { Reveal } from '@/components/motion/Reveal'
+import { Stagger } from '@/components/motion/Stagger'
 
 const TRUST_BADGES = [
   { icon: Shield, textKey: 'trustBar.badges.soc2' },
   { icon: Lock, textKey: 'trustBar.badges.dataPrivacy' },
   { icon: RefreshCw, textKey: 'trustBar.badges.moneyBack' },
   { icon: Clock, textKey: 'trustBar.badges.uptime' },
-]
+] as const
 
-function useCountUp(target: number, duration = 1500) {
-  const [count, setCount] = useState(0)
-  const { ref, visible } = useScrollReveal(0.3)
-
-  useEffect(() => {
-    if (!visible) return
-    let frame = 0
-    const totalFrames = Math.round(duration / 16)
-    const step = target / totalFrames
-
-    const timer = setInterval(() => {
-      frame++
-      if (frame >= totalFrames) {
-        setCount(target)
-        clearInterval(timer)
-      } else {
-        setCount(Math.round(step * frame))
-      }
-    }, 16)
-
-    return () => clearInterval(timer)
-  }, [visible, target, duration])
-
-  return { ref, count }
+interface Stat {
+  labelKey: string
+  suffixKey: string
+  value: number
+  formatOptions?: Intl.NumberFormatOptions
 }
 
-function StatItem({
-  label,
-  numericValue,
-  suffix,
-}: {
-  label: string
-  numericValue: number
-  suffix: string
-}) {
-  const { ref, count } = useCountUp(numericValue)
-  const display = Number.isInteger(numericValue)
-    ? count.toString()
-    : count.toFixed(1)
+const STATS: Stat[] = [
+  { labelKey: 'trustBar.stats.bugsFound', suffixKey: 'trustBar.stats.bugsFoundSuffix', value: 50000 },
+  { labelKey: 'trustBar.stats.testsGenerated', suffixKey: 'trustBar.stats.testsGeneratedSuffix', value: 120000 },
+  { labelKey: 'trustBar.stats.teams', suffixKey: 'trustBar.stats.teamsSuffix', value: 500 },
+  {
+    labelKey: 'trustBar.stats.accuracy',
+    suffixKey: 'trustBar.stats.accuracySuffix',
+    value: 99.2,
+    formatOptions: { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+  },
+]
+
+function BadgeItem({ icon: Icon, textKey }: (typeof TRUST_BADGES)[number]) {
+  const { t } = useTranslation('landing')
+  return (
+    <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg border bg-card/30">
+      <Icon className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" aria-hidden="true" />
+      <span className="text-sm text-muted-foreground whitespace-nowrap font-medium">
+        {t(textKey)}
+      </span>
+    </div>
+  )
+}
+
+function StatCell({ stat }: { stat: Stat }) {
+  const { t, i18n } = useTranslation('landing')
+  const locale = i18n.language
 
   return (
-    <div ref={ref} className="text-center">
-      <dd className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-1 tabular-nums">
-        {display}
-        {suffix}
+    <Reveal as="div" className="text-center">
+      <dd className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-1 tabular-nums min-w-[5ch]">
+        <CountUp
+          target={stat.value}
+          locale={locale}
+          formatOptions={stat.formatOptions}
+          duration={0.4}
+        />
+        {t(stat.suffixKey)}
       </dd>
-      <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-    </div>
+      <dt className="text-sm font-medium text-muted-foreground">{t(stat.labelKey)}</dt>
+    </Reveal>
   )
 }
 
 export function TrustBar() {
   const { t } = useTranslation('landing')
-  const { ref: badgesRef, visible: badgesVisible } = useScrollReveal()
-
-  const stats = [
-    { label: t('trustBar.stats.bugsFound'), numericValue: 50000, suffix: '+' },
-    { label: t('trustBar.stats.testsGenerated'), numericValue: 120000, suffix: '+' },
-    { label: t('trustBar.stats.teams'), numericValue: 500, suffix: '+' },
-    { label: t('trustBar.stats.accuracy'), numericValue: 99.2, suffix: '%' },
-  ]
 
   return (
     <section
@@ -122,55 +76,22 @@ export function TrustBar() {
           {t('trustBar.logoTitle')}
         </p>
       </div>
-      <MarqueeRow />
 
-      <div
-        ref={badgesRef}
-        className={cn(
-          'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-10 transition-opacity duration-200',
-          badgesVisible ? 'opacity-100' : 'opacity-0'
-        )}
-      >
-        <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+      <Marquee speed={30} className="mb-10" aria-label={t('trustBar.ariaLabel')}>
+        <div className="flex gap-4 sm:gap-6 px-2">
           {TRUST_BADGES.map((badge) => (
-            <div
-              key={badge.textKey}
-              className="flex items-center gap-2 px-4 py-2"
-            >
-              <badge.icon
-                className="h-5 w-5 text-green-500 shrink-0"
-                aria-hidden="true"
-              />
-              <span className="text-sm text-muted-foreground whitespace-nowrap font-medium">
-                {t(badge.textKey)}
-              </span>
-            </div>
+            <BadgeItem key={badge.textKey} {...badge} />
           ))}
         </div>
-      </div>
+      </Marquee>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-10">
+      <Stagger as="div" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <dl className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {stats.map((stat) => (
-            <StatItem key={stat.label} {...stat} />
+          {STATS.map((stat) => (
+            <StatCell key={stat.labelKey} stat={stat} />
           ))}
         </dl>
-      </div>
-
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 40s linear infinite;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .animate-marquee {
-            animation-play-state: paused;
-          }
-        }
-      `}</style>
+      </Stagger>
     </section>
   )
 }

@@ -132,6 +132,10 @@ const config: Config = {
         "pulse-slow":
           "pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
+      transitionTimingFunction: {
+        "ease-out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "ease-in-out-cubic": "cubic-bezier(0.65, 0, 0.35, 1)",
+      },
       boxShadow: {
         cypress: "0 2px 8px rgba(0, 0, 0, 0.1)",
         "cypress-lg": "0 4px 16px rgba(0, 0, 0, 0.15)",

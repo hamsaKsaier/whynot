@@ -2,20 +2,24 @@
   "nav": {
     "features": "Funktionen",
     "pricing": "Preise",
+    "docs": "Dokumentation",
     "signIn": "Anmelden",
     "getStarted": "Loslegen",
     "openApp": "App öffnen",
     "menu": "Menü",
     "changeLanguage": "Sprache ändern",
+    "themeToggleLabel": "Design wechseln",
     "main": "Hauptnavigation"
   },
   "hero": {
     "title": "Finden Sie Bugs <highlight>bevor Ihre Nutzer es tun</highlight>",
     "subtitle": "Autonome KI-Agenten erkunden Ihre Web-App, finden Bugs und generieren Playwright-Testcode — damit Sie mit Vertrauen ausliefern können.",
     "cta": "Kostenlos testen",
-    "secondaryCta": "So funktioniert es",
+    "secondaryCta": "Preise ansehen",
     "socialProof": "Vertraut von Engineering-Teams, die Qualitätssoftware ausliefern",
-    "noCreditCard": "Keine Kreditkarte erforderlich"
+    "noCreditCard": "Keine Kreditkarte erforderlich",
+    "eyebrow": "KI-gestütztes QA",
+    "videoCaption": "WhyNot-Dashboard zeigt autonome Bug-Erkennung in Aktion"
   },
   "trustBar": {
     "ariaLabel": "Vertrauensindikatoren und unterstützte Technologien",
@@ -28,9 +32,13 @@
     },
     "stats": {
       "bugsFound": "Bugs gefunden",
+      "bugsFoundSuffix": "+",
       "testsGenerated": "Tests generiert",
+      "testsGeneratedSuffix": "+",
       "teams": "Teams nutzen WhyNot",
-      "accuracy": "Erkennungsgenauigkeit"
+      "teamsSuffix": "+",
+      "accuracy": "Erkennungsgenauigkeit",
+      "accuracySuffix": " %"
     }
   },
   "features": {
@@ -47,7 +55,8 @@
       },
       "visualRegression": {
         "title": "Visuelle Regressionstests",
-        "description": "Pixel-genaue Screenshot-Vergleiche erkennen UI-Änderungen, bevor sie die Produktion erreichen."
+        "description": "Pixel-genaue Screenshot-Vergleiche erkennen UI-Änderungen, bevor sie die Produktion erreichen.",
+        "tierBadge": "Pro"
       },
       "playwrightGen": {
         "title": "Playwright-Code-Generierung",
@@ -55,7 +64,8 @@
       },
       "chaosTest": {
         "title": "Chaos-Tests",
-        "description": "Simulieren Sie langsame Netzwerke, fehlende APIs und Browser-Eigenheiten, um Ihre App unter realen Bedingungen zu testen."
+        "description": "Simulieren Sie langsame Netzwerke, fehlende APIs und Browser-Eigenheiten, um Ihre App unter realen Bedingungen zu testen.",
+        "tierBadge": "Pro"
       },
       "multiBrowser": {
         "title": "Multi-Browser-Abdeckung",
@@ -67,7 +77,8 @@
       },
       "security": {
         "title": "Sicherheitsüberprüfung",
-        "description": "Erkennt häufige Schwachstellen wie XSS, offene Weiterleitungen und exponierte Geheimnisse bei jedem Testlauf."
+        "description": "Erkennt häufige Schwachstellen wie XSS, offene Weiterleitungen und exponierte Geheimnisse bei jedem Testlauf.",
+        "tierBadge": "Verwaltet"
       }
     }
   },
@@ -89,8 +100,13 @@
       "bugDetection": "Automatische Bug-Erkennung",
       "testGeneration": "Testcode-Generierung",
       "visualRegression": "Visuelle Regressionstests",
-      "chaosTest": "Chaos-Tests"
+      "chaosTest": "Chaos-Tests",
+      "ciIntegration": "CI/CD-Integration",
+      "multiBrowser": "Multi-Browser-Tests",
+      "selfHealing": "Selbstheilende Tests",
+      "parallelExecution": "Parallele Ausführung"
     },
+    "mobileHint": "Scrollen Sie für mehr",
     "values": {
       "yes": "Ja",
       "no": "Nein",
@@ -100,6 +116,11 @@
   "testimonials": {
     "heading": "Geschätzt von Engineering-Teams",
     "subheading": "Erfahren Sie, wie Teams WhyNot nutzen, um Bugs vor ihren Nutzern zu finden.",
+    "carousel": {
+      "previous": "Vorheriges Testimonial",
+      "next": "Nächstes Testimonial",
+      "goToSlide": "Zum Testimonial {{number}} gehen"
+    },
     "items": {
       "sarah": {
         "quote": "Wir haben WhyNot auf unserer E-Commerce-Plattform eingesetzt und es hat in der ersten Stunde 23 Bugs gefunden — darunter ein Checkout-Problem, das uns Conversions gekostet hat. Der generierte Playwright-Code hat unserem QA-Team Tage an Arbeit gespart.",
@@ -147,7 +168,8 @@
       }
     },
     "contactText": "Noch Fragen?",
-    "contactLink": "Kontaktieren Sie uns"
+    "contactLink": "Kontaktieren Sie uns",
+    "deepLinkAriaLabel": "Link zu dieser Frage kopieren"
   },
   "cta": {
     "heading": "Beginnen Sie noch heute mit der Bug-Suche",
@@ -173,17 +195,25 @@
     "success": "Danke! Wir melden uns bald bei Ihnen.",
     "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-    "rateLimited": "Zu viele Versuche. Bitte versuchen Sie es später erneut."
+    "rateLimited": "Zu viele Versuche. Bitte versuchen Sie es später erneut.",
+    "rateLimitedCountdown": "Erneut versuchen in {{seconds}}s"
   },
   "pricing": {
     "heading": "Einfache, transparente Preise",
     "subheading": "Starten Sie kostenlos, upgraden Sie bei Bedarf.",
-    "monthly": "/Monat",
+    "monthly": "Monatlich",
+    "annual": "Jährlich",
+    "perMonth": "/Monat",
+    "perYear": "/Jahr",
+    "monthlyEquivalent": "{{price}}/Monat bei jährlicher Zahlung",
+    "saveBadge": "{{percent}} % sparen",
     "free": "Für immer kostenlos",
     "popular": "Am beliebtesten",
     "startFree": "Kostenlos starten",
     "getStarted": "Loslegen",
+    "contactSales": "Vertrieb kontaktieren",
     "trialDays": "{{days}} Tage kostenlos testen",
+    "errorFallback": "Standardpreise werden angezeigt. Aktuelle Preise konnten nicht geladen werden.",
     "plans": {
       "free": {
         "name": "Kostenlos",
@@ -262,15 +292,37 @@
     },
     "creditsUnit": "Guthaben",
     "creditPack": "Guthaben-Pakete ab 10 $ für 1.000 Guthaben.",
+    "packs": {
+      "heading": "Guthaben-Pakete",
+      "bestValue": "Bester Wert",
+      "perCredit": "pro Guthaben",
+      "items": {
+        "starter": { "name": "Starter", "size": "1.000 Guthaben", "price": "10 $" },
+        "growth": { "name": "Wachstum", "size": "10.000 Guthaben", "price": "80 $" },
+        "scale": { "name": "Skalierung", "size": "100.000 Guthaben", "price": "600 $" }
+      }
+    },
     "calculator": {
       "heading": "Guthaben-Rechner",
       "description": "Schätzen Sie Ihren monatlichen Guthabenverbrauch und die Kosten.",
-      "totalCredits": "Gesamtguthaben:",
-      "estimatedCost": "Geschätzte Kosten:"
+      "totalCreditsLabel": "Gesamtguthaben",
+      "estimatedMonthlyCost": "Geschätzte monatliche Kosten",
+      "recommendedPack": "Empfohlenes Paket: {{pack}}",
+      "inputLabel": {
+        "test_generation": "Testgenerierungen pro Monat",
+        "test_execution": "Testausführungen pro Monat",
+        "qa_loop_iteration": "QA-Schleifen-Iterationen pro Monat",
+        "auto_fix_attempt": "Automatische Reparaturversuche pro Monat",
+        "visual_regression": "Visuelle Regressionen pro Monat",
+        "qa_monitor_session": "QA-Monitor-Sitzungen pro Monat",
+        "ci_scan": "CI-Scans pro Monat"
+      }
     },
     "workedExample": {
       "heading": "Rechenbeispiel",
-      "description": "Ein typisches mittelgroßes Team mit 50 Testgenerierungen und 200 Testausführungen pro Monat:",
+      "expand": "Rechenbeispiel anzeigen",
+      "collapse": "Rechenbeispiel ausblenden",
+      "description": "Ein SaaS-Team mit 20 Ingenieuren, das 3× wöchentlich ausliefert:",
       "items": [
         "50 × Testgenerierung (50 Guthaben) = 2.500 Guthaben",
         "200 × Testausführung (10 Guthaben) = 2.000 Guthaben",
@@ -297,7 +349,9 @@
     "legal": "Rechtliches",
     "privacy": "Datenschutzrichtlinie",
     "terms": "Nutzungsbedingungen",
+    "security": "Sicherheit",
     "copyright": "© {{year}} WhyNot. Alle Rechte vorbehalten.",
+    "allRightsReserved": "Alle Rechte vorbehalten.",
     "github": "GitHub",
     "twitter": "X (Twitter)"
   },

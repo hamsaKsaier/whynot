@@ -1,103 +1,143 @@
-import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Check } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useScrollReveal } from '@/hooks/useScrollReveal'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { useReducedMotion } from '@/lib/motion/prefers-reduced-motion';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { Stagger } from '@/components/motion/Stagger';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatCents } from '@/lib/pricing/payg-calculator';
+import { fadeInVariants } from '@/lib/motion/presets';
 
 interface PlanData {
-  slug: string
-  monthlyCents: number
+  slug: string;
+  monthlyCents: number;
 }
 
 interface PricingResponse {
-  plans: PlanData[]
-  trialDays: number
+  plans: PlanData[];
+  trialDays: number;
 }
 
-const PLAN_SLUGS = ['free', 'pro_byo', 'pro_managed'] as const
+type BillingInterval = 'monthly' | 'annual';
 
-function formatPrice(cents: number, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100)
-}
+const PLAN_SLUGS = ['free', 'pro_byo', 'pro_managed'] as const;
+const ANNUAL_DISCOUNT = 0.2;
 
 const DEFAULT_PRICES: Record<string, number> = {
   free: 0,
   pro_byo: 2900,
   pro_managed: 4900,
-}
+};
 
 const FEATURE_COUNTS: Record<string, number> = {
   free: 5,
   pro_byo: 7,
   pro_managed: 7,
+};
+
+function getAnnualMonthlyCents(monthlyCents: number): number {
+  return Math.round(monthlyCents * (1 - ANNUAL_DISCOUNT));
+}
+
+function getAnnualSavePercent(): number {
+  return Math.round(ANNUAL_DISCOUNT * 100);
 }
 
 export function PricingSection() {
-  const { t, i18n } = useTranslation('landing')
-  const { ref, visible } = useScrollReveal()
-  const [prices, setPrices] = useState(DEFAULT_PRICES)
-  const [trialDays, setTrialDays] = useState(14)
+  const { t, i18n } = useTranslation('landing');
+  const reduced = useReducedMotion();
+  const [prices, setPrices] = useState(DEFAULT_PRICES);
+  const [trialDays, setTrialDays] = useState(14);
+  const [interval, setInterval] = useState<BillingInterval>('monthly');
 
   useEffect(() => {
     fetch('/api/landing/pricing')
       .then((r) => r.json())
       .then((data: PricingResponse) => {
-        const map: Record<string, number> = {}
-        for (const p of data.plans) map[p.slug] = p.monthlyCents
-        setPrices((prev) => ({ ...prev, ...map }))
-        if (data.trialDays) setTrialDays(data.trialDays)
+        const map: Record<string, number> = {};
+        for (const p of data.plans) map[p.slug] = p.monthlyCents;
+        setPrices((prev) => ({ ...prev, ...map }));
+        if (data.trialDays) setTrialDays(data.trialDays);
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {});
+  }, []);
 
-  const locale = i18n.language === 'ar' ? 'ar-SA' : i18n.language
+  const locale = i18n.language === 'ar' ? 'ar-SA' : i18n.language;
+
+  const handleIntervalChange = useCallback((value: string) => {
+    setInterval(value as BillingInterval);
+  }, []);
 
   return (
     <section id="pricing" className="py-24 sm:py-32 bg-muted/30" aria-labelledby="pricing-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div
-          ref={ref}
-          className={cn(
-            'text-center max-w-3xl mx-auto mb-16 transition-opacity duration-200',
-            visible ? 'opacity-100' : 'opacity-0'
-          )}
-        >
-          <h2 id="pricing-heading" className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+        <FadeIn className="text-center max-w-3xl mx-auto mb-10">
+          <h2
+            id="pricing-heading"
+            className="text-3xl sm:text-4xl font-bold tracking-tight mb-4"
+          >
             {t('pricing.heading')}
           </h2>
           <p className="text-lg text-muted-foreground">{t('pricing.subheading')}</p>
+        </FadeIn>
+
+        <div className="flex justify-center mb-12">
+          <Tabs value={interval} onValueChange={handleIntervalChange}>
+            <TabsList aria-label={t('pricing.monthly')}>
+              <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
+              <TabsTrigger value="annual">
+                {t('pricing.annual')}
+                <Badge variant="secondary" className="ms-2 text-[10px] px-1.5 py-0">
+                  {t('pricing.saveBadge', { percent: getAnnualSavePercent() })}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {PLAN_SLUGS.map((slug, index) => {
-            const isPopular = slug === 'pro_byo'
-            const isFree = slug === 'free'
-            const price = prices[slug] ?? DEFAULT_PRICES[slug]
+        <Stagger className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {PLAN_SLUGS.map((slug) => {
+            const isPopular = slug === 'pro_byo';
+            const isFree = slug === 'free';
+            const isManaged = slug === 'pro_managed';
+            const baseCents = prices[slug] ?? DEFAULT_PRICES[slug];
+            const displayCents =
+              interval === 'annual' && !isFree
+                ? getAnnualMonthlyCents(baseCents)
+                : baseCents;
+
+            const ctaText = isFree
+              ? t('pricing.startFree')
+              : isManaged
+                ? t('pricing.contactSales')
+                : t('pricing.getStarted');
+
+            const ctaHref = isManaged ? '/contact' : `/signup${!isFree ? `?plan=${slug}` : ''}`;
 
             return (
-              <div
+              <motion.div
                 key={slug}
+                variants={fadeInVariants}
                 className={cn(
-                  'rounded-lg border bg-card p-6 flex flex-col transition-opacity duration-200',
-                  isPopular && 'border-primary ring-1 ring-primary',
-                  visible ? 'opacity-100' : 'opacity-0'
+                  'rounded-lg border bg-card p-6 flex flex-col transition-colors duration-150',
+                  isPopular
+                    ? 'ring-1 ring-primary border-primary'
+                    : 'hover:ring-1 hover:ring-primary/50 hover:border-primary/30',
                 )}
-                style={{ transitionDelay: visible ? `${index * 80}ms` : '0ms' }}
               >
                 <div className="mb-6">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold">{t(`pricing.plans.${slug}.name`)}</h3>
+                    <h3 className="text-lg font-semibold">
+                      {t(`pricing.plans.${slug}.name`)}
+                    </h3>
                     {isPopular && (
-                      <Badge variant="secondary" className="text-xs">
-                        {t('pricing.popular')}
-                      </Badge>
+                      <FadeIn as="span">
+                        <Badge>{t('pricing.popular')}</Badge>
+                      </FadeIn>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
@@ -108,12 +148,32 @@ export function PricingSection() {
                       <span className="text-3xl font-bold">{t('pricing.free')}</span>
                     ) : (
                       <>
-                        <span className="text-3xl font-bold">{formatPrice(price, locale)}</span>
-                        <span className="text-muted-foreground">{t('pricing.monthly')}</span>
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={`${slug}-${interval}`}
+                            className="text-3xl font-bold tabular-nums"
+                            initial={reduced ? false : { opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={reduced ? undefined : { opacity: 0, y: 8 }}
+                            transition={reduced ? undefined : { duration: 0.15 }}
+                          >
+                            {formatCents(displayCents, locale)}
+                          </motion.span>
+                        </AnimatePresence>
+                        <span className="text-muted-foreground">
+                          {t('pricing.perMonth')}
+                        </span>
                       </>
                     )}
                   </div>
-                  {!isFree && (
+                  {!isFree && interval === 'annual' && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {t('pricing.monthlyEquivalent', {
+                        price: formatCents(displayCents, locale),
+                      })}
+                    </p>
+                  )}
+                  {!isFree && interval === 'monthly' && (
                     <p className="text-sm text-muted-foreground mt-1">
                       {t('pricing.trialDays', { days: trialDays })}
                     </p>
@@ -123,7 +183,10 @@ export function PricingSection() {
                 <ul className="space-y-3 mb-8 flex-1" role="list">
                   {Array.from({ length: FEATURE_COUNTS[slug] }, (_, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" aria-hidden="true" />
+                      <Check
+                        className="h-4 w-4 text-primary mt-0.5 shrink-0"
+                        aria-hidden="true"
+                      />
                       <span>{t(`pricing.plans.${slug}.features.${i}`)}</span>
                     </li>
                   ))}
@@ -134,15 +197,13 @@ export function PricingSection() {
                   className="w-full rounded-md"
                   asChild
                 >
-                  <a href="/signup">
-                    {isFree ? t('pricing.startFree') : t('pricing.getStarted')}
-                  </a>
+                  <a href={ctaHref}>{ctaText}</a>
                 </Button>
-              </div>
-            )
+              </motion.div>
+            );
           })}
-        </div>
+        </Stagger>
       </div>
     </section>
-  )
+  );
 }

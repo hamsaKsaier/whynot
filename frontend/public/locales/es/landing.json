@@ -2,20 +2,24 @@
   "nav": {
     "features": "Funcionalidades",
     "pricing": "Precios",
+    "docs": "Documentación",
     "signIn": "Iniciar sesión",
     "getStarted": "Comenzar",
     "openApp": "Abrir aplicación",
     "menu": "Menú",
     "changeLanguage": "Cambiar idioma",
+    "themeToggleLabel": "Cambiar tema",
     "main": "Navegación principal"
   },
   "hero": {
     "title": "Encuentra bugs <highlight>antes que tus usuarios</highlight>",
     "subtitle": "Agentes de IA autónomos que exploran tu aplicación web, encuentran bugs y generan código de prueba Playwright — para que puedas lanzar con confianza.",
     "cta": "Prueba gratuita",
-    "secondaryCta": "Ver cómo funciona",
+    "secondaryCta": "Ver precios",
     "socialProof": "Confiado por equipos de ingeniería que entregan software de calidad",
-    "noCreditCard": "No se requiere tarjeta de crédito"
+    "noCreditCard": "No se requiere tarjeta de crédito",
+    "eyebrow": "QA impulsado por IA",
+    "videoCaption": "Panel de WhyNot mostrando la detección autónoma de bugs en acción"
   },
   "trustBar": {
     "ariaLabel": "Indicadores de confianza y tecnologías soportadas",
@@ -28,9 +32,13 @@
     },
     "stats": {
       "bugsFound": "Bugs encontrados",
+      "bugsFoundSuffix": "+",
       "testsGenerated": "Pruebas generadas",
+      "testsGeneratedSuffix": "+",
       "teams": "Equipos usando WhyNot",
-      "accuracy": "Precisión de detección"
+      "teamsSuffix": "+",
+      "accuracy": "Precisión de detección",
+      "accuracySuffix": " %"
     }
   },
   "features": {
@@ -47,7 +55,8 @@
       },
       "visualRegression": {
         "title": "Pruebas de regresión visual",
-        "description": "Comparaciones de capturas de pantalla a nivel de píxel detectan cambios de UI antes de que lleguen a producción."
+        "description": "Comparaciones de capturas de pantalla a nivel de píxel detectan cambios de UI antes de que lleguen a producción.",
+        "tierBadge": "Pro"
       },
       "playwrightGen": {
         "title": "Generación de código Playwright",
@@ -55,7 +64,8 @@
       },
       "chaosTest": {
         "title": "Pruebas de caos",
-        "description": "Simula redes lentas, APIs faltantes y peculiaridades del navegador para probar tu app bajo condiciones del mundo real."
+        "description": "Simula redes lentas, APIs faltantes y peculiaridades del navegador para probar tu app bajo condiciones del mundo real.",
+        "tierBadge": "Pro"
       },
       "multiBrowser": {
         "title": "Cobertura multi-navegador",
@@ -67,7 +77,8 @@
       },
       "security": {
         "title": "Escaneo de seguridad",
-        "description": "Detecta vulnerabilidades comunes como XSS, redirecciones abiertas y secretos expuestos durante cada ejecución de prueba."
+        "description": "Detecta vulnerabilidades comunes como XSS, redirecciones abiertas y secretos expuestos durante cada ejecución de prueba.",
+        "tierBadge": "Gestionado"
       }
     }
   },
@@ -89,8 +100,13 @@
       "bugDetection": "Detección automática de bugs",
       "testGeneration": "Generación de código de prueba",
       "visualRegression": "Pruebas de regresión visual",
-      "chaosTest": "Pruebas de caos"
+      "chaosTest": "Pruebas de caos",
+      "ciIntegration": "Integración CI/CD",
+      "multiBrowser": "Pruebas multi-navegador",
+      "selfHealing": "Pruebas auto-reparables",
+      "parallelExecution": "Ejecución en paralelo"
     },
+    "mobileHint": "Desplaza para ver más",
     "values": {
       "yes": "Sí",
       "no": "No",
@@ -100,6 +116,11 @@
   "testimonials": {
     "heading": "Amado por equipos de ingeniería",
     "subheading": "Descubre cómo los equipos usan WhyNot para encontrar bugs antes que sus usuarios.",
+    "carousel": {
+      "previous": "Testimonio anterior",
+      "next": "Siguiente testimonio",
+      "goToSlide": "Ir al testimonio {{number}}"
+    },
     "items": {
       "sarah": {
         "quote": "Desplegamos WhyNot en nuestra plataforma de e-commerce y encontró 23 bugs en la primera hora — incluyendo un problema en el flujo de pago que nos estaba costando conversiones. El código Playwright que generó le ahorró días de trabajo a nuestro equipo de QA.",
@@ -147,7 +168,8 @@
       }
     },
     "contactText": "¿Aún tienes preguntas?",
-    "contactLink": "Contáctanos"
+    "contactLink": "Contáctanos",
+    "deepLinkAriaLabel": "Copiar enlace a esta pregunta"
   },
   "cta": {
     "heading": "Empieza a encontrar bugs hoy",
@@ -173,17 +195,25 @@
     "success": "¡Gracias! Nos pondremos en contacto pronto.",
     "error": "Algo salió mal. Por favor, inténtalo de nuevo.",
     "invalidEmail": "Por favor, ingresa una dirección de correo válida.",
-    "rateLimited": "Demasiados intentos. Por favor, inténtalo más tarde."
+    "rateLimited": "Demasiados intentos. Por favor, inténtalo más tarde.",
+    "rateLimitedCountdown": "Inténtalo de nuevo en {{seconds}}s"
   },
   "pricing": {
     "heading": "Precios simples y transparentes",
     "subheading": "Empieza gratis, mejora cuando necesites más.",
-    "monthly": "/mes",
+    "monthly": "Mensual",
+    "annual": "Anual",
+    "perMonth": "/mes",
+    "perYear": "/año",
+    "monthlyEquivalent": "{{price}}/mes facturado anualmente",
+    "saveBadge": "Ahorra {{percent}} %",
     "free": "Gratis para siempre",
     "popular": "Más popular",
     "startFree": "Empezar gratis",
     "getStarted": "Comenzar",
+    "contactSales": "Contactar ventas",
     "trialDays": "Prueba gratuita de {{days}} días",
+    "errorFallback": "Mostrando precios predeterminados. No se pudieron cargar los precios en tiempo real.",
     "plans": {
       "free": {
         "name": "Gratis",
@@ -262,15 +292,37 @@
     },
     "creditsUnit": "créditos",
     "creditPack": "Los packs de créditos empiezan en $10 por 1.000 créditos.",
+    "packs": {
+      "heading": "Packs de créditos",
+      "bestValue": "Mejor valor",
+      "perCredit": "por crédito",
+      "items": {
+        "starter": { "name": "Inicial", "size": "1.000 créditos", "price": "$10" },
+        "growth": { "name": "Crecimiento", "size": "10.000 créditos", "price": "$80" },
+        "scale": { "name": "Escalamiento", "size": "100.000 créditos", "price": "$600" }
+      }
+    },
     "calculator": {
       "heading": "Calculadora de créditos",
       "description": "Estima tu consumo mensual de créditos y el coste.",
-      "totalCredits": "Total de créditos:",
-      "estimatedCost": "Coste estimado:"
+      "totalCreditsLabel": "Total de créditos",
+      "estimatedMonthlyCost": "Coste mensual estimado",
+      "recommendedPack": "Pack recomendado: {{pack}}",
+      "inputLabel": {
+        "test_generation": "Generaciones de pruebas al mes",
+        "test_execution": "Ejecuciones de pruebas al mes",
+        "qa_loop_iteration": "Iteraciones de bucle QA al mes",
+        "auto_fix_attempt": "Intentos de corrección automática al mes",
+        "visual_regression": "Regresiones visuales al mes",
+        "qa_monitor_session": "Sesiones de monitor QA al mes",
+        "ci_scan": "Escaneos CI al mes"
+      }
     },
     "workedExample": {
       "heading": "Ejemplo práctico",
-      "description": "Un equipo mediano ejecutando 50 generaciones de pruebas y 200 ejecuciones al mes:",
+      "expand": "Mostrar ejemplo práctico",
+      "collapse": "Ocultar ejemplo práctico",
+      "description": "Un equipo SaaS de 20 ingenieros que despliega 3 veces por semana:",
       "items": [
         "50 × generación de pruebas (50 créditos) = 2.500 créditos",
         "200 × ejecución de pruebas (10 créditos) = 2.000 créditos",
@@ -297,7 +349,9 @@
     "legal": "Legal",
     "privacy": "Política de privacidad",
     "terms": "Términos de servicio",
+    "security": "Seguridad",
     "copyright": "© {{year}} WhyNot. Todos los derechos reservados.",
+    "allRightsReserved": "Todos los derechos reservados.",
     "github": "GitHub",
     "twitter": "X (Twitter)"
   },

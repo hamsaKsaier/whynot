@@ -2,20 +2,35 @@ import { useTranslation } from 'react-i18next'
 
 const FAQ_KEYS = ['howItWorks', 'integration', 'pricing', 'security', 'accuracy'] as const
 
+const BASE_URL = 'https://whynot.sh'
+
 function useStructuredData() {
   const { t, i18n } = useTranslation('landing')
   const lang = i18n.language || 'en'
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://whynot.sh'
 
-  const webApplication = {
+  const organization = {
     '@context': 'https://schema.org',
-    '@type': 'WebApplication',
+    '@type': 'Organization',
     name: 'WhyNot',
-    description: t('hero.subtitle'),
-    url: baseUrl,
-    applicationCategory: 'DeveloperApplication',
-    operatingSystem: 'Web',
-    inLanguage: lang,
+    url: BASE_URL,
+    logo: `${BASE_URL}/logo-light.svg`,
+    description: t('footer.description'),
+    sameAs: [
+      'https://github.com/whynot-dev',
+      'https://x.com/whynot_dev',
+    ],
+  }
+
+  const product = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: 'WhyNot',
+    description: t('seo.description'),
+    url: BASE_URL,
+    brand: {
+      '@type': 'Organization',
+      name: 'WhyNot',
+    },
     offers: [
       {
         '@type': 'Offer',
@@ -23,6 +38,7 @@ function useStructuredData() {
         priceCurrency: 'USD',
         name: t('pricing.plans.free.name'),
         description: t('pricing.plans.free.description'),
+        availability: 'https://schema.org/InStock',
       },
       {
         '@type': 'Offer',
@@ -30,6 +46,7 @@ function useStructuredData() {
         priceCurrency: 'USD',
         name: t('pricing.plans.pro_byo.name'),
         description: t('pricing.plans.pro_byo.description'),
+        availability: 'https://schema.org/InStock',
       },
       {
         '@type': 'Offer',
@@ -37,18 +54,17 @@ function useStructuredData() {
         priceCurrency: 'USD',
         name: t('pricing.plans.pro_managed.name'),
         description: t('pricing.plans.pro_managed.description'),
+        availability: 'https://schema.org/InStock',
       },
     ],
   }
 
-  const organization = {
+  const webSite = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': 'WebSite',
     name: 'WhyNot',
-    url: baseUrl,
-    logo: `${baseUrl}/logo-light.svg`,
-    description: t('footer.description'),
-    sameAs: [],
+    url: BASE_URL,
+    inLanguage: lang,
   }
 
   const faqPage = {
@@ -64,21 +80,25 @@ function useStructuredData() {
     })),
   }
 
-  return { webApplication, organization, faqPage }
+  return { organization, product, webSite, faqPage }
 }
 
 export function StructuredData() {
-  const { webApplication, organization, faqPage } = useStructuredData()
+  const { organization, product, webSite, faqPage } = useStructuredData()
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplication) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(product) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webSite) }}
       />
       <script
         type="application/ld+json"

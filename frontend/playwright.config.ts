@@ -16,5 +16,20 @@ export default defineConfig({
     { name: 'chromium-desktop-ltr-light', use: { ...devices['Desktop Chrome'] } },
     { name: 'chromium-desktop-ltr-dark', use: { ...devices['Desktop Chrome'], colorScheme: 'dark' } },
     { name: 'chromium-mobile-ltr-light', use: { ...devices['Pixel 7'] } },
+    {
+      name: 'chromium-desktop-rtl-light',
+      use: {
+        ...devices['Desktop Chrome'],
+        locale: 'ar',
+      },
+    },
+    {
+      name: 'chromium-desktop-rtl-dark',
+      use: {
+        ...devices['Desktop Chrome'],
+        locale: 'ar',
+        colorScheme: 'dark',
+      },
+    },
   ],
 });
