@@ -310,4 +310,15 @@ export class StripeProvider {
     const secret = getWebhookSecret();
     return stripe.webhooks.constructEvent(payload, signature, secret);
   }
+
+  async retrieveSubscription(
+    stripeSubscriptionId: string,
+  ): Promise<Stripe.Subscription> {
+    const stripe = getStripe();
+    const { result } = await withRetry(
+      () => stripe.subscriptions.retrieve(stripeSubscriptionId),
+      'retrieveSubscription',
+    );
+    return result;
+  }
 }

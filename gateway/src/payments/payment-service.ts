@@ -116,6 +116,7 @@ export class PaymentService {
         successUrl: params.successUrl,
         cancelUrl: params.cancelUrl,
         metadata: { workspace_id: params.orgId, plan_id: plan.id },
+        trialPeriodDays: plan.trial_days > 0 ? plan.trial_days : undefined,
         idempotencyKey,
       });
 
@@ -359,13 +360,66 @@ export class PaymentService {
     const planId = session.metadata?.plan_id;
     if (!workspaceId || !planId) return;
 
-    const sub = await subscriptionRepo.findByWorkspaceId(workspaceId);
-    if (sub) {
-      await subscriptionRepo.update(sub.id, {
+    const plan = await planRepo.findById(planId);
+
+    let stripeSub: any = null;
+    if (session.subscription) {
+      try {
+        stripeSub = await stripe.retrieveSubscription(session.subscription);
+      } catch (err) {
+        logger.warn(
+          `Failed to retrieve Stripe subscription ${session.subscription}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
+    const toDate = (seconds: number | null | undefined): Date | undefined =>
+      typeof seconds === 'number' ? new Date(seconds * 1000) : undefined;
+
+    const status =
+      (stripeSub?.status as string) === 'trialing' ? 'trialing' : 'active';
+    const currentPeriodStart = toDate(stripeSub?.current_period_start);
+    const currentPeriodEnd = toDate(stripeSub?.current_period_end);
+    const trialStart = toDate(stripeSub?.trial_start);
+    const trialEnd = toDate(stripeSub?.trial_end);
+
+    const existing = await subscriptionRepo.findByWorkspaceId(workspaceId);
+    if (existing) {
+      await subscriptionRepo.update(existing.id, {
         plan_id: planId,
-        status: 'active',
-        stripe_subscription_id: session.subscription,
-        stripe_customer_id: session.customer,
+        status,
+        stripe_subscription_id: session.subscription ?? undefined,
+        stripe_customer_id: session.customer ?? undefined,
+        current_period_start: currentPeriodStart,
+        current_period_end: currentPeriodEnd,
+        trial_start: trialStart,
+        trial_end: trialEnd,
+      });
+    } else {
+      await subscriptionRepo.create({
+        workspace_id: workspaceId,
+        plan_id: planId,
+        status,
+        stripe_subscription_id: session.subscription ?? undefined,
+        stripe_customer_id: session.customer ?? undefined,
+        current_period_start: currentPeriodStart,
+        current_period_end: currentPeriodEnd,
+        trial_start: trialStart,
+        trial_end: trialEnd,
+      });
+    }
+
+    await creditRepo.initBalance(workspaceId);
+    if (plan && plan.credits_per_period > 0) {
+      await creditRepo.addCredits({
+        workspace_id: workspaceId,
+        amount: plan.credits_per_period,
+        type: 'subscription_refill',
+        description: `Initial ${plan.name} credits`,
+        reference_type: 'stripe_checkout_session',
+        reference_id: session.id,
       });
     }
 
@@ -379,7 +433,6 @@ export class PaymentService {
 
     const recipient = await resolveWorkspaceRecipient(workspaceId);
     if (recipient) {
-      const plan = await planRepo.findById(planId);
       sendSubscriptionCreatedEmail({
         recipient,
         plan: plan?.name || planId,
