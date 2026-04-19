@@ -262,13 +262,17 @@ router.get('/api/sessions/:id', async (req: Request, res: Response) => {
       qaLoopRepository.getNotes(id)
     ]);
 
+    // Include a fresh wsToken so the frontend can (re)connect to the live
+    // WebSocket feed after a page refresh / navigation. The token is only
+    // useful while the session is active; terminal sessions ignore it.
     res.json({
       session,
       pages,
       testCases,
       bugs,
       notes,
-      isActive: activeSessions.has(id)
+      isActive: activeSessions.has(id),
+      wsToken: generateWsToken(id),
     });
   } catch (error: any) {
     logger.error('Failed to get session', { error: error.message });
