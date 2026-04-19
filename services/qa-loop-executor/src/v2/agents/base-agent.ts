@@ -451,12 +451,40 @@ export abstract class BaseAgent {
           stopWhen: stepCountIs(20),
           maxOutputTokens: 2048,
           onStepFinish: async (event) => {
+            // Stream the AI's reasoning text to the "AI Thinking" panel.
+            // The per-step `event.text` fires for each model turn (even the
+            // ones that end in a tool call), so the panel updates in real
+            // time instead of only at generateText completion.
+            const stepText = (event as any).text as string | undefined;
+            if (stepText && stepText.trim()) {
+              emitToSession(this.sessionId, {
+                type: 'thinking',
+                data: { text: stepText + '\n', agent: this.agentType },
+              });
+            }
             // Emit tool calls for WebSocket
             if (event.toolCalls) {
               for (const tc of event.toolCalls) {
                 emitToSession(this.sessionId, {
                   type: 'tool_call',
                   data: { tool: tc.toolName, input: (tc as any).input, agent: this.agentType },
+                });
+                // Mirror each tool call into the thinking stream as a
+                // natural-language action line so the AI Thinking panel
+                // shows live activity even when the model is purely
+                // tool-using without narration.
+                const inputPreview = (() => {
+                  try {
+                    const s = JSON.stringify((tc as any).input || {});
+                    return s.length > 120 ? s.slice(0, 120) + '…' : s;
+                  } catch { return ''; }
+                })();
+                emitToSession(this.sessionId, {
+                  type: 'thinking',
+                  data: {
+                    text: `→ ${this.agentType}: ${tc.toolName}${inputPreview ? ' ' + inputPreview : ''}\n`,
+                    agent: this.agentType,
+                  },
                 });
               }
             }
