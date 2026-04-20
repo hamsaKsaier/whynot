@@ -111,18 +111,26 @@ async function recoverStrandedSessions(): Promise<void> {
 }
 
 server.listen(PORT, async () => {
-  // Fetch platform config at startup to determine available providers
+  // Fetch platform config at startup to determine available providers.
+  // If the gateway isn't reachable yet (transient DNS on boot), prefetch
+  // continues retrying in the background so the in-memory cache eventually
+  // hydrates without requiring a manual restart.
   let anthropicConfigured = false;
   try {
-    const { getPlatformConfig } = await import('./platform-config');
-    const platformConfig = await getPlatformConfig();
-    anthropicConfigured = platformConfig.providers.some(p => p.provider === 'anthropic' && p.apiKey);
+    const { getPlatformConfig, prefetchPlatformConfig } = await import('./platform-config');
+    try {
+      const platformConfig = await getPlatformConfig();
+      anthropicConfigured = platformConfig.providers.some(p => p.provider === 'anthropic' && p.apiKey);
+    } catch (error: any) {
+      logger.warn('Failed to fetch platform AI config on startup; background retry scheduled', { error: error.message });
+      prefetchPlatformConfig();
+    }
 
     // Initialize model selector with platform config
     const { initModelSelector } = await import('./model-selector');
     await initModelSelector();
   } catch (error: any) {
-    logger.warn('Failed to fetch platform AI config on startup', { error: error.message });
+    logger.warn('Failed to initialize platform AI config on startup', { error: error.message });
   }
 
   logger.info('QA Loop Executor Service started', {

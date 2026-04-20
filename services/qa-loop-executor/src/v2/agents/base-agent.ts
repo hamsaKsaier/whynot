@@ -26,24 +26,29 @@ import { AgentContextBuilder } from '../agent-context-builder';
 import { ToolExecutor, ToolResult } from '../../tool-executor';
 import { MCPBrowser } from '../../mcp-browser';
 import { BoardTools } from '../tools/board-tools';
+import { getPlatformConfig } from '../../platform-config';
 
 const logger = createLogger('base-agent');
 
 /**
- * Select the AI model based on available API keys.
+ * Select the AI model from the platform configuration served by the gateway.
  *
- * Priority order (first matching key wins):
- * 1. Google Gemini 2.5 Flash — PRIMARY (500 req/day free, native tool calling, 1M context)
- * 2. OpenRouter paid models — only with tool-capable model (free tier skipped, no tool calling)
- * 3. Z.ai GLM-5.1 — standard endpoint, pay-as-you-go (NOT coding-plan endpoint)
- * 4. Anthropic Claude — last resort (expensive)
- * 5. OpenAI GPT — BYOK option
+ * Single source of truth: admin dashboard /ai-providers → platform_ai_config
+ * table → gateway /api/internal/ai-config (see platform-config.ts). No env vars.
  *
- * Why Gemini is primary:
- * - Gemma 4 via Google AI Studio hit 15 req/DAY hard cap (unusable)
- * - OpenRouter free Gemma models do NOT support tool calling (agents silently fail)
- * - Z.ai coding-plan endpoint violates policy for automated QA tools
- * - Gemini 2.5 Flash: 500 req/day free, native tool calling, 1M context — stable path
+ * Order of attempts:
+ *   1. `defaultProvider.provider` (admin-chosen primary)
+ *   2. every entry in `fallbackOrder`, in order
+ *   3. any remaining active provider returned by the gateway
+ *
+ * The gateway already filters to active, keyed providers, so any entry in
+ * `providers` is guaranteed to have a usable decrypted `apiKey`.
+ *
+ * Per-agent model overrides:
+ *   - Anthropic + agentType === 'qa_lead' → Claude Opus 4.6
+ *     (2-call plan/synthesis pair benefits from premium reasoning;
+ *      cost impact ~$0.15-0.20 per scan)
+ *   - Everything else → provider's admin-configured `defaultModel`
  */
 /**
  * Pricing per million tokens (input / output). Used by the cost tracker
@@ -85,77 +90,73 @@ export function computeCostCents(
   return Math.ceil(costDollars * 100); // cents, rounded up
 }
 
-export function selectModel(agentType?: string): { model: LanguageModel; name: string; modelId: string } {
-  // Priority 1: OpenRouter (paid, tool-calling capable)
-  // Uses createOpenAICompatible (not createOpenAI) to force /chat/completions endpoint.
-  // createOpenAI defaults to the OpenAI Responses API which OpenRouter does not support.
-  if (process.env.OPENROUTER_API_KEY) {
-    const openrouter = createOpenAICompatible({
-      name: 'openrouter',
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: 'https://openrouter.ai/api/v1',
-      headers: {
-        'HTTP-Referer': 'https://whynotqa.com',
-        'X-Title': 'WhyNot QA',
-      },
-    });
-    const modelName = process.env.OPENROUTER_MODEL || 'z-ai/glm-5.1';
-    return { model: openrouter(modelName), name: `GLM-5.1`, modelId: modelName };
+export async function selectModel(
+  agentType?: string,
+): Promise<{ model: LanguageModel; name: string; modelId: string }> {
+  const config = await getPlatformConfig();
+
+  const ordered: string[] = [];
+  if (config.defaultProvider?.provider) ordered.push(config.defaultProvider.provider);
+  for (const p of config.fallbackOrder || []) {
+    if (!ordered.includes(p)) ordered.push(p);
+  }
+  for (const p of config.providers) {
+    if (!ordered.includes(p.provider)) ordered.push(p.provider);
   }
 
-  // Priority 2: Google Gemini 2.5 Flash
-  if (process.env.GOOGLE_AI_API_KEY) {
-    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
-    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
-    return { model: google(modelId), name: `Google ${modelId}`, modelId };
-  }
+  for (const providerName of ordered) {
+    const entry = config.providers.find(p => p.provider === providerName);
+    if (!entry?.apiKey) continue;
 
-  // Priority 3: Z.ai GLM-5.1 (standard pay-as-you-go endpoint only)
-  if (process.env.Z_AI_API_KEY) {
-    const zai = createOpenAICompatible({
-      name: 'z-ai',
-      apiKey: process.env.Z_AI_API_KEY,
-      baseURL: process.env.Z_AI_BASE_URL || 'https://api.z.ai/api/paas/v4/',
-    });
-    const override = process.env.Z_AI_MODEL;
-    const premiumModel = process.env.Z_AI_PREMIUM_MODEL || 'glm-5.1';
-    const turboModel = process.env.Z_AI_TURBO_MODEL || 'glm-5-turbo';
-    const modelName = override
-      || ((agentType === 'qa_lead' || agentType === 'auto_tester') ? premiumModel : turboModel);
-    return { model: zai(modelName), name: `GLM via Z.ai (${modelName})`, modelId: modelName };
-  }
-
-  // Priority 4: Anthropic Claude — Opus 4.6 for QA Lead, Sonnet 4.6 for everyone else
-  //
-  // Opus 4.6 ($15/$75 per M) for QA Lead ONLY:
-  //   - Planning + synthesis = only 2 API calls per scan
-  //   - Best-in-class cross-referencing and critical cluster detection
-  //   - Cost impact: ~$0.15-0.20 per scan (negligible on the plan/synthesis pair)
-  //
-  // Sonnet 4.6 ($3/$15 per M) for all specialist agents:
-  //   - exploratory  — intelligent navigation, form/link discovery
-  //   - security     — injection testing that requires real reasoning
-  //   - api_tester   — edge-case generation with schema awareness
-  //   - auto_tester  — Playwright code generation
-  //
-  // Prior Haiku experiment failed (0 bugs / 0 tests / 0 pages on specialists)
-  // because Haiku couldn't navigate OrangeHRM or generate working code.
-  // Sonnet 4.6 is the latest Sonnet (same price as Sonnet 4 but better tool calling).
-  if (process.env.ANTHROPIC_API_KEY) {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    if (agentType === 'qa_lead') {
-      return { model: anthropic('claude-opus-4-6'), name: 'Claude Opus 4.6', modelId: 'claude-opus-4-6' };
+    if (providerName === 'anthropic') {
+      const anthropic = createAnthropic({ apiKey: entry.apiKey });
+      if (agentType === 'qa_lead') {
+        return { model: anthropic('claude-opus-4-6'), name: 'Claude Opus 4.6', modelId: 'claude-opus-4-6' };
+      }
+      const modelId = entry.defaultModel
+        || (config.defaultProvider?.provider === 'anthropic' ? config.defaultProvider.model : '')
+        || 'claude-sonnet-4-6';
+      return { model: anthropic(modelId), name: `Claude ${modelId}`, modelId };
     }
-    return { model: anthropic('claude-sonnet-4-6'), name: 'Claude Sonnet 4.6', modelId: 'claude-sonnet-4-6' };
+
+    if (providerName === 'openai') {
+      const openai = createOpenAI({ apiKey: entry.apiKey });
+      const modelId = entry.defaultModel
+        || (config.defaultProvider?.provider === 'openai' ? config.defaultProvider.model : '')
+        || 'gpt-4o';
+      return { model: openai(modelId), name: `OpenAI ${modelId}`, modelId };
+    }
+
+    if (providerName === 'google') {
+      const google = createGoogleGenerativeAI({ apiKey: entry.apiKey });
+      const modelId = entry.defaultModel
+        || (config.defaultProvider?.provider === 'google' ? config.defaultProvider.model : '')
+        || 'gemini-2.5-flash';
+      return { model: google(modelId), name: `Google ${modelId}`, modelId };
+    }
+
+    if (providerName === 'openrouter') {
+      const openrouter = createOpenAICompatible({
+        name: 'openrouter',
+        apiKey: entry.apiKey,
+        baseURL: 'https://openrouter.ai/api/v1',
+        headers: {
+          'HTTP-Referer': 'https://whynotqa.com',
+          'X-Title': 'WhyNot QA',
+        },
+      });
+      const modelId = entry.defaultModel
+        || (config.defaultProvider?.provider === 'openrouter' ? config.defaultProvider.model : '')
+        || 'anthropic/claude-sonnet-4';
+      return { model: openrouter(modelId), name: `OpenRouter ${modelId}`, modelId };
+    }
+
+    logger.warn('Platform config returned unknown provider — skipping', { provider: providerName });
   }
 
-  // Priority 5: OpenAI
-  if (process.env.OPENAI_API_KEY) {
-    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    return { model: openai('gpt-4o'), name: 'GPT-4o', modelId: 'gpt-4o' };
-  }
-
-  throw new Error('No AI provider configured. Set GOOGLE_AI_API_KEY (primary), OPENROUTER_API_KEY + OPENROUTER_MODEL, Z_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
+  throw new Error(
+    'No AI provider is enabled in admin/ai-providers. Configure at least one provider with a key.',
+  );
 }
 
 export abstract class BaseAgent {
@@ -363,7 +364,7 @@ export abstract class BaseAgent {
    * handles tool calling internally. We use onStepFinish for WebSocket events.
    */
   protected async executeLoop(systemPrompt: string): Promise<void> {
-    const { model, name: modelName, modelId } = selectModel(this.agentType);
+    const { model, name: modelName, modelId } = await selectModel(this.agentType);
     this.modelIdUsed = modelId;
     const maxOuterLoops = this.getMaxLoops();
 

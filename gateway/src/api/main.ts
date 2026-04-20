@@ -492,6 +492,27 @@ app.post('/api/internal/notifications', asyncHandler(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ─── Internal: AI Config (Docker-network only, no auth) ──────────────────────
+// Must be registered BEFORE the `/api` auth boundary below. Without this,
+// requireAuth (line below) returns 401 to internal services like
+// qa-loop-executor before `requireInternalNetwork` even runs.
+app.get('/api/internal/ai-config',
+  requireInternalNetwork,
+  asyncHandler(async (_req, res) => {
+    const configs = await getAllPlatformConfigs();
+    const billingConfigRepo = new BillingConfigRepository();
+    const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
+    const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
+
+    res.json({
+      success: true,
+      providers: configs,
+      defaultProvider,
+      fallbackOrder,
+    });
+  })
+);
+
 // ─── All routes below this line require a valid JWT ───────────────────────────
 app.use('/api', requireAuth);
 
@@ -3745,28 +3766,6 @@ app.get('/api/me/flags', requireAuth, asyncHandler(async (req: any, res) => {
   const flags = await resolveAllFlags(orgId);
   res.json({ success: true, flags });
 }));
-
-// ── Internal: AI Config (Docker-network only, no auth) ──────────────────
-// This endpoint is NOT exposed to the public internet.
-// It is accessed only by internal services on the Docker network.
-// Restricted by Docker network configuration + IP allowlist middleware.
-
-app.get('/api/internal/ai-config',
-  requireInternalNetwork,
-  asyncHandler(async (_req, res) => {
-    const configs = await getAllPlatformConfigs();
-    const billingConfigRepo = new BillingConfigRepository();
-    const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
-    const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
-
-    res.json({
-      success: true,
-      providers: configs,
-      defaultProvider,
-      fallbackOrder,
-    });
-  })
-);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
