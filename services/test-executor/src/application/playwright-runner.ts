@@ -7,6 +7,22 @@ import { createLogger } from '../../shared/logger/logger';
 
 const logger = createLogger('playwright-runner');
 
+/**
+ * Diagnostics payload captured by the caller (qa-loop-executor) when a
+ * test fails. Populated via Chrome DevTools MCP after the Playwright
+ * subprocess returns. Enables the self-healing retry flow.
+ */
+export interface PlaywrightDiagnostics {
+  consoleTail?: Array<{ level?: string; text?: string }>;
+  failedRequests?: Array<{
+    method?: string;
+    url?: string;
+    status?: number;
+    statusText?: string;
+  }>;
+  capturedAt?: string;
+}
+
 export interface PlaywrightRunResult {
   passed: boolean;
   exitCode: number;
@@ -17,6 +33,8 @@ export interface PlaywrightRunResult {
   error?: string;
   humanError?: string;
   retryCount?: number;
+  /** Populated on failure by the qa-loop-executor caller — see ChromeDevToolsMCP. */
+  diagnostics?: PlaywrightDiagnostics;
 }
 
 /**

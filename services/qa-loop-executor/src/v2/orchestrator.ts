@@ -15,6 +15,7 @@ import { query } from '../../../shared/database/connection';
 import { emitToSession } from '../api/websocket';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { MCPBrowser } from '../mcp-browser';
+import { ChromeDevToolsMCP } from '../chrome-devtools-mcp';
 import { LoopConfig } from '../loop-orchestrator';
 import { ParallelTestExecutor } from '../parallel-test-executor';
 import { SessionPlanStore } from './session-plan';
@@ -58,6 +59,11 @@ export class V2Orchestrator {
   private planStore: SessionPlanStore;
   private board: AgentBoard;
   private mcpBrowser: MCPBrowser | null = null;
+  // Week 2: Chrome DevTools MCP runs alongside MCPBrowser for diagnostics
+  // (console messages, network requests, a11y tree, lighthouse). Uses its
+  // OWN Chromium instance — see chrome-devtools-mcp.ts header for the
+  // Option A-vs-B tradeoff and why we picked Option B.
+  private cdpMcp: ChromeDevToolsMCP | null = null;
   // Fix D: iteration counter for persisting cost per agent into qa_loop_iterations
   private iterationCounter = 0;
   // Demo-fix: user-initiated cancellation support. The pause/stop HTTP
@@ -124,6 +130,24 @@ export class V2Orchestrator {
       this.mcpBrowser = new MCPBrowser(this.sessionId);
       await this.mcpBrowser.start();
       logger.info('MCP Browser launched for v2 session', { sessionId: this.sessionId });
+
+      // Week 2: start Chrome DevTools MCP in parallel. Non-fatal — if it
+      // fails to start (e.g. npx cache cold), the scan still runs without
+      // CDP diagnostics and agents fall back to the Playwright-only path.
+      try {
+        this.cdpMcp = new ChromeDevToolsMCP(this.sessionId);
+        await this.cdpMcp.start();
+        logger.info('Chrome DevTools MCP launched for v2 session', {
+          sessionId: this.sessionId,
+          toolCount: this.cdpMcp.getTools().length,
+        });
+      } catch (cdpErr: any) {
+        logger.warn('Chrome DevTools MCP failed to start — continuing without diagnostics', {
+          sessionId: this.sessionId,
+          error: cdpErr.message,
+        });
+        this.cdpMcp = null;
+      }
 
       if (this.config.loginCredentials) {
         await this.performLogin();
@@ -305,6 +329,7 @@ export class V2Orchestrator {
         totalPages,
       });
 
+<<<<<<< HEAD
       // ─── Compression baseline summary (Part 1 + Part 2 instrumentation) ────
       // Aggregate token + cost totals across every agent in this session.
       //
@@ -436,6 +461,38 @@ export class V2Orchestrator {
         })),
       });
 
+      // Week 2 Task 8: chromeDevtools telemetry block
+      // Rolls up per-agent CDP call counts and total truncated chars so we
+      // can see whether the integration is actually being used and whether
+      // the output truncator is doing its job.
+      const cdpTotals: Record<string, number> = {};
+      let totalCdpCharsDropped = 0;
+      let anyCdpCalls = false;
+      for (const r of allResults) {
+        if (r.cdpCallCounts) {
+          for (const [tool, n] of Object.entries(r.cdpCallCounts)) {
+            cdpTotals[tool] = (cdpTotals[tool] || 0) + n;
+            anyCdpCalls = true;
+          }
+        }
+        totalCdpCharsDropped += r.cdpCharsDropped || 0;
+      }
+      logger.info('Scan cost breakdown — chromeDevtools', {
+        sessionId: this.sessionId,
+        chromeDevtools: {
+          enabled: this.cdpMcp !== null,
+          anyCdpCallsMade: anyCdpCalls,
+          toolCallsByName: cdpTotals,
+          totalCharsDropped: totalCdpCharsDropped,
+          lighthouseRan: !!cdpTotals['cdp_lighthouse_audit'],
+          perAgent: allResults.map(r => ({
+            agent: r.agentType,
+            cdpCallCounts: r.cdpCallCounts || {},
+            cdpCharsDropped: r.cdpCharsDropped || 0,
+          })),
+        },
+      });
+
     } catch (err: any) {
       // User-initiated stop produces agent errors (MCP browser force-killed
       // mid-tool-call etc). That's expected — don't flip the DB status to
@@ -462,6 +519,9 @@ export class V2Orchestrator {
       }
 
     } finally {
+      if (this.cdpMcp) {
+        await this.cdpMcp.forceStop().catch(() => {});
+      }
       if (this.mcpBrowser) {
         await this.mcpBrowser.forceStop().catch(() => {});
       }
@@ -646,16 +706,16 @@ export class V2Orchestrator {
 
     switch (agentType) {
       case 'exploratory':
-        agent = new ExploratoryTesterAgent(agentConfig, this.mcpBrowser!);
+        agent = new ExploratoryTesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
         break;
       case 'security':
-        agent = new SecurityTesterAgent(agentConfig, this.mcpBrowser!);
+        agent = new SecurityTesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
         break;
       case 'api_tester':
-        agent = new APITesterAgent(agentConfig, this.mcpBrowser!);
+        agent = new APITesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
         break;
       case 'auto_tester':
-        // Auto Tester does NOT use the browser — only generates code
+        // Auto Tester does NOT use the browser or CDP — only generates code
         agent = new AutoTesterAgent(agentConfig);
         break;
       default:
@@ -1003,6 +1063,7 @@ export class V2Orchestrator {
         this.sessionId,
         this.config,
         this.repository,
+        this.cdpMcp,  // Week 2: CDP MCP for self-healing diagnostics on failures
       );
 
       for (const tc of testCases) {

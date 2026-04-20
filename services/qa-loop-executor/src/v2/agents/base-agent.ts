@@ -25,6 +25,7 @@ import { AgentBoard } from '../agent-board';
 import { AgentContextBuilder } from '../agent-context-builder';
 import { ToolExecutor, ToolResult } from '../../tool-executor';
 import { MCPBrowser } from '../../mcp-browser';
+import { ChromeDevToolsMCP } from '../../chrome-devtools-mcp';
 import { BoardTools } from '../tools/board-tools';
 
 const logger = createLogger('base-agent');
@@ -217,7 +218,14 @@ export abstract class BaseAgent {
   // message (not the system prompt, which must stay byte-stable for caching).
   protected boardEntriesAtStart: any[] = [];
 
-  constructor(config: AgentConfig, mcpBrowser?: MCPBrowser) {
+  // Week 2: Chrome DevTools MCP (optional, shared across agents in this session).
+  protected cdpMcp: ChromeDevToolsMCP | null = null;
+
+  constructor(
+    config: AgentConfig,
+    mcpBrowser?: MCPBrowser,
+    cdpMcp: ChromeDevToolsMCP | null = null,
+  ) {
     this.sessionId = config.sessionId;
     this.agentType = config.agentType;
     this.config = config;
@@ -225,6 +233,7 @@ export abstract class BaseAgent {
     this.contextBuilder = new AgentContextBuilder();
     this.boardTools = new BoardTools(config.sessionId, config.agentType);
     this.lastBoardPollTime = new Date().toISOString();
+    this.cdpMcp = cdpMcp;
 
     const loopConfig = {
       targetUrl: config.targetUrl,
@@ -237,7 +246,13 @@ export abstract class BaseAgent {
 
     if (mcpBrowser) {
       this.mcpBrowser = mcpBrowser;
-      this.toolExecutor = new ToolExecutor(config.sessionId, loopConfig, mcpBrowser);
+      this.toolExecutor = new ToolExecutor(
+        config.sessionId,
+        loopConfig,
+        mcpBrowser,
+        undefined,            // onTestCaseCreated
+        cdpMcp,               // Week 2: hand CDP MCP to the tool executor
+      );
     } else {
       // Agents without a browser (auto_tester, qa_lead) still need state +
       // report tools (save_test_case, get_session_state, etc.) which are
@@ -247,7 +262,13 @@ export abstract class BaseAgent {
       // Without this bootstrap, every tool call returned
       // "Tool not available for auto_tester: save_test_case" → 0 tests saved.
       const headlessBrowser = new MCPBrowser(config.sessionId);
-      this.toolExecutor = new ToolExecutor(config.sessionId, loopConfig, headlessBrowser);
+      this.toolExecutor = new ToolExecutor(
+        config.sessionId,
+        loopConfig,
+        headlessBrowser,
+        undefined,
+        cdpMcp,
+      );
     }
   }
 
@@ -345,6 +366,9 @@ export abstract class BaseAgent {
         },
       });
 
+      // Week 2: snapshot CDP telemetry from the tool executor before returning
+      const cdpSnapshot = this.snapshotCdpTelemetry();
+
       return {
         agentType: this.agentType,
         status: 'done',
@@ -370,6 +394,9 @@ export abstract class BaseAgent {
         sumToolDefsChars: this.sumToolDefsChars,
         // Priority 2: residual tool-result accumulation tokens
         sumToolResultsAccumulatedTokens: this.sumToolResultsAccumulatedTokens,
+        // Week 2 CDP telemetry
+        cdpCallCounts: cdpSnapshot.cdpCallCounts,
+        cdpCharsDropped: cdpSnapshot.cdpCharsDropped,
       };
     } catch (err: any) {
       // Priority 1: watchdog kill is NOT a normal agent failure. Log it
@@ -419,6 +446,8 @@ export abstract class BaseAgent {
         this.cachedInputTokens,
       );
 
+      const cdpSnapshot = this.snapshotCdpTelemetry();
+
       return {
         agentType: this.agentType,
         status: isWatchdogKill ? 'killed_idle' : 'error',
@@ -444,8 +473,33 @@ export abstract class BaseAgent {
         sumProjectContextChars: this.sumProjectContextChars,
         sumToolDefsChars: this.sumToolDefsChars,
         sumToolResultsAccumulatedTokens: this.sumToolResultsAccumulatedTokens,
+        // Week 2 CDP telemetry
+        cdpCallCounts: cdpSnapshot.cdpCallCounts,
+        cdpCharsDropped: cdpSnapshot.cdpCharsDropped,
       };
     }
+  }
+
+  /**
+   * Week 2 helper: read CDP tool stats from the shared ToolExecutor so they
+   * end up in the AgentResult. Orchestrator rolls these into the Scan cost
+   * breakdown's chromeDevtools block.
+   */
+  private snapshotCdpTelemetry(): {
+    cdpCallCounts: Record<string, number>;
+    cdpCharsDropped: number;
+  } {
+    if (!this.toolExecutor) {
+      return { cdpCallCounts: {}, cdpCharsDropped: 0 };
+    }
+    const counts: Record<string, number> = {};
+    // cdpCallCounts is a Map<string, number> on ToolExecutor
+    const rawCounts = (this.toolExecutor as any).cdpCallCounts as Map<string, number> | undefined;
+    if (rawCounts) {
+      for (const [tool, n] of rawCounts.entries()) counts[tool] = n;
+    }
+    const charsDropped = (this.toolExecutor as any).cdpCharsDropped || 0;
+    return { cdpCallCounts: counts, cdpCharsDropped: charsDropped };
   }
 
   /**
