@@ -270,18 +270,29 @@ export class V2Orchestrator {
       });
 
     } catch (err: any) {
-      logger.error('V2 orchestrator failed', {
-        sessionId: this.sessionId,
-        error: err.message,
-        stack: err.stack?.slice(0, 500),
-      });
+      // User-initiated stop produces agent errors (MCP browser force-killed
+      // mid-tool-call etc). That's expected — don't flip the DB status to
+      // 'failed' or show an error toast; the route handler already set it
+      // to 'cancelled' which is the truth.
+      if (this.stopRequested) {
+        logger.info('V2 orchestrator exiting after user-requested stop', {
+          sessionId: this.sessionId,
+          lastError: err?.message,
+        });
+      } else {
+        logger.error('V2 orchestrator failed', {
+          sessionId: this.sessionId,
+          error: err.message,
+          stack: err.stack?.slice(0, 500),
+        });
 
-      await this.repository.updateSessionStatus(this.sessionId, 'failed', err.message).catch(() => {});
+        await this.repository.updateSessionStatus(this.sessionId, 'failed', err.message).catch(() => {});
 
-      emitToSession(this.sessionId, {
-        type: 'error',
-        data: { message: `Multi-agent session failed: ${err.message}` },
-      });
+        emitToSession(this.sessionId, {
+          type: 'error',
+          data: { message: `Multi-agent session failed: ${err.message}` },
+        });
+      }
 
     } finally {
       if (this.mcpBrowser) {
