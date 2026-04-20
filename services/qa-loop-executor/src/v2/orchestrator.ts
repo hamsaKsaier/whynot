@@ -36,6 +36,11 @@ export class V2Orchestrator {
   private mcpBrowser: MCPBrowser | null = null;
   // Fix D: iteration counter for persisting cost per agent into qa_loop_iterations
   private iterationCounter = 0;
+  // Demo-fix: user-initiated cancellation support. The pause/stop HTTP
+  // routes call stop() → sets the flag and aborts the in-flight LLM call
+  // on whichever agent is currently running, unwinding the scan cleanly.
+  private stopRequested = false;
+  private currentAgentAbort: AbortController | null = null;
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
@@ -43,6 +48,29 @@ export class V2Orchestrator {
     this.repository = new QALoopRepository();
     this.planStore = new SessionPlanStore();
     this.board = new AgentBoard();
+  }
+
+  /**
+   * Request a clean stop of the running scan. Called by the pause and stop
+   * HTTP routes. V2 does not have a real pause/resume model — both user
+   * actions end the scan and persist whatever has been discovered so far.
+   */
+  async stop(): Promise<void> {
+    if (this.stopRequested) return;
+    this.stopRequested = true;
+    logger.info('V2 stop requested', { sessionId: this.sessionId });
+    // Abort the currently running agent's in-flight LLM call.
+    try { this.currentAgentAbort?.abort(); } catch {}
+    // Force-stop the MCP browser so any active tool calls fail fast.
+    try { await this.mcpBrowser?.stop(); } catch {}
+    emitToSession(this.sessionId, {
+      type: 'status_update',
+      data: { status: 'cancelled', message: 'Scan stopped by user' },
+    });
+  }
+
+  isStopRequested(): boolean {
+    return this.stopRequested;
   }
 
   /**
@@ -121,50 +149,56 @@ export class V2Orchestrator {
       const allResults: AgentResult[] = [exploratoryResult];
 
       // Security Tester — reads forms from board, tests XSS/SQLi/CSRF
-      emitToSession(this.sessionId, {
-        type: 'status_update',
-        data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
-      });
+      if (!this.stopRequested) {
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
+        });
 
-      const securityResult = await this.runAgent('security', plan);
-      allResults.push(securityResult);
+        const securityResult = await this.runAgent('security', plan);
+        allResults.push(securityResult);
 
-      logger.info('Security Tester completed', {
-        sessionId: this.sessionId,
-        bugs: securityResult.bugsFound,
-        status: securityResult.status,
-      });
+        logger.info('Security Tester completed', {
+          sessionId: this.sessionId,
+          bugs: securityResult.bugsFound,
+          status: securityResult.status,
+        });
+      }
 
       // API Tester — reads endpoints from board, tests edge cases via fetch()
-      emitToSession(this.sessionId, {
-        type: 'status_update',
-        data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
-      });
+      if (!this.stopRequested) {
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
+        });
 
-      const apiResult = await this.runAgent('api_tester', plan);
-      allResults.push(apiResult);
+        const apiResult = await this.runAgent('api_tester', plan);
+        allResults.push(apiResult);
 
-      logger.info('API Tester completed', {
-        sessionId: this.sessionId,
-        bugs: apiResult.bugsFound,
-        endpoints: apiResult.apiEndpointsTested,
-        status: apiResult.status,
-      });
+        logger.info('API Tester completed', {
+          sessionId: this.sessionId,
+          bugs: apiResult.bugsFound,
+          endpoints: apiResult.apiEndpointsTested,
+          status: apiResult.status,
+        });
+      }
 
       // ─── Phase 5: Auto Tester (runs last, no browser needed) ──
-      emitToSession(this.sessionId, {
-        type: 'status_update',
-        data: { phase: 'auto_testing', message: 'Auto Tester generating Playwright regression tests...' },
-      });
+      if (!this.stopRequested) {
+        emitToSession(this.sessionId, {
+          type: 'status_update',
+          data: { phase: 'auto_testing', message: 'Auto Tester generating Playwright regression tests...' },
+        });
 
-      const autoResult = await this.runAgent('auto_tester', plan);
-      allResults.push(autoResult);
+        const autoResult = await this.runAgent('auto_tester', plan);
+        allResults.push(autoResult);
 
-      logger.info('Auto Tester completed', {
-        sessionId: this.sessionId,
-        tests: autoResult.testsGenerated,
-        status: autoResult.status,
-      });
+        logger.info('Auto Tester completed', {
+          sessionId: this.sessionId,
+          tests: autoResult.testsGenerated,
+          status: autoResult.status,
+        });
+      }
 
       // ─── Phase 6: QA Lead synthesis ─────────────────────────────
       emitToSession(this.sessionId, {

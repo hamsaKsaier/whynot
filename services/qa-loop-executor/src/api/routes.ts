@@ -14,8 +14,10 @@ const router = Router();
 const logger = createLogger('qa-loop-routes');
 const qaLoopRepository = new QALoopRepository();
 
-// Active sessions map for managing running loops
-const activeSessions = new Map<string, LoopOrchestrator>();
+// Active sessions map for managing running loops. Holds both V1 and V2
+// orchestrators — pause/stop routes duck-type which methods exist.
+type ActiveOrchestrator = LoopOrchestrator | V2Orchestrator;
+const activeSessions = new Map<string, ActiveOrchestrator>();
 
 // Health check
 router.get('/health', (req: Request, res: Response) => {
@@ -126,10 +128,20 @@ router.post('/api/sessions', async (req: Request, res: Response) => {
         userPrd,
       });
 
-      // Start async — v2 manages its own lifecycle
-      v2Orchestrator.run().catch(error => {
-        logger.error('V2 multi-agent session failed', { sessionId: session.id, error: error.message });
-      });
+      // Register the v2 orchestrator so pause/stop/GET-isActive can find it.
+      // Previously v2 sessions were never tracked → pause/stop returned 404
+      // "Session not active" even while the scan was running.
+      activeSessions.set(session.id, v2Orchestrator);
+
+      // Start async — v2 manages its own lifecycle. Clean up the map entry
+      // on completion or failure so stale references don't linger.
+      v2Orchestrator.run()
+        .catch(error => {
+          logger.error('V2 multi-agent session failed', { sessionId: session.id, error: error.message });
+        })
+        .finally(() => {
+          activeSessions.delete(session.id);
+        });
     } else {
       // V1 single-agent orchestrator (existing behavior)
       const orchestrator = new LoopOrchestrator(session.id, {
@@ -304,6 +316,20 @@ router.post('/api/sessions/:id/pause', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Session not active' });
     }
 
+    // V2 orchestrator has no real pause/resume — the agents can't be
+    // suspended mid-tool-call. The user's click on "Pause" is best served
+    // by a clean stop that persists everything discovered so far.
+    if (orchestrator instanceof V2Orchestrator) {
+      await orchestrator.stop();
+      await qaLoopRepository.updateSessionStatus(id, 'cancelled');
+      activeSessions.delete(id);
+      // Persist discoveries — same as the normal pause path below
+      await qaLoopRepository.createTestSuiteFromSession(id).catch(() => null);
+      await qaLoopRepository.updateProjectContextFromSession(id).catch(() => {});
+      logger.info('V2 session stopped via pause button', { sessionId: id });
+      return res.json({ success: true, status: 'cancelled', note: 'V2 sessions cannot be paused; stopped instead' });
+    }
+
     await orchestrator.pause();
     await qaLoopRepository.updateSessionStatus(id, 'paused');
 
@@ -335,6 +361,15 @@ router.post('/api/sessions/:id/resume', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const orchestrator = activeSessions.get(id);
+
+    // V2 doesn't support resume — the multi-agent pipeline is strictly forward.
+    // Clicking resume on a v2 session should start a fresh scan instead.
+    if (orchestrator instanceof V2Orchestrator) {
+      return res.status(400).json({
+        error: 'V2 sessions cannot be resumed. Start a new scan.',
+        code: 'V2_RESUME_UNSUPPORTED',
+      });
+    }
 
     if (!orchestrator) {
       // Try to recreate orchestrator from saved state
