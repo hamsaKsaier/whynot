@@ -185,6 +185,38 @@ export abstract class BaseAgent {
   protected modelIdUsed: string = 'unknown';
   protected lastCompletionReason: string = '';
 
+  // Task 1–3 instrumentation: distinguish LLM calls from tool calls and
+  // track max single-call size + token composition averages.
+  protected llmCallCount = 0;                    // generateText invocations
+  protected maxSingleCallInputTokens = 0;        // biggest single call
+  // Accumulators for token-composition averages (chars-based estimates)
+  protected sumSystemPromptChars = 0;
+  protected sumHistoryChars = 0;
+  protected sumProjectContextChars = 0;
+  protected sumToolDefsChars = 0;
+  // Priority 2 / Option C — residual between real usage.inputTokens and our
+  // char-based estimate. Captures the tool-result accumulation that generateText
+  // appends internally between maxSteps (our char sums only see call-start state).
+  protected sumToolResultsAccumulatedTokens = 0;
+
+  // ─── Priority 1: watchdog plumbing ─────────────────────────────────────
+  // Orchestrator polls `lastActivityAt` every 30s. If Date.now()-lastActivityAt
+  // > MAX_AGENT_IDLE_MIN*60_000 the orchestrator aborts the passed signal,
+  // which unblocks any in-flight generateText() call via AbortController.
+  // The orchestrator also reads `killedIdle` to distinguish normal errors
+  // from externally-enforced idle-kills (no retry for killed_idle).
+  public lastActivityAt: number = Date.now();
+  public abortSignal?: AbortSignal;
+  public killedIdle = false;
+  protected markActivity(): void {
+    this.lastActivityAt = Date.now();
+  }
+
+  // Task 4 support: snapshot of the board at agent start. Agents can read
+  // this in getInitialPrompt() to embed board-derived data in the USER
+  // message (not the system prompt, which must stay byte-stable for caching).
+  protected boardEntriesAtStart: any[] = [];
+
   constructor(config: AgentConfig, mcpBrowser?: MCPBrowser) {
     this.sessionId = config.sessionId;
     this.agentType = config.agentType;
@@ -194,20 +226,28 @@ export abstract class BaseAgent {
     this.boardTools = new BoardTools(config.sessionId, config.agentType);
     this.lastBoardPollTime = new Date().toISOString();
 
+    const loopConfig = {
+      targetUrl: config.targetUrl,
+      mode: 'explore' as const,
+      qualityThreshold: 80,
+      maxIterations: 1,
+      maxDurationHours: 1,
+      loginCredentials: config.loginCredentials,
+    };
+
     if (mcpBrowser) {
       this.mcpBrowser = mcpBrowser;
-      this.toolExecutor = new ToolExecutor(
-        config.sessionId,
-        {
-          targetUrl: config.targetUrl,
-          mode: 'explore',
-          qualityThreshold: 80,
-          maxIterations: 1,
-          maxDurationHours: 1,
-          loginCredentials: config.loginCredentials,
-        },
-        mcpBrowser
-      );
+      this.toolExecutor = new ToolExecutor(config.sessionId, loopConfig, mcpBrowser);
+    } else {
+      // Agents without a browser (auto_tester, qa_lead) still need state +
+      // report tools (save_test_case, get_session_state, etc.) which are
+      // purely DB operations. Instantiate a ToolExecutor backed by an
+      // unstarted MCPBrowser — browser_* tool calls would return "MCP
+      // browser not connected" but those agents never call them.
+      // Without this bootstrap, every tool call returned
+      // "Tool not available for auto_tester: save_test_case" → 0 tests saved.
+      const headlessBrowser = new MCPBrowser(config.sessionId);
+      this.toolExecutor = new ToolExecutor(config.sessionId, loopConfig, headlessBrowser);
     }
   }
 
@@ -216,11 +256,15 @@ export abstract class BaseAgent {
    */
   async run(): Promise<AgentResult> {
     const startTime = Date.now();
+    // Priority 1: initial heartbeat so the watchdog doesn't trip during
+    // the first slow setup step (board init, system prompt build, etc.).
+    this.markActivity();
 
     try {
       // Initialize board entry
       await this.board.initialize(this.sessionId, this.agentType);
       await this.board.updateStatus(this.sessionId, this.agentType, 'working', 'Starting...');
+      this.markActivity();
 
       emitToSession(this.sessionId, {
         type: 'status_update',
@@ -233,6 +277,8 @@ export abstract class BaseAgent {
 
       // Get board state for context
       const boardEntries = await this.board.getAllForSession(this.sessionId);
+      // Task 4: stash snapshot so getInitialPrompt() can read it.
+      this.boardEntriesAtStart = boardEntries;
 
       // Build system prompt with agent-specific context
       const systemPrompt = this.contextBuilder.buildSystemPrompt(
@@ -315,19 +361,55 @@ export abstract class BaseAgent {
         toolCallCount: this.totalToolCalls,
         durationMs,
         completionReason: this.lastCompletionReason || 'iteration_end',
+        // Task 1–3 instrumentation passthrough
+        llmCallCount: this.llmCallCount,
+        maxSingleCallInputTokens: this.maxSingleCallInputTokens,
+        sumSystemPromptChars: this.sumSystemPromptChars,
+        sumHistoryChars: this.sumHistoryChars,
+        sumProjectContextChars: this.sumProjectContextChars,
+        sumToolDefsChars: this.sumToolDefsChars,
+        // Priority 2: residual tool-result accumulation tokens
+        sumToolResultsAccumulatedTokens: this.sumToolResultsAccumulatedTokens,
       };
     } catch (err: any) {
-      logger.error(`${this.agentType} agent failed`, {
-        sessionId: this.sessionId,
-        error: err.message,
-        stack: err.stack?.slice(0, 300),
-      });
+      // Priority 1: watchdog kill is NOT a normal agent failure. Log it
+      // differently, tag status as killed_idle so orchestrator knows to
+      // continue rather than retry, and surface the partial metrics we
+      // accumulated so cost accounting stays honest.
+      const isWatchdogKill = this.killedIdle
+        || err?.name === 'AbortError'
+        || err?.name === 'AI_AbortError'
+        || !!this.abortSignal?.aborted;
 
-      await this.board.updateStatus(this.sessionId, this.agentType, 'error', err.message).catch(() => {});
+      if (isWatchdogKill) {
+        logger.warn(`${this.agentType} agent killed by watchdog (idle timeout)`, {
+          sessionId: this.sessionId,
+          agentType: this.agentType,
+          lastActivityAt: new Date(this.lastActivityAt).toISOString(),
+          idleMs: Date.now() - this.lastActivityAt,
+          llmCallsMadeBeforeKill: this.llmCallCount,
+          toolCallsBeforeKill: this.totalToolCalls,
+        });
+      } else {
+        logger.error(`${this.agentType} agent failed`, {
+          sessionId: this.sessionId,
+          error: err.message,
+          stack: err.stack?.slice(0, 300),
+        });
+      }
+
+      const boardStatus: 'error' | 'killed_idle' = isWatchdogKill ? 'killed_idle' : 'error';
+      await this.board.updateStatus(this.sessionId, this.agentType, boardStatus, err.message).catch(() => {});
 
       emitToSession(this.sessionId, {
         type: 'status_update',
-        data: { agent: this.agentType, status: 'error', message: `${this.agentType} error: ${err.message}` },
+        data: {
+          agent: this.agentType,
+          status: boardStatus,
+          message: isWatchdogKill
+            ? `${this.agentType} killed by watchdog (idle)`
+            : `${this.agentType} error: ${err.message}`,
+        },
       });
 
       const errorCostCents = computeCostCents(
@@ -339,7 +421,7 @@ export abstract class BaseAgent {
 
       return {
         agentType: this.agentType,
-        status: 'error',
+        status: isWatchdogKill ? 'killed_idle' : 'error',
         pagesExplored: this.pagesExplored,
         testsGenerated: this.testsGenerated,
         bugsFound: this.bugsFound,
@@ -353,7 +435,15 @@ export abstract class BaseAgent {
         modelUsed: this.modelIdUsed,
         toolCallCount: this.totalToolCalls,
         durationMs: Date.now() - startTime,
-        completionReason: 'error',
+        completionReason: isWatchdogKill ? 'killed_idle' : 'error',
+        // Task 1–3 instrumentation passthrough
+        llmCallCount: this.llmCallCount,
+        maxSingleCallInputTokens: this.maxSingleCallInputTokens,
+        sumSystemPromptChars: this.sumSystemPromptChars,
+        sumHistoryChars: this.sumHistoryChars,
+        sumProjectContextChars: this.sumProjectContextChars,
+        sumToolDefsChars: this.sumToolDefsChars,
+        sumToolResultsAccumulatedTokens: this.sumToolResultsAccumulatedTokens,
       };
     }
   }
@@ -367,10 +457,16 @@ export abstract class BaseAgent {
     this.modelIdUsed = modelId;
     const maxOuterLoops = this.getMaxLoops();
 
+    // Part 1 feature flag — read only, no compression behaviour applied yet.
+    // When ENABLE_PROMPT_COMPRESSION=true and compression is wired in Part 2,
+    // this flag will gate windowing / context compression / tool truncation.
+    const compressionEnabled = process.env.ENABLE_PROMPT_COMPRESSION === 'true';
+
     logger.info(`Starting ${this.agentType} agent loop`, {
       sessionId: this.sessionId,
       model: modelName,
       maxOuterLoops,
+      compressionEnabled,
     });
 
     // Build tools with execute callbacks
@@ -426,6 +522,9 @@ export abstract class BaseAgent {
       await this.board.updateStatus(this.sessionId, this.agentType, 'working', undefined, progressPct).catch(() => {});
 
       try {
+        // Priority 1: heartbeat right before the blocking LLM call so the
+        // watchdog sees progress even if the first step takes a while.
+        this.markActivity();
         const result = await generateText({
           model,
           // System prompt via the top-level `system:` parameter. The AI SDK
@@ -435,6 +534,10 @@ export abstract class BaseAgent {
           system: systemPrompt,
           messages,
           tools,
+          // Priority 1: propagate orchestrator's AbortController so the
+          // watchdog can cancel an in-flight LLM call (and the HTTP request
+          // under it) when an agent has been silent for too long.
+          abortSignal: this.abortSignal,
           // Anthropic prompt caching: cache the system prompt + tool definitions
           // as a stable prefix. Only applied for Claude models — other providers
           // would silently ignore it but cleaner to guard explicitly.
@@ -451,6 +554,10 @@ export abstract class BaseAgent {
           stopWhen: stepCountIs(20),
           maxOutputTokens: 2048,
           onStepFinish: async (event) => {
+            // Priority 1: each step = agent making progress. Reset the
+            // idle timer so long-running tool calls + multi-step loops
+            // don't look idle to the watchdog.
+            this.markActivity();
             // Stream the AI's reasoning text to the "AI Thinking" panel.
             // The per-step `event.text` fires for each model turn (even the
             // ones that end in a tool call), so the panel updates in real
@@ -504,6 +611,8 @@ export abstract class BaseAgent {
             }
           },
         });
+        // Priority 1: successful LLM call completion is unambiguous activity.
+        this.markActivity();
 
         // Fix D: accumulate token usage per generateText call for cost tracking.
         // AI SDK v6 LanguageModelUsage shape: inputTokens, outputTokens,
@@ -517,6 +626,12 @@ export abstract class BaseAgent {
         this.inputTokens += callInput;
         this.outputTokens += callOutput;
         this.cachedInputTokens += callCached;
+        // Task 1: count LLM invocations distinctly from tool calls.
+        this.llmCallCount++;
+        // Task 3: track biggest single call so we know the worst case.
+        if (callInput > this.maxSingleCallInputTokens) {
+          this.maxSingleCallInputTokens = callInput;
+        }
         if ((result as any).finishReason) {
           this.lastCompletionReason = String((result as any).finishReason);
         }
@@ -525,6 +640,52 @@ export abstract class BaseAgent {
         // cache_read > 0 means the system prompt was served from cache.
         const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens || 0;
         const cacheHitRate = callInput > 0 ? ((callCached / callInput) * 100).toFixed(1) : '0.0';
+
+        // Compression baseline instrumentation (Part 1 — no compression yet).
+        // Chars / 4 is a rough token estimate consistent with OpenAI's guidance.
+        // These values let us pinpoint WHICH portion of the input dominates
+        // cost before applying the 3 compression techniques (windowing,
+        // context compression, tool-output truncation).
+        const systemPromptChars = systemPrompt.length;
+        const historyChars = messages.reduce((sum, m) => {
+          const c: any = (m as any).content;
+          if (typeof c === 'string') return sum + c.length;
+          if (Array.isArray(c)) {
+            return sum + c.reduce((s: number, p: any) =>
+              s + (typeof p?.text === 'string' ? p.text.length : 0), 0);
+          }
+          return sum;
+        }, 0);
+        const projectContextChars = this.config.projectContext
+          ? JSON.stringify(this.config.projectContext).length
+          : 0;
+        const approxToolOverheadChars = (() => {
+          try {
+            return Object.keys(tools || {}).reduce((sum, name) => {
+              const def: any = (tools as any)[name];
+              return sum + (def?.description?.length || 0) + 200;
+            }, 0);
+          } catch { return 0; }
+        })();
+
+        // Task 2: accumulate char-based composition sizes for session-wide averages.
+        this.sumSystemPromptChars += systemPromptChars;
+        this.sumHistoryChars += historyChars;
+        this.sumProjectContextChars += projectContextChars;
+        this.sumToolDefsChars += approxToolOverheadChars;
+
+        // Priority 2 / Option C — residual = (real tokens billed) − (our chars/4 estimates).
+        // Our char-based sums measure the messages array BEFORE generateText runs.
+        // generateText with stopWhen=stepCountIs(20) internally appends tool-result
+        // messages between steps, so the provider sees a much bigger payload by the
+        // final step. usage.inputTokens reflects that final state. The delta is
+        // exactly the tool-result accumulation we need to quantify for Part 2.
+        const estimatedInputTokens = Math.round(
+          (systemPromptChars + historyChars + projectContextChars + approxToolOverheadChars) / 4,
+        );
+        const toolResultsResidualTokens = Math.max(0, callInput - estimatedInputTokens);
+        this.sumToolResultsAccumulatedTokens += toolResultsResidualTokens;
+
         logger.info('generateText usage', {
           sessionId: this.sessionId,
           agentType: this.agentType,
@@ -535,6 +696,23 @@ export abstract class BaseAgent {
           cacheWriteTokens: cacheWrite,
           cacheHitRate: cacheHitRate + '%',
           model: modelId,
+          // Part 1 baseline: size breakdown (chars + estimated tokens)
+          sizes: {
+            systemPromptChars,
+            systemPromptTokensApprox: Math.round(systemPromptChars / 4),
+            historyChars,
+            historyTokensApprox: Math.round(historyChars / 4),
+            projectContextChars,
+            projectContextTokensApprox: Math.round(projectContextChars / 4),
+            toolDefsCharsApprox: approxToolOverheadChars,
+            toolDefsTokensApprox: Math.round(approxToolOverheadChars / 4),
+            // Priority 2 residual: tokens present in the call that our
+            // char-based estimate didn't account for. High values mean
+            // tool-result accumulation across steps is dominating cost.
+            toolResultsResidualTokens,
+            estimatedInputTokens,
+            messageCount: messages.length,
+          },
         });
 
         // Check text output for completion
@@ -569,6 +747,17 @@ export abstract class BaseAgent {
         }
 
       } catch (err: any) {
+        // Priority 1: watchdog aborted us mid-call. Don't retry, don't swallow
+        // — propagate so run() can return a killed_idle result with the
+        // partial metrics we've already accumulated.
+        if (
+          err?.name === 'AbortError' ||
+          err?.name === 'AI_AbortError' ||
+          this.abortSignal?.aborted
+        ) {
+          this.killedIdle = true;
+          throw err;
+        }
         if (err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED')) {
           logger.warn('Rate limited — waiting 30s', { sessionId: this.sessionId, agent: this.agentType });
           await new Promise(r => setTimeout(r, 30_000));
@@ -686,8 +875,13 @@ export abstract class BaseAgent {
    * or forget to set the metrics field. Only invoked on successful tool
    * calls (errors throw before reaching here), so any invocation here
    * represents a real DB write.
+   *
+   * Fix 4 exception: if result.data.deduplicated is set, the tool returned
+   * successfully but did NOT insert a DB row (dedup). Don't increment.
    */
   protected trackMetrics(toolName: string, result: ToolResult): void {
+    if (result.data?.deduplicated) return;
+
     if (toolName === 'mark_page_explored' || result.metrics?.pageExplored) {
       this.pagesExplored++;
     }

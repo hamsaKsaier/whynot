@@ -366,7 +366,9 @@ export class ParallelTestExecutor {
           timeoutMs: 30_000,
           credentials: this.config.loginCredentials ?? undefined,
         },
-        { timeout: 60_000 }
+        // 3 attempts × 30 s hard timeout + 30 s overhead = 120 s upper bound.
+        // Previous 60 s cut retries short before the 2nd attempt could start.
+        { timeout: 120_000 }
       );
 
       const res = response.data;

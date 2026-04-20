@@ -1079,6 +1079,156 @@ ${combinedTests}
   }
 });
 
+// Export entire QA Loop session as a ready-to-run Playwright project ZIP.
+// Contains: package.json, playwright.config.ts, tests/*.spec.ts, README.md, .env.example
+// The user runs: npm install && npx playwright install && npm test
+router.get('/api/sessions/:id/export', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const workspaceId = req.headers['x-workspace-id'] as string | undefined;
+
+    const session = await qaLoopRepository.getSession(id, workspaceId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const testCases = await qaLoopRepository.getTestCases(id, { active: true });
+    if (testCases.length === 0) {
+      return res.status(404).json({ error: 'No test cases found for this session' });
+    }
+
+    const archiver = require('archiver');
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const targetUrl = session.target_url || 'unknown';
+
+    let urlHost = 'whynot-qa';
+    try { urlHost = new URL(targetUrl).hostname.replace(/\./g, '-'); } catch {}
+    const zipFilename = `whynot-testsuite-${urlHost}-${id.slice(0, 8)}.zip`;
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+
+    archive.on('error', (err: any) => {
+      logger.error('Archiver error', { sessionId: id, error: err.message });
+      if (!res.headersSent) res.status(500).json({ error: 'Archive generation failed' });
+    });
+    archive.pipe(res);
+
+    // package.json
+    archive.append(JSON.stringify({
+      name: `whynot-testsuite-${urlHost}`,
+      version: '1.0.0',
+      private: true,
+      description: `Auto-generated Playwright test suite by WhyNot QA for ${targetUrl}`,
+      scripts: {
+        test: 'playwright test',
+        'test:headed': 'playwright test --headed',
+        'test:ui': 'playwright test --ui',
+        report: 'playwright show-report',
+      },
+      devDependencies: {
+        '@playwright/test': '^1.50.0',
+      },
+    }, null, 2), { name: 'package.json' });
+
+    // playwright.config.ts
+    archive.append(`import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  timeout: 60_000,
+  fullyParallel: false,
+  retries: process.env.CI ? 2 : 0,
+  reporter: [['html'], ['list']],
+  use: {
+    baseURL: process.env.BASE_URL || '${targetUrl}',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  ],
+});
+`, { name: 'playwright.config.ts' });
+
+    // .env.example (credentials placeholder)
+    archive.append(`# Copy to .env and fill in your credentials before running the suite.
+TEST_USERNAME=Admin
+TEST_PASSWORD=admin123
+BASE_URL=${targetUrl}
+`, { name: '.env.example' });
+
+    // README.md
+    archive.append(`# WhyNot QA — Test Suite Export
+
+Auto-generated from session ${id} on ${new Date().toISOString()}.
+Target: ${targetUrl}
+
+## Quick start
+
+\`\`\`bash
+npm install
+npx playwright install
+cp .env.example .env  # fill in real credentials
+npm test
+\`\`\`
+
+## Contents
+
+- \`tests/\` — ${testCases.length} test case(s), one file per test
+- \`playwright.config.ts\` — base Playwright configuration
+- \`.env.example\` — credential template
+
+## View report
+
+After running \`npm test\`, open the HTML report:
+
+\`\`\`bash
+npm run report
+\`\`\`
+`, { name: 'README.md' });
+
+    // tests/*.spec.ts — one per test case
+    const header = generateExportHeader(targetUrl);
+    const usedNames = new Set<string>();
+    let filesWritten = 0;
+    for (const tc of testCases) {
+      if (!tc.playwright_code) continue;
+      const masked = maskCredentials(tc.playwright_code);
+      const wrapped = wrapWithTestRunner(masked, tc.name);
+      let baseName = sanitizeFilename(tc.name) || `test-${filesWritten + 1}`;
+      // Ensure unique filenames
+      let finalName = baseName;
+      let suffix = 2;
+      while (usedNames.has(finalName)) {
+        finalName = `${baseName}-${suffix++}`;
+      }
+      usedNames.add(finalName);
+      archive.append(`${header}\n${wrapped}\n`, { name: `tests/${finalName}.spec.ts` });
+      filesWritten++;
+    }
+
+    if (filesWritten === 0) {
+      archive.append('// No test cases with playwright_code were available.\n', {
+        name: 'tests/README.txt',
+      });
+    }
+
+    logger.info('Exporting session test suite as ZIP', {
+      sessionId: id,
+      testCount: testCases.length,
+      filesWritten,
+      filename: zipFilename,
+    });
+
+    await archive.finalize();
+  } catch (error: any) {
+    logger.error('Failed to export session test suite', { error: error.message, stack: error.stack?.slice(0, 300) });
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to export test suite' });
+  }
+});
+
 /**
  * Strip any legacy import statements and test()/describe() wrappers from
  * Playwright code, returning only the raw page commands.

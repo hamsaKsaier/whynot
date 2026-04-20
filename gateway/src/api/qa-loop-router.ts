@@ -414,6 +414,34 @@ createProxy('get', '/sessions', 'Failed to list QA Loop sessions', {
 // Get session details
 createProxy('get', '/sessions/:id', 'Failed to get QA Loop session');
 
+// Export session test suite as a ZIP — custom route (binary response, not JSON)
+router.get(
+  '/sessions/:id/export',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    await withQALoopBreaker(res, 'Failed to export test suite', async () => {
+      const response = await axios.get(
+        `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/export`,
+        {
+          headers: qaLoopHeaders(req),
+          timeout: 60_000,
+          responseType: 'stream',
+          validateStatus: () => true, // forward error responses too
+        },
+      );
+
+      // Forward status + relevant headers (Content-Type, Content-Disposition)
+      res.status(response.status);
+      const contentType = response.headers['content-type'];
+      const contentDisposition = response.headers['content-disposition'];
+      if (contentType) res.setHeader('Content-Type', contentType);
+      if (contentDisposition) res.setHeader('Content-Disposition', contentDisposition);
+
+      response.data.pipe(res);
+    });
+  }),
+);
+
 // Pause / Resume / Stop
 createProxy('post', '/sessions/:id/pause',  'Failed to pause QA Loop session',  { status: 200, timeout: 10_000 });
 createProxy('post', '/sessions/:id/resume', 'Failed to resume QA Loop session', { status: 200, timeout: 10_000 });

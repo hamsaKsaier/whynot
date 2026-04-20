@@ -412,6 +412,32 @@ export async function exportTestSuitePlaywright(suiteId: string): Promise<void> 
   window.URL.revokeObjectURL(url);
 }
 
+/**
+ * Download the entire QA Loop session as a ready-to-run Playwright project ZIP.
+ * Contains: package.json, playwright.config.ts, tests/*.spec.ts, README.md, .env.example.
+ * Run after unzip: npm install && npx playwright install && npm test
+ */
+export async function exportSessionTestSuite(sessionId: string): Promise<void> {
+  const response = await apiClient.get(
+    `/qa-loop/sessions/${sessionId}/export`,
+    { responseType: 'blob' }
+  );
+
+  const disposition = response.headers['content-disposition'] || '';
+  const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1] : `whynot-testsuite-${sessionId.slice(0, 8)}.zip`;
+
+  const blob = new Blob([response.data], { type: 'application/zip' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
 // ==================== PROJECT HIERARCHY API ====================
 
 export interface TestSuiteHierarchyBug {

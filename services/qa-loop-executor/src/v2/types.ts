@@ -4,7 +4,10 @@
 
 export type AgentType = 'qa_lead' | 'exploratory' | 'security' | 'api_tester' | 'auto_tester';
 
-export type AgentStatus = 'idle' | 'working' | 'blocked' | 'done' | 'error';
+// 'killed_idle' = watchdog killed the agent for inactivity (see orchestrator.runAgent
+// and the MAX_AGENT_IDLE_MIN env var). Distinct from 'error' because the agent
+// didn't throw — it was externally aborted for exceeding the idle-timeout.
+export type AgentStatus = 'idle' | 'working' | 'blocked' | 'done' | 'error' | 'killed_idle';
 
 export type PlanStatus = 'active' | 'completed' | 'failed';
 
@@ -82,7 +85,9 @@ export interface AgentConfig {
 
 export interface AgentResult {
   agentType: AgentType;
-  status: 'done' | 'error';
+  // 'killed_idle' = watchdog aborted the agent for inactivity. Orchestrator
+  // records the last known metrics from the agent, skips retry, moves on.
+  status: 'done' | 'error' | 'killed_idle';
   pagesExplored: number;
   testsGenerated: number;
   bugsFound: number;
@@ -98,4 +103,18 @@ export interface AgentResult {
   toolCallCount?: number;
   durationMs?: number;
   completionReason?: string;
+  // Task 1–3 instrumentation (separates LLM calls from tool calls,
+  // tracks worst-case single call, accumulates char-based composition
+  // so the orchestrator can compute session-wide averages).
+  llmCallCount?: number;
+  maxSingleCallInputTokens?: number;
+  sumSystemPromptChars?: number;
+  sumHistoryChars?: number;
+  sumProjectContextChars?: number;
+  sumToolDefsChars?: number;
+  // Priority 2 / Option C — residual between real usage.inputTokens and our
+  // char-based estimates. Equals the tool-result accumulation that generateText
+  // appends between steps (our char sums capture only the call-start state).
+  // Summed across all LLM calls so orchestrator can compute a session average.
+  sumToolResultsAccumulatedTokens?: number;
 }

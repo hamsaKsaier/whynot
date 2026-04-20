@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../contexts/ToastContext';
 import {
   Zap, Globe, Activity, Play, Pause,
-  CircleStop, RefreshCw, Target, Menu, Loader2,
+  CircleStop, RefreshCw, Target, Menu, Loader2, Download,
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -30,7 +30,7 @@ import {
 } from '../components/ui/dialog';
 import { cn } from '../lib/utils';
 
-import { checkExistingSession } from '../services/qa-loop-api';
+import { checkExistingSession, exportSessionTestSuite } from '../services/qa-loop-api';
 import { getProjects, getProjectContext, ProjectWithStats } from '../services/api';
 import { useSessionManager, StartSessionParams } from '../hooks/useSessionManager';
 
@@ -386,6 +386,22 @@ export const QALoopPage: React.FC = () => {
                     <Target className="me-1" size={12} /> <span className="hidden sm:inline">{t('runner.qaLoop.cinema.smartRetest')}</span>
                   </Button>
                 </>
+              )}
+              {sessionTestCases.length > 0 && (
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      await exportSessionTestSuite(activeSession.id);
+                      success('Downloading test suite…');
+                    } catch (err: any) {
+                      showError(err?.message || 'Failed to download test suite');
+                    }
+                  }}
+                  title="Download a ready-to-run Playwright project (ZIP)"
+                >
+                  <Download className="me-1" size={12} /> Download Test Suite
+                </Button>
               )}
             </div>
           </div>
