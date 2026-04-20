@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
+from app.infrastructure.platform_config import prefetch as prefetch_platform_config
 import os
 import logging
 from dotenv import load_dotenv
@@ -38,6 +39,11 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+
+@app.on_event("startup")
+async def _hydrate_platform_config() -> None:
+    prefetch_platform_config()
 
 
 @app.get("/")

@@ -401,11 +401,11 @@ export const ProjectDetailPage: React.FC = () => {
               const isExpanded = expandedCategories.has(cat.name);
               const total = cat.testCases.length;
               return (
-                <div key={cat.name} className="bg-navy-800 rounded-lg border border-navy-700 overflow-hidden">
+                <div key={cat.name} className="bg-card rounded-lg border overflow-hidden">
                   {/* Category header */}
                   <button
                     onClick={() => toggleCategory(cat.name)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-navy-700/50 transition-colors"
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       {isExpanded ? <FiChevronDown className="h-4 w-4 text-muted-foreground" /> : <FiChevronRight className="h-4 w-4 text-muted-foreground rtl:scale-x-[-1]" />}
@@ -423,17 +423,17 @@ export const ProjectDetailPage: React.FC = () => {
 
                   {/* Category test cases */}
                   {isExpanded && (
-                    <div className="border-t border-navy-700">
+                    <div className="border-t">
                       {cat.testCases.map((tc: any) => {
                         const testStatus = tc.last_run_status || tc.observed_result || 'review';
                         const isTestExpanded = expandedTests.has(tc.id);
                         const steps = tc.steps || [];
                         const duration = tc.last_run_duration;
                         return (
-                          <div key={tc.id} className="border-b border-navy-700/50 last:border-b-0">
+                          <div key={tc.id} className="border-b last:border-b-0">
                             <button
                               onClick={() => toggleTestExpand(tc.id)}
-                              className="w-full flex items-center justify-between px-6 py-2.5 hover:bg-navy-700/30 transition-colors text-start"
+                              className="w-full flex items-center justify-between px-6 py-2.5 hover:bg-muted/30 transition-colors text-start"
                             >
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 {statusIcon(testStatus)}
@@ -454,7 +454,7 @@ export const ProjectDetailPage: React.FC = () => {
 
                             {/* Expanded test details */}
                             {isTestExpanded && (
-                              <div className="px-6 pb-4 pt-1 bg-navy-900/50 space-y-3">
+                              <div className="px-6 pb-4 pt-1 bg-muted/40 space-y-3">
                                 {tc.description && (
                                   <p className="text-sm text-muted-foreground">{tc.description}</p>
                                 )}
@@ -494,7 +494,7 @@ export const ProjectDetailPage: React.FC = () => {
                                         {copiedId === tc.id ? t('dashboard.projectDetail.copied') : t('dashboard.projectDetail.copy')}
                                       </button>
                                     </div>
-                                    <pre className="text-xs text-foreground bg-navy-950 rounded p-3 overflow-x-auto max-h-48">
+                                    <pre className="text-xs text-foreground bg-muted rounded p-3 overflow-x-auto max-h-48">
                                       {tc.playwright_code}
                                     </pre>
                                   </div>
@@ -567,7 +567,7 @@ export const ProjectDetailPage: React.FC = () => {
                       </div>
                     </button>
                     {isBugExpanded && (
-                      <div className="mt-3 pt-3 border-t border-navy-700 space-y-2">
+                      <div className="mt-3 pt-3 border-t space-y-2">
                         {bug.description && <p className="text-sm text-muted-foreground">{bug.description}</p>}
                         {bug.page_url && <p className="text-xs text-muted-foreground">{t('dashboard.projectDetail.page')}: {bug.page_url}</p>}
                         {bug.screenshot_url && (

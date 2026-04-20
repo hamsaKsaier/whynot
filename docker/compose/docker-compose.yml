@@ -44,10 +44,7 @@ services:
       - ../../.env
     environment:
       - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
-      - OPENAI_VISION_MODEL=${OPENAI_VISION_MODEL:-gpt-4o}
-      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      - GATEWAY_URL=http://gateway:3000
       - CORS_ORIGINS=http://localhost:${GATEWAY_PORT:-3010},http://localhost:${TEST_EXECUTOR_PORT:-3011},http://localhost:${FRONTEND_PORT:-5183}
     volumes:
       - ../../services/ai-service/app:/app/app

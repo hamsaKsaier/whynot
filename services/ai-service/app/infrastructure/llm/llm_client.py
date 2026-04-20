@@ -7,35 +7,49 @@ from openai import OpenAI
 from anthropic import AsyncAnthropic   # async client — does not block the event loop (3.8)
 import json
 
+from app.infrastructure.platform_config import get_platform_key
+
 # Transient HTTP status codes that warrant a retry with exponential back-off (3.4)
 _RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 _MAX_RETRIES = 3
 
 
 class LLMClient:
-    """Client for interacting with LLM APIs"""
-    
+    """Client for interacting with LLM APIs.
+
+    API keys are loaded lazily from the gateway's platform-config endpoint on
+    first use (not from env vars), so the ai-service can start even when no
+    provider is configured yet.
+    """
+
     def __init__(self):
         self.openai_client = None
         self.anthropic_client = None
         self.provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
-        
-        if self.provider == "openai":
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
-                self.openai_client = OpenAI(api_key=api_key)
-            else:
-                raise ValueError("OPENAI_API_KEY environment variable is not set")
-        elif self.provider == "anthropic":
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-            if api_key:
-                # Use the async client so .messages.create() is a coroutine and
-                # does not block the FastAPI event loop (3.8)
-                self.anthropic_client = AsyncAnthropic(api_key=api_key)
-            else:
-                raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
-        else:
-            raise ValueError(f"Unknown LLM provider: {self.provider}. Set LLM_PROVIDER to 'openai' or 'anthropic'")
+        if self.provider not in ("openai", "anthropic"):
+            raise ValueError(
+                f"Unknown LLM provider: {self.provider}. Set LLM_PROVIDER to 'openai' or 'anthropic'"
+            )
+
+    async def _ensure_anthropic(self) -> None:
+        if self.anthropic_client is not None:
+            return
+        api_key = await get_platform_key("anthropic")
+        if not api_key:
+            raise ValueError(
+                "No Anthropic API key configured in platform admin (platform_ai_config)."
+            )
+        self.anthropic_client = AsyncAnthropic(api_key=api_key)
+
+    async def _ensure_openai(self) -> None:
+        if self.openai_client is not None:
+            return
+        api_key = await get_platform_key("openai")
+        if not api_key:
+            raise ValueError(
+                "No OpenAI API key configured in platform admin (platform_ai_config)."
+            )
+        self.openai_client = OpenAI(api_key=api_key)
     
     async def _anthropic_with_retry(self, coro_factory: Callable[[], Any]) -> Any:
         """Execute an Anthropic API coroutine with exponential back-off retry (3.4).
@@ -66,8 +80,7 @@ class LLMClient:
     async def generate_completion(self, prompt: str, system_prompt: Optional[str] = None, max_tokens: int = 8192) -> str:
         """Generate completion from LLM"""
         if self.provider == "openai":
-            if not self.openai_client:
-                raise ValueError("OpenAI client not initialized. Check OPENAI_API_KEY environment variable.")
+            await self._ensure_openai()
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
@@ -84,8 +97,7 @@ class LLMClient:
                 raise ValueError(f"OpenAI API error: {str(e)}")
 
         elif self.provider == "anthropic":
-            if not self.anthropic_client:
-                raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
+            await self._ensure_anthropic()
             system_message = system_prompt or ""
             model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
             try:
@@ -101,7 +113,7 @@ class LLMClient:
             except Exception as e:
                 raise ValueError(f"Anthropic API error: {str(e)}")
 
-        raise ValueError(f"No LLM provider configured. Provider: {self.provider}, Set OPENAI_API_KEY or ANTHROPIC_API_KEY")
+        raise ValueError(f"No LLM provider configured. Provider: {self.provider}")
     
     def _fix_missing_commas_safe(self, text):
         """Fix missing commas while respecting string boundaries"""
@@ -563,7 +575,8 @@ class LLMClient:
         For Anthropic: uses tool_use to guarantee syntactically valid JSON with no repair needed.
         For OpenAI: falls back to text generation + _extract_and_repair_json.
         """
-        if self.provider == "anthropic" and self.anthropic_client:
+        if self.provider == "anthropic":
+            await self._ensure_anthropic()
             return await self._generate_with_tool_use(prompt, system_prompt, max_tokens)
 
         # OpenAI fallback: generate text then repair
@@ -584,7 +597,8 @@ class LLMClient:
         max_tokens: int = 8192
     ) -> str:
         """Generate completion using vision-capable model with screenshot"""
-        if self.provider == "openai" and self.openai_client:
+        if self.provider == "openai":
+            await self._ensure_openai()
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
@@ -610,11 +624,10 @@ class LLMClient:
             return response.choices[0].message.content
         
         elif self.provider == "anthropic":
-            if not self.anthropic_client:
-                raise ValueError("Anthropic client not initialized. Check ANTHROPIC_API_KEY environment variable.")
+            await self._ensure_anthropic()
             system_message = system_prompt or ""
             model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-            
+
             try:
                 # Anthropic vision API format — awaited via async client (3.8), with retry (3.4)
                 response = await self._anthropic_with_retry(
@@ -659,7 +672,8 @@ class LLMClient:
         For Anthropic: uses tool_use with inline image for guaranteed valid JSON.
         For OpenAI: falls back to text generation + _extract_and_repair_json.
         """
-        if self.provider == "anthropic" and self.anthropic_client:
+        if self.provider == "anthropic":
+            await self._ensure_anthropic()
             return await self._generate_with_tool_use_vision(prompt, screenshot_base64, system_prompt, max_tokens)
 
         # OpenAI fallback

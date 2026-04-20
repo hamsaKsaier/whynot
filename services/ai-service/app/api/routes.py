@@ -45,28 +45,14 @@ def get_strategy_agent():
 
 @router.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Liveness check. Keys come from the platform-config service (gateway),
+    not from env vars, so their availability is verified per-request — not here."""
     import os
-    provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
-    api_key_set = False
-    
-    if provider == "openai":
-        api_key_set = bool(os.getenv("OPENAI_API_KEY"))
-    elif provider == "anthropic":
-        api_key_set = bool(os.getenv("ANTHROPIC_API_KEY"))
-    
-    status = "healthy" if api_key_set else "unhealthy"
-    details = {
-        "status": status,
+    return {
+        "status": "healthy",
         "service": "ai-service",
-        "llm_provider": provider,
-        "api_key_configured": api_key_set
+        "llm_provider": os.getenv("LLM_PROVIDER", "anthropic").lower(),
     }
-    
-    if not api_key_set:
-        details["error"] = f"{provider.upper()}_API_KEY environment variable is not set"
-    
-    return details
 
 
 @router.post("/api/generate-tests")
