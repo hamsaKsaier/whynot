@@ -419,7 +419,7 @@ router.get(
   '/sessions/:id/export',
   requireAuth,
   asyncHandler(async (req, res) => {
-    await withQALoopBreaker(res, 'Failed to export test suite', async () => {
+    await withQALoopBreaker(req, res, 'Failed to export test suite', async () => {
       const response = await axios.get(
         `${qaLoopExecutorUrl}/api/sessions/${req.params.id}/export`,
         {
