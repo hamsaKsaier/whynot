@@ -86,8 +86,8 @@ Backend selection:
 
 Model alias conventions:
     Claude backend:
-        opus, sonnet, haiku          → claude-opus-4-6[1m], etc.
-        opus-200k, sonnet-200k       → claude-opus-4-6, etc. (200k context)
+        opus, sonnet, haiku          → claude-opus-4-7[1m], etc.
+        opus-200k, sonnet-200k       → claude-opus-4-7, etc. (200k context)
     OpenCode backend (zai/ prefix required):
         glm-5.1                      → zai/glm-5.1  (default GLM)
         glm-5                        → zai/glm-5
@@ -360,10 +360,10 @@ ANTHROPIC_MODELS = {"opus", "sonnet", "haiku"}
 # (cheaper) variant.
 MODEL_ALIASES = {
     # Anthropic Claude models
-    "opus": "claude-opus-4-6[1m]",
+    "opus": "claude-opus-4-7[1m]",
     "sonnet": "claude-sonnet-4-6[1m]",
     "haiku": "claude-haiku-4-5-20251001",
-    "opus-200k": "claude-opus-4-6",
+    "opus-200k": "claude-opus-4-7",
     "sonnet-200k": "claude-sonnet-4-6",
     # Z.AI GLM models (5-model family with zai/ namespace prefix)
     "glm-5.1": "zai/glm-5.1",
