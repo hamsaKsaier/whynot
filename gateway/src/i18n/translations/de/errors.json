@@ -193,5 +193,9 @@
   "validation.workspaceNameRequired": "Name des Arbeitsbereichs ist erforderlich",
   "validation.workspaceRequired": "Arbeitsbereich erforderlich",
   "workspace.noWorkspace": "Kein Arbeitsbereich für den Benutzer gefunden",
-  "workspace.notResolved": "Arbeitsbereich nicht aufgelöst"
+  "workspace.notResolved": "Arbeitsbereich nicht aufgelöst",
+  "recon.quota.exceeded": "Monatliches Kontingent für Recon-Scans überschritten. Laden Sie Ihr Guthaben auf oder aktualisieren Sie Ihren Plan.",
+  "recon.payment.required": "Zahlung erforderlich: Ihr Plan beinhaltet keine Recon-Scans oder Ihr Guthaben ist unzureichend.",
+  "recon.phase.exploitation.authorizationMissing": "Exploitation-Phase abgebrochen: Autorisierungsdatensatz für diesen Scan fehlt.",
+  "recon.report.generationFailed": "Erstellung des Recon-Berichts fehlgeschlagen."
 }

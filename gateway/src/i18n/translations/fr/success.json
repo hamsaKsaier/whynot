@@ -37,5 +37,11 @@
   "user.unsuspended": "Utilisateur réactivé",
   "workspace.deleted": "Espace de travail supprimé",
   "userStory.deleted": "User story supprimée avec succès",
-  "userStory.assignedToFolder": "User story assignée au dossier avec succès"
+  "userStory.assignedToFolder": "User story assignée au dossier avec succès",
+  "recon.scan.queued": "Scan de reconnaissance mis en file d'attente avec succès.",
+  "recon.phase.fingerprinting.completed": "Phase d'empreinte terminée.",
+  "recon.phase.discovery.completed": "Phase de découverte terminée.",
+  "recon.phase.vulnAnalysis.completed": "Phase d'analyse des vulnérabilités terminée.",
+  "recon.phase.exploitation.completed": "Phase d'exploitation terminée.",
+  "recon.report.generated": "Rapport de reconnaissance généré."
 }

@@ -34,4 +34,27 @@ export const DEFAULT_PAYG_RATES: Record<string, bigint> = {
   visual_regression: 15n,
   qa_monitor_session: 200n,
   ci_scan: 200n,
+  recon_scan_run: 5000n,
+  recon_phase_fingerprinting: 200n,
+  recon_phase_discovery: 800n,
+  recon_phase_vuln_analysis: 1500n,
+  recon_phase_exploitation: 2000n,
+  recon_phase_reporting: 500n,
+};
+
+export const RECON_PAYG_EVENT_TYPES = [
+  'recon_scan_run',
+  'recon_phase_fingerprinting',
+  'recon_phase_discovery',
+  'recon_phase_vuln_analysis',
+  'recon_phase_exploitation',
+  'recon_phase_reporting',
+] as const;
+
+export type ReconPaygEventType = (typeof RECON_PAYG_EVENT_TYPES)[number];
+
+export const DEFAULT_RECON_PLAN_FEATURES: Record<PlanSlug, { recon_enabled: boolean; recon_monthly_scans: number }> = {
+  free: { recon_enabled: false, recon_monthly_scans: 0 },
+  pro_byo: { recon_enabled: true, recon_monthly_scans: 1 },
+  pro_managed: { recon_enabled: true, recon_monthly_scans: 3 },
 };

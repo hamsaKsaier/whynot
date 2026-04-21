@@ -5,6 +5,7 @@ export const PLATFORM_FEATURES = {
   ADVANCED_ANALYTICS: 'advanced_analytics',
   SUPERADMIN_IMPERSONATION: 'superadmin_impersonation',
   LANGUAGE_SWITCHER: 'language_switcher',
+  RECON_ENABLED: 'recon_enabled',
 } as const;
 
 export type PlatformFeatureKey = (typeof PLATFORM_FEATURES)[keyof typeof PLATFORM_FEATURES];

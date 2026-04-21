@@ -48,6 +48,15 @@ const stableT = (key: string, opts?: any) => {
         'admin.aiProviders.providerDesc.anthropic': '',
         'admin.aiProviders.providerDesc.google': '',
         'admin.aiProviders.providerDesc.openrouter': '',
+        'admin.ai.recon.title': 'Recon Model Overrides',
+        'admin.ai.recon.description': 'Recon model override description',
+        'admin.ai.recon.placeholder': 'Inherit platform default',
+        'admin.ai.recon.small.label': 'Recon — Small Model (optional override)',
+        'admin.ai.recon.small.help': 'Leave blank to inherit platform default',
+        'admin.ai.recon.medium.label': 'Recon — Medium Model (optional override)',
+        'admin.ai.recon.medium.help': 'Leave blank to inherit platform default',
+        'admin.ai.recon.large.label': 'Recon — Large Model (optional override)',
+        'admin.ai.recon.large.help': 'Leave blank to inherit platform default',
   };
   return map[key] || key;
 };
@@ -66,12 +75,14 @@ vi.mock('../../services/api', () => ({
   testProviderKey: vi.fn(),
   setDefaultModel: vi.fn(),
   setFallbackOrder: vi.fn(),
+  setReconModels: vi.fn(),
 }));
 
 import {
   getAIProviders, updateAIProviders, setProviderKey, removeProviderKey,
   setProviderFallbackKey, removeProviderFallbackKey, testProviderKey,
   setDefaultModel, setFallbackOrder as saveFallbackOrderApi,
+  setReconModels,
 } from '../../services/api';
 
 const mockConfig = {
@@ -414,5 +425,113 @@ describe('AIProvidersPage', () => {
     render(<AIProvidersPage />);
     await waitForLoaded();
     expect(screen.getByText('No providers')).toBeInTheDocument();
+  });
+
+  describe('Recon model overrides', () => {
+    it('hydrates the 3 recon inputs from the config response', async () => {
+      vi.mocked(getAIProviders).mockResolvedValue({
+        ...mockConfig,
+        reconModels: {
+          small: 'sonnet-small',
+          medium: 'sonnet-medium',
+          large: 'opus-large',
+        },
+      });
+      render(<AIProvidersPage />);
+      await waitForLoaded();
+
+      const small = document.getElementById('recon-small-model') as HTMLInputElement;
+      const medium = document.getElementById('recon-medium-model') as HTMLInputElement;
+      const large = document.getElementById('recon-large-model') as HTMLInputElement;
+      expect(small.value).toBe('sonnet-small');
+      expect(medium.value).toBe('sonnet-medium');
+      expect(large.value).toBe('opus-large');
+    });
+
+    it('renders empty inputs when the server returned null for each tier', async () => {
+      vi.mocked(getAIProviders).mockResolvedValue({
+        ...mockConfig,
+        reconModels: { small: null, medium: null, large: null },
+      });
+      render(<AIProvidersPage />);
+      await waitForLoaded();
+
+      const small = document.getElementById('recon-small-model') as HTMLInputElement;
+      const medium = document.getElementById('recon-medium-model') as HTMLInputElement;
+      const large = document.getElementById('recon-large-model') as HTMLInputElement;
+      expect(small.value).toBe('');
+      expect(medium.value).toBe('');
+      expect(large.value).toBe('');
+    });
+
+    it('round-trips an empty input as null (not "") when saving', async () => {
+      vi.mocked(getAIProviders).mockResolvedValue({
+        ...mockConfig,
+        reconModels: {
+          small: 'sonnet-small',
+          medium: null,
+          large: 'opus-large',
+        },
+      });
+      vi.mocked(setReconModels).mockResolvedValue({
+        small: null,
+        medium: null,
+        large: 'opus-large',
+      });
+
+      render(<AIProvidersPage />);
+      await waitForLoaded();
+
+      // Clear the small input (replacing 'sonnet-small' with '').
+      const small = document.getElementById('recon-small-model') as HTMLInputElement;
+      fireEvent.change(small, { target: { value: '' } });
+
+      const saveBtn = screen.getByTestId('save-recon-models');
+      await userEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(setReconModels).toHaveBeenCalledTimes(1);
+      });
+
+      // The page hands raw input to the API helper, which is the boundary
+      // where '' collapses to null before hitting the wire (see api.test.ts).
+      const payload = vi.mocked(setReconModels).mock.calls[0][0];
+      expect(payload.small).toBe('');
+      expect(payload.large).toBe('opus-large');
+
+      // After the server confirms null, the cleared input stays empty
+      // instead of drifting to a literal "null" string.
+      await waitFor(() => {
+        expect((document.getElementById('recon-small-model') as HTMLInputElement).value).toBe('');
+      });
+    });
+
+    it('forwards a non-empty override verbatim', async () => {
+      vi.mocked(getAIProviders).mockResolvedValue({
+        ...mockConfig,
+        reconModels: { small: null, medium: null, large: null },
+      });
+      vi.mocked(setReconModels).mockResolvedValue({
+        small: null,
+        medium: 'claude-opus-4-6',
+        large: null,
+      });
+
+      render(<AIProvidersPage />);
+      await waitForLoaded();
+
+      const medium = document.getElementById('recon-medium-model') as HTMLInputElement;
+      fireEvent.change(medium, { target: { value: 'claude-opus-4-6' } });
+
+      const saveBtn = screen.getByTestId('save-recon-models');
+      await userEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(setReconModels).toHaveBeenCalled();
+      });
+
+      const payload = vi.mocked(setReconModels).mock.calls[0][0];
+      expect(payload.medium).toBe('claude-opus-4-6');
+    });
   });
 });

@@ -37,5 +37,11 @@
   "user.unsuspended": "Benutzer entsperrt",
   "workspace.deleted": "Arbeitsbereich gelöscht",
   "userStory.deleted": "User Story erfolgreich gelöscht",
-  "userStory.assignedToFolder": "User Story erfolgreich dem Ordner zugewiesen"
+  "userStory.assignedToFolder": "User Story erfolgreich dem Ordner zugewiesen",
+  "recon.scan.queued": "Recon-Scan erfolgreich in die Warteschlange gestellt.",
+  "recon.phase.fingerprinting.completed": "Fingerprinting-Phase abgeschlossen.",
+  "recon.phase.discovery.completed": "Erkundungsphase abgeschlossen.",
+  "recon.phase.vulnAnalysis.completed": "Schwachstellenanalyse-Phase abgeschlossen.",
+  "recon.phase.exploitation.completed": "Exploitation-Phase abgeschlossen.",
+  "recon.report.generated": "Recon-Bericht erstellt."
 }

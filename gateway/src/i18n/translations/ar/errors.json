@@ -193,5 +193,9 @@
   "validation.urlProtocolRequired": "targetUrl يجب أن يستخدم http أو https",
   "validation.valueMustBeString": "القيمة لـ \"{{key}}\" يجب أن تكون نصًا",
   "workspace.notResolved": "لم يتم تحديد مساحة العمل",
-  "workspace.noWorkspace": "لم يتم العثور على مساحة عمل للمستخدم"
+  "workspace.noWorkspace": "لم يتم العثور على مساحة عمل للمستخدم",
+  "recon.quota.exceeded": "تم تجاوز حصة فحص الاستطلاع الشهرية. قم بإعادة شحن رصيدك أو ترقية خطتك.",
+  "recon.payment.required": "الدفع مطلوب: خطتك لا تتضمن عمليات فحص الاستطلاع أو رصيدك غير كافٍ.",
+  "recon.phase.exploitation.authorizationMissing": "تم إحباط مرحلة الاستغلال: سجل التفويض لكل فحص غير موجود.",
+  "recon.report.generationFailed": "فشل إنشاء تقرير الاستطلاع."
 }

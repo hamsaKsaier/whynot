@@ -9,9 +9,9 @@ describe('feature-flags seed', () => {
     vi.clearAllMocks();
   });
 
-  it('FLAG_SEEDS contains all 6 platform features', async () => {
+  it('FLAG_SEEDS contains all 7 platform features', async () => {
     const { FLAG_SEEDS } = await import('../database/seeds/feature-flags');
-    expect(FLAG_SEEDS).toHaveLength(6);
+    expect(FLAG_SEEDS).toHaveLength(7);
     const keys = FLAG_SEEDS.map((f) => f.key);
     expect(keys).toContain('ai_multi_provider');
     expect(keys).toContain('payg_billing');
@@ -19,13 +19,13 @@ describe('feature-flags seed', () => {
     expect(keys).toContain('advanced_analytics');
     expect(keys).toContain('superadmin_impersonation');
     expect(keys).toContain('language_switcher');
+    expect(keys).toContain('recon_enabled');
   });
 
-  it('only LANGUAGE_SWITCHER is enabled by default', async () => {
+  it('LANGUAGE_SWITCHER and RECON_ENABLED are enabled by default', async () => {
     const { FLAG_SEEDS } = await import('../database/seeds/feature-flags');
-    const enabled = FLAG_SEEDS.filter((f) => f.default_enabled);
-    expect(enabled).toHaveLength(1);
-    expect(enabled[0].key).toBe('language_switcher');
+    const enabled = FLAG_SEEDS.filter((f) => f.default_enabled).map((f) => f.key).sort();
+    expect(enabled).toEqual(['language_switcher', 'recon_enabled']);
   });
 
   it('each seed has required fields', async () => {

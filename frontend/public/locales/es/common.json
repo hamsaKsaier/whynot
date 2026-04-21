@@ -91,6 +91,7 @@
   "common.workspace.deleteConfirm": "¿Eliminar el espacio de trabajo \"{{name}}\"? Esta acción no se puede deshacer.",
   "common.header.credits": "{{count}} créditos",
   "common.nav.qaLoop": "QA Loop",
+  "common.nav.recon": "Recon",
   "common.nav.performance": "Rendimiento",
   "common.nav.dashboard": "Panel de control",
   "common.nav.projects": "Proyectos",

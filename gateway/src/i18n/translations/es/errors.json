@@ -193,5 +193,9 @@
   "validation.workspaceNameRequired": "Se requiere el nombre del espacio de trabajo",
   "validation.workspaceRequired": "Se requiere espacio de trabajo",
   "workspace.noWorkspace": "No se encontró espacio de trabajo para el usuario",
-  "workspace.notResolved": "Espacio de trabajo no resuelto"
+  "workspace.notResolved": "Espacio de trabajo no resuelto",
+  "recon.quota.exceeded": "Cuota mensual de escaneos de reconocimiento superada. Recargue su saldo o actualice su plan.",
+  "recon.payment.required": "Se requiere pago: su plan no incluye escaneos de reconocimiento o su saldo es insuficiente.",
+  "recon.phase.exploitation.authorizationMissing": "Fase de explotación abortada: falta el registro de autorización del escaneo.",
+  "recon.report.generationFailed": "Error al generar el informe de reconocimiento."
 }

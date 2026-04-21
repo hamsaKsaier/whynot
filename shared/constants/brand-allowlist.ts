@@ -7,6 +7,7 @@ export const BRAND_ALLOW_LIST = new Set([
   'WhyNot QA',
   'WhyNot',
   'QA Loop',
+  'Recon',
   'MCP',
   'Stripe',
   'GitHub',

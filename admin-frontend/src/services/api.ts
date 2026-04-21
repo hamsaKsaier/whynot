@@ -334,10 +334,17 @@ export interface AIProviderEntry {
   models: string[];
 }
 
+export interface ReconModelOverrides {
+  small: string | null;
+  medium: string | null;
+  large: string | null;
+}
+
 export interface AIProvidersConfig {
   providers: AIProviderEntry[];
   defaultProvider: { provider: string; model: string };
   fallbackOrder: string[];
+  reconModels?: ReconModelOverrides;
 }
 
 export const getAIProviders = async (): Promise<AIProvidersConfig> => {
@@ -380,6 +387,22 @@ export const setDefaultModel = async (provider: string, model: string): Promise<
 
 export const setFallbackOrder = async (order: string[]): Promise<void> => {
   await apiClient.patch('/admin/ai-providers/fallback-order', { order });
+};
+
+export const setReconModels = async (
+  models: Partial<Record<'small' | 'medium' | 'large', string | null>>,
+): Promise<ReconModelOverrides> => {
+  const payload: Record<string, string | null> = {};
+  for (const tier of ['small', 'medium', 'large'] as const) {
+    if (tier in models) {
+      const raw = models[tier];
+      // Empty string collapses to null so the value clears the override
+      // instead of being persisted as a literal empty string.
+      payload[tier] = typeof raw === 'string' && raw.trim() === '' ? null : (raw ?? null);
+    }
+  }
+  const res = await apiClient.patch('/admin/ai-providers/recon-models', payload);
+  return res.data?.reconModels as ReconModelOverrides;
 };
 
 export default apiClient;

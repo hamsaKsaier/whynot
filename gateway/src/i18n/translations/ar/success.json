@@ -37,5 +37,11 @@
   "user.unsuspended": "تم إلغاء تعليق المستخدم",
   "workspace.deleted": "تم حذف مساحة العمل",
   "userStory.deleted": "تم حذف قصة المستخدم بنجاح",
-  "userStory.assignedToFolder": "تم تعيين قصة المستخدم إلى المجلد بنجاح"
+  "userStory.assignedToFolder": "تم تعيين قصة المستخدم إلى المجلد بنجاح",
+  "recon.scan.queued": "تم جدولة فحص الاستطلاع بنجاح.",
+  "recon.phase.fingerprinting.completed": "اكتملت مرحلة البصمة.",
+  "recon.phase.discovery.completed": "اكتملت مرحلة الاكتشاف.",
+  "recon.phase.vulnAnalysis.completed": "اكتملت مرحلة تحليل الثغرات.",
+  "recon.phase.exploitation.completed": "اكتملت مرحلة الاستغلال.",
+  "recon.report.generated": "تم إنشاء تقرير الاستطلاع."
 }

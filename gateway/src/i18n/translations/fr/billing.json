@@ -26,5 +26,7 @@
   "subscription.downgraded": "Rétrogradation de l'abonnement planifiée",
   "payg.usageRecorded": "Événement d'utilisation enregistré",
   "payg.topupCompleted": "Recharge du solde effectuée",
-  "payg.autoCharged": "Prélèvement automatique effectué"
+  "payg.autoCharged": "Prélèvement automatique effectué",
+  "recon.scan.includedQuota": "Scans inclus restants : {{count}}",
+  "recon.scan.paygCost": "Ce scan coûtera {{credits}} crédits"
 }

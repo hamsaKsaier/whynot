@@ -1,6 +1,9 @@
 import { PaygCreditsLedgerRepository } from '../../shared/database/repositories/payg-credits-ledger-repository';
 import { BillingConfigRepository } from '../../shared/database/repositories/billing-config-repository';
 import { BillingHistoryRepository } from '../../shared/database/repositories/billing-history-repository';
+import { PlanRepository } from '../../shared/database/repositories/plan-repository';
+import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
+import { ReconScanRepository } from '../../shared/database/repositories/recon-scan-repository';
 import { StripeProvider } from './stripe-provider';
 import { auditedOperation } from './audit-logger';
 import { createLogger } from '../../shared/logger/logger';
@@ -16,6 +19,9 @@ const logger = createLogger('billing-service');
 const paygRepo = new PaygCreditsLedgerRepository();
 const billingConfigRepo = new BillingConfigRepository();
 const billingHistoryRepo = new BillingHistoryRepository();
+const planRepo = new PlanRepository();
+const subscriptionRepo = new SubscriptionRepository();
+const reconScanRepo = new ReconScanRepository();
 const stripe = new StripeProvider();
 
 export interface UsageEventParams {
@@ -170,6 +176,35 @@ export class BillingService {
       logger.error('PAYG auto-charge failed', error, { orgId });
       throw error;
     }
+  }
+
+  static async getReconScansThisMonth(workspaceId: string): Promise<number> {
+    const now = new Date();
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    return reconScanRepo.countCreatedSince(workspaceId, startOfMonth);
+  }
+
+  static async checkReconQuota(workspaceId: string): Promise<{
+    included_remaining: number;
+    payg_per_scan_credits: bigint;
+  }> {
+    const perScan = await this.getPaygRate('recon_scan_run');
+
+    const sub = await subscriptionRepo.findByWorkspaceId(workspaceId);
+    let included = 0;
+    if (sub) {
+      const features = await planRepo.getFeatures(sub.plan_id);
+      const limitFeature = features.find((f) => f.feature_key === 'recon_monthly_scans');
+      if (limitFeature) {
+        const parsed = parseInt(limitFeature.feature_value, 10);
+        if (!Number.isNaN(parsed) && parsed > 0) included = parsed;
+      }
+    }
+
+    const used = await this.getReconScansThisMonth(workspaceId);
+    const remaining = Math.max(0, included - used);
+
+    return { included_remaining: remaining, payg_per_scan_credits: perScan };
   }
 
   private static async getPaygRate(eventType: string): Promise<bigint> {

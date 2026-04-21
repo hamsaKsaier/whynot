@@ -26,5 +26,7 @@
   "subscription.downgraded": "تم جدولة تخفيض الاشتراك",
   "payg.usageRecorded": "تم تسجيل حدث الاستخدام",
   "payg.topupCompleted": "تم إعادة شحن الرصيد",
-  "payg.autoCharged": "تم الخصم التلقائي"
+  "payg.autoCharged": "تم الخصم التلقائي",
+  "recon.scan.includedQuota": "عمليات الفحص المضمنة المتبقية: {{count}}",
+  "recon.scan.paygCost": "سيكلف هذا الفحص {{credits}} رصيد"
 }

@@ -193,5 +193,9 @@
   "validation.workspaceNameRequired": "Le nom de l'espace de travail est requis",
   "validation.workspaceRequired": "Espace de travail requis",
   "workspace.noWorkspace": "Aucun espace de travail trouvé pour l'utilisateur",
-  "workspace.notResolved": "Espace de travail non résolu"
+  "workspace.notResolved": "Espace de travail non résolu",
+  "recon.quota.exceeded": "Quota mensuel de scans de reconnaissance dépassé. Rechargez votre solde ou mettez à niveau votre plan.",
+  "recon.payment.required": "Paiement requis : votre plan n'inclut pas les scans de reconnaissance ou votre solde est insuffisant.",
+  "recon.phase.exploitation.authorizationMissing": "Phase d'exploitation interrompue : l'enregistrement d'autorisation par scan est manquant.",
+  "recon.report.generationFailed": "La génération du rapport de reconnaissance a échoué."
 }

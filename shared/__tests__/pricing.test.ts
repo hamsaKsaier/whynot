@@ -95,8 +95,27 @@ describe('pricing', () => {
       }
     });
 
-    it('has 7 operation types', () => {
-      expect(Object.keys(DEFAULT_PAYG_RATES)).toHaveLength(7);
+    it('has 7 non-recon operation types plus 6 recon event types (13 total)', () => {
+      expect(Object.keys(DEFAULT_PAYG_RATES)).toHaveLength(13);
+    });
+
+    it('defines recon PAYG event types with expected rates', () => {
+      expect(DEFAULT_PAYG_RATES.recon_scan_run).toBe(5000n);
+      expect(DEFAULT_PAYG_RATES.recon_phase_fingerprinting).toBe(200n);
+      expect(DEFAULT_PAYG_RATES.recon_phase_discovery).toBe(800n);
+      expect(DEFAULT_PAYG_RATES.recon_phase_vuln_analysis).toBe(1500n);
+      expect(DEFAULT_PAYG_RATES.recon_phase_exploitation).toBe(2000n);
+      expect(DEFAULT_PAYG_RATES.recon_phase_reporting).toBe(500n);
+    });
+
+    it('recon per-phase rates sum to the full-scan baseline', () => {
+      const perPhaseSum =
+        DEFAULT_PAYG_RATES.recon_phase_fingerprinting +
+        DEFAULT_PAYG_RATES.recon_phase_discovery +
+        DEFAULT_PAYG_RATES.recon_phase_vuln_analysis +
+        DEFAULT_PAYG_RATES.recon_phase_exploitation +
+        DEFAULT_PAYG_RATES.recon_phase_reporting;
+      expect(perPhaseSum).toBe(DEFAULT_PAYG_RATES.recon_scan_run);
     });
   });
 });

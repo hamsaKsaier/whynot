@@ -61,6 +61,54 @@ async def get_platform_key(provider: str) -> Optional[str]:
     return None
 
 
+_RECON_TIERS = ("small", "medium", "large")
+
+
+def _platform_default_model(config: dict) -> Optional[str]:
+    default_provider = config.get("defaultProvider") or {}
+    model = default_provider.get("model")
+    return model or None
+
+
+async def get_recon_model(tier: str) -> Optional[str]:
+    """Return the resolved model for a Recon tier.
+
+    Tiers: "small", "medium", "large".  If the admin has set a
+    Recon-specific override for ``tier`` it is returned as-is; otherwise
+    this falls back to the platform-wide default model.  Returns ``None``
+    only when no default has been configured at all.
+    """
+    if tier not in _RECON_TIERS:
+        raise ValueError(f"Unknown Recon tier: {tier!r}. Expected one of {_RECON_TIERS}.")
+    try:
+        config = await get_platform_config()
+    except Exception as e:
+        logger.error("Failed to fetch platform AI config: %s", e)
+        return None
+
+    recon_models = config.get("reconModels") or {}
+    override = recon_models.get(tier)
+    if override:
+        return override
+    return _platform_default_model(config)
+
+
+async def get_recon_models() -> dict:
+    """Return resolved Recon models for all tiers as ``{tier: model|None}``."""
+    try:
+        config = await get_platform_config()
+    except Exception as e:
+        logger.error("Failed to fetch platform AI config: %s", e)
+        return {tier: None for tier in _RECON_TIERS}
+
+    recon_models = config.get("reconModels") or {}
+    default_model = _platform_default_model(config)
+    return {
+        tier: (recon_models.get(tier) or default_model)
+        for tier in _RECON_TIERS
+    }
+
+
 def invalidate_cache() -> None:
     global _cached_config
     _cached_config = None

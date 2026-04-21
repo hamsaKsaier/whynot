@@ -193,5 +193,9 @@
   "validation.urlProtocolRequired": "targetUrl must use http or https",
   "validation.valueMustBeString": "Value for \"{{key}}\" must be a string",
   "workspace.notResolved": "Workspace not resolved",
-  "workspace.noWorkspace": "No workspace found for user"
+  "workspace.noWorkspace": "No workspace found for user",
+  "recon.quota.exceeded": "Monthly recon scan quota exceeded. Top up your balance or upgrade your plan.",
+  "recon.payment.required": "Payment required: your plan does not include recon scans or you have insufficient credits.",
+  "recon.phase.exploitation.authorizationMissing": "Exploitation phase aborted: per-scan authorization record is missing.",
+  "recon.report.generationFailed": "Recon report generation failed."
 }

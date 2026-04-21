@@ -45,6 +45,12 @@ const FLAG_SEEDS: FeatureFlagSeed[] = [
     description: 'Show the language switcher in the UI',
     default_enabled: true,
   },
+  {
+    key: PLATFORM_FEATURES.RECON_ENABLED,
+    name: 'Recon',
+    description: 'Recon AI pentester',
+    default_enabled: true,
+  },
 ];
 
 export async function seedFeatureFlags(): Promise<void> {

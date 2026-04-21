@@ -109,6 +109,10 @@ logs-test-executor: ## Tail test-executor logs
 logs-qa-loop: ## Tail qa-loop-executor logs
 	$(DC_RUN) logs -f qa-loop-executor
 
+.PHONY: logs-recon-executor
+logs-recon-executor: ## Tail recon-executor logs
+	$(DC_RUN) logs -f recon-executor
+
 ##@ Status and inspection
 
 .PHONY: ps
@@ -151,6 +155,10 @@ shell-test-executor: ## Open a shell inside the test-executor container
 .PHONY: shell-qa-loop
 shell-qa-loop: ## Open a shell inside the qa-loop-executor container
 	$(DC_RUN) exec qa-loop-executor sh
+
+.PHONY: shell-recon-executor
+shell-recon-executor: ## Open a shell inside the recon-executor container
+	$(DC_RUN) exec recon-executor sh
 
 .PHONY: psql
 psql: ## Open a psql shell in the database container

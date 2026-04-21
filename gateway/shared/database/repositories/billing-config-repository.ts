@@ -78,4 +78,36 @@ export class BillingConfigRepository {
   async setAiFallbackOrder(order: string[]): Promise<void> {
     await this.set('ai_fallback_order', JSON.stringify(order));
   }
+
+  // ─── Recon-specific AI model tier overrides ─────────────────────────
+  // NULL semantics: an empty string is stored as the "unset" marker
+  // because billing_config.value is NOT NULL.  The getters normalize it
+  // to null so callers can fall back to the platform-wide default.
+
+  async getReconModel(tier: 'small' | 'medium' | 'large'): Promise<string | null> {
+    const value = await this.get(`recon_${tier}_model`);
+    if (value == null || value === '') return null;
+    return value;
+  }
+
+  async setReconModel(
+    tier: 'small' | 'medium' | 'large',
+    model: string | null,
+  ): Promise<void> {
+    const normalized = model == null ? '' : model.trim();
+    await this.set(`recon_${tier}_model`, normalized);
+  }
+
+  async getAllReconModels(): Promise<{
+    small: string | null;
+    medium: string | null;
+    large: string | null;
+  }> {
+    const [small, medium, large] = await Promise.all([
+      this.getReconModel('small'),
+      this.getReconModel('medium'),
+      this.getReconModel('large'),
+    ]);
+    return { small, medium, large };
+  }
 }

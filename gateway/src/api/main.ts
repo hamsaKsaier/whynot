@@ -503,12 +503,14 @@ app.get('/api/internal/ai-config',
     const billingConfigRepo = new BillingConfigRepository();
     const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
     const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
+    const reconModels = await billingConfigRepo.getAllReconModels();
 
     res.json({
       success: true,
       providers: configs,
       defaultProvider,
       fallbackOrder,
+      reconModels,
     });
   })
 );
@@ -3416,10 +3418,11 @@ function isKnownProvider(p: string): p is (typeof KNOWN_AI_PROVIDERS)[number] {
 }
 
 app.get('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
-  const [configs, defaultProvider, fallbackOrder] = await Promise.all([
+  const [configs, defaultProvider, fallbackOrder, reconModels] = await Promise.all([
     platformAiConfigRepository.listAll(),
     billingConfigRepository.getDefaultAiProvider(),
     billingConfigRepository.getAiFallbackOrder(),
+    billingConfigRepository.getAllReconModels(),
   ]);
 
   const providers = configs.map((c) => ({
@@ -3440,6 +3443,7 @@ app.get('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(
     providers,
     defaultProvider: defaultProvider || { provider: 'anthropic', model: 'claude-sonnet-4-6' },
     fallbackOrder: fallbackOrder.length > 0 ? fallbackOrder : [...KNOWN_AI_PROVIDERS],
+    reconModels,
   });
 }));
 
@@ -3710,6 +3714,38 @@ app.patch('/api/admin/ai-providers/fallback-order', requireAuth, requireSuperAdm
   auditLog(req, 'ai-provider.fallback-order-changed', 'platform_ai_config', undefined, { order });
 
   res.json({ success: true, fallbackOrder: order });
+}));
+
+// Recon-specific AI model tier overrides.  Empty / missing value = inherit
+// the platform-wide default model for that tier.
+app.patch('/api/admin/ai-providers/recon-models', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { small, medium, large } = req.body ?? {};
+
+  const tiers: Array<['small' | 'medium' | 'large', unknown]> = [
+    ['small', small],
+    ['medium', medium],
+    ['large', large],
+  ];
+
+  for (const [, value] of tiers) {
+    if (value !== undefined && value !== null && typeof value !== 'string') {
+      throw createError(req.t('errors:validation.invalid') || 'Recon model must be a string or null', 400, 'INVALID_BODY');
+    }
+  }
+
+  for (const [tier, value] of tiers) {
+    if (value === undefined) continue;
+    const normalized = typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+    await billingConfigRepository.setReconModel(tier, normalized);
+  }
+
+  platformKeyCache.invalidate();
+
+  const reconModels = await billingConfigRepository.getAllReconModels();
+
+  auditLog(req, 'ai-provider.recon-models-changed', 'platform_ai_config', undefined, reconModels);
+
+  res.json({ success: true, reconModels });
 }));
 
 // ─── User: AI Providers (public) ────────────────────────────────────────────
