@@ -34,9 +34,9 @@ const STATS: Stat[] = [
 function BadgeItem({ icon: Icon, textKey }: (typeof TRUST_BADGES)[number]) {
   const { t } = useTranslation('landing')
   return (
-    <div className="flex items-center gap-2 px-5 py-2.5 rounded-lg border bg-card/30">
-      <Icon className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" aria-hidden="true" />
-      <span className="text-sm text-muted-foreground whitespace-nowrap font-medium">
+    <div className="flex items-center gap-2 px-3 py-2 sm:px-5 sm:py-2.5 rounded-lg border bg-card/30">
+      <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400 shrink-0" aria-hidden="true" />
+      <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap font-medium">
         {t(textKey)}
       </span>
     </div>
@@ -49,7 +49,7 @@ function StatCell({ stat }: { stat: Stat }) {
 
   return (
     <Reveal as="div" className="text-center">
-      <dd className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-1 tabular-nums min-w-[5ch]">
+      <dd className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-1 tabular-nums min-w-[5ch]">
         <CountUp
           target={stat.value}
           locale={locale}
@@ -68,16 +68,16 @@ export function TrustBar() {
 
   return (
     <section
-      className="py-16 sm:py-20 border-y border-border/50 bg-muted/10 overflow-hidden"
+      className="py-12 sm:py-16 md:py-20 border-y border-border/50 bg-muted/10 overflow-hidden"
       aria-label={t('trustBar.ariaLabel')}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-8">
-        <p className="text-center text-sm text-muted-foreground font-medium tracking-wide uppercase mb-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8">
+        <p className="text-center text-xs sm:text-sm text-muted-foreground font-medium tracking-wide uppercase mb-4 sm:mb-6">
           {t('trustBar.logoTitle')}
         </p>
       </div>
 
-      <Marquee speed={30} className="mb-10" aria-label={t('trustBar.ariaLabel')}>
+      <Marquee speed={30} className="mb-6 sm:mb-10" aria-label={t('trustBar.ariaLabel')}>
         <div className="flex gap-4 sm:gap-6 px-2">
           {TRUST_BADGES.map((badge) => (
             <BadgeItem key={badge.textKey} {...badge} />
@@ -86,7 +86,7 @@ export function TrustBar() {
       </Marquee>
 
       <Stagger as="div" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <dl className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
           {STATS.map((stat) => (
             <StatCell key={stat.labelKey} stat={stat} />
           ))}

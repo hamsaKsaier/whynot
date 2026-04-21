@@ -256,16 +256,16 @@ export function PaygPricingSection() {
   }, []);
 
   return (
-    <section className="py-24 sm:py-32 bg-background" aria-labelledby="payg-heading">
+    <section className="py-16 sm:py-24 md:py-32 bg-background" aria-labelledby="payg-heading">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        <FadeIn className="text-center mb-16">
+        <FadeIn className="text-center mb-10 sm:mb-16">
           <h2
             id="payg-heading"
-            className="text-3xl sm:text-4xl font-bold tracking-tight mb-4"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3 sm:mb-4"
           >
             {t('payg.heading')}
           </h2>
-          <p className="text-lg text-muted-foreground">{t('payg.subheading')}</p>
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground">{t('payg.subheading')}</p>
         </FadeIn>
 
         <FadeIn>

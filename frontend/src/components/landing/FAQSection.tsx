@@ -118,18 +118,18 @@ export function FAQSection() {
     <section
       ref={sectionRef}
       id="faq"
-      className="py-24 sm:py-32 bg-background"
+      className="py-16 sm:py-24 md:py-32 bg-background"
       aria-labelledby="faq-heading"
     >
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        <Reveal className="text-center mb-16">
+        <Reveal className="text-center mb-10 sm:mb-16">
           <h2
             id="faq-heading"
-            className="text-3xl sm:text-4xl font-bold tracking-tight mb-4"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3 sm:mb-4"
           >
             {t('faq.heading')}
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
             {t('faq.subheading')}
           </p>
         </Reveal>

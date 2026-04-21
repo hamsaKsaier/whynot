@@ -1,363 +1,247 @@
 {
-  "nav": {
-    "features": "المزايا",
-    "pricing": "الأسعار",
-    "docs": "التوثيق",
-    "signIn": "تسجيل الدخول",
-    "getStarted": "ابدأ الآن",
-    "openApp": "فتح التطبيق",
-    "menu": "القائمة",
-    "changeLanguage": "تغيير اللغة",
-    "themeToggleLabel": "تبديل المظهر",
-    "main": "التنقل الرئيسي"
-  },
-  "hero": {
-    "title": "اكتشف الأخطاء <highlight>قبل أن يكتشفها المستخدمون</highlight>",
-    "subtitle": "وكلاء ذكاء اصطناعي مستقلون يستكشفون تطبيقك، ويكتشفون الأخطاء، وينشئون كود اختبار Playwright — لتتمكن من الإطلاق بثقة.",
-    "cta": "ابدأ التجربة المجانية",
-    "secondaryCta": "عرض الأسعار",
-    "socialProof": "موثوق به من فرق الهندسة التي تقدم برامج عالية الجودة",
-    "noCreditCard": "لا حاجة لبطاقة ائتمان",
-    "eyebrow": "ضمان الجودة بالذكاء الاصطناعي",
-    "videoCaption": "لوحة تحكم WhyNot تعرض اكتشاف الأخطاء الذاتي أثناء العمل"
-  },
-  "trustBar": {
-    "ariaLabel": "مؤشرات الثقة والتقنيات المدعومة",
-    "logoTitle": "يعمل مع جميع الأطر والتقنيات",
-    "badges": {
-      "soc2": "متوافق مع SOC 2",
-      "dataPrivacy": "البيانات مشفرة في حالة السكون",
-      "moneyBack": "ضمان استرداد الأموال لمدة 30 يومًا",
-      "uptime": "اتفاقية مستوى خدمة بنسبة 99.9%"
-    },
-    "stats": {
-      "bugsFound": "أخطاء تم اكتشافها",
-      "bugsFoundSuffix": "+",
-      "testsGenerated": "اختبارات تم إنشاؤها",
-      "testsGeneratedSuffix": "+",
-      "teams": "فرق تستخدم WhyNot",
-      "teamsSuffix": "+",
-      "accuracy": "دقة الاكتشاف",
-      "accuracySuffix": "٪"
-    }
-  },
-  "features": {
-    "heading": "كل ما تحتاجه لإطلاق برامج خالية من الأخطاء",
-    "subheading": "اختبار مستقل مدعوم بالذكاء الاصطناعي يكتشف الأخطاء وينشئ كود الاختبار ويحافظ على موثوقية تطبيقك — دون كتابة اختبار واحد يدويًا.",
-    "items": {
-      "aiAgents": {
-        "title": "وكلاء ذكاء اصطناعي مستقلون",
-        "description": "وكلاء الذكاء الاصطناعي يستكشفون تطبيقك كمستخدمين حقيقيين، يتنقلون بين المسارات ويكشفون الحالات الحدية التي قد يغفلها البشر."
-      },
-      "bugDetection": {
-        "title": "اكتشاف ذكي للأخطاء",
-        "description": "يكتشف تلقائيًا الأخطاء البصرية والروابط المعطلة وأخطاء وحدة التحكم والانحدارات الوظيفية في الوقت الفعلي."
-      },
-      "visualRegression": {
-        "title": "اختبار الانحدار البصري",
-        "description": "مقارنات لقطات الشاشة على مستوى البكسل تكشف تغييرات واجهة المستخدم قبل وصولها إلى الإنتاج.",
-        "tierBadge": "احترافي"
-      },
-      "playwrightGen": {
-        "title": "إنشاء كود Playwright",
-        "description": "احصل على سكربتات اختبار Playwright جاهزة للإنتاج يتم إنشاؤها تلقائيًا من كل خطأ يتم اكتشافه."
-      },
-      "chaosTest": {
-        "title": "اختبار الفوضى",
-        "description": "محاكاة الشبكات البطيئة وواجهات API المفقودة وعيوب المتصفح لاختبار تطبيقك تحت ظروف العالم الحقيقي.",
-        "tierBadge": "احترافي"
-      },
-      "multiBrowser": {
-        "title": "تغطية متعددة المتصفحات",
-        "description": "اختبر عبر Chrome وFirefox وSafari في وقت واحد لضمان سلوك متسق في كل مكان."
-      },
-      "testSuites": {
-        "title": "مجموعات اختبار منظمة",
-        "description": "إدارة حالات الاختبار في مجلدات، ووضع علامات حسب الأولوية، وتتبع التغطية عبر قصص المستخدمين والمزايا."
-      },
-      "security": {
-        "title": "فحص الأمان",
-        "description": "يكتشف الثغرات الشائعة مثل XSS وإعادة التوجيه المفتوحة والأسرار المكشوفة أثناء كل عملية اختبار.",
-        "tierBadge": "مُدار"
-      }
-    }
-  },
-  "comparison": {
-    "title": "كيف يقارن WhyNot",
-    "subtitle": "اكتشف لماذا تنتقل الفرق من أطر الاختبار اليدوية إلى ضمان الجودة المستقل المدعوم بالذكاء الاصطناعي.",
-    "featureColumn": "الميزة",
-    "competitors": {
-      "whynot": "WhyNot",
-      "selenium": "Selenium",
-      "cypress": "Cypress",
-      "playwrightManual": "Playwright",
-      "browserstack": "BrowserStack",
-      "lambdatest": "LambdaTest"
-    },
-    "features": {
-      "aiAutonomous": "استكشاف مستقل بالذكاء الاصطناعي",
-      "noCodeSetup": "إعداد بدون كود",
-      "bugDetection": "اكتشاف تلقائي للأخطاء",
-      "testGeneration": "إنشاء كود الاختبار",
-      "visualRegression": "اختبار الانحدار البصري",
-      "chaosTest": "اختبار الفوضى",
-      "ciIntegration": "تكامل CI/CD",
-      "multiBrowser": "اختبار متعدد المتصفحات",
-      "selfHealing": "اختبارات ذاتية الإصلاح",
-      "parallelExecution": "التنفيذ المتوازي"
-    },
-    "mobileHint": "مرر لرؤية المزيد",
-    "values": {
-      "yes": "نعم",
-      "no": "لا",
-      "partial": "جزئي"
-    }
-  },
-  "testimonials": {
-    "heading": "محبوب من فرق الهندسة",
-    "subheading": "شاهد كيف تستخدم الفرق WhyNot لاكتشاف الأخطاء قبل مستخدميها.",
-    "carousel": {
-      "previous": "الشهادة السابقة",
-      "next": "الشهادة التالية",
-      "goToSlide": "الانتقال إلى الشهادة {{number}}"
-    },
-    "items": {
-      "sarah": {
-        "quote": "نشرنا WhyNot على منصة التجارة الإلكترونية الخاصة بنا واكتشف 23 خطأ في الساعة الأولى — بما في ذلك مشكلة في تدفق الدفع كانت تكلفنا تحويلات. كود Playwright الذي أنشأه وفر على فريق ضمان الجودة أيام عمل.",
-        "author": "سارة تشين",
-        "title": "نائبة رئيس الهندسة",
-        "company": "ShopFlow"
-      },
-      "marcus": {
-        "quote": "كشركة ناشئة بدون فريق ضمان جودة مخصص، WhyNot مثل وجود مهندس اختبار كبير متاح على مدار الساعة. وكلاء الذكاء الاصطناعي يستكشفون مسارات لم نفكر في اختبارها، واختبار الفوضى اكتشف حالة سباق كانت ستكون P0 في الإنتاج.",
-        "author": "ماركوس جونسون",
-        "title": "المدير التقني",
-        "company": "LaunchPad AI"
-      },
-      "elena": {
-        "quote": "انتقلنا من صفر اختبارات آلية إلى تغطية انحدار كاملة في أقل من أسبوع. WhyNot ينشئ سكربتات Playwright، ونحن نراجع وندمج. ثقتنا في الإصدارات لم تكن أعلى من أي وقت مضى.",
-        "author": "إيلينا رودريغيز",
-        "title": "مهندسة ضمان جودة رئيسية",
-        "company": "Meridian Health"
-      }
-    }
-  },
-  "faq": {
-    "heading": "الأسئلة الشائعة",
-    "subheading": "كل ما تحتاج معرفته عن WhyNot.",
-    "items": {
-      "howItWorks": {
-        "question": "كيف يكتشف WhyNot الأخطاء تلقائيًا؟",
-        "answer": "ينشر WhyNot وكلاء ذكاء اصطناعي مستقلين يتنقلون في تطبيقك مثل المستخدمين الحقيقيين. ينقرون على الأزرار ويملأون النماذج ويستكشفون مسارات التنقل ويراقبون أخطاء وحدة التحكم والتخطيطات المعطلة واستدعاءات API الفاشلة والانحدارات البصرية — كل ذلك دون كتابة سطر واحد من كود الاختبار."
-      },
-      "integration": {
-        "question": "كيف أدمج WhyNot مع تطبيقي؟",
-        "answer": "فقط قدم عنوان URL لتطبيقك. يعمل WhyNot مع أي تطبيق ويب بغض النظر عن التقنية المستخدمة — React أو Vue أو Angular أو Next.js أو Django أو Rails أو Laravel أو WordPress أو أي إطار آخر. لا حاجة لـ SDK أو تغييرات في الكود."
-      },
-      "pricing": {
-        "question": "هل توجد خطة مجانية؟",
-        "answer": "نعم! تتضمن الخطة المجانية 50 عملية اختبار شهريًا، وحتى 3 مشاريع، ووصول كامل لاكتشاف الأخطاء بالذكاء الاصطناعي وإنشاء كود Playwright. لا حاجة لبطاقة ائتمان للبدء."
-      },
-      "security": {
-        "question": "هل بيانات تطبيقي آمنة؟",
-        "answer": "بالتأكيد. يشغل WhyNot الاختبارات في بيئات متصفح معزولة. لا نخزن بيانات تطبيقك أو بيانات الاعتماد أو معلومات المستخدمين. جميع الاتصالات مشفرة بـ TLS، ونحن متوافقون مع SOC 2."
-      },
-      "accuracy": {
-        "question": "ما مدى دقة اكتشاف الأخطاء؟",
-        "answer": "يحقق ذكاؤنا الاصطناعي نسبة دقة 99.2% مع نسبة إيجابيات كاذبة منخفضة جدًا. يتضمن كل خطأ مبلغ عنه لقطات شاشة وسجلات وحدة التحكم وتتبعات الشبكة وكود Playwright المنشأ حتى تتمكن من التحقق وإعادة الإنتاج فورًا."
-      }
-    },
-    "contactText": "لا تزال لديك أسئلة؟",
-    "contactLink": "تواصل معنا",
-    "deepLinkAriaLabel": "نسخ رابط هذا السؤال"
-  },
-  "cta": {
-    "heading": "ابدأ في اكتشاف الأخطاء اليوم",
-    "subheading": "انضم إلى مئات الفرق التي تستخدم WhyNot لإطلاق البرامج بثقة. إعداد في دقائق، لا حاجة لتغييرات في الكود.",
-    "getStarted": "ابدأ مجانًا",
-    "trustSignals": {
-      "freeTier": "خطة مجانية متاحة",
-      "noCard": "لا حاجة لبطاقة ائتمان",
-      "moneyBack": "ضمان استرداد الأموال لمدة 30 يومًا"
-    }
-  },
-  "stickyBottomCTA": {
-    "ariaLabel": "شريط الإجراء السريع",
-    "text": "اكتشف الأخطاء قبل مستخدميك.",
-    "cta": "ابدأ مجانًا",
-    "dismiss": "إغلاق"
-  },
-  "emailCapture": {
-    "placeholder": "أدخل بريدك الإلكتروني المهني",
-    "ariaLabel": "عنوان البريد الإلكتروني",
-    "cta": "ابدأ مجانًا",
-    "sending": "جارٍ الإرسال...",
-    "success": "شكرًا! سنتواصل معك قريبًا.",
-    "error": "حدث خطأ. يرجى المحاولة مرة أخرى.",
-    "invalidEmail": "يرجى إدخال عنوان بريد إلكتروني صالح.",
-    "rateLimited": "محاولات كثيرة جدًا. يرجى المحاولة لاحقًا.",
-    "rateLimitedCountdown": "حاول مرة أخرى خلال {{seconds}} ثانية"
-  },
-  "pricing": {
-    "heading": "أسعار بسيطة وشفافة",
-    "subheading": "ابدأ مجانًا، وقم بالترقية عندما تحتاج المزيد.",
-    "monthly": "شهري",
-    "annual": "سنوي",
-    "perMonth": "/شهر",
-    "perYear": "/سنة",
-    "monthlyEquivalent": "{{price}}/شهر يُدفع سنويًا",
-    "saveBadge": "وفّر {{percent}}%",
-    "free": "مجاني للأبد",
-    "popular": "الأكثر شيوعًا",
-    "startFree": "ابدأ مجانًا",
-    "getStarted": "ابدأ الآن",
-    "contactSales": "تواصل مع المبيعات",
-    "trialDays": "تجربة مجانية لمدة {{days}} يوم",
-    "errorFallback": "عرض الأسعار الافتراضية. تعذّر تحميل الأسعار المباشرة.",
-    "plans": {
-      "free": {
-        "name": "مجاني",
-        "description": "مثالي لتجربة WhyNot على المشاريع الشخصية.",
-        "features": [
-          "50 اختبار شهريًا",
-          "حتى 3 مشاريع",
-          "كشف الأخطاء بالذكاء الاصطناعي",
-          "توليد أكواد Playwright",
-          "دعم المجتمع"
-        ]
-      },
-      "pro_byo": {
-        "name": "احترافي (مفاتيحك)",
-        "description": "للفرق التي تريد استخدام مفاتيح مزوّد الذكاء الاصطناعي الخاصة بهم.",
-        "features": [
-          "اختبارات غير محدودة",
-          "مشاريع غير محدودة",
-          "استخدم مفاتيح API الخاصة بك",
-          "اختبار الانحدار البصري",
-          "اختبار الفوضى",
-          "تكامل CI/CD",
-          "دعم ذو أولوية"
-        ]
-      },
-      "pro_managed": {
-        "name": "احترافي (مُدار)",
-        "description": "قوة كاملة مع بنية ذكاء اصطناعي مُدارة ورصيد الدفع حسب الاستخدام.",
-        "features": [
-          "كل ما في الاحترافي (مفاتيحك)",
-          "بنية ذكاء اصطناعي مُدارة",
-          "رصيد الدفع حسب الاستخدام",
-          "تحليلات متقدمة",
-          "مراقبات مخصصة",
-          "SSO وإدارة الفريق",
-          "دعم مخصص"
-        ]
-      }
-    }
-  },
-  "payg": {
-    "heading": "أسعار الدفع حسب الاستخدام",
-    "subheading": "ادفع فقط مقابل ما تستخدمه. يتم استهلاك الرصيد لكل عملية على خطة المُدار.",
-    "event": "العملية",
-    "credits": "الرصيد",
-    "example": "مثال",
-    "events": {
-      "test_generation": {
-        "name": "توليد الاختبارات",
-        "example": "توليد 20 اختبار = 1,000 رصيد"
-      },
-      "test_execution": {
-        "name": "تنفيذ الاختبارات",
-        "example": "تشغيل 100 اختبار = 1,000 رصيد"
-      },
-      "qa_loop_iteration": {
-        "name": "دورة ضمان الجودة",
-        "example": "30 دورة = 900 رصيد"
-      },
-      "auto_fix_attempt": {
-        "name": "محاولة إصلاح تلقائي",
-        "example": "10 إصلاحات = 1,000 رصيد"
-      },
-      "visual_regression": {
-        "name": "الانحدار البصري",
-        "example": "50 مقارنة = 750 رصيد"
-      },
-      "qa_monitor_session": {
-        "name": "جلسة مراقبة الجودة",
-        "example": "5 جلسات = 1,000 رصيد"
-      },
-      "ci_scan": {
-        "name": "فحص CI",
-        "example": "5 فحوصات = 1,000 رصيد"
-      }
-    },
-    "creditsUnit": "رصيد",
-    "creditPack": "حزم الرصيد تبدأ من $10 لكل 1,000 رصيد.",
-    "packs": {
-      "heading": "حزم الرصيد",
-      "bestValue": "أفضل قيمة",
-      "perCredit": "لكل رصيد",
-      "items": {
-        "starter": { "name": "المبتدئ", "size": "1,000 رصيد", "price": "$10" },
-        "growth": { "name": "النمو", "size": "10,000 رصيد", "price": "$80" },
-        "scale": { "name": "التوسع", "size": "100,000 رصيد", "price": "$600" }
-      }
-    },
-    "calculator": {
-      "heading": "حاسبة الرصيد",
-      "description": "قدّر استخدامك الشهري من الرصيد والتكلفة.",
-      "totalCreditsLabel": "إجمالي الرصيد",
-      "estimatedMonthlyCost": "التكلفة الشهرية المقدرة",
-      "recommendedPack": "الحزمة الموصى بها: {{pack}}",
-      "inputLabel": {
-        "test_generation": "عمليات توليد الاختبارات شهريًا",
-        "test_execution": "عمليات تنفيذ الاختبارات شهريًا",
-        "qa_loop_iteration": "دورات ضمان الجودة شهريًا",
-        "auto_fix_attempt": "محاولات الإصلاح التلقائي شهريًا",
-        "visual_regression": "عمليات الانحدار البصري شهريًا",
-        "qa_monitor_session": "جلسات مراقبة الجودة شهريًا",
-        "ci_scan": "فحوصات CI شهريًا"
-      }
-    },
-    "workedExample": {
-      "heading": "مثال عملي",
-      "expand": "عرض المثال العملي",
-      "collapse": "إخفاء المثال العملي",
-      "description": "فريق SaaS من 20 مهندسًا يطلق تحديثات 3 مرات أسبوعيًا:",
-      "items": [
-        "50 × توليد اختبار (50 رصيد) = 2,500 رصيد",
-        "200 × تنفيذ اختبار (10 رصيد) = 2,000 رصيد",
-        "10 × محاولات إصلاح تلقائي (100 رصيد) = 1,000 رصيد"
-      ],
-      "total": "الإجمالي: 5,500 رصيد ≈ $55/شهر",
-      "note": "بالإضافة إلى اشتراك $49/شهر الأساسي."
-    }
-  },
-  "footer": {
-    "description": "اختبار ضمان الجودة المستقل المدعوم بوكلاء الذكاء الاصطناعي.",
-    "product": "المنتج",
-    "features": "المزايا",
-    "pricing": "الأسعار",
-    "changelog": "سجل التغييرات",
-    "company": "الشركة",
-    "about": "عن الشركة",
-    "blog": "المدونة",
-    "contact": "تواصل معنا",
-    "resources": "الموارد",
-    "docs": "التوثيق",
-    "status": "الحالة",
-    "api": "واجهة برمجة التطبيقات",
-    "legal": "قانوني",
-    "privacy": "سياسة الخصوصية",
-    "terms": "شروط الخدمة",
-    "security": "الأمان",
-    "copyright": "© {{year}} WhyNot. جميع الحقوق محفوظة.",
-    "allRightsReserved": "جميع الحقوق محفوظة.",
-    "github": "GitHub",
-    "twitter": "X (Twitter)"
-  },
-  "seo": {
-    "title": "WhyNot — اختبار ضمان الجودة الذاتي بالذكاء الاصطناعي",
-    "description": "اكتشف الأخطاء قبل المستخدمين. وكلاء ذكاء اصطناعي مستقلون يستكشفون تطبيقك ويكتشفون الأخطاء ويولّدون أكواد اختبار Playwright.",
-    "keywords": "اختبار ذكاء اصطناعي، ضمان جودة ذاتي، كشف أخطاء، Playwright، انحدار بصري، أتمتة اختبار"
-  }
+  "nav.features": "المزايا",
+  "nav.pricing": "الأسعار",
+  "nav.docs": "التوثيق",
+  "nav.signIn": "تسجيل الدخول",
+  "nav.getStarted": "ابدأ الآن",
+  "nav.openApp": "فتح التطبيق",
+  "nav.menu": "القائمة",
+  "nav.changeLanguage": "تغيير اللغة",
+  "nav.themeToggleLabel": "تبديل المظهر",
+  "nav.main": "التنقل الرئيسي",
+  "hero.title": "اكتشف الأخطاء <highlight>قبل أن يكتشفها المستخدمون</highlight>",
+  "hero.subtitle": "وكلاء ذكاء اصطناعي مستقلون يستكشفون تطبيقك، ويكتشفون الأخطاء، وينشئون كود اختبار Playwright — لتتمكن من الإطلاق بثقة.",
+  "hero.cta": "ابدأ التجربة المجانية",
+  "hero.secondaryCta": "عرض الأسعار",
+  "hero.socialProof": "موثوق به من فرق الهندسة التي تقدم برامج عالية الجودة",
+  "hero.noCreditCard": "لا حاجة لبطاقة ائتمان",
+  "hero.eyebrow": "ضمان الجودة بالذكاء الاصطناعي",
+  "hero.videoCaption": "لوحة تحكم WhyNot تعرض اكتشاف الأخطاء الذاتي أثناء العمل",
+  "trustBar.ariaLabel": "مؤشرات الثقة والتقنيات المدعومة",
+  "trustBar.logoTitle": "يعمل مع جميع الأطر والتقنيات",
+  "trustBar.badges.soc2": "متوافق مع SOC 2",
+  "trustBar.badges.dataPrivacy": "البيانات مشفرة في حالة السكون",
+  "trustBar.badges.moneyBack": "ضمان استرداد الأموال لمدة 30 يومًا",
+  "trustBar.badges.uptime": "اتفاقية مستوى خدمة بنسبة 99.9%",
+  "trustBar.stats.bugsFound": "أخطاء تم اكتشافها",
+  "trustBar.stats.bugsFoundSuffix": "+",
+  "trustBar.stats.testsGenerated": "اختبارات تم إنشاؤها",
+  "trustBar.stats.testsGeneratedSuffix": "+",
+  "trustBar.stats.teams": "فرق تستخدم WhyNot",
+  "trustBar.stats.teamsSuffix": "+",
+  "trustBar.stats.accuracy": "دقة الاكتشاف",
+  "trustBar.stats.accuracySuffix": "٪",
+  "features.heading": "كل ما تحتاجه لإطلاق برامج خالية من الأخطاء",
+  "features.subheading": "اختبار مستقل مدعوم بالذكاء الاصطناعي يكتشف الأخطاء وينشئ كود الاختبار ويحافظ على موثوقية تطبيقك — دون كتابة اختبار واحد يدويًا.",
+  "features.items.aiAgents.title": "وكلاء ذكاء اصطناعي مستقلون",
+  "features.items.aiAgents.description": "وكلاء الذكاء الاصطناعي يستكشفون تطبيقك كمستخدمين حقيقيين، يتنقلون بين المسارات ويكشفون الحالات الحدية التي قد يغفلها البشر.",
+  "features.items.bugDetection.title": "اكتشاف ذكي للأخطاء",
+  "features.items.bugDetection.description": "يكتشف تلقائيًا الأخطاء البصرية والروابط المعطلة وأخطاء وحدة التحكم والانحدارات الوظيفية في الوقت الفعلي.",
+  "features.items.visualRegression.title": "اختبار الانحدار البصري",
+  "features.items.visualRegression.description": "مقارنات لقطات الشاشة على مستوى البكسل تكشف تغييرات واجهة المستخدم قبل وصولها إلى الإنتاج.",
+  "features.items.visualRegression.tierBadge": "احترافي",
+  "features.items.playwrightGen.title": "إنشاء كود Playwright",
+  "features.items.playwrightGen.description": "احصل على سكربتات اختبار Playwright جاهزة للإنتاج يتم إنشاؤها تلقائيًا من كل خطأ يتم اكتشافه.",
+  "features.items.chaosTest.title": "اختبار الفوضى",
+  "features.items.chaosTest.description": "محاكاة الشبكات البطيئة وواجهات API المفقودة وعيوب المتصفح لاختبار تطبيقك تحت ظروف العالم الحقيقي.",
+  "features.items.chaosTest.tierBadge": "احترافي",
+  "features.items.multiBrowser.title": "تغطية متعددة المتصفحات",
+  "features.items.multiBrowser.description": "اختبر عبر Chrome وFirefox وSafari في وقت واحد لضمان سلوك متسق في كل مكان.",
+  "features.items.testSuites.title": "مجموعات اختبار منظمة",
+  "features.items.testSuites.description": "إدارة حالات الاختبار في مجلدات، ووضع علامات حسب الأولوية، وتتبع التغطية عبر قصص المستخدمين والمزايا.",
+  "features.items.security.title": "فحص الأمان",
+  "features.items.security.description": "يكتشف الثغرات الشائعة مثل XSS وإعادة التوجيه المفتوحة والأسرار المكشوفة أثناء كل عملية اختبار.",
+  "features.items.security.tierBadge": "مُدار",
+  "comparison.title": "كيف يقارن WhyNot",
+  "comparison.subtitle": "اكتشف لماذا تنتقل الفرق من أطر الاختبار اليدوية إلى ضمان الجودة المستقل المدعوم بالذكاء الاصطناعي.",
+  "comparison.featureColumn": "الميزة",
+  "comparison.competitors.whynot": "WhyNot",
+  "comparison.competitors.selenium": "Selenium",
+  "comparison.competitors.cypress": "Cypress",
+  "comparison.competitors.playwrightManual": "Playwright",
+  "comparison.competitors.browserstack": "BrowserStack",
+  "comparison.competitors.lambdatest": "LambdaTest",
+  "comparison.features.aiAutonomous": "استكشاف مستقل بالذكاء الاصطناعي",
+  "comparison.features.noCodeSetup": "إعداد بدون كود",
+  "comparison.features.bugDetection": "اكتشاف تلقائي للأخطاء",
+  "comparison.features.testGeneration": "إنشاء كود الاختبار",
+  "comparison.features.visualRegression": "اختبار الانحدار البصري",
+  "comparison.features.chaosTest": "اختبار الفوضى",
+  "comparison.features.ciIntegration": "تكامل CI/CD",
+  "comparison.features.multiBrowser": "اختبار متعدد المتصفحات",
+  "comparison.features.selfHealing": "اختبارات ذاتية الإصلاح",
+  "comparison.features.parallelExecution": "التنفيذ المتوازي",
+  "comparison.mobileHint": "مرر لرؤية المزيد",
+  "comparison.values.yes": "نعم",
+  "comparison.values.no": "لا",
+  "comparison.values.partial": "جزئي",
+  "testimonials.heading": "محبوب من فرق الهندسة",
+  "testimonials.subheading": "شاهد كيف تستخدم الفرق WhyNot لاكتشاف الأخطاء قبل مستخدميها.",
+  "testimonials.carousel.previous": "الشهادة السابقة",
+  "testimonials.carousel.next": "الشهادة التالية",
+  "testimonials.carousel.goToSlide": "الانتقال إلى الشهادة {{number}}",
+  "testimonials.items.sarah.quote": "نشرنا WhyNot على منصة التجارة الإلكترونية الخاصة بنا واكتشف 23 خطأ في الساعة الأولى — بما في ذلك مشكلة في تدفق الدفع كانت تكلفنا تحويلات. كود Playwright الذي أنشأه وفر على فريق ضمان الجودة أيام عمل.",
+  "testimonials.items.sarah.author": "سارة تشين",
+  "testimonials.items.sarah.title": "نائبة رئيس الهندسة",
+  "testimonials.items.sarah.company": "ShopFlow",
+  "testimonials.items.marcus.quote": "كشركة ناشئة بدون فريق ضمان جودة مخصص، WhyNot مثل وجود مهندس اختبار كبير متاح على مدار الساعة. وكلاء الذكاء الاصطناعي يستكشفون مسارات لم نفكر في اختبارها، واختبار الفوضى اكتشف حالة سباق كانت ستكون P0 في الإنتاج.",
+  "testimonials.items.marcus.author": "ماركوس جونسون",
+  "testimonials.items.marcus.title": "المدير التقني",
+  "testimonials.items.marcus.company": "LaunchPad AI",
+  "testimonials.items.elena.quote": "انتقلنا من صفر اختبارات آلية إلى تغطية انحدار كاملة في أقل من أسبوع. WhyNot ينشئ سكربتات Playwright، ونحن نراجع وندمج. ثقتنا في الإصدارات لم تكن أعلى من أي وقت مضى.",
+  "testimonials.items.elena.author": "إيلينا رودريغيز",
+  "testimonials.items.elena.title": "مهندسة ضمان جودة رئيسية",
+  "testimonials.items.elena.company": "Meridian Health",
+  "faq.heading": "الأسئلة الشائعة",
+  "faq.subheading": "كل ما تحتاج معرفته عن WhyNot.",
+  "faq.items.howItWorks.question": "كيف يكتشف WhyNot الأخطاء تلقائيًا؟",
+  "faq.items.howItWorks.answer": "ينشر WhyNot وكلاء ذكاء اصطناعي مستقلين يتنقلون في تطبيقك مثل المستخدمين الحقيقيين. ينقرون على الأزرار ويملأون النماذج ويستكشفون مسارات التنقل ويراقبون أخطاء وحدة التحكم والتخطيطات المعطلة واستدعاءات API الفاشلة والانحدارات البصرية — كل ذلك دون كتابة سطر واحد من كود الاختبار.",
+  "faq.items.integration.question": "كيف أدمج WhyNot مع تطبيقي؟",
+  "faq.items.integration.answer": "فقط قدم عنوان URL لتطبيقك. يعمل WhyNot مع أي تطبيق ويب بغض النظر عن التقنية المستخدمة — React أو Vue أو Angular أو Next.js أو Django أو Rails أو Laravel أو WordPress أو أي إطار آخر. لا حاجة لـ SDK أو تغييرات في الكود.",
+  "faq.items.pricing.question": "هل توجد خطة مجانية؟",
+  "faq.items.pricing.answer": "نعم! تتضمن الخطة المجانية 50 عملية اختبار شهريًا، وحتى 3 مشاريع، ووصول كامل لاكتشاف الأخطاء بالذكاء الاصطناعي وإنشاء كود Playwright. لا حاجة لبطاقة ائتمان للبدء.",
+  "faq.items.security.question": "هل بيانات تطبيقي آمنة؟",
+  "faq.items.security.answer": "بالتأكيد. يشغل WhyNot الاختبارات في بيئات متصفح معزولة. لا نخزن بيانات تطبيقك أو بيانات الاعتماد أو معلومات المستخدمين. جميع الاتصالات مشفرة بـ TLS، ونحن متوافقون مع SOC 2.",
+  "faq.items.accuracy.question": "ما مدى دقة اكتشاف الأخطاء؟",
+  "faq.items.accuracy.answer": "يحقق ذكاؤنا الاصطناعي نسبة دقة 99.2% مع نسبة إيجابيات كاذبة منخفضة جدًا. يتضمن كل خطأ مبلغ عنه لقطات شاشة وسجلات وحدة التحكم وتتبعات الشبكة وكود Playwright المنشأ حتى تتمكن من التحقق وإعادة الإنتاج فورًا.",
+  "faq.contactText": "لا تزال لديك أسئلة؟",
+  "faq.contactLink": "تواصل معنا",
+  "faq.deepLinkAriaLabel": "نسخ رابط هذا السؤال",
+  "cta.heading": "ابدأ في اكتشاف الأخطاء اليوم",
+  "cta.subheading": "انضم إلى مئات الفرق التي تستخدم WhyNot لإطلاق البرامج بثقة. إعداد في دقائق، لا حاجة لتغييرات في الكود.",
+  "cta.getStarted": "ابدأ مجانًا",
+  "cta.trustSignals.freeTier": "خطة مجانية متاحة",
+  "cta.trustSignals.noCard": "لا حاجة لبطاقة ائتمان",
+  "cta.trustSignals.moneyBack": "ضمان استرداد الأموال لمدة 30 يومًا",
+  "stickyBottomCTA.ariaLabel": "شريط الإجراء السريع",
+  "stickyBottomCTA.text": "اكتشف الأخطاء قبل مستخدميك.",
+  "stickyBottomCTA.cta": "ابدأ مجانًا",
+  "stickyBottomCTA.dismiss": "إغلاق",
+  "emailCapture.placeholder": "أدخل بريدك الإلكتروني المهني",
+  "emailCapture.ariaLabel": "عنوان البريد الإلكتروني",
+  "emailCapture.cta": "ابدأ مجانًا",
+  "emailCapture.sending": "جارٍ الإرسال...",
+  "emailCapture.success": "شكرًا! سنتواصل معك قريبًا.",
+  "emailCapture.error": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+  "emailCapture.invalidEmail": "يرجى إدخال عنوان بريد إلكتروني صالح.",
+  "emailCapture.rateLimited": "محاولات كثيرة جدًا. يرجى المحاولة لاحقًا.",
+  "emailCapture.rateLimitedCountdown": "حاول مرة أخرى خلال {{seconds}} ثانية",
+  "pricing.heading": "أسعار بسيطة وشفافة",
+  "pricing.subheading": "ابدأ مجانًا، وقم بالترقية عندما تحتاج المزيد.",
+  "pricing.monthly": "شهري",
+  "pricing.annual": "سنوي",
+  "pricing.perMonth": "/شهر",
+  "pricing.perYear": "/سنة",
+  "pricing.monthlyEquivalent": "{{price}}/شهر يُدفع سنويًا",
+  "pricing.saveBadge": "وفّر {{percent}}%",
+  "pricing.free": "مجاني للأبد",
+  "pricing.popular": "الأكثر شيوعًا",
+  "pricing.startFree": "ابدأ مجانًا",
+  "pricing.getStarted": "ابدأ الآن",
+  "pricing.contactSales": "تواصل مع المبيعات",
+  "pricing.trialDays": "تجربة مجانية لمدة {{days}} يوم",
+  "pricing.errorFallback": "عرض الأسعار الافتراضية. تعذّر تحميل الأسعار المباشرة.",
+  "pricing.plans.free.name": "مجاني",
+  "pricing.plans.free.description": "مثالي لتجربة WhyNot على المشاريع الشخصية.",
+  "pricing.plans.free.features.0": "50 اختبار شهريًا",
+  "pricing.plans.free.features.1": "حتى 3 مشاريع",
+  "pricing.plans.free.features.2": "كشف الأخطاء بالذكاء الاصطناعي",
+  "pricing.plans.free.features.3": "توليد أكواد Playwright",
+  "pricing.plans.free.features.4": "دعم المجتمع",
+  "pricing.plans.pro_byo.name": "احترافي (مفاتيحك)",
+  "pricing.plans.pro_byo.description": "للفرق التي تريد استخدام مفاتيح مزوّد الذكاء الاصطناعي الخاصة بهم.",
+  "pricing.plans.pro_byo.features.0": "اختبارات غير محدودة",
+  "pricing.plans.pro_byo.features.1": "مشاريع غير محدودة",
+  "pricing.plans.pro_byo.features.2": "استخدم مفاتيح API الخاصة بك",
+  "pricing.plans.pro_byo.features.3": "اختبار الانحدار البصري",
+  "pricing.plans.pro_byo.features.4": "اختبار الفوضى",
+  "pricing.plans.pro_byo.features.5": "تكامل CI/CD",
+  "pricing.plans.pro_byo.features.6": "دعم ذو أولوية",
+  "pricing.plans.pro_managed.name": "احترافي (مُدار)",
+  "pricing.plans.pro_managed.description": "قوة كاملة مع بنية ذكاء اصطناعي مُدارة ورصيد الدفع حسب الاستخدام.",
+  "pricing.plans.pro_managed.features.0": "كل ما في الاحترافي (مفاتيحك)",
+  "pricing.plans.pro_managed.features.1": "بنية ذكاء اصطناعي مُدارة",
+  "pricing.plans.pro_managed.features.2": "رصيد الدفع حسب الاستخدام",
+  "pricing.plans.pro_managed.features.3": "تحليلات متقدمة",
+  "pricing.plans.pro_managed.features.4": "مراقبات مخصصة",
+  "pricing.plans.pro_managed.features.5": "SSO وإدارة الفريق",
+  "pricing.plans.pro_managed.features.6": "دعم مخصص",
+  "payg.heading": "أسعار الدفع حسب الاستخدام",
+  "payg.subheading": "ادفع فقط مقابل ما تستخدمه. يتم استهلاك الرصيد لكل عملية على خطة المُدار.",
+  "payg.event": "العملية",
+  "payg.credits": "الرصيد",
+  "payg.example": "مثال",
+  "payg.events.test_generation.name": "توليد الاختبارات",
+  "payg.events.test_generation.example": "توليد 20 اختبار = 1,000 رصيد",
+  "payg.events.test_execution.name": "تنفيذ الاختبارات",
+  "payg.events.test_execution.example": "تشغيل 100 اختبار = 1,000 رصيد",
+  "payg.events.qa_loop_iteration.name": "دورة ضمان الجودة",
+  "payg.events.qa_loop_iteration.example": "30 دورة = 900 رصيد",
+  "payg.events.auto_fix_attempt.name": "محاولة إصلاح تلقائي",
+  "payg.events.auto_fix_attempt.example": "10 إصلاحات = 1,000 رصيد",
+  "payg.events.visual_regression.name": "الانحدار البصري",
+  "payg.events.visual_regression.example": "50 مقارنة = 750 رصيد",
+  "payg.events.qa_monitor_session.name": "جلسة مراقبة الجودة",
+  "payg.events.qa_monitor_session.example": "5 جلسات = 1,000 رصيد",
+  "payg.events.ci_scan.name": "فحص CI",
+  "payg.events.ci_scan.example": "5 فحوصات = 1,000 رصيد",
+  "payg.creditsUnit": "رصيد",
+  "payg.creditPack": "حزم الرصيد تبدأ من $10 لكل 1,000 رصيد.",
+  "payg.packs.heading": "حزم الرصيد",
+  "payg.packs.bestValue": "أفضل قيمة",
+  "payg.packs.perCredit": "لكل رصيد",
+  "payg.packs.items.starter.name": "المبتدئ",
+  "payg.packs.items.starter.size": "1,000 رصيد",
+  "payg.packs.items.starter.price": "$10",
+  "payg.packs.items.growth.name": "النمو",
+  "payg.packs.items.growth.size": "10,000 رصيد",
+  "payg.packs.items.growth.price": "$80",
+  "payg.packs.items.scale.name": "التوسع",
+  "payg.packs.items.scale.size": "100,000 رصيد",
+  "payg.packs.items.scale.price": "$600",
+  "payg.calculator.heading": "حاسبة الرصيد",
+  "payg.calculator.description": "قدّر استخدامك الشهري من الرصيد والتكلفة.",
+  "payg.calculator.totalCreditsLabel": "إجمالي الرصيد",
+  "payg.calculator.estimatedMonthlyCost": "التكلفة الشهرية المقدرة",
+  "payg.calculator.recommendedPack": "الحزمة الموصى بها: {{pack}}",
+  "payg.calculator.inputLabel.test_generation": "عمليات توليد الاختبارات شهريًا",
+  "payg.calculator.inputLabel.test_execution": "عمليات تنفيذ الاختبارات شهريًا",
+  "payg.calculator.inputLabel.qa_loop_iteration": "دورات ضمان الجودة شهريًا",
+  "payg.calculator.inputLabel.auto_fix_attempt": "محاولات الإصلاح التلقائي شهريًا",
+  "payg.calculator.inputLabel.visual_regression": "عمليات الانحدار البصري شهريًا",
+  "payg.calculator.inputLabel.qa_monitor_session": "جلسات مراقبة الجودة شهريًا",
+  "payg.calculator.inputLabel.ci_scan": "فحوصات CI شهريًا",
+  "payg.workedExample.heading": "مثال عملي",
+  "payg.workedExample.expand": "عرض المثال العملي",
+  "payg.workedExample.collapse": "إخفاء المثال العملي",
+  "payg.workedExample.description": "فريق SaaS من 20 مهندسًا يطلق تحديثات 3 مرات أسبوعيًا:",
+  "payg.workedExample.items.0": "50 × توليد اختبار (50 رصيد) = 2,500 رصيد",
+  "payg.workedExample.items.1": "200 × تنفيذ اختبار (10 رصيد) = 2,000 رصيد",
+  "payg.workedExample.items.2": "10 × محاولات إصلاح تلقائي (100 رصيد) = 1,000 رصيد",
+  "payg.workedExample.total": "الإجمالي: 5,500 رصيد ≈ $55/شهر",
+  "payg.workedExample.note": "بالإضافة إلى اشتراك $49/شهر الأساسي.",
+  "footer.description": "اختبار ضمان الجودة المستقل المدعوم بوكلاء الذكاء الاصطناعي.",
+  "footer.product": "المنتج",
+  "footer.features": "المزايا",
+  "footer.pricing": "الأسعار",
+  "footer.changelog": "سجل التغييرات",
+  "footer.company": "الشركة",
+  "footer.about": "عن الشركة",
+  "footer.blog": "المدونة",
+  "footer.contact": "تواصل معنا",
+  "footer.resources": "الموارد",
+  "footer.docs": "التوثيق",
+  "footer.status": "الحالة",
+  "footer.api": "واجهة برمجة التطبيقات",
+  "footer.legal": "قانوني",
+  "footer.privacy": "سياسة الخصوصية",
+  "footer.terms": "شروط الخدمة",
+  "footer.security": "الأمان",
+  "footer.copyright": "© {{year}} WhyNot. جميع الحقوق محفوظة.",
+  "footer.allRightsReserved": "جميع الحقوق محفوظة.",
+  "footer.github": "GitHub",
+  "footer.twitter": "X (Twitter)",
+  "seo.title": "WhyNot — اختبار ضمان الجودة الذاتي بالذكاء الاصطناعي",
+  "seo.description": "اكتشف الأخطاء قبل المستخدمين. وكلاء ذكاء اصطناعي مستقلون يستكشفون تطبيقك ويكتشفون الأخطاء ويولّدون أكواد اختبار Playwright.",
+  "seo.keywords": "اختبار ذكاء اصطناعي، ضمان جودة ذاتي، كشف أخطاء، Playwright، انحدار بصري، أتمتة اختبار"
 }

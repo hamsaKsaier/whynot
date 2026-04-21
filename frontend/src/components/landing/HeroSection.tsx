@@ -51,16 +51,16 @@ export function HeroSection() {
   const titleWords = useMemo(() => parseTitle(t('hero.title')), [t])
 
   const headlineClasses =
-    'mt-6 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl'
+    'mt-4 text-2xl font-semibold leading-tight tracking-tight xs:text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl'
 
   const scrollToPricing = () => {
     document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
-    <section id="hero" className="px-4 pb-20 pt-20 sm:px-6 sm:pt-28">
+    <section id="hero" className="px-4 pb-12 pt-12 sm:px-6 sm:pb-20 sm:pt-20 md:pb-24 md:pt-28">
       <div className="mx-auto max-w-7xl">
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="grid items-center gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
             {reduced ? (
               <span className="inline-flex items-center rounded-md border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -102,19 +102,19 @@ export function HeroSection() {
             )}
 
             {reduced ? (
-              <p className="mt-6 max-w-lg text-base text-muted-foreground sm:text-lg">
+                <p className="mt-4 max-w-lg text-sm text-muted-foreground sm:mt-6 sm:text-base md:text-lg">
                 {t('hero.subtitle')}
               </p>
             ) : (
               <SlideIn from="bottom" distance={4}>
-                <p className="mt-6 max-w-lg text-base text-muted-foreground sm:text-lg">
+              <p className="mt-4 max-w-lg text-sm text-muted-foreground sm:mt-6 sm:text-base md:text-lg">
                   {t('hero.subtitle')}
                 </p>
               </SlideIn>
             )}
 
             {reduced ? (
-              <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row">
+              <div className="mt-6 flex flex-col items-start gap-3 sm:mt-8 sm:flex-row sm:gap-4">
                 {isAuthenticated ? (
                   <Button size="lg" onClick={() => navigate('/dashboard')}>
                     {t('nav.openApp')}
@@ -132,7 +132,7 @@ export function HeroSection() {
               </div>
             ) : (
               <SlideIn from="bottom" distance={4}>
-                <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row">
+                <div className="mt-6 flex flex-col items-start gap-3 sm:mt-8 sm:flex-row sm:gap-4">
                   {isAuthenticated ? (
                     <Button size="lg" onClick={() => navigate('/dashboard')}>
                       {t('nav.openApp')}
@@ -173,7 +173,7 @@ export function HeroSection() {
               </div>
             ) : (
               <motion.div
-                className="mt-8 flex flex-col gap-3"
+                className="mt-6 flex flex-col gap-3 sm:mt-8"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
@@ -205,12 +205,12 @@ export function HeroSection() {
           </div>
 
           {reduced ? (
-            <div className="mx-auto max-w-full overflow-hidden rounded-lg ring-1 ring-border bg-card shadow-sm">
-              <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-3">
-                <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
-                <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
-                <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
-                <div className="mx-auto h-4 w-32 rounded-md bg-muted-foreground/10 sm:w-48" />
+            <div className="mx-auto max-w-full overflow-hidden rounded-lg ring-1 ring-border bg-card shadow-sm mt-2 md:mt-0">
+              <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-3 py-2 sm:px-4 sm:py-3">
+                <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 sm:h-3 sm:w-3" />
+                <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 sm:h-3 sm:w-3" />
+                <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 sm:h-3 sm:w-3" />
+                <div className="mx-auto h-3 w-24 rounded-md bg-muted-foreground/10 sm:h-4 sm:w-32 md:w-48" />
               </div>
               <div className="relative aspect-video">
                 <video
@@ -221,22 +221,22 @@ export function HeroSection() {
                   className="absolute inset-0 h-full w-full object-cover"
                   aria-label={t('hero.videoCaption')}
                 />
-                <div className="absolute inset-0 flex flex-col justify-center space-y-3 p-4 sm:p-8">
-                  <div className="h-4 w-3/4 rounded bg-muted-foreground/10" />
-                  <div className="h-4 w-1/2 rounded bg-muted-foreground/10" />
-                  <div className="h-4 w-5/6 rounded bg-muted-foreground/10" />
-                  <div className="mt-4 flex-1 rounded-lg border border-primary/10 bg-primary/5 sm:mt-6" />
+                <div className="absolute inset-0 flex flex-col justify-center space-y-2 p-3 sm:space-y-3 sm:p-4 md:p-8">
+                  <div className="h-3 w-3/4 rounded bg-muted-foreground/10 sm:h-4" />
+                  <div className="h-3 w-1/2 rounded bg-muted-foreground/10 sm:h-4" />
+                  <div className="h-3 w-5/6 rounded bg-muted-foreground/10 sm:h-4" />
+                  <div className="mt-3 flex-1 rounded-lg border border-primary/10 bg-primary/5 sm:mt-4 md:mt-6" />
                 </div>
               </div>
             </div>
           ) : (
             <Parallax speed={0.15}>
-              <div className="mx-auto max-w-full overflow-hidden rounded-lg ring-1 ring-border bg-card shadow-sm">
-                <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-3">
-                  <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
-                  <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
-                  <div className="h-3 w-3 rounded-full bg-muted-foreground/20" />
-                  <div className="mx-auto h-4 w-32 rounded-md bg-muted-foreground/10 sm:w-48" />
+              <div className="mx-auto max-w-full overflow-hidden rounded-lg ring-1 ring-border bg-card shadow-sm mt-2 md:mt-0">
+                <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-3 py-2 sm:px-4 sm:py-3">
+                  <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 sm:h-3 sm:w-3" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 sm:h-3 sm:w-3" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 sm:h-3 sm:w-3" />
+                  <div className="mx-auto h-3 w-24 rounded-md bg-muted-foreground/10 sm:h-4 sm:w-32 md:w-48" />
                 </div>
                 <div className="relative aspect-video">
                   <video
@@ -247,11 +247,11 @@ export function HeroSection() {
                     className="absolute inset-0 h-full w-full object-cover"
                     aria-label={t('hero.videoCaption')}
                   />
-                  <div className="absolute inset-0 flex flex-col justify-center space-y-3 p-4 sm:p-8">
-                    <div className="h-4 w-3/4 rounded bg-muted-foreground/10" />
-                    <div className="h-4 w-1/2 rounded bg-muted-foreground/10" />
-                    <div className="h-4 w-5/6 rounded bg-muted-foreground/10" />
-                    <div className="mt-4 flex-1 rounded-lg border border-primary/10 bg-primary/5 sm:mt-6" />
+                  <div className="absolute inset-0 flex flex-col justify-center space-y-2 p-3 sm:space-y-3 sm:p-4 md:p-8">
+                    <div className="h-3 w-3/4 rounded bg-muted-foreground/10 sm:h-4" />
+                    <div className="h-3 w-1/2 rounded bg-muted-foreground/10 sm:h-4" />
+                    <div className="h-3 w-5/6 rounded bg-muted-foreground/10 sm:h-4" />
+                    <div className="mt-3 flex-1 rounded-lg border border-primary/10 bg-primary/5 sm:mt-4 md:mt-6" />
                   </div>
                 </div>
               </div>

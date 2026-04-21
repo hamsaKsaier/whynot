@@ -18,17 +18,17 @@ export function CTASection() {
 
   const content = (
     <div className="mx-auto max-w-2xl text-center">
-      <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+      <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
         {t('cta.heading')}
       </h2>
-      <p className="mt-4 text-lg text-muted-foreground">{t('cta.subheading')}</p>
-      <div className="mt-8">
+      <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground">{t('cta.subheading')}</p>
+      <div className="mt-6 sm:mt-8">
         <Button size="lg" onClick={() => navigate('/signup')}>
           {t('cta.getStarted')}
           <ArrowRight className="ms-2 h-5 w-5 rtl:scale-x-[-1]" />
         </Button>
       </div>
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+      <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground">
         {trustSignals.map(({ icon: Icon, key }) => (
           <span key={key} className="flex items-center gap-1.5">
             <Icon className="h-4 w-4 text-primary" />
@@ -40,7 +40,7 @@ export function CTASection() {
   )
 
   return (
-    <section className="bg-muted py-20 sm:py-28">
+    <section className="bg-muted py-16 sm:py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {reduced ? content : <Reveal>{content}</Reveal>}
       </div>

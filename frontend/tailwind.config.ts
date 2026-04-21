@@ -12,6 +12,9 @@ const config: Config = {
       },
     },
     extend: {
+      screens: {
+        xs: "475px",
+      },
       colors: {
         border: "oklch(var(--border) / <alpha-value>)",
         input: "oklch(var(--input) / <alpha-value>)",
