@@ -122,4 +122,21 @@ export interface AgentResult {
   // the orchestrator into the chromeDevtools block of "Scan cost breakdown".
   cdpCallCounts?: Record<string, number>;
   cdpCharsDropped?: number;
+  // Task 6: tool-result truncation stats. Present whenever an agent ran
+  // (regardless of feature flag state — `enabled=false` means no chars
+  // were actually elided). Aggregated by orchestrator into the
+  // `toolResultTruncation` block of "Scan cost breakdown".
+  toolTruncation?: {
+    enabled: boolean;
+    totalToolCalls: number;
+    toolsTruncatedCount: number;
+    totalCharsBeforeTruncation: number;
+    totalCharsAfterTruncation: number;
+    perTool: Record<string, {
+      invocations: number;
+      truncatedInvocations: number;
+      sumCharsBefore: number;
+      sumCharsAfter: number;
+    }>;
+  };
 }

@@ -27,6 +27,13 @@ import { ToolExecutor, ToolResult } from '../../tool-executor';
 import { MCPBrowser } from '../../mcp-browser';
 import { ChromeDevToolsMCP } from '../../chrome-devtools-mcp';
 import { BoardTools } from '../tools/board-tools';
+import {
+  truncateToolResult,
+  isPromptCompressionEnabled,
+  emptyTruncationStats,
+  recordTruncation,
+  ToolTruncationStats,
+} from '../tool-result-truncator';
 
 const logger = createLogger('base-agent');
 
@@ -221,6 +228,14 @@ export abstract class BaseAgent {
   // Week 2: Chrome DevTools MCP (optional, shared across agents in this session).
   protected cdpMcp: ChromeDevToolsMCP | null = null;
 
+  // Task 6: per-agent truncation stats. Populated by the execute callback
+  // wrapper regardless of feature flag state — if the flag is off, every
+  // tool call passes through untruncated but we still count invocations so
+  // the breakdown log always shows the full picture.
+  protected toolTruncationStats: ToolTruncationStats = emptyTruncationStats(
+    isPromptCompressionEnabled(),
+  );
+
   constructor(
     config: AgentConfig,
     mcpBrowser?: MCPBrowser,
@@ -397,6 +412,8 @@ export abstract class BaseAgent {
         // Week 2 CDP telemetry
         cdpCallCounts: cdpSnapshot.cdpCallCounts,
         cdpCharsDropped: cdpSnapshot.cdpCharsDropped,
+        // Task 6: tool-result truncation stats
+        toolTruncation: this.toolTruncationStats,
       };
     } catch (err: any) {
       // Priority 1: watchdog kill is NOT a normal agent failure. Log it
@@ -476,6 +493,8 @@ export abstract class BaseAgent {
         // Week 2 CDP telemetry
         cdpCallCounts: cdpSnapshot.cdpCallCounts,
         cdpCharsDropped: cdpSnapshot.cdpCharsDropped,
+        // Task 6: tool-result truncation stats
+        toolTruncation: this.toolTruncationStats,
       };
     }
   }
@@ -870,7 +889,31 @@ export abstract class BaseAgent {
               argsKeys: Object.keys(args || {}),
             });
 
-            return result.data || { success: true };
+            // Task 6: truncate the result BEFORE it becomes conversation
+            // history. If the feature flag is off, `truncateToolResult`
+            // still measures the payload but the wrapper returns the
+            // original value untouched — recordTruncation sees
+            // wasTruncated=false in that path because the cap is not
+            // enforced.
+            const rawData = result.data ?? { success: true };
+            if (!this.toolTruncationStats.enabled) {
+              // Flag off: still measure size for telemetry, but never
+              // shorten — preserves Scan A semantics exactly.
+              const asString = typeof rawData === 'string'
+                ? rawData
+                : (() => { try { return JSON.stringify(rawData); } catch { return String(rawData); } })();
+              recordTruncation(this.toolTruncationStats, toolName, {
+                truncated: rawData,
+                charsBefore: asString.length,
+                charsAfter: asString.length,
+                wasTruncated: false,
+                wasScreenshotStripped: false,
+              });
+              return rawData;
+            }
+            const outcome = truncateToolResult(toolName, rawData);
+            recordTruncation(this.toolTruncationStats, toolName, outcome);
+            return outcome.truncated;
           } catch (err: any) {
             // Already counted if thrown above (result.error branch)
             // This branch catches true exceptions (DB errors, network, etc.)

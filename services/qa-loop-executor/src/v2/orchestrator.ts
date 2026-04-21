@@ -234,7 +234,19 @@ export class V2Orchestrator {
       }
 
       // ─── Phase 5: Auto Tester (runs last, no browser needed) ──
-      if (!this.stopRequested && !this.costBudgetExceeded()) {
+      // Task 6 diagnostic: Scan A reported totalTests=11 but perAgent omitted
+      // auto_tester. These two logs let us tell from Railway logs exactly why
+      // — skipped due to cost cap vs stop requested vs actually ran.
+      const autoGateStop = this.stopRequested;
+      const autoGateCost = this.costBudgetExceeded();
+      logger.info('Auto Tester phase gate', {
+        sessionId: this.sessionId,
+        stopRequested: autoGateStop,
+        costBudgetExceeded: autoGateCost,
+        cumulativeCostCents: this.cumulativeCostCents,
+        willRun: !autoGateStop && !autoGateCost,
+      });
+      if (!autoGateStop && !autoGateCost) {
         emitToSession(this.sessionId, {
           type: 'status_update',
           data: { phase: 'auto_testing', message: 'Auto Tester generating Playwright regression tests...' },
@@ -246,6 +258,13 @@ export class V2Orchestrator {
           sessionId: this.sessionId,
           tests: autoResult.testsGenerated,
           status: autoResult.status,
+          llmCalls: autoResult.llmCallCount,
+          pushedToAllResults: true,
+        });
+      } else {
+        logger.warn('Auto Tester SKIPPED — this is why auto_tester will be absent from perAgent', {
+          sessionId: this.sessionId,
+          reason: autoGateStop ? 'stop_requested' : 'cost_budget_exceeded',
         });
       }
 
@@ -458,6 +477,80 @@ export class V2Orchestrator {
           model: r.modelUsed,
           maxSingleCallInputTokens: r.maxSingleCallInputTokens || 0,
         })),
+      });
+
+      // Task 6: tool-result truncation telemetry block
+      // Aggregates per-agent truncation stats so we can see compression
+      // effect in a single log line. Present even when the feature flag
+      // is off (enabled=false) because the execute wrapper still measures
+      // raw tool-result sizes — that's how we spot regressions later.
+      const truncAgg = {
+        enabled: false as boolean,
+        totalToolCalls: 0,
+        toolsTruncatedCount: 0,
+        totalCharsBeforeTruncation: 0,
+        totalCharsAfterTruncation: 0,
+        perTool: {} as Record<string, {
+          invocations: number;
+          truncatedInvocations: number;
+          sumCharsBefore: number;
+          sumCharsAfter: number;
+        }>,
+      };
+      for (const r of allResults) {
+        const t = r.toolTruncation;
+        if (!t) continue;
+        truncAgg.enabled = truncAgg.enabled || t.enabled;
+        truncAgg.totalToolCalls += t.totalToolCalls;
+        truncAgg.toolsTruncatedCount += t.toolsTruncatedCount;
+        truncAgg.totalCharsBeforeTruncation += t.totalCharsBeforeTruncation;
+        truncAgg.totalCharsAfterTruncation += t.totalCharsAfterTruncation;
+        for (const [tool, s] of Object.entries(t.perTool)) {
+          const slot = truncAgg.perTool[tool] ?? (truncAgg.perTool[tool] = {
+            invocations: 0, truncatedInvocations: 0, sumCharsBefore: 0, sumCharsAfter: 0,
+          });
+          slot.invocations += s.invocations;
+          slot.truncatedInvocations += s.truncatedInvocations;
+          slot.sumCharsBefore += s.sumCharsBefore;
+          slot.sumCharsAfter += s.sumCharsAfter;
+        }
+      }
+      const truncationRate = truncAgg.totalToolCalls > 0
+        ? truncAgg.toolsTruncatedCount / truncAgg.totalToolCalls
+        : 0;
+      const totalCharsElided = Math.max(
+        0,
+        truncAgg.totalCharsBeforeTruncation - truncAgg.totalCharsAfterTruncation,
+      );
+      const percentCharsRemoved = truncAgg.totalCharsBeforeTruncation > 0
+        ? totalCharsElided / truncAgg.totalCharsBeforeTruncation
+        : 0;
+      // Top 5 offenders by avg-chars-before (only count tools with >0
+      // truncations — a 3-byte click response isn't useful noise).
+      const mostTruncatedTools = Object.entries(truncAgg.perTool)
+        .filter(([, s]) => s.truncatedInvocations > 0)
+        .map(([tool, s]) => ({
+          tool,
+          invocations: s.invocations,
+          truncatedInvocations: s.truncatedInvocations,
+          avgCharsBefore: Math.round(s.sumCharsBefore / Math.max(1, s.invocations)),
+          avgCharsAfter: Math.round(s.sumCharsAfter / Math.max(1, s.invocations)),
+        }))
+        .sort((a, b) => b.avgCharsBefore - a.avgCharsBefore)
+        .slice(0, 5);
+      logger.info('Scan cost breakdown — toolResultTruncation', {
+        sessionId: this.sessionId,
+        toolResultTruncation: {
+          enabled: truncAgg.enabled,
+          totalToolCalls: truncAgg.totalToolCalls,
+          toolsTruncatedCount: truncAgg.toolsTruncatedCount,
+          truncationRate: Math.round(truncationRate * 1000) / 1000,
+          totalCharsBeforeTruncation: truncAgg.totalCharsBeforeTruncation,
+          totalCharsAfterTruncation: truncAgg.totalCharsAfterTruncation,
+          totalCharsElided,
+          percentCharsRemoved: Math.round(percentCharsRemoved * 1000) / 1000,
+          mostTruncatedTools,
+        },
       });
 
       // Week 2 Task 8: chromeDevtools telemetry block
