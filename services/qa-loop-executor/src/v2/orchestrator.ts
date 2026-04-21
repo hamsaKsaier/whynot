@@ -329,7 +329,6 @@ export class V2Orchestrator {
         totalPages,
       });
 
-<<<<<<< HEAD
       // ─── Compression baseline summary (Part 1 + Part 2 instrumentation) ────
       // Aggregate token + cost totals across every agent in this session.
       //
