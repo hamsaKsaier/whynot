@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiSearch, FiX } from 'react-icons/fi';
 import { Input } from './Input';
 
@@ -13,10 +14,11 @@ interface SearchInputProps {
 export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder,
   className = '',
   debounceMs = 300,
 }) => {
+  const { t } = useTranslation('common');
   const [localValue, setLocalValue] = React.useState(value);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -46,22 +48,22 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">
+      <div className="absolute start-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
         <FiSearch className="h-5 w-5" />
       </div>
       <input
         type="text"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full pl-10 pr-10 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${className}`}
-        aria-label="Search"
+        placeholder={placeholder ?? t('common.actions.search')}
+        className={`w-full ps-10 pe-10 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${className}`}
+        aria-label={t('common.aria.search')}
       />
       {localValue && (
         <button
           onClick={handleClear}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-400"
-          aria-label="Clear search"
+          className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label={t('common.aria.clearSearch')}
         >
           <FiX className="h-5 w-5" />
         </button>

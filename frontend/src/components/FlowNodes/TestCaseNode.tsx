@@ -29,7 +29,7 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
 
   return (
     <div
-      className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 border-l-4 border-l-sky-500 min-w-[240px] max-w-[280px] cursor-pointer transition-all duration-200 hover:shadow-md"
+      className="bg-card rounded-xl shadow-sm border border-border border-s-4 border-s-sky-500 min-w-[240px] max-w-[280px] cursor-pointer transition-colors duration-150 hover:bg-muted/50"
       onClick={handleToggleExpand}
     >
       <Handle
@@ -45,27 +45,27 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-600">
             Test Case
           </span>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ms-auto flex items-center gap-1">
             {data.stepCount != null && data.stepCount > 0 && (
               <button
                 onClick={handleToggleExpand}
-                className="p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="p-1 rounded-lg hover:bg-muted transition-colors"
                 title={data.isExpanded ? 'Collapse steps' : 'Expand steps'}
               >
                 {data.isExpanded ? (
-                  <FiChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                  <FiChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 ) : (
-                  <FiChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                  <FiChevronRight className="h-3.5 w-3.5 text-muted-foreground rtl:scale-x-[-1]" />
                 )}
               </button>
             )}
             <button
               onClick={handleRun}
               disabled={data.isRunning}
-              className={`p-1 rounded-lg transition-all ${
+              className={`p-1 rounded-lg transition-colors ${
                 data.isRunning
                   ? 'bg-sky-900/30 cursor-not-allowed'
-                  : 'hover:bg-sky-900/20 hover:scale-110'
+                  : 'hover:bg-sky-900/20'
               }`}
               title={data.isRunning ? 'Running...' : 'Run test'}
             >
@@ -77,16 +77,16 @@ export const TestCaseNode: React.FC<NodeProps<TestCaseNodeData>> = ({ data }) =>
             </button>
           </div>
         </div>
-        <div className="font-bold text-white text-sm leading-snug line-clamp-2">
+        <div className="font-bold text-foreground text-sm leading-snug line-clamp-2">
           {data.label}
         </div>
         {data.description && (
-          <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
             {data.description}
           </p>
         )}
         {data.stepCount != null && (
-          <div className="mt-2 pt-2 border-t border-slate-700">
+          <div className="mt-2 pt-2 border-t border-border">
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-sky-900/20 text-[10px] font-medium text-sky-400">
               {data.stepCount} {data.stepCount === 1 ? 'step' : 'steps'}
             </span>

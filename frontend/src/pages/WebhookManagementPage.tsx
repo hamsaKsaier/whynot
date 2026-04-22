@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FiKey,
   FiPlus,
@@ -53,6 +54,7 @@ interface WebhookLog {
 export const WebhookContent: React.FC = () => <WebhookManagementPage embedded />;
 
 export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t } = useTranslation('dashboard');
   const { success, error: showError } = useToastContext();
 
   // API Keys State
@@ -198,9 +200,9 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
   const testNotificationChannel = async (id: string) => {
     try {
       await apiClient.post(`/qa-loop/api/notification-channels/${id}/test`);
-      success('Test notification sent!');
+      success(t('dashboard.webhooks.testSent'));
     } catch (error: any) {
-      showError(`Failed to send test: ${error.response?.data?.details || error.message}`);
+      showError(t('dashboard.webhooks.testError', { details: error.response?.data?.details || error.message }));
     }
   };
 
@@ -211,7 +213,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
   };
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Never';
+    if (!dateStr) return t('dashboard.webhooks.never');
     return new Date(dateStr).toLocaleString();
   };
 
@@ -228,22 +230,22 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
           <div className="page-header flex items-center justify-between">
             <div>
               <h1 className="page-title flex items-center gap-2">
-                <FiShield className="text-sky-500" />
-                Notifications
+                <FiShield className="text-primary" />
+                {t('dashboard.webhooks.title')}
               </h1>
               <p className="page-subtitle">
-                Manage API keys, notification channels, and monitor activity
+                {t('dashboard.webhooks.subtitle')}
               </p>
             </div>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-slate-700">
+        <div className="flex gap-2 mb-6 border-b border-border">
           {[
-            { id: 'keys', label: 'API Keys', icon: FiKey },
-            { id: 'channels', label: 'Notifications', icon: FiBell },
-            { id: 'logs', label: 'Activity Logs', icon: FiActivity }
+            { id: 'keys', label: t('dashboard.webhooks.tabs.apiKeys'), icon: FiKey },
+            { id: 'channels', label: t('dashboard.webhooks.tabs.notifications'), icon: FiBell },
+            { id: 'logs', label: t('dashboard.webhooks.tabs.activityLogs'), icon: FiActivity }
           ].map(tab => (
             <button
               key={tab.id}
@@ -251,8 +253,8 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               className={`
                 flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors
                 ${activeTab === tab.id
-                  ? 'border-sky-500 text-sky-600'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
                 }
               `}
             >
@@ -264,34 +266,34 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
         {/* Created Key Modal */}
         {createdKey && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl">
+          <div className="fixed inset-0 bg-foreground/50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg p-6 max-w-lg w-full mx-4 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-green-900/30 rounded-full">
                   <FiCheck className="text-green-500 text-xl" />
                 </div>
-                <h3 className="text-lg font-semibold text-white">
-                  API Key Created
+                <h3 className="text-lg font-semibold text-foreground">
+                  {t('dashboard.webhooks.keyCreated')}
                 </h3>
               </div>
 
               <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 text-yellow-300 mb-2">
                   <FiAlertTriangle />
-                  <span className="font-medium">Save this key now!</span>
+                  <span className="font-medium">{t('dashboard.webhooks.saveKeyNow')}</span>
                 </div>
                 <p className="text-sm text-yellow-400">
-                  This key will only be shown once. Store it securely.
+                  {t('dashboard.webhooks.keyShownOnce')}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 bg-slate-900 rounded-lg p-3 mb-4">
-                <code className="flex-1 font-mono text-sm text-slate-200 break-all">
+              <div className="flex items-center gap-2 bg-muted rounded-lg p-3 mb-4">
+                <code className="flex-1 font-mono text-sm text-foreground break-all">
                   {createdKey}
                 </code>
                 <button
                   onClick={() => copyToClipboard(createdKey)}
-                  className="p-2 text-slate-400 hover:text-slate-200"
+                  className="p-2 text-muted-foreground hover:text-foreground"
                 >
                   {copiedKey ? <FiCheck className="text-green-500" /> : <FiCopy />}
                 </button>
@@ -299,9 +301,9 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
               <button
                 onClick={() => setCreatedKey(null)}
-                className="w-full py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
-                Done
+                {t('dashboard.webhooks.done')}
               </button>
             </div>
           </div>
@@ -311,38 +313,38 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {activeTab === 'keys' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-white">
-                API Keys ({apiKeys.length})
+              <h2 className="text-lg font-semibold text-foreground">
+                {t('dashboard.webhooks.apiKeysCount', { count: apiKeys.length })}
               </h2>
               <button
                 onClick={() => setShowCreateKey(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <FiPlus /> Create Key
+                <FiPlus /> {t('dashboard.webhooks.createKey')}
               </button>
             </div>
 
             {/* Create Key Form */}
             {showCreateKey && (
-              <div className="bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-700">
-                <h3 className="font-medium text-white mb-4">Create New API Key</h3>
+              <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
+                <h3 className="font-medium text-foreground mb-4">{t('dashboard.webhooks.createNewKey')}</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">
-                      Name
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      {t('dashboard.webhooks.keyNameLabel')}
                     </label>
                     <input
                       type="text"
                       value={newKeyName}
                       onChange={(e) => setNewKeyName(e.target.value)}
-                      placeholder="e.g., CI/CD Pipeline"
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
+                      placeholder={t('dashboard.webhooks.keyNamePlaceholder')}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">
-                      Permissions
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      {t('dashboard.webhooks.permissionsLabel')}
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {['retest', 'status', 'trigger', 'admin'].map(perm => (
@@ -357,43 +359,43 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                                 setNewKeyPermissions(newKeyPermissions.filter(p => p !== perm));
                               }
                             }}
-                            className="rounded text-sky-500 focus:ring-sky-500"
+                            className="rounded text-primary focus:ring-primary"
                           />
-                          <span className="text-sm text-slate-200 capitalize">{perm}</span>
+                          <span className="text-sm text-foreground capitalize">{perm}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">
-                      Expires In
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      {t('dashboard.webhooks.expiresInLabel')}
                     </label>
                     <select
                       value={newKeyExpiry || ''}
                       onChange={(e) => setNewKeyExpiry(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground"
                     >
-                      <option value="">Never</option>
-                      <option value="30">30 days</option>
-                      <option value="90">90 days</option>
-                      <option value="365">1 year</option>
+                      <option value="">{t('dashboard.webhooks.expiresNever')}</option>
+                      <option value="30">{t('dashboard.webhooks.expires30days')}</option>
+                      <option value="90">{t('dashboard.webhooks.expires90days')}</option>
+                      <option value="365">{t('dashboard.webhooks.expires1year')}</option>
                     </select>
                   </div>
 
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setShowCreateKey(false)}
-                      className="px-4 py-2 text-slate-400 hover:text-slate-200"
+                      className="px-4 py-2 text-muted-foreground hover:text-foreground"
                     >
-                      Cancel
+                      {t('dashboard.webhooks.cancel')}
                     </button>
                     <button
                       onClick={createAPIKey}
                       disabled={!newKeyName}
-                      className="px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Create
+                      {t('dashboard.webhooks.create')}
                     </button>
                   </div>
                 </div>
@@ -402,23 +404,23 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
             {/* Keys List */}
             {loadingKeys ? (
-              <div className="text-center py-8 text-slate-400">Loading API keys…</div>
+              <div className="text-center py-8 text-muted-foreground">{t('dashboard.webhooks.loadingKeys')}</div>
             ) : apiKeys.length === 0 ? (
-              <div className="rounded-xl border border-slate-700 bg-slate-800 text-center py-12 px-8">
+              <div className="rounded-lg border border-border bg-card text-center py-12 px-8">
                 <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-sky-900/20 flex items-center justify-center">
-                    <FiKey className="h-6 w-6 text-sky-400" />
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FiKey className="h-6 w-6 text-primary" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-slate-200 mb-1">No API keys yet</h3>
-                <p className="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
-                  Create an API key to trigger test runs from your CI/CD pipeline or external tools.
+                <h3 className="text-sm font-semibold text-foreground mb-1">{t('dashboard.webhooks.noKeysTitle')}</h3>
+                <p className="text-xs text-muted-foreground mb-4 max-w-xs mx-auto">
+                  {t('dashboard.webhooks.noKeysDescription')}
                 </p>
                 <button
                   onClick={() => setShowCreateKey(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
-                  <FiPlus className="h-3.5 w-3.5" /> Create Key
+                  <FiPlus className="h-3.5 w-3.5" /> {t('dashboard.webhooks.createKey')}
                 </button>
               </div>
             ) : (
@@ -427,35 +429,35 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                   <div
                     key={key.id}
                     className={`
-                      bg-slate-800 rounded-xl p-4 shadow-sm border
+                      bg-card rounded-lg p-4 shadow-sm border
                       ${key.revoked_at
                         ? 'border-red-700 opacity-60'
-                        : 'border-slate-700'
+                        : 'border-border'
                       }
                     `}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <FiKey className={key.revoked_at ? 'text-red-500' : 'text-sky-500'} />
+                        <FiKey className={key.revoked_at ? 'text-red-500' : 'text-primary'} />
                         <div>
-                          <div className="font-medium text-white">
+                          <div className="font-medium text-foreground">
                             {key.name}
                             {key.revoked_at && (
-                              <span className="ml-2 text-xs bg-red-900/30 text-red-600 px-2 py-0.5 rounded">
-                                Revoked
+                              <span className="ms-2 text-xs bg-red-900/30 text-red-600 px-2 py-0.5 rounded">
+                                {t('dashboard.webhooks.revoked')}
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-slate-400">
+                          <div className="text-sm text-muted-foreground">
                             {key.key_prefix}••••••••
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-4">
-                        <div className="text-right text-sm">
-                          <div className="text-slate-400">Last used</div>
-                          <div className="text-slate-200">
+                        <div className="text-end text-sm">
+                          <div className="text-muted-foreground">{t('dashboard.webhooks.lastUsed')}</div>
+                          <div className="text-foreground">
                             {formatDate(key.last_used_at)}
                           </div>
                         </div>
@@ -464,7 +466,7 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                           <button
                             onClick={() => revokeAPIKey(key.id)}
                             className="p-2 text-red-500 hover:bg-red-900/20 rounded-lg transition-colors"
-                            title="Revoke key"
+                            title={t('dashboard.webhooks.revokeKey')}
                           >
                             <FiTrash2 />
                           </button>
@@ -476,17 +478,17 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                       {key.permissions.map(perm => (
                         <span
                           key={perm}
-                          className="text-xs bg-slate-900 text-slate-400 px-2 py-1 rounded"
+                          className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded"
                         >
                           {perm}
                         </span>
                       ))}
-                      <span className="text-xs text-slate-400">
-                        • {key.rate_limit_per_hour}/hr limit
+                      <span className="text-xs text-muted-foreground">
+                        • {t('dashboard.webhooks.rateLimitPerHour', { count: key.rate_limit_per_hour })}
                       </span>
                       {key.expires_at && (
-                        <span className="text-xs text-slate-400">
-                          • Expires {new Date(key.expires_at).toLocaleDateString()}
+                        <span className="text-xs text-muted-foreground">
+                          • {t('dashboard.webhooks.expiresOn', { date: new Date(key.expires_at).toLocaleDateString() })}
                         </span>
                       )}
                     </div>
@@ -501,31 +503,31 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {activeTab === 'channels' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-white">
-                Notification Channels ({channels.length})
+              <h2 className="text-lg font-semibold text-foreground">
+                {t('dashboard.webhooks.channelsCount', { count: channels.length })}
               </h2>
               <button
                 onClick={() => setShowCreateChannel(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <FiPlus /> Add Channel
+                <FiPlus /> {t('dashboard.webhooks.addChannel')}
               </button>
             </div>
 
             {/* Triggers info */}
-            <div className="bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-700 mb-4">
-              <h3 className="font-medium text-white mb-3">Notification Triggers</h3>
+            <div className="bg-card rounded-lg p-5 shadow-sm border border-border mb-4">
+              <h3 className="font-medium text-foreground mb-3">{t('dashboard.webhooks.triggersTitle')}</h3>
               <div className="space-y-2">
                 {[
-                  { label: 'Scan complete', desc: 'When a QA session finishes running' },
-                  { label: 'Bug found (critical)', desc: 'When a critical-severity bug is discovered' },
-                  { label: 'Monitor alert', desc: 'When a scheduled monitor detects a regression' },
+                  { label: t('dashboard.webhooks.triggerScanComplete'), desc: t('dashboard.webhooks.triggerScanCompleteDesc') },
+                  { label: t('dashboard.webhooks.triggerBugFound'), desc: t('dashboard.webhooks.triggerBugFoundDesc') },
+                  { label: t('dashboard.webhooks.triggerMonitorAlert'), desc: t('dashboard.webhooks.triggerMonitorAlertDesc') },
                 ].map(trigger => (
-                  <div key={trigger.label} className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg">
-                    <FiBell className="text-sky-500 flex-shrink-0" />
+                  <div key={trigger.label} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    <FiBell className="text-primary flex-shrink-0" />
                     <div>
-                      <div className="text-sm font-medium text-white">{trigger.label}</div>
-                      <div className="text-xs text-slate-400">{trigger.desc}</div>
+                      <div className="text-sm font-medium text-foreground">{trigger.label}</div>
+                      <div className="text-xs text-muted-foreground">{trigger.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -534,62 +536,62 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
             {/* Create Channel Form */}
             {showCreateChannel && (
-              <div className="bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-700">
-                <h3 className="font-medium text-white mb-4">Add Notification Channel</h3>
+              <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
+                <h3 className="font-medium text-foreground mb-4">{t('dashboard.webhooks.addChannelTitle')}</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">
-                      Channel Name
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      {t('dashboard.webhooks.channelNameLabel')}
                     </label>
                     <input
                       type="text"
                       value={channelName}
                       onChange={(e) => setChannelName(e.target.value)}
-                      placeholder="e.g., Team Slack"
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
+                      placeholder={t('dashboard.webhooks.channelNamePlaceholder')}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">
-                      Channel Type
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      {t('dashboard.webhooks.channelTypeLabel')}
                     </label>
                     <select
                       value={channelType}
                       onChange={(e) => setChannelType(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground"
                     >
-                      <option value="email">Email</option>
-                      <option value="slack">Slack Webhook URL</option>
+                      <option value="email">{t('dashboard.webhooks.channelTypeEmail')}</option>
+                      <option value="slack">{t('dashboard.webhooks.channelTypeSlack')}</option>
                     </select>
                   </div>
 
                   {channelType === 'slack' && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-200 mb-1">
-                        Slack Webhook URL
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        {t('dashboard.webhooks.slackWebhookUrlLabel')}
                       </label>
                       <input
                         type="url"
                         value={channelConfig.webhookUrl}
                         onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
                         placeholder="https://hooks.slack.com/services/..."
-                        className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground"
                       />
                     </div>
                   )}
 
                   {channelType === 'email' as any && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-200 mb-1">
-                        Email Address
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        {t('dashboard.webhooks.emailAddressLabel')}
                       </label>
                       <input
                         type="email"
                         value={channelConfig.webhookUrl}
                         onChange={(e) => setChannelConfig({ ...channelConfig, webhookUrl: e.target.value })}
                         placeholder="team@example.com"
-                        className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-800 text-white"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground"
                       />
                     </div>
                   )}
@@ -597,16 +599,16 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setShowCreateChannel(false)}
-                      className="px-4 py-2 text-slate-400 hover:text-slate-200"
+                      className="px-4 py-2 text-muted-foreground hover:text-foreground"
                     >
-                      Cancel
+                      {t('dashboard.webhooks.cancel')}
                     </button>
                     <button
                       onClick={createNotificationChannel}
                       disabled={!channelName || !channelConfig.webhookUrl}
-                      className="px-4 py-2 bg-sky-900/200 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Add Channel
+                      {t('dashboard.webhooks.addChannel')}
                     </button>
                   </div>
                 </div>
@@ -615,23 +617,23 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
 
             {/* Channels List */}
             {loadingChannels ? (
-              <div className="text-center py-8 text-slate-400">Loading channels…</div>
+              <div className="text-center py-8 text-muted-foreground">{t('dashboard.webhooks.loadingChannels')}</div>
             ) : channels.length === 0 ? (
-              <div className="rounded-xl border border-slate-700 bg-slate-800 text-center py-12 px-8">
+              <div className="rounded-lg border border-border bg-card text-center py-12 px-8">
                 <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-blue-900/20 flex items-center justify-center">
-                    <FiBell className="h-6 w-6 text-blue-400" />
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FiBell className="h-6 w-6 text-primary" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-slate-200 mb-1">No notification channels</h3>
-                <p className="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
-                  Connect Slack, Discord, or a generic webhook to receive test result notifications automatically.
+                <h3 className="text-sm font-semibold text-foreground mb-1">{t('dashboard.webhooks.noChannelsTitle')}</h3>
+                <p className="text-xs text-muted-foreground mb-4 max-w-xs mx-auto">
+                  {t('dashboard.webhooks.noChannelsDescription')}
                 </p>
                 <button
                   onClick={() => setShowCreateChannel(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-900/200 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
-                  <FiPlus className="h-3.5 w-3.5" /> Add Channel
+                  <FiPlus className="h-3.5 w-3.5" /> {t('dashboard.webhooks.addChannel')}
                 </button>
               </div>
             ) : (
@@ -639,16 +641,16 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                 {channels.map(channel => (
                   <div
                     key={channel.id}
-                    className="bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-700"
+                    className="bg-card rounded-lg p-4 shadow-sm border border-border"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <FiBell className="text-blue-500" />
                         <div>
-                          <div className="font-medium text-white">
+                          <div className="font-medium text-foreground">
                             {channel.name}
                           </div>
-                          <div className="text-sm text-slate-400 capitalize">
+                          <div className="text-sm text-muted-foreground capitalize">
                             {channel.channelType}
                           </div>
                         </div>
@@ -658,14 +660,14 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
                         <button
                           onClick={() => testNotificationChannel(channel.id)}
                           className="p-2 text-blue-500 hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title="Send test notification"
+                          title={t('dashboard.webhooks.sendTestNotification')}
                         >
                           <FiSend />
                         </button>
                         <button
                           onClick={() => deleteNotificationChannel(channel.id)}
                           className="p-2 text-red-500 hover:bg-red-900/20 rounded-lg transition-colors"
-                          title="Delete channel"
+                          title={t('dashboard.webhooks.deleteChannel')}
                         >
                           <FiTrash2 />
                         </button>
@@ -682,66 +684,66 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {activeTab === 'logs' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-white">
-                Recent Activity
+              <h2 className="text-lg font-semibold text-foreground">
+                {t('dashboard.webhooks.recentActivity')}
               </h2>
               <button
                 onClick={loadWebhookLogs}
-                className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-slate-200"
+                className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground"
               >
-                <FiRefreshCw /> Refresh
+                <FiRefreshCw /> {t('dashboard.webhooks.refresh')}
               </button>
             </div>
 
             {loadingLogs ? (
-              <div className="text-center py-8 text-slate-400">Loading logs…</div>
+              <div className="text-center py-8 text-muted-foreground">{t('dashboard.webhooks.loadingLogs')}</div>
             ) : logs.length === 0 ? (
-              <div className="rounded-xl border border-slate-700 bg-slate-800 text-center py-12 px-8">
+              <div className="rounded-lg border border-border bg-card text-center py-12 px-8">
                 <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center">
-                    <FiActivity className="h-6 w-6 text-slate-500" />
+                  <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                    <FiActivity className="h-6 w-6 text-muted-foreground" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-slate-200 mb-1">No activity yet</h3>
-                <p className="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
-                  Activity will appear here once your API key is used to trigger a test run.
+                <h3 className="text-sm font-semibold text-foreground mb-1">{t('dashboard.webhooks.noActivityTitle')}</h3>
+                <p className="text-xs text-muted-foreground mb-4 max-w-xs mx-auto">
+                  {t('dashboard.webhooks.noActivityDescription')}
                 </p>
               </div>
             ) : (
-              <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+              <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-slate-900">
+                  <thead className="bg-muted">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
-                        Endpoint
+                      <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+                        {t('dashboard.webhooks.endpoint')}
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
-                        Status
+                      <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+                        {t('dashboard.webhooks.status')}
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
-                        Duration
+                      <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+                        {t('dashboard.webhooks.duration')}
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">
-                        Time
+                      <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+                        {t('dashboard.webhooks.time')}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700">
+                  <tbody className="divide-y divide-border">
                     {logs.map(log => (
-                      <tr key={log.id} className="hover:bg-slate-900">
+                      <tr key={log.id} className="hover:bg-muted/50">
                         <td className="px-4 py-3 text-sm">
-                          <span className="text-slate-400 mr-2">{log.method}</span>
-                          <span className="text-white">{log.endpoint}</span>
+                          <span className="text-muted-foreground me-2">{log.method}</span>
+                          <span className="text-foreground">{log.endpoint}</span>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(log.responseStatus)}`}>
                             {log.responseStatus}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-400">
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
                           {log.durationMs}ms
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-400">
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
                           {formatDate(log.createdAt)}
                         </td>
                       </tr>
@@ -754,14 +756,14 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         )}
 
         {/* Documentation Section */}
-        <div className="mt-8 p-6 bg-slate-900 rounded-xl">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <FiExternalLink /> API Documentation
+        <div className="mt-8 p-6 bg-muted rounded-lg">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <FiExternalLink className="rtl:scale-x-[-1]" /> {t('dashboard.webhooks.apiDocumentation')}
           </h3>
           <div className="space-y-4 text-sm">
             <div>
-              <h4 className="font-medium text-slate-200 mb-2">Trigger Retest</h4>
-              <pre className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto">
+              <h4 className="font-medium text-foreground mb-2">{t('dashboard.webhooks.triggerRetest')}</h4>
+              <pre className="bg-muted text-green-400 p-3 rounded-lg overflow-x-auto">
                 {`curl -X POST https://your-domain/api/qa-loop/webhook/retest \\
   -H "X-QALoop-Key: qal_your_api_key" \\
   -H "Content-Type: application/json" \\
@@ -769,8 +771,8 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
               </pre>
             </div>
             <div>
-              <h4 className="font-medium text-slate-200 mb-2">Trigger New Session</h4>
-              <pre className="bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto">
+              <h4 className="font-medium text-foreground mb-2">{t('dashboard.webhooks.triggerNewSession')}</h4>
+              <pre className="bg-muted text-green-400 p-3 rounded-lg overflow-x-auto">
                 {`curl -X POST https://your-domain/api/qa-loop/webhook/trigger \\
   -H "X-QALoop-Key: qal_your_api_key" \\
   -H "Content-Type: application/json" \\
@@ -783,18 +785,18 @@ export const WebhookManagementPage: React.FC<{ embedded?: boolean }> = ({ embedd
         {/* Confirm Dialogs */}
         <ConfirmDialog
           isOpen={revokeConfirm.isOpen}
-          title="Revoke API Key"
-          message="Are you sure you want to revoke this API key? This action cannot be undone."
-          confirmText="Revoke"
+          title={t('dashboard.webhooks.revokeTitle')}
+          message={t('dashboard.webhooks.revokeMessage')}
+          confirmText={t('dashboard.webhooks.revokeConfirm')}
           variant="danger"
           onConfirm={confirmRevokeAPIKey}
           onCancel={() => setRevokeConfirm({isOpen: false, keyId: null})}
         />
         <ConfirmDialog
           isOpen={deleteChannelConfirm.isOpen}
-          title="Delete Notification Channel"
-          message="Are you sure you want to delete this notification channel?"
-          confirmText="Delete"
+          title={t('dashboard.webhooks.deleteChannelTitle')}
+          message={t('dashboard.webhooks.deleteChannelMessage')}
+          confirmText={t('dashboard.webhooks.deleteConfirm')}
           variant="danger"
           onConfirm={confirmDeleteNotificationChannel}
           onCancel={() => setDeleteChannelConfirm({isOpen: false, channelId: null})}

@@ -1,15 +1,16 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
 import axios from 'axios';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 import { AutoFixRepository, AutoFixAttemptEntity } from '../../shared/database/repositories/auto-fix-repository';
 import { GitHubService } from './github-service';
 import { query } from '../../shared/database/connection';
 import { sendAutoFixPREmail } from './email-service';
+import { getPlatformAIModel } from '../utils/ai/get-platform-ai-model';
 
 const logger = createLogger('auto-fix-service');
 
-const qaLoopExecutorUrl =
-  process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+const qaLoopExecutorUrl = env.QA_LOOP_EXECUTOR_URL;
 
 interface BugDetails {
   id: string;
@@ -44,15 +45,21 @@ interface RetestResult {
 
 export class AutoFixService {
   private repository: AutoFixRepository;
-  private anthropic: Anthropic;
+  private aiModel: Awaited<ReturnType<typeof getPlatformAIModel>> | null = null;
 
   constructor() {
     this.repository = new AutoFixRepository();
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY is required for auto-fix service');
+  }
+
+  /**
+   * Lazily resolve the platform AI model on first use.
+   * Throws if no AI provider is configured on the platform.
+   */
+  private async getAIModel() {
+    if (!this.aiModel) {
+      this.aiModel = await getPlatformAIModel();
     }
-    this.anthropic = new Anthropic({ apiKey });
+    return this.aiModel;
   }
 
   /**
@@ -933,17 +940,13 @@ IMPORTANT:
     reasoning: string;
     diff: string;
   }> {
-    const response = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8192,
+    const aiModel = await this.getAIModel();
+    const { text: textContent } = await generateText({
+      model: aiModel,
+      maxOutputTokens: 8192,
       system: 'You are an expert software engineer. You MUST respond with ONLY a valid JSON object. No markdown, no explanation text before or after the JSON. Just the raw JSON object starting with { and ending with }.',
-      messages: [{ role: 'user', content: prompt }],
+      prompt,
     });
-
-    const textContent = response.content
-      .filter((block: any) => block.type === 'text')
-      .map((block: any) => block.text)
-      .join('');
 
     // Parse the JSON response - try multiple extraction strategies
     let parsed: any;

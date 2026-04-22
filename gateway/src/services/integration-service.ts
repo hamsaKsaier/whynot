@@ -1,4 +1,5 @@
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 import {
   IntegrationRepository,
   IntegrationEntity,
@@ -251,7 +252,7 @@ export class IntegrationService {
     // Include video recording link if available
     const videoPath = (bug as any).video_path || (bug as any).session_video_path;
     if (videoPath) {
-      const baseUrl = process.env.FRONTEND_URL || process.env.GATEWAY_URL || 'http://localhost:3010';
+      const baseUrl = env.FRONTEND_URL || env.GATEWAY_URL;
       lines.push('');
       lines.push(`## Video Recording`);
       lines.push(`[Watch session recording](${baseUrl}/api/videos/${videoPath})`);

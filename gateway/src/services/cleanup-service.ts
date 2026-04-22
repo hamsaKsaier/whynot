@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 
 const logger = createLogger('cleanup-service');
 
-const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || path.join(__dirname, '../../screenshots');
-const VISUAL_DIFFS_DIR = process.env.VISUAL_DIFFS_DIR || path.join(__dirname, '../../visual-diffs');
-const RETENTION_DAYS = parseInt(process.env.SCREENSHOT_RETENTION_DAYS || '30', 10);
+const SCREENSHOTS_DIR = env.SCREENSHOTS_DIR || path.join(__dirname, '../../screenshots');
+const VISUAL_DIFFS_DIR = env.VISUAL_DIFFS_DIR || path.join(__dirname, '../../visual-diffs');
+const RETENTION_DAYS = env.SCREENSHOT_RETENTION_DAYS;
 
 /**
  * Delete files in a directory that are older than `retentionDays` days.

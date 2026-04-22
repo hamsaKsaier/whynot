@@ -126,6 +126,13 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
     setSessionBugs(details.bugs || []);
     setSessionPages(details.pages || []);
 
+    // Preserve the WS auth token across refresh/navigation. The server now
+    // returns a fresh wsToken on every GET /sessions/:id, so the live preview
+    // stays connected even if the user reloads the scan page.
+    if (details.wsToken) {
+      setWsToken(details.wsToken);
+    }
+
     if (details.session) {
       const session = details.session;
       const bugs: any[] = details.bugs || [];

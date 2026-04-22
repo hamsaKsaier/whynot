@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiX, FiZap, FiFolder, FiBook, FiPlay } from 'react-icons/fi';
 import { Modal } from '../common/Modal';
 import { OnboardingStep } from './OnboardingStep';
@@ -9,13 +10,14 @@ interface OnboardingFlowProps {
 }
 
 export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
+  const { t } = useTranslation('common');
   const { completeOnboarding } = useOnboarding();
   const [currentStep, setCurrentStep] = useState(0);
 
   const steps = [
     {
-      title: 'Welcome to WhyNot',
-      description: 'AI-powered test automation that converts user stories into executable test cases',
+      title: t('common.onboarding.welcomeTitle'),
+      description: t('common.onboarding.welcomeDescription'),
       content: (
         <div className="space-y-4 text-center">
           <div className="flex justify-center mb-4">
@@ -23,14 +25,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
               <FiZap className="h-12 w-12 text-primary-600" />
             </div>
           </div>
-          <div className="space-y-2 text-left">
+          <div className="space-y-2 text-start">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-6 h-6 bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 font-semibold text-sm">
                 1
               </div>
               <div>
-                <h3 className="font-semibold text-white">Create Projects</h3>
-                <p className="text-sm text-slate-400">Organize your test cases by application or feature</p>
+                <h3 className="font-semibold text-foreground">{t('common.onboarding.createProjects')}</h3>
+                <p className="text-sm text-muted-foreground">{t('common.onboarding.createProjectsDesc')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -38,8 +40,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 2
               </div>
               <div>
-                <h3 className="font-semibold text-white">Add User Stories</h3>
-                <p className="text-sm text-slate-400">Describe what users want to accomplish</p>
+                <h3 className="font-semibold text-foreground">{t('common.onboarding.addUserStories')}</h3>
+                <p className="text-sm text-muted-foreground">{t('common.onboarding.addUserStoriesDesc')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -47,8 +49,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 3
               </div>
               <div>
-                <h3 className="font-semibold text-white">Generate & Run Tests</h3>
-                <p className="text-sm text-slate-400">AI automatically creates and executes test cases</p>
+                <h3 className="font-semibold text-foreground">{t('common.onboarding.generateRunTests')}</h3>
+                <p className="text-sm text-muted-foreground">{t('common.onboarding.generateRunTestsDesc')}</p>
               </div>
             </div>
           </div>
@@ -56,68 +58,68 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       ),
     },
     {
-      title: 'Create Your First Project',
-      description: 'Projects help you organize test cases by application or feature',
+      title: t('common.onboarding.firstProjectTitle'),
+      description: t('common.onboarding.firstProjectDescription'),
       content: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 p-4 bg-blue-900/20 rounded-lg border border-blue-700">
             <FiFolder className="h-8 w-8 text-blue-600 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-white">Example: E-commerce Website</h3>
-              <p className="text-sm text-slate-400 mt-1">
-                A project for testing your online store functionality
+              <h3 className="font-semibold text-foreground">{t('common.onboarding.exampleProject')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('common.onboarding.exampleProjectDesc')}
               </p>
             </div>
           </div>
-          <div className="text-sm text-slate-400 space-y-2">
-            <p>• Click "Projects" in the sidebar to get started</p>
-            <p>• Give your project a name and optional description</p>
-            <p>• Add a website URL if you have one</p>
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>{t('common.onboarding.projectTip1')}</p>
+            <p>{t('common.onboarding.projectTip2')}</p>
+            <p>{t('common.onboarding.projectTip3')}</p>
           </div>
         </div>
       ),
     },
     {
-      title: 'Add User Stories',
-      description: 'User stories describe what users want to accomplish',
+      title: t('common.onboarding.userStoriesTitle'),
+      description: t('common.onboarding.userStoriesDescription'),
       content: (
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-4 bg-green-900/20 rounded-lg border border-green-700">
             <FiBook className="h-8 w-8 text-green-600 flex-shrink-0 mt-1" />
             <div>
-              <h3 className="font-semibold text-white mb-1">Example User Story</h3>
-              <p className="text-sm text-slate-200 italic">
-                "As a user, I want to login to the website so that I can access my account"
+              <h3 className="font-semibold text-foreground mb-1">{t('common.onboarding.exampleUserStory')}</h3>
+              <p className="text-sm text-muted-foreground italic">
+                {t('common.onboarding.exampleUserStoryText')}
               </p>
             </div>
           </div>
-          <div className="text-sm text-slate-400 space-y-2">
-            <p>• Navigate to your project and click "Add User Story"</p>
-            <p>• Write in natural language what the user wants to do</p>
-            <p>• Add additional context if needed</p>
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>{t('common.onboarding.storyTip1')}</p>
+            <p>{t('common.onboarding.storyTip2')}</p>
+            <p>{t('common.onboarding.storyTip3')}</p>
           </div>
         </div>
       ),
     },
     {
-      title: 'Generate & Run Tests',
-      description: 'WhyNot automatically creates test cases from your user stories',
+      title: t('common.onboarding.generateTestsTitle'),
+      description: t('common.onboarding.generateTestsDescription'),
       content: (
         <div className="space-y-4">
           <div className="flex items-center gap-3 p-4 bg-sky-900/20 rounded-lg border border-sky-700">
             <FiPlay className="h-8 w-8 text-sky-600 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-white">AI-Powered Test Generation</h3>
-              <p className="text-sm text-slate-400 mt-1">
-                WhyNot analyzes your user story and creates executable test cases
+              <h3 className="font-semibold text-foreground">{t('common.onboarding.aiTestGeneration')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('common.onboarding.aiTestGenerationDesc')}
               </p>
             </div>
           </div>
-          <div className="text-sm text-slate-400 space-y-2">
-            <p>• Select a project and user story</p>
-            <p>• Click "Generate Tests" to create test cases</p>
-            <p>• Or click "Run Test" to generate and execute immediately</p>
-            <p>• Watch the live browser preview as tests execute</p>
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>{t('common.onboarding.testTip1')}</p>
+            <p>{t('common.onboarding.testTip2')}</p>
+            <p>{t('common.onboarding.testTip3')}</p>
+            <p>{t('common.onboarding.testTip4')}</p>
           </div>
         </div>
       ),
@@ -154,16 +156,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
         {/* Progress Indicator */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-200">
-              Step {currentStep + 1} of {steps.length}
+            <span className="text-sm font-medium text-muted-foreground">
+              {t('common.onboarding.stepOf', { current: currentStep + 1, total: steps.length })}
             </span>
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-muted-foreground">
               {Math.round(((currentStep + 1) / steps.length) * 100)}%
             </span>
           </div>
-          <div className="w-full bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-2">
             <div
-              className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary-600 h-2 rounded-full transition-colors duration-150"
               style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
             />
           </div>

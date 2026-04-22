@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiMoreVertical, FiEdit, FiTrash2, FiCopy, FiShare2 } from 'react-icons/fi';
 
 export interface QuickAction {
@@ -22,6 +23,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   position = 'bottom-right',
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,19 +143,19 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="p-2 rounded-lg hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-        aria-label="More actions"
+        className="p-2 rounded-lg hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label={t('common.aria.moreActions')}
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
-        {trigger || <FiMoreVertical className="h-4 w-4 text-slate-400" />}
+        {trigger || <FiMoreVertical className="h-4 w-4 text-muted-foreground" />}
       </button>
 
       {isOpen && (
         <>
           <div
             ref={menuRef}
-            className="absolute z-50 mt-1 w-48 bg-slate-800 rounded-lg shadow-lg border border-slate-700 py-1"
+            className="absolute z-50 mt-1 w-48 bg-popover rounded-lg shadow-sm border border-border py-1"
             style={{
               top: `${menuPosition.top}px`,
               left: `${menuPosition.left}px`,
@@ -173,12 +175,12 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
                 className={`
                   w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors
                   ${action.disabled
-                    ? 'text-slate-500 cursor-not-allowed'
+                    ? 'text-muted-foreground cursor-not-allowed'
                     : action.variant === 'danger'
-                    ? 'text-red-600 hover:bg-red-900/20'
-                    : 'text-slate-200 hover:bg-slate-900'
+                    ? 'text-destructive hover:bg-destructive/10'
+                    : 'text-popover-foreground hover:bg-muted'
                   }
-                  ${focusedIndex === index ? 'bg-slate-900' : ''}
+                  ${focusedIndex === index ? 'bg-muted' : ''}
                 `}
                 role="menuitem"
                 tabIndex={action.disabled ? -1 : 0}

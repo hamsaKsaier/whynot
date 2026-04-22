@@ -46,23 +46,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <div className={`text-center ${config.padding} ${className}`}>
       <div className="flex justify-center mb-4">
-        <div className={`${config.icon} text-slate-500 flex items-center justify-center`}>
+        <div className={`${config.icon} text-muted-foreground flex items-center justify-center`}>
           {icon != null && typeof icon === 'object' && 'type' in icon ? (
             React.cloneElement(icon as React.ReactElement, {
-              className: `${config.icon} text-slate-500`,
+              className: `${config.icon} text-muted-foreground`,
             })
           ) : (
             icon
           )}
         </div>
       </div>
-      <h3 className={`mt-2 ${config.title} font-semibold text-white`}>{title}</h3>
-      <p className={`mt-2 ${config.description} text-slate-400 max-w-md mx-auto leading-relaxed`}>
+      <h3 className={`mt-2 ${config.title} font-semibold text-foreground`}>{title}</h3>
+      <p className={`mt-2 ${config.description} text-muted-foreground max-w-md mx-auto leading-relaxed`}>
         {description}
       </p>
       {tip && (
         <div className="mt-4 max-w-md mx-auto">
-          <p className={`${config.description} text-slate-400 italic bg-slate-900 rounded-lg px-4 py-2 inline-block`}>
+          <p className={`${config.description} text-muted-foreground italic bg-muted rounded-lg px-4 py-2 inline-block`}>
             💡 {tip}
           </p>
         </div>

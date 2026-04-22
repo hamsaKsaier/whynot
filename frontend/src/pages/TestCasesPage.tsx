@@ -1,14 +1,37 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiPlay, FiEdit, FiTrash2, FiSave, FiX, FiGlobe, FiSearch, FiFilter } from 'react-icons/fi';
-import { Card } from '../components/common/Card';
-import { Button } from '../components/common/Button';
-import { Alert } from '../components/common/Alert';
-import { ConfirmDialog } from '../components/common/ConfirmDialog';
-
-import { EmptyState } from '../components/common/EmptyState';
-import { SkeletonCard } from '../components/common/SkeletonCard';
-import { QuickActions } from '../components/common/QuickActions';
+import { useTranslation } from 'react-i18next';
+import { Plus, Play, Pencil, Trash2, Save, X, Globe, Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Skeleton } from '../components/ui/skeleton';
+import { Separator } from '../components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '../components/ui/sheet';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { cn } from '../lib/utils';
 import { useToastContext } from '../contexts/ToastContext';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getTestCases, updateTestCase, deleteTestCase, executeTest } from '../services/api';
@@ -17,6 +40,7 @@ import type { TestCase } from '../types';
 export const TestCasesContent: React.FC = () => <TestCasesPage embedded />;
 
 export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t } = useTranslation('results');
   const { success, error: showError } = useToastContext();
   const { optimisticUpdate, optimisticDelete } = useOptimisticUpdate<TestCase>();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -47,7 +71,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
       const response = await getTestCases();
       setTestCases(response.test_cases);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to fetch test cases');
+      setError(err.response?.data?.error || err.message || t('results.testCases.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -84,8 +108,8 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
           description: editDescription,
         }),
         {
-          successMessage: 'Test case updated successfully',
-          errorMessage: 'Failed to update test case',
+          successMessage: t('results.testCases.updated'),
+          errorMessage: t('results.testCases.updateError'),
         }
       );
       setTestCases(updatedTestCases);
@@ -93,7 +117,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
       setEditName('');
       setEditDescription('');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to update test case';
+      const errorMessage = err.response?.data?.error || err.message || t('results.testCases.updateError');
       setError(errorMessage);
     }
   };
@@ -111,14 +135,14 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         deleteConfirm.testCase.id,
         () => deleteTestCase(deleteConfirm.testCase!.id),
         {
-          successMessage: 'Test case deleted successfully',
-          errorMessage: 'Failed to delete test case',
+          successMessage: t('results.testCases.deleted'),
+          errorMessage: t('results.testCases.deleteError'),
         }
       );
       setTestCases(updatedTestCases);
       setDeleteConfirm({ isOpen: false, testCase: null });
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to delete test case';
+      const errorMessage = err.response?.data?.error || err.message || t('results.testCases.deleteError');
       setError(errorMessage);
       setDeleteConfirm({ isOpen: false, testCase: null });
     }
@@ -133,7 +157,7 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
         navigate(`/test-runs/${result.execution_id}`);
       }
     } catch (err: any) {
-      showError(err.response?.data?.error || err.message || 'Failed to run test');
+      showError(err.response?.data?.error || err.message || t('results.testCases.runError'));
       setRunningTestId(null);
     }
   };
@@ -168,137 +192,230 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
   return (
     <div>
       {!embedded && (
-        <div className="page-header flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
           <div>
-            <h1 className="page-title">Test Cases</h1>
-            <p className="page-subtitle">Manage and execute your saved test cases</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{t('results.testCases.title')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('results.testCases.subtitle')}</p>
           </div>
-          <Button
-            className="flex items-center space-x-2"
-            onClick={() => navigate('/qa-loop')}
-          >
-            <FiPlus className="h-4 w-4" />
-            <span>New Test Case</span>
+          <Button onClick={() => navigate('/qa-loop')} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 me-2" />
+            {t('results.testCases.new')}
           </Button>
         </div>
       )}
 
-      {/* Filter bar — only shown when there are test cases */}
+      {/* Filter bar -- only shown when there are test cases */}
       {testCases.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-900 rounded-xl border border-slate-700">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[180px]">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or URL…"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400"
-            />
+        <>
+          {/* Desktop: inline filter bar */}
+          <div className="hidden md:flex flex-wrap items-center gap-3 mb-4 p-3 bg-muted rounded-lg border border-border">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('results.testCases.searchPlaceholder')}
+                className="ps-9"
+              />
+            </div>
+            {uniqueDomains.length > 0 && (
+              <Select value={domainFilter} onValueChange={setDomainFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder={t('results.testCases.allDomains')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t('results.testCases.allDomains')}</SelectItem>
+                  {uniqueDomains.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder={t('results.testCases.allStatuses')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('results.testCases.allStatuses')}</SelectItem>
+                <SelectItem value="passed">{t('results.passed')}</SelectItem>
+                <SelectItem value="failed">{t('results.failed')}</SelectItem>
+                <SelectItem value="not_run">{t('results.testCases.notRun')}</SelectItem>
+              </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+              >
+                <X className="h-3 w-3 me-1" />
+                {t('results.testCases.clear')}
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ms-auto">
+              {filteredTestCases.length} of {testCases.length}
+            </span>
           </div>
 
-          {/* Domain filter */}
-          {uniqueDomains.length > 0 && (
-            <select
-              value={domainFilter}
-              onChange={(e) => setDomainFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400 text-slate-200"
-            >
-              <option value="">All domains</option>
-              {uniqueDomains.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          )}
-
-          {/* Status filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-3 py-2 text-sm border border-slate-700 rounded-lg bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-400 text-slate-200"
-          >
-            <option value="all">All statuses</option>
-            <option value="passed">Passed</option>
-            <option value="failed">Failed</option>
-            <option value="not_run">Not run</option>
-          </select>
-
-          {/* Clear filters */}
-          {hasActiveFilters && (
-            <button
-              onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-900 transition-colors"
-            >
-              <FiX className="h-3 w-3" /> Clear
-            </button>
-          )}
-
-          {/* Result count */}
-          <span className="text-xs text-slate-500 ml-auto">
-            {filteredTestCases.length} of {testCases.length}
-          </span>
-        </div>
+          {/* Mobile: search + filter drawer */}
+          <div className="md:hidden mb-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  inputMode="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('results.testCases.searchPlaceholder')}
+                  className="ps-9"
+                />
+              </div>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 relative">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {hasActiveFilters && (
+                      <span className="absolute -top-1 -end-1 w-2.5 h-2.5 bg-primary rounded-full" />
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="rounded-t-lg">
+                  <SheetHeader>
+                    <SheetTitle>{t('results.testCases.filters', { defaultValue: 'Filters' })}</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 py-4">
+                    {uniqueDomains.length > 0 && (
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">
+                          {t('results.testCases.allDomains')}
+                        </label>
+                        <Select value={domainFilter} onValueChange={setDomainFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('results.testCases.allDomains')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">{t('results.testCases.allDomains')}</SelectItem>
+                            {uniqueDomains.map((d) => (
+                              <SelectItem key={d} value={d}>{d}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">
+                        {t('results.testCases.allStatuses')}
+                      </label>
+                      <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('results.testCases.allStatuses')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t('results.testCases.allStatuses')}</SelectItem>
+                          <SelectItem value="passed">{t('results.passed')}</SelectItem>
+                          <SelectItem value="failed">{t('results.failed')}</SelectItem>
+                          <SelectItem value="not_run">{t('results.testCases.notRun')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {hasActiveFilters && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+                      >
+                        <X className="h-3 w-3 me-1" />
+                        {t('results.testCases.clear')}
+                      </Button>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {filteredTestCases.length} of {testCases.length}
+              </span>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+                >
+                  {t('results.testCases.clearFilters')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {error && (
-        <Alert
-          type="error"
-          title="Error"
-          message={error}
-          suggestions={[
-            'Check your network connection',
-            'Verify that the test case still exists',
-            'Try refreshing the page',
-          ]}
-          actions={[
-            {
-              label: 'Retry',
-              onClick: () => {
-                setError(null);
-                fetchTestCases();
-              },
-              variant: 'primary',
-            },
-            {
-              label: 'Dismiss',
-              onClick: () => setError(null),
-              variant: 'secondary',
-            },
-          ]}
-          onClose={() => setError(null)}
-        />
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setError(null); fetchTestCases(); }}>
+                {t('results.testCases.retry')}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+                {t('results.testCases.dismiss')}
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {loading && testCases.length === 0 ? (
-        <div className="card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <SkeletonCard count={3} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-1/2" />
+                <Separator />
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : testCases.length === 0 ? (
         <Card>
-          <EmptyState
-            icon={<FiPlay />}
-            title="No test cases yet"
-            description="Test cases are generated from user stories. Create a project and add user stories to get started"
-            action={
-              <Button onClick={() => navigate('/qa-loop')}>
-                <FiPlus className="mr-2" />
-                Create Your First Test Case
-              </Button>
-            }
-            tip="Tip: Navigate to a project, add a user story, then generate test cases"
-          />
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Play className="h-8 w-8 text-muted-foreground mb-3" />
+            <h3 className="font-semibold text-foreground mb-1">{t('results.testCases.emptyTitle')}</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
+              {t('results.testCases.emptyDescription')}
+            </p>
+            <Button onClick={() => navigate('/qa-loop')}>
+              <Plus className="h-4 w-4 me-2" />
+              {t('results.testCases.createFirst')}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-3">
+              {t('results.testCases.emptyTip')}
+            </p>
+          </CardContent>
         </Card>
       ) : filteredTestCases.length === 0 ? (
-        <Card className="text-center py-12">
-          <FiFilter className="h-8 w-8 text-slate-500 mx-auto mb-3" />
-          <p className="text-slate-400 text-sm mb-2">No test cases match your filters</p>
-          <button
-            onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-          >
-            Clear filters
-          </button>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Filter className="h-8 w-8 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground text-sm mb-2">{t('results.testCases.noMatch')}</p>
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => { setSearchQuery(''); setDomainFilter(''); setStatusFilter('all'); }}
+            >
+              {t('results.testCases.clearFilters')}
+            </Button>
+          </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -307,100 +424,124 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
             const isRunning = runningTestId === testCase.id;
 
             return (
-              <Card key={testCase.id} className="p-4" hoverable>
-                {isEditing ? (
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Test case name"
-                    />
-                    <textarea
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                      rows={3}
-                      placeholder="Description"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleSaveEdit(testCase.id)}
-                        className="flex-1"
-                      >
-                        <FiSave className="mr-1" />
-                        Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={handleCancelEdit}
-                        className="flex-1"
-                      >
-                        <FiX className="mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="font-semibold text-white mb-2">{testCase.name}</h3>
-                    <p className="text-sm text-slate-400 mb-3 line-clamp-2">
-                      {testCase.description || 'No description'}
-                    </p>
-                    <div className="flex items-center text-xs text-slate-400 mb-3">
-                      <FiGlobe className="h-3 w-3 mr-1" />
-                      <span className="truncate">{testCase.website_url}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-700">
-                      <span className="text-xs text-slate-400">
-                        {testCase.steps.length} step{testCase.steps.length !== 1 ? 's' : ''}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleRunTest(testCase)}
-                          disabled={isRunning}
-                          className="p-2 rounded hover:bg-slate-900 transition-colors disabled:opacity-50"
-                          title="Run test"
+              <Card key={testCase.id} className="hover:bg-muted/50 transition-colors duration-150">
+                <CardContent className="p-4">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder={t('results.testCases.namePlaceholder')}
+                      />
+                      <Textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        rows={3}
+                        placeholder={t('results.testCases.descriptionPlaceholder')}
+                        className="resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveEdit(testCase.id)}
+                          className="flex-1"
                         >
-                          <FiPlay className={`h-4 w-4 ${isRunning ? 'text-slate-500' : 'text-primary-600'}`} />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(testCase)}
-                          className="p-2 rounded hover:bg-slate-900 transition-colors"
-                          title="Edit"
+                          <Save className="h-4 w-4 me-1" />
+                          {t('results.testCases.save')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={handleCancelEdit}
+                          className="flex-1"
                         >
-                          <FiEdit className="h-4 w-4 text-slate-400" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(testCase)}
-                          className="p-2 rounded hover:bg-slate-900 transition-colors"
-                          title="Delete"
-                        >
-                          <FiTrash2 className="h-4 w-4 text-red-600" />
-                        </button>
+                          <X className="h-4 w-4 me-1" />
+                          {t('results.testCases.cancel')}
+                        </Button>
                       </div>
                     </div>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <h3 className="font-semibold text-foreground mb-2">{testCase.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {testCase.description || t('results.testCases.noDescription')}
+                      </p>
+                      <div className="flex items-center text-xs text-muted-foreground mb-3">
+                        <Globe className="h-3 w-3 me-1" />
+                        <span className="truncate">{testCase.website_url}</span>
+                      </div>
+                      <Separator className="mb-3" />
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {t('results.testCases.stepsCount', { count: testCase.steps.length })}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleRunTest(testCase)}
+                            disabled={isRunning}
+                            title={t('results.testCases.runTest')}
+                          >
+                            <Play className={cn('h-4 w-4', isRunning ? 'text-muted-foreground' : 'text-primary')} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(testCase)}
+                            title={t('results.testCases.edit')}
+                          >
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteClick(testCase)}
+                            title={t('results.testCases.delete')}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
               </Card>
             );
           })}
         </div>
       )}
 
-      <ConfirmDialog
-        isOpen={deleteConfirm.isOpen}
-        title="Delete Test Case"
-        message={`Are you sure you want to delete "${deleteConfirm.testCase?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeleteConfirm({ isOpen: false, testCase: null })}
-      />
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={deleteConfirm.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirm({ isOpen: false, testCase: null });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('results.testCases.deleteTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('results.testCases.deleteConfirm', { name: deleteConfirm.testCase?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteConfirm({ isOpen: false, testCase: null })}
+            >
+              {t('results.testCases.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              {t('results.testCases.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

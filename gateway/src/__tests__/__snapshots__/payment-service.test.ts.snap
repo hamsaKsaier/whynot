@@ -1,0 +1,34 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Error envelope snapshots > card declined envelope 1`] = `
+{
+  "code": "CARD_DECLINED",
+  "message": "Your card was declined",
+  "provider": "stripe",
+  "providerCode": "card_declined",
+  "retryable": false,
+  "statusCode": 402,
+}
+`;
+
+exports[`Error envelope snapshots > network error envelope 1`] = `
+{
+  "code": "NETWORK_ERROR",
+  "message": "connect ECONNREFUSED",
+  "provider": "stripe",
+  "providerCode": undefined,
+  "retryable": true,
+  "statusCode": undefined,
+}
+`;
+
+exports[`Error envelope snapshots > provider error envelope 1`] = `
+{
+  "code": "PROVIDER_ERROR",
+  "message": "Internal server error",
+  "provider": "stripe",
+  "providerCode": undefined,
+  "retryable": true,
+  "statusCode": 500,
+}
+`;

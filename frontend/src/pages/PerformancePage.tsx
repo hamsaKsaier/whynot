@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiClock, FiCheckCircle, FiXCircle, FiAlertCircle, FiLoader, FiColumns } from 'react-icons/fi';
 import { TestConfig } from '../components/Performance/TestConfig';
 import { ResultsDashboard } from '../components/Performance/ResultsDashboard';
@@ -8,6 +9,7 @@ import { startPerfRun, stopPerfRun, getPerfRuns } from '../services/perf-api';
 import type { PerfRunConfig, PerfRun } from '../services/perf-api';
 
 export const PerformancePage: React.FC = () => {
+  const { t } = useTranslation('runner');
   const [isRunning, setIsRunning] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [currentTestType, setCurrentTestType] = useState<string>('load');
@@ -64,7 +66,7 @@ export const PerformancePage: React.FC = () => {
       setIsRunning(true);
       perfStream.connect(response.runId);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to start test');
+      setError(err.response?.data?.error || err.message || t('runner.performance.startError'));
     }
   };
 
@@ -75,7 +77,7 @@ export const PerformancePage: React.FC = () => {
       setIsRunning(false);
       loadPastRuns();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to stop test');
+      setError(err.response?.data?.error || t('runner.performance.stopError'));
     }
   };
 
@@ -135,28 +137,28 @@ export const PerformancePage: React.FC = () => {
       : runId === selectedPastRun?.id;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-[1600px] mx-auto px-6 py-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Performance Testing</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Run load, stress, spike, and smoke tests against your APIs
+          <h1 className="text-2xl font-bold text-foreground">{t('runner.performance.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t('runner.performance.subtitle')}
           </p>
         </div>
 
         {error && (
           <div className="mb-4 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center justify-between">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-300 text-xs ml-4">Dismiss</button>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-300 text-xs ms-4">{t('runner.performance.dismiss')}</button>
           </div>
         )}
 
         {/* Main Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
           {/* Left — Configuration */}
-          <div className="bg-[#1e293b]/50 border border-[#334155] rounded-xl p-5">
-            <h2 className="text-sm font-medium text-slate-300 mb-4">Test Configuration</h2>
+          <div className="bg-card/50 border border-border rounded-lg p-5">
+            <h2 className="text-sm font-medium text-muted-foreground mb-4">{t('runner.performance.testConfiguration')}</h2>
             <TestConfig onRun={handleRun} isRunning={isRunning} />
           </div>
 
@@ -178,10 +180,10 @@ export const PerformancePage: React.FC = () => {
               <div className="mb-4 px-4 py-3 bg-sky-500/10 border border-sky-500/30 rounded-lg text-sky-400 text-sm flex items-center justify-between">
                 <span>
                   {!compareRunA
-                    ? 'Select the first run to compare'
-                    : 'Now select the second run to compare'}
+                    ? t('runner.performance.selectFirstRun')
+                    : t('runner.performance.selectSecondRun')}
                 </span>
-                <button onClick={() => { setCompareMode(false); setCompareRunA(null); setCompareRunB(null); }} className="text-sky-500 hover:text-sky-300 text-xs">Cancel</button>
+                <button onClick={() => { setCompareMode(false); setCompareRunA(null); setCompareRunB(null); }} className="text-sky-500 hover:text-sky-300 text-xs">{t('runner.performance.cancel')}</button>
               </div>
             )}
 
@@ -204,7 +206,7 @@ export const PerformancePage: React.FC = () => {
             {/* Past Runs */}
             <div className="mt-6">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-slate-300">Previous Runs</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">{t('runner.performance.previousRuns')}</h3>
                 {pastRuns.filter(r => r.status === 'completed').length >= 2 && (
                   <button
                     onClick={() => {
@@ -221,24 +223,24 @@ export const PerformancePage: React.FC = () => {
                     className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition-colors ${
                       compareMode
                         ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
-                        : 'text-slate-500 hover:text-slate-300 border border-[#334155] hover:border-slate-500'
+                        : 'text-muted-foreground hover:text-foreground border border-border hover:border-muted-foreground'
                     }`}
                   >
                     <FiColumns className="h-3 w-3" />
-                    {compareMode ? 'Comparing...' : 'Compare'}
+                    {compareMode ? t('runner.performance.comparing') : t('runner.performance.compare')}
                   </button>
                 )}
               </div>
 
               {pastRunsLoading && pastRuns.length === 0 && (
-                <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                   <FiLoader className="h-4 w-4 animate-spin" />
-                  Loading previous runs...
+                  {t('runner.performance.loadingRuns')}
                 </div>
               )}
 
               {!pastRunsLoading && pastRuns.length === 0 && (
-                <p className="text-sm text-slate-600 py-4">No previous runs yet. Run your first test above!</p>
+                <p className="text-sm text-muted-foreground py-4">{t('runner.performance.noRunsYet')}</p>
               )}
 
               <div className="space-y-2">
@@ -246,35 +248,35 @@ export const PerformancePage: React.FC = () => {
                   <button
                     key={run.id}
                     onClick={() => handleSelectPastRun(run)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors text-left ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors text-start ${
                       isRunSelected(run.id)
                         ? 'bg-sky-500/10 border-sky-500/30'
-                        : 'bg-[#1e293b] border-[#334155] hover:border-slate-500'
+                        : 'bg-card border-border hover:border-muted-foreground'
                     }`}
                   >
                     {statusIcon(run.status)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white capitalize">
-                          {run.test_type} Test
+                        <span className="text-sm font-medium text-foreground capitalize">
+                          {t('runner.performance.testTypeLabel', { type: run.test_type })}
                         </span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted-foreground">
                           {formatDate(run.created_at)}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-500 truncate mt-0.5">
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">
                         {run.target_url}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-end flex-shrink-0">
                       {run.total_requests != null && (
-                        <div className="text-xs text-slate-400">
-                          {run.total_requests.toLocaleString()} req
+                        <div className="text-xs text-muted-foreground">
+                          {t('runner.performance.requestCount', { count: run.total_requests, formattedCount: run.total_requests.toLocaleString() })}
                         </div>
                       )}
                       {run.avg_response_time_ms != null && (
-                        <div className="text-xs text-slate-500">
-                          {Math.round(run.avg_response_time_ms)}ms avg
+                        <div className="text-xs text-muted-foreground">
+                          {t('runner.performance.avgResponseTime', { ms: Math.round(run.avg_response_time_ms) })}
                         </div>
                       )}
                     </div>

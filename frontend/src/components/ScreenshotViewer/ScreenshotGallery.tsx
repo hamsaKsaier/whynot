@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiX, FiDownload, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 interface ScreenshotGalleryProps {
@@ -12,6 +13,7 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
   stepIds = [],
   onClose,
 }) => {
+  const { t } = useTranslation('results');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -61,10 +63,10 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
         {screenshots.map((screenshot, index) => (
           <div
             key={index}
-            className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+            className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-colors ${
               selectedIndex === index
-                ? 'border-primary-500 ring-2 ring-primary-200'
-                : 'border-slate-700 hover:border-slate-600'
+                ? 'border-primary-500 ring-1 ring-primary'
+                : 'border-border hover:border-muted-foreground'
             }`}
             onClick={() => {
               setSelectedIndex(index);
@@ -73,17 +75,17 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
           >
             <img
               src={getScreenshotUrl(screenshot)}
-              alt={`Screenshot ${index + 1}`}
+              alt={t('results.screenshot.altImage', { index: index + 1 })}
               className="w-full h-32 object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage not found%3C/text%3E%3C/svg%3E';
               }}
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2">
+            <div className="absolute bottom-0 start-0 end-0 bg-foreground/50 text-background text-xs p-2">
               {stepIds[index] || `Step ${index + 1}`}
             </div>
             {selectedIndex === index && (
-              <div className="absolute top-2 right-2 bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+              <div className="absolute top-2 end-2 bg-primary-600 text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                 {index + 1}
               </div>
             )}
@@ -94,17 +96,17 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
       {/* Lightbox Modal */}
       {isLightboxOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-foreground/90 z-50 flex items-center justify-center p-4"
           onClick={() => setIsLightboxOpen(false)}
         >
           <div className="relative max-w-7xl max-h-full" onClick={(e) => e.stopPropagation()}>
             {/* Close Button */}
             <button
               onClick={() => setIsLightboxOpen(false)}
-              className="absolute top-4 right-4 z-10 bg-slate-800 rounded-full p-2 hover:bg-slate-800 transition-colors"
-              aria-label="Close"
+              className="absolute top-4 end-4 z-10 bg-card rounded-full p-2 hover:bg-muted transition-colors"
+              aria-label={t('results.screenshot.close')}
             >
-              <FiX className="h-6 w-6 text-white" />
+              <FiX className="h-6 w-6 text-foreground" />
             </button>
 
             {/* Navigation Buttons */}
@@ -112,17 +114,17 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
               <>
                 <button
                   onClick={prevScreenshot}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-slate-800 rounded-full p-3 hover:bg-slate-800 transition-colors"
-                  aria-label="Previous"
+                  className="absolute start-4 top-1/2 -translate-y-1/2 z-10 bg-card rounded-full p-3 hover:bg-muted transition-colors"
+                  aria-label={t('results.screenshot.previous')}
                 >
-                  <FiChevronLeft className="h-6 w-6 text-white" />
+                  <FiChevronLeft className="h-6 w-6 text-foreground rtl:scale-x-[-1]" />
                 </button>
                 <button
                   onClick={nextScreenshot}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-slate-800 rounded-full p-3 hover:bg-slate-800 transition-colors"
-                  aria-label="Next"
+                  className="absolute end-4 top-1/2 -translate-y-1/2 z-10 bg-card rounded-full p-3 hover:bg-muted transition-colors"
+                  aria-label={t('results.screenshot.next')}
                 >
-                  <FiChevronRight className="h-6 w-6 text-white" />
+                  <FiChevronRight className="h-6 w-6 text-foreground rtl:scale-x-[-1]" />
                 </button>
               </>
             )}
@@ -130,24 +132,24 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
             {/* Screenshot */}
             <img
               src={getScreenshotUrl(currentScreenshot)}
-              alt={`Screenshot ${selectedIndex + 1}`}
+              alt={t('results.screenshot.altImage', { index: selectedIndex + 1 })}
               className="max-w-full max-h-[90vh] object-contain rounded-lg"
             />
 
             {/* Info Bar */}
-            <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-75 text-white rounded-lg p-4 flex items-center justify-between">
+            <div className="absolute bottom-4 start-4 end-4 bg-foreground/75 text-background rounded-lg p-4 flex items-center justify-between">
               <div>
                 <p className="font-medium">{currentStepId}</p>
-                <p className="text-sm text-slate-400">
-                  {selectedIndex + 1} of {screenshots.length}
+                <p className="text-sm text-muted-foreground">
+                  {t('results.screenshot.indexOfTotal', { current: selectedIndex + 1, total: screenshots.length })}
                 </p>
               </div>
               <button
                 onClick={() => downloadScreenshot(getScreenshotUrl(currentScreenshot), `screenshot-${selectedIndex + 1}.png`)}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-card text-foreground rounded-lg hover:bg-muted transition-colors"
               >
                 <FiDownload className="h-4 w-4" />
-                <span className="text-sm font-medium">Download</span>
+                <span className="text-sm font-medium">{t('results.screenshot.download')}</span>
               </button>
             </div>
           </div>
@@ -161,12 +163,12 @@ export const ScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({
             <button
               key={index}
               onClick={() => setSelectedIndex(index)}
-              className={`w-2 h-2 rounded-full transition-all ${
+              className={`w-2 h-2 rounded-full transition-opacity ${
                 selectedIndex === index
                   ? 'bg-primary-600 w-8'
-                  : 'bg-slate-600 hover:bg-slate-500'
+                  : 'bg-muted-foreground hover:bg-foreground'
               }`}
-              aria-label={`Go to screenshot ${index + 1}`}
+              aria-label={t('results.screenshot.goTo', { index: index + 1 })}
             />
           ))}
         </div>

@@ -1,0 +1,90 @@
+{
+  "plans": {
+    "title": "Plans",
+    "newPlan": "Nouveau plan",
+    "editPlan": "Modifier le plan",
+    "createPlan": "Cr\u00e9er un plan",
+    "saveChanges": "Enregistrer les modifications",
+    "archivePlan": "Archiver le plan",
+    "archiveDescription": "\u00cates-vous s\u00fbr de vouloir archiver \u00ab\u00a0{{name}}\u00a0\u00bb\u00a0? Les abonn\u00e9s existants ne seront pas affect\u00e9s, mais les nouveaux abonnements seront d\u00e9sactiv\u00e9s.",
+    "archive": "Archiver",
+    "restore": "Restaurer",
+    "syncStripe": "Synchroniser avec Stripe",
+    "syncStripeFailed": "\u00c9chec de la synchronisation Stripe\u00a0: {{error}}",
+    "noPlans": "Aucun plan cr\u00e9\u00e9 pour le moment.",
+    "details": "D\u00e9tails",
+    "featureFlags": "Feature flags",
+    "free": "Gratuit",
+    "priceInterval": "{{price}}/{{interval}}",
+    "creditsCount": "{{count}} cr\u00e9dits",
+    "trialDays": "Essai de {{days}} jours",
+    "subscriberCount": "{{count}} abonn\u00e9(s)",
+    "breadcrumbs": {
+      "plans": "Plans",
+      "new": "Nouveau"
+    },
+    "fields": {
+      "name": "Nom",
+      "slug": "Slug",
+      "description": "Description",
+      "price": "Prix ($)",
+      "billingInterval": "Intervalle de facturation",
+      "creditsPerPeriod": "Cr\u00e9dits / P\u00e9riode",
+      "trialDays": "Jours d'essai",
+      "sortOrder": "Ordre d'affichage",
+      "public": "Public",
+      "enterprise": "Entreprise",
+      "featureKey": "Cl\u00e9",
+      "featureValue": "Valeur"
+    },
+    "intervals": {
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "oneTime": "Unique"
+    },
+    "badges": {
+      "archived": "Archiv\u00e9",
+      "hidden": "Masqu\u00e9",
+      "custom": "Personnalis\u00e9"
+    }
+  },
+  "subscriptions": {
+    "title": "Abonnements",
+    "totalCount": "{{count}} au total",
+    "allStatuses": "Tous les statuts",
+    "noSubscriptions": "Aucun abonnement trouv\u00e9",
+    "columns": {
+      "workspace": "Espace de travail",
+      "owner": "Propri\u00e9taire",
+      "plan": "Plan",
+      "status": "Statut",
+      "credits": "Cr\u00e9dits",
+      "periodEnd": "Fin de p\u00e9riode"
+    },
+    "statuses": {
+      "active": "Actif",
+      "trialing": "En essai",
+      "pastDue": "En retard de paiement",
+      "canceled": "Annul\u00e9"
+    }
+  },
+  "credits": {
+    "title": "Cr\u00e9dits",
+    "description": "Soldes de cr\u00e9dits de tous les utilisateurs",
+    "grantCredits": "Attribuer des cr\u00e9dits",
+    "grantDescription": "Attribuer des cr\u00e9dits \u00e0 un espace de travail sp\u00e9cifique.",
+    "grant": "Attribuer",
+    "defaultGrantDescription": "Attribution group\u00e9e par l'administrateur",
+    "workspaceId": "ID de l'espace de travail",
+    "amount": "Montant",
+    "descriptionLabel": "Description",
+    "reasonPlaceholder": "Raison de l'attribution de cr\u00e9dits\u2026",
+    "noUsers": "Aucun utilisateur trouv\u00e9",
+    "columns": {
+      "user": "Utilisateur",
+      "email": "E-mail",
+      "plan": "Plan",
+      "credits": "Cr\u00e9dits"
+    }
+  }
+}

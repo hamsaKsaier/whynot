@@ -1,144 +1,157 @@
-import React, { useState } from 'react';
-import { FiZap, FiLock, FiAlertCircle, FiLoader, FiCheck } from 'react-icons/fi';
-import { useSearchParams, Link } from 'react-router-dom';
-import { resetPassword } from '../services/api';
+import { useState } from "react"
+import { Link, useSearchParams } from "react-router-dom"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { CheckCircle, Loader2, Lock } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AuthShell } from "@/components/layout/AuthShell"
+import { resetPassword } from "@/services/api"
 
-export const ResetPasswordPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || '';
+function createResetSchema(t: (key: string) => string) {
+  return z
+    .object({
+      newPassword: z.string().min(8, t("auth.common.passwordMinLength")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: t("auth.signup.error.passwordMismatch"),
+      path: ["confirmPassword"],
+    })
+}
 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+type ResetFormData = z.infer<ReturnType<typeof createResetSchema>>
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+export function ResetPasswordPage() {
+  const { t } = useTranslation("common")
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get("token") || ""
+  const [success, setSuccess] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
 
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+  const resetSchema = createResetSchema(t)
 
-    setLoading(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetFormData>({
+    resolver: zodResolver(resetSchema),
+  })
+
+  const onSubmit = async (data: ResetFormData) => {
+    setServerError(null)
     try {
-      await resetPassword(token, newPassword);
-      setSuccess(true);
+      await resetPassword(token, data.newPassword)
+      setSuccess(true)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
+      setServerError(
+        err?.response?.data?.error || err?.message || t("auth.signup.error.generic")
+      )
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-navy-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-500 rounded-xl mb-3">
-            <FiZap className="h-6 w-6 text-white" />
+    <AuthShell>
+      <h2 className="mb-4 text-lg font-semibold text-foreground">
+        {t("auth.resetPassword.title")}
+      </h2>
+
+      {success ? (
+        <div>
+          <div className="mb-4 flex items-start gap-3 rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-900/20">
+            <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
+            <div>
+              <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                {t("auth.resetPassword.success.title")}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("auth.resetPassword.success.description")}
+              </p>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-white">WhyNot QA</h1>
-          <p className="text-sm text-slate-500 mt-1">Reset your password</p>
+          <Button asChild className="w-full">
+            <Link to="/login">{t("auth.resetPassword.success.loginLink")}</Link>
+          </Button>
         </div>
-
-        <div className="bg-navy-800 rounded-2xl shadow-lg border border-navy-700 p-8">
-          {success ? (
-            <div>
-              <div className="flex items-start gap-3 p-4 bg-emerald-900/20 border border-emerald-500/20 rounded-lg mb-4">
-                <FiCheck className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm text-emerald-300 font-medium">Password reset successfully</p>
-                  <p className="text-sm text-slate-400 mt-1">You can now sign in with your new password.</p>
-                </div>
-              </div>
-              <Link
-                to="/login"
-                className="block w-full py-2.5 px-4 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors text-center"
-              >
-                Go to Login
-              </Link>
+      ) : !token ? (
+        <div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              {t("auth.resetPassword.error.invalidLink")}
+            </AlertDescription>
+          </Alert>
+          <Button variant="outline" asChild className="w-full">
+            <Link to="/login">{t("auth.resetPassword.error.backToLogin")}</Link>
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">{t("auth.resetPassword.newPasswordLabel")}</Label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="newPassword"
+                type="password"
+                autoComplete="new-password"
+                enterKeyHint="next"
+                autoFocus
+                placeholder={t("auth.common.passwordPlaceholder")}
+                className="ps-10"
+                {...register("newPassword")}
+              />
             </div>
-          ) : !token ? (
-            <div>
-              <div className="flex items-start gap-2 p-3 bg-red-900/20 border border-red-500/20 rounded-lg text-sm text-red-400 mb-4">
-                <FiAlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>Invalid reset link. Please request a new password reset.</span>
-              </div>
-              <Link
-                to="/login"
-                className="block w-full py-2.5 px-4 bg-navy-700 text-white text-sm font-medium rounded-lg hover:bg-navy-600 transition-colors text-center"
-              >
-                Back to Login
-              </Link>
+            {errors.newPassword && (
+              <p className="text-xs text-destructive">
+                {errors.newPassword.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">{t("auth.resetPassword.confirmPasswordLabel")}</Label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                enterKeyHint="done"
+                placeholder={t("auth.common.passwordPlaceholder")}
+                className="ps-10"
+                {...register("confirmPassword")}
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  New password
-                </label>
-                <div className="relative">
-                  <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    minLength={8}
-                    className="w-full pl-10 pr-4 py-2.5 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
+            {errors.confirmPassword && (
+              <p className="text-xs text-destructive">
+                {errors.confirmPassword.message}
+              </p>
+            )}
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Confirm password
-                </label>
-                <div className="relative">
-                  <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    minLength={8}
-                    className="w-full pl-10 pr-4 py-2.5 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-start gap-2 p-3 bg-red-900/20 border border-red-500/20 rounded-lg text-sm text-red-400">
-                  <FiAlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 px-4 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <><FiLoader className="h-4 w-4 animate-spin" /> Resetting...</>
-                ) : (
-                  'Reset Password'
-                )}
-              </button>
-            </form>
+          {serverError && (
+            <Alert variant="destructive">
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
           )}
-        </div>
-      </div>
-    </div>
-  );
-};
+
+          <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                {t("auth.resetPassword.submitting")}
+              </>
+            ) : (
+              t("auth.resetPassword.submit")
+            )}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
+  )
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, ModalFooter } from '../common/Modal';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
@@ -30,6 +31,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
   folder,
   projectId,
 }) => {
+  const { t } = useTranslation('dashboard');
   const [name, setName] = useState('');
   const [color, setColor] = useState('#0284c7');
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
     setError(null);
 
     if (!name.trim()) {
-      setError('Folder name is required');
+      setError(t('dashboard.folders.nameRequired'));
       return;
     }
 
@@ -60,7 +62,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
       await onSubmit({ name: name.trim(), color });
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to save folder');
+      setError(err.response?.data?.error || err.message || t('dashboard.folders.saveError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +72,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={folder ? 'Edit Folder' : 'Create Folder'}
+      title={folder ? t('dashboard.folders.editTitle') : t('dashboard.folders.createTitle')}
       size="md"
     >
       <form onSubmit={handleSubmit}>
@@ -82,17 +84,17 @@ export const FolderModal: React.FC<FolderModalProps> = ({
 
         <div className="space-y-4">
           <Input
-            label="Folder Name"
+            label={t('dashboard.folders.folderName')}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Authentication, Checkout, Dashboard"
+            placeholder={t('dashboard.folders.namePlaceholder')}
             required
             autoFocus
           />
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Color
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              {t('dashboard.folders.color')}
             </label>
             <div className="flex flex-wrap gap-2">
               {PRESET_COLORS.map((presetColor) => (
@@ -100,9 +102,9 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                   key={presetColor}
                   type="button"
                   onClick={() => setColor(presetColor)}
-                  className={`w-10 h-10 rounded-lg border-2 transition-all ${color === presetColor
-                      ? 'border-slate-900 scale-110 shadow-md'
-                      : 'border-slate-600 hover:border-slate-500'
+                  className={`w-10 h-10 rounded-lg border-2 transition-colors ${color === presetColor
+                      ? 'border-foreground ring-1 ring-primary'
+                      : 'border-border hover:border-muted-foreground'
                     }`}
                   style={{ backgroundColor: presetColor }}
                   title={presetColor}
@@ -114,9 +116,9 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="w-12 h-8 rounded border border-slate-600 cursor-pointer"
+                className="w-12 h-8 rounded border border-border cursor-pointer"
               />
-              <span className="text-sm text-slate-400">{color}</span>
+              <span className="text-sm text-muted-foreground">{color}</span>
             </div>
           </div>
         </div>
@@ -128,10 +130,10 @@ export const FolderModal: React.FC<FolderModalProps> = ({
             onClick={onClose}
             disabled={isSubmitting}
           >
-            Cancel
+            {t('dashboard.folders.cancel')}
           </Button>
           <Button type="submit" isLoading={isSubmitting}>
-            {folder ? 'Update' : 'Create'} Folder
+            {folder ? t('dashboard.folders.updateFolder') : t('dashboard.folders.createFolder')}
           </Button>
         </ModalFooter>
       </form>

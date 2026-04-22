@@ -18,6 +18,7 @@ import crypto from 'crypto';
 import { asyncHandler, createError } from '../middleware/error-handler';
 import { query } from '../../shared/database/connection';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 
 const router = express.Router();
 const logger = createLogger('credentials-router');
@@ -28,7 +29,7 @@ const ALGORITHM = 'aes-256-cbc';
 const IV_LENGTH = 16;
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
+  const key = env.ENCRYPTION_KEY;
   if (!key) throw new Error('ENCRYPTION_KEY environment variable is required');
   return crypto.createHash('sha256').update(key).digest();
 }
@@ -50,7 +51,7 @@ router.post('/projects/:projectId/credentials', asyncHandler(async (req, res) =>
   const { username, password } = req.body;
 
   if (!username || !password) {
-    throw createError('username and password are required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.usernamePasswordRequired'), 400, 'VALIDATION_ERROR');
   }
 
   const encryptedUsername = encrypt(username);
@@ -122,10 +123,10 @@ router.put('/notifications/preferences', asyncHandler(async (req, res) => {
   const { trigger_type, enabled } = req.body;
 
   if (!trigger_type || !VALID_TRIGGERS.includes(trigger_type)) {
-    throw createError(`trigger_type must be one of: ${VALID_TRIGGERS.join(', ')}`, 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.triggerTypeInvalid', { values: VALID_TRIGGERS.join(', ') }), 400, 'VALIDATION_ERROR');
   }
   if (typeof enabled !== 'boolean') {
-    throw createError('enabled must be a boolean', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.enabledMustBeBoolean'), 400, 'VALIDATION_ERROR');
   }
 
   await query(

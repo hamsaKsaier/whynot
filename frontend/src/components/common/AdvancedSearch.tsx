@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiSearch, FiX, FiFilter } from 'react-icons/fi';
 import { Input } from './Input';
 import { Button } from './Button';
@@ -23,12 +24,13 @@ interface AdvancedSearchProps {
 export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder,
   filters = [],
   onFilterRemove,
   onClearAll,
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   const [isFocused, setIsFocused] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -66,16 +68,16 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div className="relative">
-        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 h-5 w-5" />
+        <FiSearch className="absolute start-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
         <Input
           ref={inputRef}
           type="text"
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('common.actions.search')}
           value={localValue}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className="pl-10 pr-10"
+          className="ps-10 pe-10"
         />
         {localValue.length > 0 && (
           <button
@@ -83,8 +85,8 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               setLocalValue('');
               onChange('');
             }}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-400"
-            aria-label="Clear search"
+            className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={t('common.aria.clearSearch')}
           >
             <FiX className="h-4 w-4" />
           </button>
@@ -104,8 +106,8 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               {onFilterRemove && (
                 <button
                   onClick={() => onFilterRemove(filter.key)}
-                  className="ml-1 hover:text-primary-900"
-                  aria-label={`Remove ${filter.label} filter`}
+                  className="ms-1 hover:text-primary-900"
+                  aria-label={t('common.aria.removeFilter', { label: filter.label })}
                 >
                   <FiX className="h-3 w-3" />
                 </button>
@@ -119,7 +121,7 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               onClick={onClearAll}
               className="text-xs"
             >
-              Clear all
+              {t('common.filters.clearAll')}
             </Button>
           )}
         </div>
@@ -127,8 +129,8 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 
       {/* Keyboard shortcut hint */}
       {isFocused && (
-        <div className="absolute right-3 top-full mt-1 text-xs text-slate-400 bg-slate-800 border border-slate-700 rounded px-2 py-1 shadow-sm">
-          Press <kbd className="px-1 py-0.5 bg-slate-800 rounded text-xs">⌘K</kbd> to focus
+        <div className="absolute end-3 top-full mt-1 text-xs text-muted-foreground bg-card border border-border rounded px-2 py-1 shadow-sm">
+          {t('common.search.keyboardHint')}
         </div>
       )}
     </div>

@@ -1,5 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiGitPullRequest, FiCheck, FiX, FiLoader, FiExternalLink, FiCode, FiRefreshCw, FiAlertTriangle, FiZap } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
+import { Progress } from '../ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import {
+  GitPullRequest,
+  Check,
+  X,
+  Loader2,
+  ExternalLink,
+  Code,
+  RefreshCw,
+  AlertTriangle,
+  Zap,
+} from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { apiClient } from '../../services/api';
 
 interface GitHubRepo {
@@ -34,25 +66,36 @@ interface AutoFixButtonProps {
   className?: string;
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending: { label: 'Starting...', color: 'text-slate-400', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
-  analyzing: { label: 'Analyzing code...', color: 'text-blue-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
-  generating: { label: 'Generating fix...', color: 'text-sky-500', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
-  pr_created: { label: 'PR Created', color: 'text-green-600', icon: <FiGitPullRequest className="h-3 w-3" /> },
-  merging: { label: 'Merging PR...', color: 'text-blue-600', icon: <FiLoader className="h-3 w-3 animate-spin" /> },
-  retesting: { label: 'Retesting...', color: 'text-orange-500', icon: <FiRefreshCw className="h-3 w-3 animate-spin" /> },
-  verified: { label: 'Verified ✓', color: 'text-green-600', icon: <FiCheck className="h-3 w-3" /> },
-  needs_review: { label: 'Needs Review', color: 'text-yellow-600', icon: <FiAlertTriangle className="h-3 w-3" /> },
-  failed: { label: 'Failed', color: 'text-red-500', icon: <FiX className="h-3 w-3" /> },
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  pending: <Loader2 className="h-3 w-3 animate-spin" />,
+  analyzing: <Loader2 className="h-3 w-3 animate-spin" />,
+  generating: <Loader2 className="h-3 w-3 animate-spin" />,
+  pr_created: <GitPullRequest className="h-3 w-3" />,
+  merging: <Loader2 className="h-3 w-3 animate-spin" />,
+  retesting: <RefreshCw className="h-3 w-3 animate-spin" />,
+  verified: <Check className="h-3 w-3" />,
+  needs_review: <AlertTriangle className="h-3 w-3" />,
+  failed: <X className="h-3 w-3" />,
+};
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  pending: '',
+  analyzing: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  generating: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800',
+  pr_created: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
+  merging: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  retesting: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+  verified: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
+  needs_review: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800',
+  failed: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
 };
 
 const LOOP_STEPS = ['analyzing', 'generating', 'pr_created', 'merging', 'retesting', 'verified'];
-const LOOP_STEP_LABELS = ['Analyze', 'Generate', 'PR', 'Merge', 'Retest', 'Verified'];
 
 const SIMPLE_STEPS = ['analyzing', 'generating', 'pr_created'];
-const SIMPLE_STEP_LABELS = ['Analyze', 'Generate', 'PR'];
 
 export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, className = '' }) => {
+  const { t } = useTranslation('runner');
   const [showModal, setShowModal] = useState(false);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
@@ -60,11 +103,38 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
   const [currentAttempt, setCurrentAttempt] = useState<AutoFixAttempt | null>(null);
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [mode, setMode] = useState<'simple' | 'loop'>('loop'); // Default to loop mode
-  const [autoMerge, setAutoMerge] = useState(false); // Disabled by default
+  const [mode, setMode] = useState<'simple' | 'loop'>('loop');
+  const [autoMerge, setAutoMerge] = useState(false);
   const [maxIterations, setMaxIterations] = useState(3);
   const [qualityThreshold, setQualityThreshold] = useState(80);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const STATUS_LABELS: Record<string, string> = {
+    pending: t('runner.qaLoop.autoFix.status.starting'),
+    analyzing: t('runner.qaLoop.autoFix.status.analyzing'),
+    generating: t('runner.qaLoop.autoFix.status.generating'),
+    pr_created: t('runner.qaLoop.autoFix.status.prCreated'),
+    merging: t('runner.qaLoop.autoFix.status.merging'),
+    retesting: t('runner.qaLoop.autoFix.status.retesting'),
+    verified: t('runner.qaLoop.autoFix.status.verified'),
+    needs_review: t('runner.qaLoop.autoFix.status.needsReview'),
+    failed: t('runner.qaLoop.autoFix.status.failed'),
+  };
+
+  const LOOP_STEP_LABELS = [
+    t('runner.qaLoop.autoFix.steps.analyze'),
+    t('runner.qaLoop.autoFix.steps.generate'),
+    t('runner.qaLoop.autoFix.steps.pr'),
+    t('runner.qaLoop.autoFix.steps.merge'),
+    t('runner.qaLoop.autoFix.steps.retest'),
+    t('runner.qaLoop.autoFix.steps.verified'),
+  ];
+
+  const SIMPLE_STEP_LABELS = [
+    t('runner.qaLoop.autoFix.steps.analyze'),
+    t('runner.qaLoop.autoFix.steps.generate'),
+    t('runner.qaLoop.autoFix.steps.pr'),
+  ];
 
   const workspaceId = localStorage.getItem('active_workspace_id') || '';
 
@@ -123,7 +193,7 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
       setCurrentAttempt(res.data);
       startPolling(res.data.id);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to start auto-fix');
+      alert(error.response?.data?.error || t('runner.qaLoop.autoFix.startFailed'));
     } finally {
       setStarting(false);
     }
@@ -178,452 +248,442 @@ export const AutoFixButton: React.FC<AutoFixButtonProps> = ({ bugId, bugTitle, c
 
   return (
     <>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleOpen}
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-sky-900/20 text-sky-600 hover:bg-sky-900/40 transition-colors ${className}`}
-        title="Auto-fix: Generate a PR to fix this bug"
+        className={cn('gap-1 text-xs h-7 px-2 text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300', className)}
+        title={t('runner.qaLoop.autoFix.tooltip')}
       >
-        <FiGitPullRequest className="h-3 w-3" />
+        <GitPullRequest className="h-3 w-3" />
         <span>Auto-Fix</span>
-        <span className="text-[10px] px-1 py-0.5 bg-amber-100 text-amber-700 rounded font-medium leading-none">Experimental</span>
-      </button>
+        <Badge variant="outline" className="text-[10px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 leading-none">
+          {t('runner.qaLoop.autoFix.experimental')}
+        </Badge>
+      </Button>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleClose}>
-          <div className="bg-slate-800 rounded-xl shadow-xl w-full max-w-xl mx-4 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="p-5 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <FiGitPullRequest className="h-5 w-5 text-sky-600" />
-                Auto-Fix Bug
-                <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">Experimental</span>
-              </h3>
-              <p className="text-sm text-slate-400 mt-1 truncate">{bugTitle}</p>
-            </div>
+      <Dialog open={showModal} onOpenChange={open => { if (!open) handleClose(); }}>
+        <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitPullRequest className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              {t('runner.qaLoop.autoFix.title')}
+              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800">
+                Experimental
+              </Badge>
+            </DialogTitle>
+            <DialogDescription className="truncate">{bugTitle}</DialogDescription>
+          </DialogHeader>
 
-            {/* Body */}
-            <div className="p-5 overflow-y-auto flex-1">
-              {loading ? (
-                <div className="text-center py-4 text-slate-400">Loading...</div>
-              ) : repos.length === 0 ? (
-                <div className="text-center py-6">
-                  <p className="text-slate-400 mb-3">No GitHub repositories connected</p>
-                  <a
-                    href="/github-repos"
-                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                  >
-                    Go to GitHub Repos to connect your repository
-                  </a>
-                </div>
-              ) : (
-                <>
-                  {/* Previous attempts */}
-                  {attempts.length > 0 && !currentAttempt && (
-                    <div className="mb-4">
-                      <div className="text-xs font-medium text-slate-400 uppercase mb-2">Previous Attempts</div>
-                      <div className="space-y-2">
-                        {attempts.slice(0, 5).map((attempt) => {
-                          const statusInfo = STATUS_LABELS[attempt.status] || STATUS_LABELS.pending;
-                          return (
-                            <div key={attempt.id} className="p-3 bg-slate-900 rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  {statusInfo.icon}
-                                  <span className={`text-sm font-medium ${statusInfo.color}`}>{statusInfo.label}</span>
-                                  {attempt.iteration_count > 1 && (
-                                    <span className="text-xs text-slate-500">
-                                      (iter {attempt.iteration_count}/{attempt.max_iterations})
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-xs text-slate-500">{new Date(attempt.created_at).toLocaleString()}</span>
-                              </div>
-                              <div className="flex items-center gap-3 mt-1">
-                                {attempt.pr_url && (
-                                  <a
-                                    href={attempt.pr_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
-                                  >
-                                    <FiExternalLink className="h-3 w-3" />
-                                    PR #{attempt.pr_number}
-                                  </a>
-                                )}
-                                {attempt.quality_score_after !== null && (
-                                  <span className="text-xs text-slate-400">
-                                    Quality: {attempt.quality_score_before ?? '?'} → {attempt.quality_score_after}
+          {/* Body */}
+          <div className="overflow-y-auto flex-1 space-y-4">
+            {loading ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                {t('runner.qaLoop.autoFix.loading')}
+              </div>
+            ) : repos.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground mb-3">{t('runner.qaLoop.autoFix.noRepos')}</p>
+                <a
+                  href="/github-repos"
+                  className="text-primary hover:text-primary/80 text-sm font-medium"
+                >
+                  {t('runner.qaLoop.autoFix.goToRepos')}
+                </a>
+              </div>
+            ) : (
+              <>
+                {/* Previous attempts */}
+                {attempts.length > 0 && !currentAttempt && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">{t('runner.qaLoop.autoFix.previousAttempts')}</div>
+                    <div className="space-y-2">
+                      {attempts.slice(0, 5).map((attempt) => {
+                        const statusInfo = { label: STATUS_LABELS[attempt.status] || STATUS_LABELS.pending, icon: STATUS_ICONS[attempt.status] || STATUS_ICONS.pending };
+                        return (
+                          <div key={attempt.id} className="p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {statusInfo.icon}
+                                <Badge variant="outline" className={cn('text-xs', STATUS_BADGE_CLASS[attempt.status])}>
+                                  {statusInfo.label}
+                                </Badge>
+                                {attempt.iteration_count > 1 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    (iter {attempt.iteration_count}/{attempt.max_iterations})
                                   </span>
                                 )}
                               </div>
-                              {attempt.error_message && (
-                                <p className="text-xs text-red-500 mt-1">{attempt.error_message}</p>
+                              <span className="text-xs text-muted-foreground">{new Date(attempt.created_at).toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1">
+                              {attempt.pr_url && (
+                                <a
+                                  href={attempt.pr_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80"
+                                >
+                                  <ExternalLink className="h-3 w-3 rtl:scale-x-[-1]" />
+                                  PR #{attempt.pr_number}
+                                </a>
+                              )}
+                              {attempt.quality_score_after !== null && (
+                                <span className="text-xs text-muted-foreground">
+                                  Quality: {attempt.quality_score_before ?? '?'} &rarr; {attempt.quality_score_after}
+                                </span>
                               )}
                             </div>
-                          );
-                        })}
-                      </div>
+                            {attempt.error_message && (
+                              <p className="text-xs text-destructive mt-1">{attempt.error_message}</p>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Current attempt progress */}
-                  {currentAttempt ? (
-                    <div className="space-y-4">
-                      {/* Progress steps */}
-                      <div className="text-center py-2">
-                        <div className="mb-4">
-                          <div className="flex items-center justify-center gap-1">
-                            {steps.map((step, i) => {
-                              const currentIdx = getStepIndex(currentAttempt.status);
-                              const stepIdx = i;
-                              const isActive = stepIdx <= currentIdx;
-                              const isCurrent = step === currentAttempt.status || (currentAttempt.status === 'pending' && step === 'analyzing');
-                              return (
-                                <React.Fragment key={step}>
-                                  {i > 0 && <div className={`h-0.5 w-6 ${isActive ? 'bg-sky-900/200' : 'bg-slate-700'}`} />}
-                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                                    ${isActive ? 'bg-sky-900/200 text-white' : 'bg-slate-700 text-slate-400'}
-                                    ${isCurrent ? 'ring-2 ring-sky-300' : ''}`}>
-                                    {i + 1}
-                                  </div>
-                                </React.Fragment>
-                              );
-                            })}
-                          </div>
-                          <div className="flex justify-center mt-2" style={{ gap: isLoopMode ? '0.5rem' : '1rem' }}>
-                            {stepLabels.map((label) => (
-                              <span key={label} className="text-xs text-slate-400">{label}</span>
-                            ))}
-                          </div>
+                {/* Current attempt progress */}
+                {currentAttempt ? (
+                  <div className="space-y-4">
+                    {/* Progress steps */}
+                    <div className="text-center py-2">
+                      <div className="mb-4">
+                        <div className="flex items-center justify-center gap-1">
+                          {steps.map((step, i) => {
+                            const currentIdx = getStepIndex(currentAttempt.status);
+                            const stepIdx = i;
+                            const isActive = stepIdx <= currentIdx;
+                            const isCurrent = step === currentAttempt.status || (currentAttempt.status === 'pending' && step === 'analyzing');
+                            return (
+                              <React.Fragment key={step}>
+                                {i > 0 && <div className={cn('h-0.5 w-6', isActive ? 'bg-primary' : 'bg-muted')} />}
+                                <div className={cn(
+                                  'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
+                                  isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+                                  isCurrent && 'ring-2 ring-primary/50'
+                                )}>
+                                  {i + 1}
+                                </div>
+                              </React.Fragment>
+                            );
+                          })}
                         </div>
-
-                        {/* Iteration indicator for loop mode */}
-                        {currentAttempt.iteration_count > 0 && currentAttempt.max_iterations > 1 && (
-                          <div className="mb-3">
-                            <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
-                              <FiRefreshCw className="h-3 w-3" />
-                              Iteration {currentAttempt.iteration_count} of {currentAttempt.max_iterations}
-                            </div>
-                            {/* Iteration progress bar */}
-                            <div className="w-48 mx-auto mt-1.5 bg-slate-900 rounded-full h-1.5">
-                              <div
-                                className="bg-sky-900/200 h-1.5 rounded-full transition-all"
-                                style={{ width: `${(currentAttempt.iteration_count / currentAttempt.max_iterations) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {isInProgress && (
-                          <div className="flex items-center justify-center gap-2 text-sky-600">
-                            <FiLoader className="h-5 w-5 animate-spin" />
-                            <span className="font-medium">{STATUS_LABELS[currentAttempt.status]?.label}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Verified state */}
-                      {currentAttempt.status === 'verified' && (
-                        <div className="bg-green-900/20 border border-green-800 p-4 rounded-lg">
-                          <div className="flex items-center gap-2 text-green-400 font-semibold mb-2">
-                            <FiCheck className="h-5 w-5" />
-                            Bug Verified Fixed!
-                          </div>
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            {currentAttempt.quality_score_before !== null && (
-                              <div className="text-center p-2 bg-green-900/30 rounded">
-                                <div className="text-xs text-green-600">Before</div>
-                                <div className="text-lg font-bold text-green-400">{currentAttempt.quality_score_before}</div>
-                              </div>
-                            )}
-                            {currentAttempt.quality_score_after !== null && (
-                              <div className="text-center p-2 bg-green-900/30 rounded">
-                                <div className="text-xs text-green-600">After</div>
-                                <div className="text-lg font-bold text-green-400">{currentAttempt.quality_score_after}</div>
-                              </div>
-                            )}
-                          </div>
-                          {currentAttempt.pr_url && (
-                            <a
-                              href={currentAttempt.pr_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                            >
-                              <FiExternalLink className="h-4 w-4" />
-                              View PR #{currentAttempt.pr_number} on GitHub
-                            </a>
-                          )}
-                          {currentAttempt.claude_reasoning && (
-                            <div className="mt-3">
-                              <div className="text-sm font-medium text-green-400 mb-1">Fix Explanation:</div>
-                              <p className="text-sm text-green-400">{currentAttempt.claude_reasoning}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* PR Created (simple mode) */}
-                      {currentAttempt.status === 'pr_created' && mode === 'simple' && (
-                        <div className="bg-green-900/20 p-4 rounded-lg">
-                          <div className="flex items-center gap-2 text-green-400 font-medium mb-2">
-                            <FiCheck className="h-5 w-5" />
-                            Pull Request Created!
-                          </div>
-                          {currentAttempt.pr_url && (
-                            <a
-                              href={currentAttempt.pr_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                            >
-                              <FiExternalLink className="h-4 w-4" />
-                              View PR #{currentAttempt.pr_number} on GitHub
-                            </a>
-                          )}
-                          {currentAttempt.claude_reasoning && (
-                            <div className="mt-3">
-                              <div className="text-sm font-medium text-green-400 mb-1">Fix Explanation:</div>
-                              <p className="text-sm text-green-400">{currentAttempt.claude_reasoning}</p>
-                            </div>
-                          )}
-                          {currentAttempt.relevant_files && currentAttempt.relevant_files.length > 0 && (
-                            <div className="mt-3">
-                              <div className="text-sm font-medium text-green-400 mb-1">Files Modified:</div>
-                              <div className="space-y-1">
-                                {(Array.isArray(currentAttempt.relevant_files) ? currentAttempt.relevant_files : []).map((f: string) => (
-                                  <div key={f} className="text-xs text-green-400 font-mono bg-green-900/30 px-2 py-1 rounded">{f}</div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Needs Review state */}
-                      {currentAttempt.status === 'needs_review' && (
-                        <div className="bg-yellow-900/20 border border-yellow-800 p-4 rounded-lg">
-                          <div className="flex items-center gap-2 text-yellow-400 font-semibold mb-2">
-                            <FiAlertTriangle className="h-5 w-5" />
-                            Manual Review Needed
-                          </div>
-                          <p className="text-sm text-yellow-400 mb-3">
-                            {currentAttempt.verification_status === 'regression'
-                              ? 'The fix may have introduced new issues. Quality score decreased.'
-                              : `Auto-fix reached ${currentAttempt.iteration_count}/${currentAttempt.max_iterations} iterations without fully resolving the bug.`}
-                          </p>
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            {currentAttempt.quality_score_before !== null && (
-                              <div className="text-center p-2 bg-yellow-900/30 rounded">
-                                <div className="text-xs text-yellow-600">Before</div>
-                                <div className="text-lg font-bold text-yellow-400">{currentAttempt.quality_score_before}</div>
-                              </div>
-                            )}
-                            {currentAttempt.quality_score_after !== null && (
-                              <div className="text-center p-2 bg-yellow-900/30 rounded">
-                                <div className="text-xs text-yellow-600">After</div>
-                                <div className="text-lg font-bold text-yellow-400">{currentAttempt.quality_score_after}</div>
-                              </div>
-                            )}
-                          </div>
-                          {currentAttempt.pr_url && (
-                            <a
-                              href={currentAttempt.pr_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-                            >
-                              <FiExternalLink className="h-4 w-4" />
-                              Review PR #{currentAttempt.pr_number} on GitHub
-                            </a>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Failed state */}
-                      {currentAttempt.status === 'failed' && (
-                        <div className="bg-red-900/20 p-4 rounded-lg">
-                          <div className="flex items-center gap-2 text-red-400 font-medium mb-1">
-                            <FiX className="h-5 w-5" />
-                            Auto-Fix Failed
-                          </div>
-                          <p className="text-sm text-red-600">{currentAttempt.error_message || 'An unknown error occurred'}</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Start new attempt */
-                    <div className="space-y-4">
-                      {/* Repo selector */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-200 mb-1">Target Repository</label>
-                        <select
-                          value={selectedRepo}
-                          onChange={e => setSelectedRepo(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        >
-                          {repos.map(r => (
-                            <option key={r.id} value={r.id}>{r.owner}/{r.repo}</option>
+                        <div className="flex justify-center mt-2" style={{ gap: isLoopMode ? '0.5rem' : '1rem' }}>
+                          {stepLabels.map((label) => (
+                            <span key={label} className="text-xs text-muted-foreground">{label}</span>
                           ))}
-                        </select>
-                      </div>
-
-                      {/* Mode selector */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-200 mb-2">Fix Mode</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setMode('loop')}
-                            className={`p-3 rounded-lg border-2 text-left transition-all ${
-                              mode === 'loop'
-                                ? 'border-sky-500 bg-sky-900/20'
-                                : 'border-slate-700 hover:border-slate-700'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <FiZap className={`h-4 w-4 ${mode === 'loop' ? 'text-sky-600' : 'text-slate-500'}`} />
-                              <span className={`text-sm font-semibold ${mode === 'loop' ? 'text-sky-400' : 'text-slate-200'}`}>
-                                Fix + Merge + Verify
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-400">
-                              Fix → PR → Merge → Retest → Iterate until quality met
-                            </p>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMode('simple')}
-                            className={`p-3 rounded-lg border-2 text-left transition-all ${
-                              mode === 'simple'
-                                ? 'border-sky-500 bg-sky-900/20'
-                                : 'border-slate-700 hover:border-slate-700'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <FiCode className={`h-4 w-4 ${mode === 'simple' ? 'text-sky-600' : 'text-slate-500'}`} />
-                              <span className={`text-sm font-semibold ${mode === 'simple' ? 'text-sky-400' : 'text-slate-200'}`}>
-                                PR Only
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-400">
-                              Generate fix and create PR (no retest)
-                            </p>
-                          </button>
                         </div>
                       </div>
 
-                      {/* Loop options */}
-                      {mode === 'loop' && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg">
-                            <div>
-                              <div className="text-sm font-medium text-slate-200">Auto-merge PRs</div>
-                              <div className="text-xs text-slate-400">Automatically merge PRs into the default branch</div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setAutoMerge(!autoMerge)}
-                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                autoMerge ? 'bg-sky-900/200' : 'bg-slate-600'
-                              }`}
-                            >
-                              <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-slate-800 transition-transform ${
-                                  autoMerge ? 'translate-x-6' : 'translate-x-1'
-                                }`}
-                              />
-                            </button>
+                      {/* Iteration indicator for loop mode */}
+                      {currentAttempt.iteration_count > 0 && currentAttempt.max_iterations > 1 && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                            <RefreshCw className="h-3 w-3" />
+                            {t('runner.qaLoop.autoFix.iterationOf', { current: currentAttempt.iteration_count, max: currentAttempt.max_iterations })}
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-slate-400 mb-1">Max Iterations</label>
-                            <select
-                              value={maxIterations}
-                              onChange={e => setMaxIterations(Number(e.target.value))}
-                              className="w-full px-3 py-2 border border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-                            >
-                              <option value={1}>1</option>
-                              <option value={2}>2</option>
-                              <option value={3}>3 (recommended)</option>
-                              <option value={5}>5</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-slate-400 mb-1">Quality Target</label>
-                            <select
-                              value={qualityThreshold}
-                              onChange={e => setQualityThreshold(Number(e.target.value))}
-                              className="w-full px-3 py-2 border border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-                            >
-                              <option value={60}>60% (lenient)</option>
-                              <option value={70}>70%</option>
-                              <option value={80}>80% (recommended)</option>
-                              <option value={90}>90% (strict)</option>
-                            </select>
-                          </div>
-                        </div>
+                          <Progress
+                            value={(currentAttempt.iteration_count / currentAttempt.max_iterations) * 100}
+                            className="w-48 mx-auto mt-1.5 h-1.5"
+                          />
                         </div>
                       )}
 
-                      {/* How it works */}
-                      <div className="bg-sky-900/20 p-4 rounded-lg text-sm text-sky-400">
-                        <p className="font-medium mb-1">How it works:</p>
-                        <ol className="list-decimal list-inside space-y-1 text-xs">
-                          <li>AI analyzes the bug report and finds relevant source files</li>
-                          <li>Claude generates a code fix based on the bug context</li>
-                          <li>A pull request is created on a new branch</li>
-                          {mode === 'loop' && (
-                            <>
-                              {autoMerge && <li>PR is auto-merged into the default branch</li>}
-                              <li>QA Loop retests the live app to verify the fix</li>
-                              <li>If not fixed, Claude iterates with improved fix until quality target met</li>
-                            </>
+                      {isInProgress && (
+                        <div className="flex items-center justify-center gap-2 text-primary">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span className="font-medium">{STATUS_LABELS[currentAttempt.status]}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Verified state */}
+                    {currentAttempt.status === 'verified' && (
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold mb-2">
+                          <Check className="h-5 w-5" />
+                          {t('runner.qaLoop.autoFix.bugVerifiedFixed')}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          {currentAttempt.quality_score_before !== null && (
+                            <div className="text-center p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg">
+                              <div className="text-xs text-green-600 dark:text-green-400">{t('runner.qaLoop.autoFix.before')}</div>
+                              <div className="text-lg font-bold text-green-700 dark:text-green-300">{currentAttempt.quality_score_before}</div>
+                            </div>
                           )}
-                        </ol>
+                          {currentAttempt.quality_score_after !== null && (
+                            <div className="text-center p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg">
+                              <div className="text-xs text-green-600 dark:text-green-400">{t('runner.qaLoop.autoFix.after')}</div>
+                              <div className="text-lg font-bold text-green-700 dark:text-green-300">{currentAttempt.quality_score_after}</div>
+                            </div>
+                          )}
+                        </div>
+                        {currentAttempt.pr_url && (
+                          <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
+                            <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
+                              {t('runner.qaLoop.autoFix.viewPr', { number: currentAttempt.pr_number })}
+                            </a>
+                          </Button>
+                        )}
+                        {currentAttempt.claude_reasoning && (
+                          <div className="mt-3">
+                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">{t('runner.qaLoop.autoFix.fixExplanation')}</div>
+                            <p className="text-sm text-green-600 dark:text-green-300">{currentAttempt.claude_reasoning}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* PR Created (simple mode) */}
+                    {currentAttempt.status === 'pr_created' && mode === 'simple' && (
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium mb-2">
+                          <Check className="h-5 w-5" />
+                          {t('runner.qaLoop.autoFix.prCreated')}
+                        </div>
+                        {currentAttempt.pr_url && (
+                          <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
+                            <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
+                              {t('runner.qaLoop.autoFix.viewPr', { number: currentAttempt.pr_number })}
+                            </a>
+                          </Button>
+                        )}
+                        {currentAttempt.claude_reasoning && (
+                          <div className="mt-3">
+                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">{t('runner.qaLoop.autoFix.fixExplanation')}</div>
+                            <p className="text-sm text-green-600 dark:text-green-300">{currentAttempt.claude_reasoning}</p>
+                          </div>
+                        )}
+                        {currentAttempt.relevant_files && currentAttempt.relevant_files.length > 0 && (
+                          <div className="mt-3">
+                            <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">{t('runner.qaLoop.autoFix.filesModified')}</div>
+                            <div className="space-y-1">
+                              {(Array.isArray(currentAttempt.relevant_files) ? currentAttempt.relevant_files : []).map((f: string) => (
+                                <div key={f} className="text-xs font-mono bg-green-100/50 dark:bg-green-900/30 px-2 py-1 rounded-md text-green-700 dark:text-green-300">{f}</div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Needs Review state */}
+                    {currentAttempt.status === 'needs_review' && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-semibold mb-2">
+                          <AlertTriangle className="h-5 w-5" />
+                          {t('runner.qaLoop.autoFix.manualReviewNeeded')}
+                        </div>
+                        <p className="text-sm text-yellow-600 dark:text-yellow-300 mb-3">
+                          {currentAttempt.verification_status === 'regression'
+                            ? t('runner.qaLoop.autoFix.regressionWarning')
+                            : t('runner.qaLoop.autoFix.maxIterationsReached', { current: currentAttempt.iteration_count, max: currentAttempt.max_iterations })}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          {currentAttempt.quality_score_before !== null && (
+                            <div className="text-center p-2 bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg">
+                              <div className="text-xs text-yellow-600 dark:text-yellow-400">{t('runner.qaLoop.autoFix.before')}</div>
+                              <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{currentAttempt.quality_score_before}</div>
+                            </div>
+                          )}
+                          {currentAttempt.quality_score_after !== null && (
+                            <div className="text-center p-2 bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg">
+                              <div className="text-xs text-yellow-600 dark:text-yellow-400">{t('runner.qaLoop.autoFix.after')}</div>
+                              <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{currentAttempt.quality_score_after}</div>
+                            </div>
+                          )}
+                        </div>
+                        {currentAttempt.pr_url && (
+                          <Button asChild variant="default" className="bg-yellow-600 hover:bg-yellow-700 text-primary-foreground">
+                            <a href={currentAttempt.pr_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4 me-2 rtl:scale-x-[-1]" />
+                              {t('runner.qaLoop.autoFix.reviewPr', { number: currentAttempt.pr_number })}
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Failed state */}
+                    {currentAttempt.status === 'failed' && (
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-medium mb-1">
+                          <X className="h-5 w-5" />
+                          {t('runner.qaLoop.autoFix.autoFixFailed')}
+                        </div>
+                        <p className="text-sm text-red-600 dark:text-red-300">{currentAttempt.error_message || t('runner.qaLoop.autoFix.unknownError')}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Start new attempt */
+                  <div className="space-y-4">
+                    {/* Repo selector */}
+                    <div className="space-y-1.5">
+                      <Label>{t('runner.qaLoop.autoFix.targetRepository')}</Label>
+                      <Select value={selectedRepo} onValueChange={setSelectedRepo}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {repos.map(r => (
+                            <SelectItem key={r.id} value={r.id}>{r.owner}/{r.repo}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Mode selector */}
+                    <div className="space-y-2">
+                      <Label>{t('runner.qaLoop.autoFix.fixMode')}</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setMode('loop')}
+                          className={cn(
+                            'p-3 rounded-lg border-2 text-start transition-colors duration-150',
+                            mode === 'loop'
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:bg-muted/50'
+                          )}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Zap className={cn('h-4 w-4', mode === 'loop' ? 'text-primary' : 'text-muted-foreground')} />
+                            <span className={cn('text-sm font-semibold', mode === 'loop' ? 'text-primary' : 'text-foreground')}>
+                              {t('runner.qaLoop.autoFix.mode.fixMergeVerify')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {t('runner.qaLoop.autoFix.mode.fixMergeVerifyDesc')}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMode('simple')}
+                          className={cn(
+                            'p-3 rounded-lg border-2 text-start transition-colors duration-150',
+                            mode === 'simple'
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:bg-muted/50'
+                          )}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Code className={cn('h-4 w-4', mode === 'simple' ? 'text-primary' : 'text-muted-foreground')} />
+                            <span className={cn('text-sm font-semibold', mode === 'simple' ? 'text-primary' : 'text-foreground')}>
+                              {t('runner.qaLoop.autoFix.mode.prOnly')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {t('runner.qaLoop.autoFix.mode.prOnlyDesc')}
+                          </p>
+                        </button>
                       </div>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
 
-            {/* Footer */}
-            <div className="p-5 border-t border-slate-700 flex justify-end gap-3">
-              <button
-                onClick={handleClose}
-                className="px-4 py-2 text-slate-200 bg-slate-900 rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Close
-              </button>
-              {repos.length > 0 && !currentAttempt && (
-                <button
-                  onClick={handleStart}
-                  disabled={starting || !selectedRepo}
-                  className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {starting ? (
-                    <>
-                      <FiLoader className="h-4 w-4 animate-spin" />
-                      Starting...
-                    </>
-                  ) : mode === 'loop' ? (
-                    <>
-                      <FiZap className="h-4 w-4" />
-                      Fix + Merge + Verify
-                    </>
-                  ) : (
-                    <>
-                      <FiCode className="h-4 w-4" />
-                      Generate Fix
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
+                    {/* Loop options */}
+                    {mode === 'loop' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg min-h-[44px]">
+                          <div>
+                            <div className="text-sm font-medium text-foreground">{t('runner.qaLoop.autoFix.autoMergePrs')}</div>
+                            <div className="text-xs text-muted-foreground">{t('runner.qaLoop.autoFix.autoMergePrsDesc')}</div>
+                          </div>
+                          <Switch
+                            checked={autoMerge}
+                            onCheckedChange={setAutoMerge}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">{t('runner.qaLoop.autoFix.maxIterations')}</Label>
+                            <Select value={String(maxIterations)} onValueChange={v => setMaxIterations(Number(v))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">{t('runner.qaLoop.autoFix.threeRecommended')}</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">{t('runner.qaLoop.autoFix.qualityTarget')}</Label>
+                            <Select value={String(qualityThreshold)} onValueChange={v => setQualityThreshold(Number(v))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="60">{t('runner.qaLoop.autoFix.qualityLenient')}</SelectItem>
+                                <SelectItem value="70">70%</SelectItem>
+                                <SelectItem value="80">{t('runner.qaLoop.autoFix.qualityRecommended')}</SelectItem>
+                                <SelectItem value="90">{t('runner.qaLoop.autoFix.qualityStrict')}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* How it works */}
+                    <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 p-4 rounded-lg text-sm text-sky-700 dark:text-sky-300">
+                      <p className="font-medium mb-1">{t('runner.qaLoop.autoFix.howItWorks')}</p>
+                      <ol className="list-decimal list-inside space-y-1 text-xs">
+                        <li>{t('runner.qaLoop.autoFix.instructions.analyze')}</li>
+                        <li>{t('runner.qaLoop.autoFix.instructions.generate')}</li>
+                        <li>{t('runner.qaLoop.autoFix.instructions.createPr')}</li>
+                        {mode === 'loop' && (
+                          <>
+                            {autoMerge && <li>{t('runner.qaLoop.autoFix.instructions.autoMerge')}</li>}
+                            <li>{t('runner.qaLoop.autoFix.instructions.retest')}</li>
+                            <li>{t('runner.qaLoop.autoFix.instructions.iterate')}</li>
+                          </>
+                        )}
+                      </ol>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </div>
-      )}
+
+          {/* Footer */}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose}>
+              {t('runner.qaLoop.autoFix.close')}
+            </Button>
+            {repos.length > 0 && !currentAttempt && (
+              <Button
+                onClick={handleStart}
+                disabled={starting || !selectedRepo}
+              >
+                {starting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('runner.qaLoop.autoFix.status.starting')}
+                  </>
+                ) : mode === 'loop' ? (
+                  <>
+                    <Zap className="h-4 w-4" />
+                    {t('runner.qaLoop.autoFix.mode.fixMergeVerify')}
+                  </>
+                ) : (
+                  <>
+                    <Code className="h-4 w-4" />
+                    {t('runner.qaLoop.autoFix.generateFix')}
+                  </>
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

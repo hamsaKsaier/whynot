@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AgentMessage } from '../components/TestRunner/AgentActivityPanel';
+import { config } from '@/config';
 
 // Remove logger reference that doesn't exist
 const logger = {
@@ -88,10 +89,8 @@ export const useBrowserStream = (options: UseBrowserStreamOptions = {}) => {
       return;
     }
 
-    // Get WebSocket URL - use VITE_WS_URL env var, fallback to same-origin detection
-    const wsBaseUrl = wsUrl || import.meta.env.VITE_WS_URL || (window.location.protocol === 'https:'
-      ? `wss://${window.location.host}`
-      : `ws://${window.location.hostname}:3011`);
+    // Get WebSocket URL from centralized config
+    const wsBaseUrl = wsUrl || config.wsUrl;
     const wsUrlFull = `${wsBaseUrl}/ws/browser-stream/${executionId}`;
     console.log('Attempting WebSocket connection', { wsUrlFull, executionId });
 

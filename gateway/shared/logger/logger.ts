@@ -21,6 +21,7 @@ class Logger {
 
   constructor(serviceName: string, logLevel: LogLevel = LogLevel.INFO) {
     this.serviceName = serviceName;
+    // LOG_LEVEL is read directly to avoid circular dependency with config module
     this.logLevel = (process.env.LOG_LEVEL as LogLevel) || logLevel;
   }
 

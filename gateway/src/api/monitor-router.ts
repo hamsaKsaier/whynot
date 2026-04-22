@@ -50,7 +50,7 @@ const updateMonitorSchema = z.object({
 // List monitors for workspace
 router.get('/', requireAuth, asyncHandler(async (req: any, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceRequired') });
 
   const monitors = await monitorRepository.findByWorkspace(workspaceId);
 
@@ -68,12 +68,12 @@ router.get('/', requireAuth, asyncHandler(async (req: any, res) => {
 router.post('/cron-preview', requireAuth, asyncHandler(async (req: any, res) => {
   const { cron_expression } = req.body;
   if (!cron_expression || typeof cron_expression !== 'string') {
-    return res.status(400).json({ error: 'cron_expression is required' });
+    return res.status(400).json({ error: (req as any).t('errors:validation.cronExpressionRequired') });
   }
 
   const parts = cron_expression.trim().split(/\s+/);
   if (parts.length !== 5) {
-    return res.status(400).json({ error: 'Invalid cron expression — must have 5 fields' });
+    return res.status(400).json({ error: (req as any).t('errors:validation.cronExpressionInvalid') });
   }
 
   const humanReadable = cronToHumanReadable(cron_expression);
@@ -85,7 +85,7 @@ router.post('/cron-preview', requireAuth, asyncHandler(async (req: any, res) => 
 // Create a monitor
 router.post('/', requireAuth, validate(createMonitorSchema), asyncHandler(async (req: any, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceRequired') });
 
   const monitor = await monitorRepository.create({
     ...req.body,
@@ -103,7 +103,7 @@ router.post('/', requireAuth, validate(createMonitorSchema), asyncHandler(async 
 // Get a monitor
 router.get('/:id', requireAuth, asyncHandler(async (req: any, res) => {
   const monitor = await monitorRepository.findById(req.params.id);
-  if (!monitor) return res.status(404).json({ error: 'Monitor not found' });
+  if (!monitor) return res.status(404).json({ error: (req as any).t('errors:resource.monitorNotFound') });
 
   res.json({
     ...monitor,
@@ -114,7 +114,7 @@ router.get('/:id', requireAuth, asyncHandler(async (req: any, res) => {
 // Update a monitor
 router.put('/:id', requireAuth, validate(updateMonitorSchema), asyncHandler(async (req: any, res) => {
   const monitor = await monitorRepository.update(req.params.id, req.body);
-  if (!monitor) return res.status(404).json({ error: 'Monitor not found' });
+  if (!monitor) return res.status(404).json({ error: (req as any).t('errors:resource.monitorNotFound') });
 
   logger.info('Monitor updated', { monitorId: monitor.id });
 
@@ -127,7 +127,7 @@ router.put('/:id', requireAuth, validate(updateMonitorSchema), asyncHandler(asyn
 // Delete a monitor
 router.delete('/:id', requireAuth, asyncHandler(async (req: any, res) => {
   const deleted = await monitorRepository.delete(req.params.id);
-  if (!deleted) return res.status(404).json({ error: 'Monitor not found' });
+  if (!deleted) return res.status(404).json({ error: (req as any).t('errors:resource.monitorNotFound') });
   res.json({ success: true });
 }));
 
@@ -135,7 +135,7 @@ router.delete('/:id', requireAuth, asyncHandler(async (req: any, res) => {
 router.post('/:id/trigger', requireAuth, asyncHandler(async (req: any, res) => {
   try {
     const result = await triggerMonitorManually(req.params.id);
-    res.json({ success: true, sessionId: result.sessionId, message: 'Monitor triggered' });
+    res.json({ success: true, sessionId: result.sessionId, message: (req as any).t('success:monitor.triggered') });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -151,7 +151,7 @@ router.get('/:id/history', requireAuth, asyncHandler(async (req: any, res) => {
 // Pause a monitor
 router.patch('/:id/pause', requireAuth, asyncHandler(async (req: any, res) => {
   const monitor = await monitorRepository.update(req.params.id, { is_enabled: false });
-  if (!monitor) return res.status(404).json({ error: 'Monitor not found' });
+  if (!monitor) return res.status(404).json({ error: (req as any).t('errors:resource.monitorNotFound') });
 
   logger.info('Monitor paused', { monitorId: monitor.id, name: monitor.name });
 
@@ -164,7 +164,7 @@ router.patch('/:id/pause', requireAuth, asyncHandler(async (req: any, res) => {
 // Resume a monitor
 router.patch('/:id/resume', requireAuth, asyncHandler(async (req: any, res) => {
   const monitor = await monitorRepository.findById(req.params.id);
-  if (!monitor) return res.status(404).json({ error: 'Monitor not found' });
+  if (!monitor) return res.status(404).json({ error: (req as any).t('errors:resource.monitorNotFound') });
 
   // Calculate next run time when resuming
   const nextRun = calculateNextRunFromCron(monitor.cron_expression);

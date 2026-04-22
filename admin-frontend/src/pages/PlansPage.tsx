@@ -1,134 +1,158 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getAdminPlans, archivePlan, restorePlan, syncPlanToStripe } from '../services/api';
-import { FiPlus, FiEdit2, FiArchive, FiRefreshCw, FiUploadCloud } from 'react-icons/fi';
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import { Plus, Pencil, Archive, RotateCcw, Upload } from 'lucide-react'
+import { Card, CardContent } from '../components/ui/card'
+import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
+import { Skeleton } from '../components/ui/skeleton'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { ConfirmDialog } from '../components/admin/ConfirmDialog'
+import { formatCents } from '../lib/money'
+import { getAdminPlans, archivePlan, restorePlan, syncPlanToStripe } from '../services/api'
 
-export const PlansPage: React.FC = () => {
-  const [plans, setPlans] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function PlansPage() {
+  const { t } = useTranslation('superadmin')
+  const [plans, setPlans] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [archiveTarget, setArchiveTarget] = useState<any>(null)
 
   const fetchPlans = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await getAdminPlans();
-      setPlans(data.plans || []);
+      const data = await getAdminPlans()
+      setPlans(data.plans || [])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  useEffect(() => { fetchPlans(); }, []);
+  useEffect(() => {
+    fetchPlans()
+  }, [])
 
-  const handleArchive = async (id: string) => {
-    await archivePlan(id);
-    await fetchPlans();
-  };
+  const handleArchive = async () => {
+    if (!archiveTarget) return
+    await archivePlan(archiveTarget.id)
+    setArchiveTarget(null)
+    await fetchPlans()
+  }
 
   const handleRestore = async (id: string) => {
-    await restorePlan(id);
-    await fetchPlans();
-  };
+    await restorePlan(id)
+    await fetchPlans()
+  }
 
   const handleSyncStripe = async (id: string) => {
     try {
-      await syncPlanToStripe(id);
-      await fetchPlans();
-      alert('Plan synced to Stripe successfully');
+      await syncPlanToStripe(id)
+      await fetchPlans()
     } catch (err: any) {
-      alert(`Stripe sync failed: ${err.response?.data?.error || err.message}`);
+      alert(t('plans.syncStripeFailed', { error: err.response?.data?.error || err.message }))
     }
-  };
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Plans</h1>
-        <Link
-          to="/plans/new"
-          className="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700"
-        >
-          <FiPlus className="mr-2 h-4 w-4" /> New Plan
-        </Link>
-      </div>
+      <AdminPageHeader
+        title={t('plans.title')}
+        actions={
+          <Button asChild size="sm">
+            <Link to="/plans/new">
+              <Plus className="h-4 w-4 me-1.5" />
+              {t('plans.newPlan')}
+            </Link>
+          </Button>
+        }
+      />
 
       {loading ? (
-        <div className="animate-pulse space-y-3">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-slate-700 rounded-lg" />)}
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
         </div>
+      ) : plans.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            {t('plans.noPlans')}
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
           {plans.map((plan: any) => (
-            <div key={plan.id} className={`bg-slate-800 rounded-lg border p-5 ${plan.is_archived ? 'border-slate-600 opacity-60' : 'border-slate-700'}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-                    {plan.is_archived && (
-                      <span className="px-2 py-0.5 bg-slate-800 text-slate-400 text-xs rounded-full">Archived</span>
-                    )}
-                    {!plan.is_public && (
-                      <span className="px-2 py-0.5 bg-yellow-900/30 text-yellow-700 text-xs rounded-full">Hidden</span>
-                    )}
-                    {plan.is_custom && (
-                      <span className="px-2 py-0.5 bg-sky-900/30 text-sky-300 text-xs rounded-full">Custom</span>
+            <Card key={plan.id} className={plan.is_archived ? 'opacity-60' : undefined}>
+              <CardContent className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold">{plan.name}</h3>
+                      {plan.is_archived && <Badge variant="secondary">{t('plans.badges.archived')}</Badge>}
+                      {!plan.is_public && (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-900 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800">
+                          {t('plans.badges.hidden')}
+                        </Badge>
+                      )}
+                      {plan.is_custom && (
+                        <Badge variant="outline" className="bg-sky-50 text-sky-900 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800">
+                          {t('plans.badges.custom')}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {plan.price_cents === 0 ? t('plans.free') : t('plans.priceInterval', { price: formatCents(plan.price_cents), interval: plan.billing_interval })}
+                      {' · '}{t('plans.creditsCount', { count: plan.credits_per_period })}
+                      {plan.trial_days > 0 && ` · ${t('plans.trialDays', { days: plan.trial_days })}`}
+                      {' · '}{t('plans.subscriberCount', { count: plan.subscriber_count || 0 })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => handleSyncStripe(plan.id)} title={t('plans.syncStripe')}>
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" asChild title={t('common:admin.common.edit')}>
+                      <Link to={`/plans/${plan.id}/edit`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    {plan.is_archived ? (
+                      <Button variant="ghost" size="icon" onClick={() => handleRestore(plan.id)} title={t('plans.restore')}>
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" onClick={() => setArchiveTarget(plan)} title={t('plans.archive')}>
+                        <Archive className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
-                  <p className="text-sm text-slate-400 mt-1">
-                    {plan.price_cents === 0 ? 'Free' : `$${(plan.price_cents / 100).toFixed(2)}/${plan.billing_interval}`}
-                    {' '} | {plan.credits_per_period} credits
-                    {plan.trial_days > 0 && ` | ${plan.trial_days}-day trial`}
-                    {' '} | {plan.subscriber_count || 0} subscribers
-                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleSyncStripe(plan.id)}
-                    className="p-2 text-slate-500 hover:text-primary-600 rounded-lg hover:bg-slate-800"
-                    title="Sync to Stripe"
-                  >
-                    <FiUploadCloud className="h-4 w-4" />
-                  </button>
-                  <Link
-                    to={`/plans/${plan.id}/edit`}
-                    className="p-2 text-slate-500 hover:text-primary-600 rounded-lg hover:bg-slate-800"
-                    title="Edit"
-                  >
-                    <FiEdit2 className="h-4 w-4" />
-                  </Link>
-                  {plan.is_archived ? (
-                    <button
-                      onClick={() => handleRestore(plan.id)}
-                      className="p-2 text-slate-500 hover:text-green-600 rounded-lg hover:bg-slate-800"
-                      title="Restore"
-                    >
-                      <FiRefreshCw className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleArchive(plan.id)}
-                      className="p-2 text-slate-500 hover:text-red-600 rounded-lg hover:bg-slate-800"
-                      title="Archive"
-                    >
-                      <FiArchive className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
 
-              {/* Features */}
-              {plan.features && plan.features.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {plan.features.map((f: any) => (
-                    <span key={f.feature_key} className="inline-flex px-2 py-0.5 bg-slate-800 text-slate-400 text-xs rounded">
-                      {f.feature_key}: {f.feature_value}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+                {plan.features && plan.features.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {plan.features.map((f: any) => (
+                      <Badge key={f.feature_key} variant="secondary" className="font-mono text-xs">
+                        {f.feature_key}: {f.feature_value}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!archiveTarget}
+        onOpenChange={(open) => { if (!open) setArchiveTarget(null) }}
+        title={t('plans.archivePlan')}
+        description={t('plans.archiveDescription', { name: archiveTarget?.name })}
+        confirmText={t('plans.archive')}
+        variant="destructive"
+        onConfirm={handleArchive}
+      />
     </div>
-  );
-};
+  )
+}
+
+export { PlansPage as default }

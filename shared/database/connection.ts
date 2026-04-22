@@ -20,7 +20,7 @@ export function getPool(): Pool {
       connectionTimeoutMillis: 2000,
     });
 
-    pool.on('error', (err) => {
+    pool.on('error', (err: Error) => {
       logger.error('Unexpected database pool error', err);
     });
 

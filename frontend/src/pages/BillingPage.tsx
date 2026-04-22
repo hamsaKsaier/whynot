@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../components/common/Card';
-import { Button } from '../components/common/Button';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { useTranslation } from 'react-i18next';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Skeleton } from '../components/ui/skeleton';
+import { Progress } from '../components/ui/progress';
 import {
   getBillingSubscription,
   getBillingCredits,
@@ -14,23 +17,32 @@ import {
   cancelSubscription,
   reactivateSubscription,
 } from '../services/api';
-import { CreditUsageBar } from '../components/Billing/CreditUsageBar';
 import { PlanCard } from '../components/Billing/PlanCard';
 import { TransactionHistory } from '../components/Billing/TransactionHistory';
 import { InvoiceList } from '../components/Billing/InvoiceList';
 import {
-  FiCreditCard,
-  FiZap,
-  FiTrendingUp,
-  FiCalendar,
-} from 'react-icons/fi';
+  CreditCard,
+  Zap,
+  TrendingUp,
+  Calendar,
+  Loader2,
+} from 'lucide-react';
 
 export const BillingContent: React.FC = () => <BillingPage embedded />;
 
+const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  active: 'default',
+  trialing: 'secondary',
+  past_due: 'destructive',
+  canceled: 'destructive',
+  paused: 'outline',
+  incomplete: 'outline',
+};
+
 export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t, i18n } = useTranslation('billing');
   const [subscription, setSubscription] = useState<any>(null);
   const [plan, setPlan] = useState<any>(null);
-  const [features, setFeatures] = useState<Record<string, string>>({});
   const [balance, setBalance] = useState<any>(null);
   const [usage, setUsage] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
@@ -38,6 +50,7 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [checkoutPlanId, setCheckoutPlanId] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -53,7 +66,6 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
 
       setSubscription(subData.subscription);
       setPlan(subData.plan);
-      setFeatures(subData.features || {});
       setBalance(creditsData.balance);
       setUsage(usageData.usage);
       setPlans(plansData.plans || []);
@@ -68,8 +80,16 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
     fetchData();
   }, []);
 
+  const formatDate = (dateStr: string) => {
+    return new Intl.DateTimeFormat(i18n.language, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(dateStr));
+  };
+
   const handleUpgrade = async (planId: string) => {
-    setActionLoading(true);
+    setCheckoutPlanId(planId);
     try {
       const result = await createCheckoutSession(planId);
       if (result.url) {
@@ -78,7 +98,7 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
     } catch (err) {
       console.error('Checkout error:', err);
     } finally {
-      setActionLoading(false);
+      setCheckoutPlanId(null);
     }
   };
 
@@ -89,15 +109,13 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
       if (result.url) {
         window.location.href = result.url;
       }
-    } catch (err) {
-      console.error('Portal error:', err);
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleCancel = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription? It will remain active until the end of your billing period.')) return;
+    if (!confirm(t('billing.cancelConfirm'))) return;
     setActionLoading(true);
     try {
       await cancelSubscription();
@@ -119,131 +137,150 @@ export const BillingPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-700 rounded w-48" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-700 rounded" />)}
-          </div>
+      <div className={embedded ? 'space-y-6' : 'px-4 py-6 sm:px-6 max-w-6xl mx-auto space-y-6'}>
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-5">
+                <Skeleton className="h-4 w-24 mb-3" />
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-20" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
+        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
 
-  const statusMap: Record<string, 'success' | 'error' | 'running' | 'pending'> = {
-    active: 'success',
-    trialing: 'running',
-    past_due: 'error',
-    canceled: 'error',
-    paused: 'pending',
-    incomplete: 'pending',
-  };
+  const usagePercent = usage && usage.credits_total > 0
+    ? Math.min((usage.credits_used / usage.credits_total) * 100, 100)
+    : 0;
 
   return (
-    <div className={embedded ? 'space-y-8' : 'p-6 max-w-6xl mx-auto space-y-8'}>
+    <div className={embedded ? 'space-y-8' : 'px-4 py-6 sm:px-6 max-w-6xl mx-auto space-y-8'}>
+      {/* Header */}
       {!embedded && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Billing & Usage</h1>
-            <p className="text-sm text-slate-400 mt-1">Manage your subscription, credits, and invoices</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{t('billing.title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('billing.subtitle')}</p>
           </div>
           {subscription?.stripe_subscription_id && (
-            <Button onClick={handleManageBilling} disabled={actionLoading} variant="secondary">
-              <FiCreditCard className="mr-2 h-4 w-4" />
-              Manage Billing
+            <Button onClick={handleManageBilling} disabled={actionLoading} variant="outline" className="w-full sm:w-auto">
+              <CreditCard className="me-2 h-4 w-4" />
+              {t('billingTab.manage')}
             </Button>
           )}
         </div>
       )}
 
-      {/* Current Plan + Credits Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-primary-900/20 rounded-lg">
-              <FiZap className="h-5 w-5 text-primary-600" />
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {/* Current Plan */}
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <Zap className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">{t('billing.currentPlan')}</p>
+                <p className="text-base font-semibold text-foreground truncate">{plan?.name || t('billingTab.noPlan')}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-slate-400">Current Plan</p>
-              <p className="text-lg font-semibold text-white">{plan?.name || 'No Plan'}</p>
-            </div>
-          </div>
-          {subscription && (
-            <StatusBadge status={statusMap[subscription.status] || 'pending'} label={subscription.status} />
-          )}
-          {subscription?.cancel_at_period_end && (
-            <p className="text-xs text-orange-600 mt-2">Cancels at end of period</p>
-          )}
+            {subscription && (
+              <Badge variant={STATUS_VARIANTS[subscription.status] || 'outline'}>
+                {t(`billingTab.status.${subscription.status}`)}
+              </Badge>
+            )}
+            {subscription?.cancel_at_period_end && (
+              <p className="text-xs text-destructive mt-2">{t('billingTab.cancelsAtEnd')}</p>
+            )}
+          </CardContent>
         </Card>
 
-        <Card className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-green-900/20 rounded-lg">
-              <FiTrendingUp className="h-5 w-5 text-green-600" />
+        {/* Credits */}
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <TrendingUp className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">{t('billing.credits.remaining')}</p>
+                <p className="text-base font-semibold text-foreground">{balance?.balance ?? 0}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-slate-400">Credits Remaining</p>
-              <p className="text-lg font-semibold text-white">{balance?.balance ?? 0}</p>
+            <Progress value={usagePercent} className="h-2" />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>{t('billingTab.creditsUsed', { count: usage?.credits_used ?? 0 })}</span>
+              <span>{t('billingTab.creditsOf', { count: usage?.credits_total ?? 0 })}</span>
             </div>
-          </div>
-          <CreditUsageBar
-            used={usage?.credits_used || 0}
-            total={usage?.credits_total || 0}
-            remaining={balance?.balance ?? 0}
-          />
+          </CardContent>
         </Card>
 
-        <Card className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-blue-900/20 rounded-lg">
-              <FiCalendar className="h-5 w-5 text-blue-600" />
+        {/* Billing Period */}
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">{t('billingTab.period')}</p>
+                <p className="text-sm font-medium text-foreground">
+                  {subscription?.current_period_end
+                    ? t('billingTab.renewsOn', { date: formatDate(subscription.current_period_end) })
+                    : t('billingTab.noPeriod')}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-slate-400">Billing Period</p>
-              <p className="text-sm font-medium text-white">
-                {subscription?.current_period_end
-                  ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`
-                  : 'No active period'
-                }
-              </p>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {subscription?.cancel_at_period_end ? (
+                <Button size="sm" variant="outline" onClick={handleReactivate} disabled={actionLoading}>
+                  {t('billingTab.reactivate')}
+                </Button>
+              ) : subscription?.stripe_subscription_id ? (
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={handleCancel} disabled={actionLoading}>
+                  {t('billing.cancel')}
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => plans[0] && handleUpgrade(plans[0].id)}>
+                  {t('billing.plans.upgrade')}
+                </Button>
+              )}
             </div>
-          </div>
-          <div className="mt-2 space-x-2">
-            {subscription?.cancel_at_period_end ? (
-              <Button size="sm" onClick={handleReactivate} disabled={actionLoading}>Reactivate</Button>
-            ) : subscription?.stripe_subscription_id ? (
-              <Button size="sm" variant="danger" onClick={handleCancel} disabled={actionLoading}>Cancel</Button>
-            ) : null}
-          </div>
+          </CardContent>
         </Card>
       </div>
 
       {/* Plan Comparison */}
       <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Available Plans</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <h2 className="text-lg font-semibold text-foreground mb-4">{t('billing.plans.title')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {plans.map((p: any) => (
             <PlanCard
               key={p.id}
               plan={p}
               isCurrentPlan={plan?.id === p.id}
+              isPopular={p.slug === 'pro_managed'}
               onUpgrade={() => handleUpgrade(p.id)}
-              disabled={actionLoading}
+              disabled={actionLoading || checkoutPlanId !== null}
+              loading={checkoutPlanId === p.id}
             />
           ))}
         </div>
       </div>
 
       {/* Transaction History */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Credit History</h2>
-        <TransactionHistory transactions={transactions} />
-      </div>
+      {transactions.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{t('billingTab.creditHistory')}</h2>
+          <TransactionHistory transactions={transactions} />
+        </div>
+      )}
 
       {/* Invoices */}
       {invoices.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-white mb-4">Invoices</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{t('billing.invoices.title')}</h2>
           <InvoiceList invoices={invoices} />
         </div>
       )}

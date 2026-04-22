@@ -16,7 +16,9 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 ENV VITE_QA_LOOP_WS_URL=$VITE_QA_LOOP_WS_URL
 
-RUN npm run build
+# Core build only: skip sitemap + prerender steps because they reference
+# ../scripts/ outside the Docker build context.
+RUN npx tsc && npx vite build
 
 # ── Stage 2: Serve with nginx ──────────────────────────────────────────────
 FROM nginx:alpine

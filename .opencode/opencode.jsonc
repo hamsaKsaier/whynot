@@ -1,0 +1,129 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "model": "anthropic/claude-sonnet-4-6",
+  "small_model": "anthropic/claude-sonnet-4-6",
+
+  "provider": {
+    "zai": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Z.AI (GLM Coding Plan)",
+      "options": {
+        "baseURL": "https://api.z.ai/api/coding/paas/v4",
+        "apiKey": "{env:ZAI_API_KEY}"
+      },
+      "models": {
+        "glm-5.1": {
+          "name": "GLM-5.1",
+          "reasoning": true,
+          "attachment": false,
+          "temperature": true,
+          "tool_call": true,
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "limit": { "context": 204800, "output": 131072 }
+        },
+        "glm-5": {
+          "name": "GLM-5",
+          "reasoning": true,
+          "tool_call": true,
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "limit": { "context": 204800, "output": 131072 }
+        },
+        "glm-5-turbo": {
+          "name": "GLM-5 Turbo",
+          "reasoning": false,
+          "tool_call": true,
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "limit": { "context": 204800, "output": 131072 }
+        },
+        "glm-4.7": {
+          "name": "GLM-4.7",
+          "reasoning": true,
+          "tool_call": true,
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "limit": { "context": 204800, "output": 131072 }
+        },
+        "glm-4.7-flash": {
+          "name": "GLM-4.7 Flash",
+          "reasoning": false,
+          "tool_call": true,
+          "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+          "limit": { "context": 131072, "output": 32768 }
+        }
+      }
+    }
+  },
+
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "legal-*": "ask",
+      "security-*": "ask",
+      "payment-*": "ask",
+      "stripe-mcp": "ask",
+      "production-*": "ask",
+      "deploy-*": "ask",
+      "release-*": "ask",
+      "swarm-*": "deny",
+      "hive-mind-*": "deny",
+      "flow-nexus-*": "deny",
+      "neural-*": "deny",
+      "consensus-*": "deny"
+    },
+    "bash": "allow",
+    "edit": "allow",
+    "webfetch": "allow",
+    "websearch": "allow"
+  },
+
+  "instructions": [
+    "AGENTS.md",
+    ".claude/rules/rtl-support-arabic.md",
+    ".claude/rules/uncodixify-ui.md",
+    ".claude/rules/url-tab-state.md",
+    ".claude/rules/spec-driven-development.md",
+    ".claude/rules/switch-component-styling.md"
+  ],
+
+  "mcp": {
+    "z-web-search": {
+      "type": "remote",
+      "url": "https://api.z.ai/api/mcp/web_search_prime/mcp",
+      "headers": {
+        "Authorization": "Bearer {env:ZAI_API_KEY}"
+      },
+      "oauth": false,
+      "enabled": true,
+      "timeout": 15000
+    },
+
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      },
+      "oauth": false,
+      "enabled": true,
+      "timeout": 10000
+    },
+
+    "stripe": {
+      "type": "local",
+      "command": ["npx", "-y", "@stripe/mcp", "--tools=all"],
+      "environment": {
+        "STRIPE_SECRET_KEY": "{env:STRIPE_SECRET_KEY}"
+      },
+      "enabled": false,
+      "timeout": 20000
+    },
+
+    "sentry": {
+      "type": "remote",
+      "url": "https://mcp.sentry.dev/mcp",
+      "oauth": {},
+      "enabled": false,
+      "timeout": 15000
+    }
+  }
+}

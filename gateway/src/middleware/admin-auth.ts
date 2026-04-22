@@ -8,14 +8,15 @@ const userRepository = new UserRepository();
  */
 export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const t = (req as any).t ?? ((k: string) => k);
     if (!req.user) {
-      res.status(401).json({ success: false, error: 'Authentication required' });
+      res.status(401).json({ success: false, error: t('errors:auth.unauthorized') });
       return;
     }
 
     const user = await userRepository.findById(req.user.id);
     if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
-      res.status(403).json({ success: false, error: 'Admin access required' });
+      res.status(403).json({ success: false, error: t('errors:auth.adminRequired') });
       return;
     }
 
@@ -30,14 +31,15 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
  */
 export async function requireSuperAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const t = (req as any).t ?? ((k: string) => k);
     if (!req.user) {
-      res.status(401).json({ success: false, error: 'Authentication required' });
+      res.status(401).json({ success: false, error: t('errors:auth.unauthorized') });
       return;
     }
 
     const user = await userRepository.findById(req.user.id);
     if (!user || user.role !== 'super_admin') {
-      res.status(403).json({ success: false, error: 'Super admin access required' });
+      res.status(403).json({ success: false, error: t('errors:auth.superAdminRequired') });
       return;
     }
 

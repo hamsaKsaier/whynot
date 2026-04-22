@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { query, transaction } from '../connection';
 import { TestCase } from '../../types';
 import { PoolClient } from 'pg';
@@ -28,9 +29,7 @@ export class TestCaseRepository {
     // If ID is not a valid UUID format, generate a new UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(testCaseId)) {
-      // Import uuid dynamically to avoid issues
-      const { v4: uuidv4 } = require('uuid');
-      testCaseId = uuidv4();
+      testCaseId = randomUUID();
     }
 
     const result = await query<TestCaseEntity>(

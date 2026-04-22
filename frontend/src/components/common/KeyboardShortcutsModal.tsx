@@ -66,22 +66,22 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       <div className="space-y-6">
         {Object.entries(groupedShortcuts).map(([category, categoryShortcuts]) => (
           <div key={category}>
-            <h3 className="text-sm font-semibold text-white mb-3">{category}</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-3">{category}</h3>
             <div className="space-y-2">
               {categoryShortcuts.map((shortcut, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between py-2 border-b border-slate-700 last:border-0"
+                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
                 >
-                  <span className="text-sm text-slate-200">{shortcut.description}</span>
+                  <span className="text-sm text-foreground">{shortcut.description}</span>
                   <div className="flex items-center gap-1">
                     {shortcut.keys.map((key, keyIndex) => (
                       <React.Fragment key={keyIndex}>
-                        <kbd className="px-2 py-1 text-xs font-semibold text-slate-200 bg-slate-800 border border-slate-600 rounded">
+                        <kbd className="px-2 py-1 text-xs font-semibold text-foreground bg-muted border border-border rounded">
                           {formatKey(key)}
                         </kbd>
                         {keyIndex < shortcut.keys.length - 1 && (
-                          <span className="text-slate-500 mx-1">+</span>
+                          <span className="text-muted-foreground mx-1">+</span>
                         )}
                       </React.Fragment>
                     ))}
@@ -92,8 +92,8 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
           </div>
         ))}
       </div>
-      <div className="mt-6 pt-4 border-t border-slate-700">
-        <p className="text-xs text-slate-400 text-center">
+      <div className="mt-6 pt-4 border-t border-border">
+        <p className="text-xs text-muted-foreground text-center">
           Note: On Windows/Linux, use Ctrl instead of Cmd
         </p>
       </div>

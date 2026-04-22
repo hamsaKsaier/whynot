@@ -15,7 +15,7 @@ export const UserStoryNode: React.FC<NodeProps<UserStoryNodeData>> = ({ data }) 
   const displayUrl = data.website_url || parsedUrl;
 
   return (
-    <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 border-l-4 border-l-green-500 min-w-[240px] max-w-[280px] transition-all duration-200 hover:shadow-md">
+    <div className="bg-card rounded-xl shadow-sm border border-border border-s-4 border-s-green-500 min-w-[240px] max-w-[280px] transition-colors duration-150 hover:bg-muted/50">
       <Handle
         type="target"
         position={Position.Top}
@@ -30,12 +30,12 @@ export const UserStoryNode: React.FC<NodeProps<UserStoryNodeData>> = ({ data }) 
             User Story
           </span>
         </div>
-        <div className="text-sm text-slate-200 leading-snug line-clamp-3">
+        <div className="text-sm text-foreground leading-snug line-clamp-3">
           {parsedStory}
         </div>
         {displayUrl && (
-          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-700">
-            <FiGlobe className="h-3 w-3 text-slate-500 flex-shrink-0" />
+          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border">
+            <FiGlobe className="h-3 w-3 text-muted-foreground flex-shrink-0" />
             <span className="text-[11px] text-green-600 truncate">
               {displayUrl}
             </span>

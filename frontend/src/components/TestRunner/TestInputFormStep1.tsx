@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { FiFolder } from 'react-icons/fi';
 import { Select } from '../common/Select';
@@ -22,11 +23,12 @@ export const TestInputFormStep1: React.FC<TestInputFormStep1Props> = ({
   onProjectChange,
   disabled = false,
 }) => {
+  const { t } = useTranslation('runner');
   const navigate = useNavigate();
 
   const projectOptions = projects.map((p) => ({
     value: p.id,
-    label: `${p.name}${p.user_story_count ? ` (${p.user_story_count} stories)` : ''}`,
+    label: `${p.name}${p.user_story_count ? ` (${p.user_story_count} ${t('runner.step1.stories')})` : ''}`,
   }));
 
   return (
@@ -34,7 +36,7 @@ export const TestInputFormStep1: React.FC<TestInputFormStep1Props> = ({
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="block text-sm font-medium text-slate-200">
-            Project <span className="text-red-500">*</span>
+            {t('runner.step1.project')} <span className="text-red-500">*</span>
           </label>
           <Button
             variant="secondary"
@@ -42,26 +44,26 @@ export const TestInputFormStep1: React.FC<TestInputFormStep1Props> = ({
             onClick={() => navigate('/projects')}
             className="text-xs"
           >
-            <FiFolder className="mr-1 h-3 w-3" />
-            Manage Projects
+            <FiFolder className="me-1 h-3 w-3" />
+            {t('runner.step1.manageProjects')}
           </Button>
         </div>
         <Select
           options={projectOptions}
           value={selectedProjectId}
           onChange={onProjectChange}
-          placeholder={loadingProjects ? 'Loading projects...' : 'Select a project'}
+          placeholder={loadingProjects ? t('runner.step1.loadingProjects') : t('runner.step1.selectProject')}
           error={error}
           disabled={disabled || loadingProjects}
         />
         {projects.length === 0 && !loadingProjects && (
           <p className="mt-1 text-sm text-slate-400">
-            No projects found.{' '}
+            {t('runner.step1.noProjects')}{' '}
             <button
               onClick={() => navigate('/projects')}
               className="text-primary-600 hover:underline"
             >
-              Create one
+              {t('runner.step1.createOne')}
             </button>
           </p>
         )}

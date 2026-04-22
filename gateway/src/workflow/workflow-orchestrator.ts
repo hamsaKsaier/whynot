@@ -4,6 +4,7 @@ import type { PrerequisiteStep } from '../../shared/utils/create-edit-flow';
 import { retryWithBackoff } from '../../shared/utils/retry';
 import { CircuitBreaker } from '../../shared/utils/circuit-breaker';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 
 const logger = createLogger('workflow-orchestrator');
 
@@ -38,14 +39,8 @@ export class WorkflowOrchestrator {
     url: string;
   }> {
     // Configurable timeout for page capture (default: 60 seconds)
-    const captureTimeout = parseInt(
-      process.env.PAGE_CAPTURE_TIMEOUT_MS || '60000',
-      10
-    );
-    const maxRetries = parseInt(
-      process.env.PAGE_CAPTURE_MAX_RETRIES || '2',
-      10
-    );
+    const captureTimeout = env.PAGE_CAPTURE_TIMEOUT_MS;
+    const maxRetries = env.PAGE_CAPTURE_MAX_RETRIES;
 
     try {
       logger.info('Capturing page content', {

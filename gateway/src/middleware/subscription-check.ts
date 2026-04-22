@@ -13,9 +13,10 @@ export async function requireActiveSubscription(
   next: NextFunction
 ): Promise<void> {
   try {
+    const t = (req as any).t ?? ((k: string) => k);
     const workspaceId = req.workspaceId;
     if (!workspaceId) {
-      res.status(401).json({ success: false, error: 'Workspace not resolved' });
+      res.status(401).json({ success: false, error: t('errors:workspace.notResolved') });
       return;
     }
 
@@ -24,7 +25,7 @@ export async function requireActiveSubscription(
     if (!subscription) {
       res.status(403).json({
         success: false,
-        error: 'No active subscription',
+        error: t('errors:subscription.notActive'),
         code: 'NO_SUBSCRIPTION',
         details: {
           upgrade_url: '/billing',
@@ -37,7 +38,7 @@ export async function requireActiveSubscription(
     if (!activeStatuses.includes(subscription.status)) {
       res.status(403).json({
         success: false,
-        error: 'Your subscription is not active',
+        error: t('errors:subscription.inactive'),
         code: 'SUBSCRIPTION_INACTIVE',
         details: {
           status: subscription.status,
@@ -53,7 +54,7 @@ export async function requireActiveSubscription(
       if (trialEnd < new Date()) {
         res.status(403).json({
           success: false,
-          error: 'Your free trial has expired',
+          error: t('errors:subscription.trialExpired'),
           code: 'TRIAL_EXPIRED',
           details: {
             trial_end: trialEnd.toISOString(),

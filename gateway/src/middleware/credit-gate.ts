@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { CreditRepository } from '../../shared/database/repositories/credit-repository';
-import { BillingService } from '../services/billing-service';
-import { getCreditCost, getCreditDescription, CreditCostKey } from '../services/credit-cost-mapper';
-
-const creditRepository = new CreditRepository();
-const billingService = new BillingService();
+import { PaymentService } from '../payments/payment-service';
+import { getCreditCost, getCreditDescription, CreditCostKey } from '../payments/credit-cost-mapper';
 
 /**
  * Middleware that checks if the workspace has enough credits for an operation.
@@ -15,20 +11,21 @@ const billingService = new BillingService();
 export function requireCredits(costOrKey: CreditCostKey | number) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const t = (req as any).t ?? ((k: string) => k);
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        res.status(401).json({ success: false, error: 'Workspace not resolved' });
+        res.status(401).json({ success: false, error: t('errors:workspace.notResolved') });
         return;
       }
 
       const cost = typeof costOrKey === 'number' ? costOrKey : getCreditCost(costOrKey);
 
-      const { hasEnough, balance } = await billingService.checkCreditBalance(workspaceId, cost);
+      const { hasEnough, balance } = await PaymentService.checkCreditBalance(workspaceId, cost);
 
       if (!hasEnough) {
         res.status(402).json({
           success: false,
-          error: 'Insufficient credits',
+          error: t('errors:business.insufficientCredits'),
           code: 'INSUFFICIENT_CREDITS',
           details: {
             required: cost,
@@ -64,11 +61,11 @@ export async function deductCredits(
   const cost = getCreditCost(operation);
   const description = getCreditDescription(operation, detail);
 
-  await billingService.consumeCredits(
+  await PaymentService.consumeCredits(
     workspaceId,
     cost,
     description,
     referenceType,
-    referenceId
+    referenceId,
   );
 }

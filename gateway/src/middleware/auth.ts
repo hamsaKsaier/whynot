@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
 import { createError } from './error-handler';
 import { WorkspaceRepository } from '../../shared/database/repositories/workspace-repository';
 
@@ -23,9 +24,7 @@ declare global {
 }
 
 function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET environment variable is not set');
-  return secret;
+  return env.JWT_SECRET;
 }
 
 /**
@@ -33,9 +32,10 @@ function getJwtSecret(): string {
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const t = (req as any).t ?? ((k: string) => k);
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ success: false, error: 'Authentication required' });
+      res.status(401).json({ success: false, error: t('errors:auth.unauthorized') });
       return;
     }
 
@@ -44,7 +44,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     try {
       payload = jwt.verify(token, getJwtSecret());
     } catch (err) {
-      res.status(401).json({ success: false, error: 'Invalid or expired token' });
+      res.status(401).json({ success: false, error: t('errors:auth.invalidToken') });
       return;
     }
 
@@ -98,7 +98,7 @@ async function resolveWorkspace(userId: string, requestedWorkspaceId?: string): 
 
   const workspaces = await workspaceRepository.findAllByUserId(userId);
   if (workspaces.length === 0) {
-    throw createError('No workspace found for user', 500, 'NO_WORKSPACE');
+    throw createError('No workspace found for user', 500, 'NO_WORKSPACE', undefined, 'errors:workspace.noWorkspace');
   }
   return workspaces[0].id;
 }

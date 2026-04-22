@@ -11,28 +11,28 @@ interface TestStepNodeData {
 
 export const TestStepNode: React.FC<NodeProps<TestStepNodeData>> = ({ data }) => {
   return (
-    <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 border-l-4 border-l-gray-400 min-w-[200px] max-w-[240px] transition-all duration-200 hover:shadow-md">
+    <div className="bg-card rounded-xl shadow-sm border border-border border-s-4 border-s-gray-400 min-w-[200px] max-w-[240px] transition-colors duration-150 hover:bg-muted/50">
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-slate-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-muted-foreground"
       />
       <div className="px-3 py-2.5">
         <div className="flex items-center gap-2 mb-1">
-          <div className="p-1 bg-slate-900 rounded-lg flex-shrink-0">
-            <FiActivity className="h-3 w-3 text-slate-400" />
+          <div className="p-1 bg-muted rounded-lg flex-shrink-0">
+            <FiActivity className="h-3 w-3 text-muted-foreground" />
           </div>
           {data.action && (
-            <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-mono font-medium text-slate-400 uppercase">
+            <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono font-medium text-muted-foreground uppercase">
               {data.action}
             </span>
           )}
         </div>
-        <div className="font-medium text-slate-200 text-xs leading-snug line-clamp-2">
+        <div className="font-medium text-foreground text-xs leading-snug line-clamp-2">
           {data.label}
         </div>
         {data.description && data.description !== data.label && (
-          <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
             {data.description}
           </p>
         )}
@@ -40,7 +40,7 @@ export const TestStepNode: React.FC<NodeProps<TestStepNodeData>> = ({ data }) =>
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-slate-500"
+        className="!w-2.5 !h-2.5 !border-2 !border-white !bg-muted-foreground"
       />
     </div>
   );

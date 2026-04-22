@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+>
+    <url>
+      <loc>https://whynot.sh/</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>1.0</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/?lng=ar</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>1.0</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/?lng=fr</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>1.0</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/?lng=de</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>1.0</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/?lng=es</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>1.0</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/login</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/login" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/login?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/login?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/login?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/login?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/login" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/login?lng=ar</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/login" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/login?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/login?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/login?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/login?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/login" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/login?lng=fr</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/login" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/login?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/login?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/login?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/login?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/login" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/login?lng=de</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/login" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/login?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/login?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/login?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/login?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/login" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/login?lng=es</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/login" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/login?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/login?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/login?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/login?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/login" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/signup</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/signup" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/signup?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/signup?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/signup?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/signup?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/signup" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/signup?lng=ar</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/signup" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/signup?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/signup?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/signup?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/signup?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/signup" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/signup?lng=fr</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/signup" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/signup?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/signup?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/signup?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/signup?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/signup" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/signup?lng=de</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/signup" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/signup?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/signup?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/signup?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/signup?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/signup" />
+    </url>
+    <url>
+      <loc>https://whynot.sh/signup?lng=es</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.6</priority>
+      <xhtml:link rel="alternate" hreflang="en" href="https://whynot.sh/signup" />
+      <xhtml:link rel="alternate" hreflang="ar" href="https://whynot.sh/signup?lng=ar" />
+      <xhtml:link rel="alternate" hreflang="fr" href="https://whynot.sh/signup?lng=fr" />
+      <xhtml:link rel="alternate" hreflang="de" href="https://whynot.sh/signup?lng=de" />
+      <xhtml:link rel="alternate" hreflang="es" href="https://whynot.sh/signup?lng=es" />
+      <xhtml:link rel="alternate" hreflang="x-default" href="https://whynot.sh/signup" />
+    </url>
+</urlset>

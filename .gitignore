@@ -1,44 +1,95 @@
-# Python
+# ---------- Node.js ----------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# ---------- Build output ----------
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.turbo/
+.cache/
+*.tsbuildinfo
+
+# ---------- Test & coverage ----------
+coverage/
+**/coverage/
+.nyc_output/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.lcov
+lcov.info
+
+# Playwright
+playwright-report/
+test-results/
+e2e/**/__screenshots__/
+
+# Vitest
+.vitest-cache/
+
+# ---------- Python ----------
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+.venv/
 venv/
 env/
 ENV/
-.venv
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.prompt_executor_*.pid
+.prompt_executor_*.log
+.prompt_executor_*_failures.log
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-dist/
-build/
-*.log
-
-# Environment variables
+# ---------- Environment ----------
 .env
 .env.local
+.env.*.local
+.env.development
+.env.production
+!.env.example
+!.env.test
 
-# Screenshots
+# ---------- Screenshots ----------
 screenshots/
-*.png
-*.jpg
-*.jpeg
 
-# IDE
-.vscode/
+# ---------- IDE / editors ----------
+.vscode/*
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 *~
 
-# OS
+# Claude / agent tool local state
+.claude/settings.local.json
+.claude/worktrees/
+.claude/projects/
+
+# ---------- OS ----------
 .DS_Store
 Thumbs.db
 
-# Docker
+# ---------- Docker ----------
 # .dockerignore must be tracked for Railway builds
 
+# ---------- Knowledge graph ----------
+.code-review-graph/

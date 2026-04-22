@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { OnboardingFlow } from '../components/Onboarding/OnboardingFlow';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { StatsCard } from '../components/common/StatsCard';
@@ -21,6 +22,7 @@ import {
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('dashboard');
   const { isCompleted, isLoading: onboardingLoading } = useOnboarding();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -71,33 +73,33 @@ export const HomePage: React.FC = () => {
       {!showOnboarding && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Overview</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t('dashboard.overview')}</h2>
             {statsError && (
               <Button variant="secondary" onClick={fetchStats} className="text-sm">
-                <FiRefreshCw className="mr-1 h-3 w-3" /> Retry
+                <FiRefreshCw className="me-1 h-3 w-3" /> {t('dashboard.retry')}
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatsCard
-              title="Test Cases"
+              title={t('dashboard.stats.testCases')}
               value={loadingStats ? '...' : stats?.totalTestCases ?? 0}
               icon={<FiCheckCircle className="h-6 w-6" />}
               onClick={() => navigate('/test-cases')}
             />
             <StatsCard
-              title="QA Sessions"
+              title={t('dashboard.stats.qaSessions')}
               value={loadingStats ? '...' : stats?.totalQASessions ?? 0}
               icon={<FiActivity className="h-6 w-6" />}
               onClick={() => navigate('/qa-loop')}
             />
             <StatsCard
-              title="Bugs Found"
+              title={t('dashboard.stats.bugsFound')}
               value={loadingStats ? '...' : stats?.totalBugsFound ?? 0}
               icon={<FiAlertTriangle className="h-6 w-6" />}
             />
             <StatsCard
-              title="Success Rate"
+              title={t('dashboard.stats.successRate')}
               value={loadingStats ? '...' : `${stats?.successRate ?? 0}%`}
               icon={<FiTrendingUp className="h-6 w-6" />}
               trend={(stats?.successRate ?? 0) >= 80 ? 'up' : (stats?.successRate ?? 0) >= 50 ? 'neutral' : 'down'}
@@ -111,39 +113,39 @@ export const HomePage: React.FC = () => {
       {!showOnboarding && stats?.recentSessions && stats.recentSessions.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Recent QA Sessions</h2>
-            <Link to="/qa-loop" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              View all
+            <h2 className="text-lg font-semibold text-foreground">{t('dashboard.recentSessions.title')}</h2>
+            <Link to="/qa-loop" className="text-sm text-primary hover:text-primary/80 font-medium">
+              {t('dashboard.recentSessions.viewAll')}
             </Link>
           </div>
           <div className="space-y-3">
             {stats.recentSessions.map(session => (
-              <Card key={session.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/qa-loop')}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              <Card key={session.id} className="p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate('/qa-loop')}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
                     <StatusBadge
                       status={sessionStatusMap[session.status] || 'pending'}
                       pulse={session.status === 'running'}
                       size="sm"
                     />
-                    <div>
-                      <div className="font-medium text-white truncate max-w-md">
+                    <div className="min-w-0">
+                      <div className="font-medium text-foreground truncate">
                         {(() => {
                           try { return new URL(session.target_url).hostname; } catch { return session.target_url; }
                         })()}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-muted-foreground">
                         {formatRelativeTime(session.created_at)}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-400">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground ps-8 sm:ps-0">
                     {session.quality_score > 0 && (
-                      <span className="font-medium">{session.quality_score}% quality</span>
+                      <span className="font-medium">{t('dashboard.recentSessions.quality', { score: session.quality_score })}</span>
                     )}
-                    <span>{session.tests_generated} tests</span>
-                    <span>{session.bugs_found} bugs</span>
-                    <span>{session.pages_explored} pages</span>
+                    <span>{t('dashboard.recentSessions.tests', { count: session.tests_generated })}</span>
+                    <span>{t('dashboard.recentSessions.bugs', { count: session.bugs_found })}</span>
+                    <span>{t('dashboard.recentSessions.pages', { count: session.pages_explored })}</span>
                   </div>
                 </div>
               </Card>
@@ -154,39 +156,38 @@ export const HomePage: React.FC = () => {
 
       {/* QA Loop Hero CTA */}
       {!showOnboarding && (
-        <div className="rounded-2xl border border-primary-700 bg-gradient-to-br from-slate-800 to-slate-800/80 p-10 text-center">
+        <div className="rounded-lg border border-primary/50 bg-card p-6 sm:p-10 text-center">
           <div className="flex justify-center mb-5">
-            <div className="h-16 w-16 rounded-2xl bg-primary-600 flex items-center justify-center shadow-lg">
-              <FiZap className="h-8 w-8 text-white" />
+            <div className="h-16 w-16 rounded-lg bg-primary flex items-center justify-center shadow-sm">
+              <FiZap className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Autonomous QA Loop</h2>
-          <p className="text-slate-400 mb-8 max-w-xl mx-auto text-base leading-relaxed">
-            Point the AI at any URL and let it autonomously explore your app, generate test cases,
-            and find bugs — while you focus on building.
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{t('dashboard.qaLoop.title')}</h2>
+          <p className="text-muted-foreground mb-6 sm:mb-8 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
+            {t('dashboard.qaLoop.description')}
           </p>
 
-          <div className="flex justify-center gap-6 text-sm text-slate-400 mb-8">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-sm text-muted-foreground mb-6 sm:mb-8">
+            <div className="flex items-center justify-center gap-2">
               <FiGlobe className="text-blue-500 h-4 w-4" />
-              <span>Explores all pages</span>
+              <span>{t('dashboard.qaLoop.exploresPages')}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <FiFileText className="text-green-500 h-4 w-4" />
-              <span>Generates test cases</span>
+              <span>{t('dashboard.qaLoop.generatesTests')}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <FiAlertTriangle className="text-red-500 h-4 w-4" />
-              <span>Finds bugs</span>
+              <span>{t('dashboard.qaLoop.findsBugs')}</span>
             </div>
           </div>
 
           <button
             onClick={() => navigate('/qa-loop')}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors text-base shadow-md hover:shadow-lg"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-md hover:bg-primary/90 transition-colors text-base"
           >
             <FiZap className="h-5 w-5" />
-            Launch QA Loop
+            {t('dashboard.qaLoop.launch')}
           </button>
         </div>
       )}

@@ -6,6 +6,7 @@
       "ES2020"
     ],
     "outDir": "./dist",
+    "rootDir": "./",
     "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
@@ -28,6 +29,9 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "**/__tests__",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

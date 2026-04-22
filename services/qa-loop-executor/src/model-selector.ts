@@ -83,14 +83,15 @@ export const MODEL_CAPABILITIES: Record<ClaudeModel, {
  * chaos/retest are mechanical tool calls that Haiku 3.5 handles fine.
  */
 /**
- * When GOOGLE_AI_API_KEY is set, exploration uses Gemma 4 ($0).
+ * When Google AI is available on the platform, exploration uses Gemma 4 ($0).
  * Chaos / retest / investigate still use Claude (Gemma lacks the specialised
  * agents). The orchestrator handles the actual session creation — this map
  * is used for model selection logging and cost estimation.
+ *
+ * `initModelSelector()` must be called at startup to fetch platform config.
+ * Until then, defaults to claude-sonnet-4-6 for explore.
  */
-const defaultExploreModel: ClaudeModel = process.env.GOOGLE_AI_API_KEY
-  ? 'gemma-4-26b-a4b-it'
-  : 'claude-sonnet-4-6';
+let defaultExploreModel: ClaudeModel = 'claude-sonnet-4-6';
 
 export const FOCUS_AREA_MODELS: Record<FocusArea, ClaudeModel> = {
   explore: defaultExploreModel,
@@ -98,6 +99,29 @@ export const FOCUS_AREA_MODELS: Record<FocusArea, ClaudeModel> = {
   investigate: 'claude-sonnet-4-6',        // Sonnet 4.6 for analysis
   retest: 'claude-3-5-haiku-20241022'      // Haiku 3.5: straightforward test execution
 };
+
+/**
+ * Initialize model selector with platform config.
+ * Call once at service startup to set the correct explore model.
+ */
+export async function initModelSelector(): Promise<void> {
+  try {
+    const { getPlatformConfig } = await import('./platform-config');
+    const config = await getPlatformConfig();
+    const hasGoogle = config.providers.some(p => p.provider === 'google' && p.apiKey);
+    if (hasGoogle) {
+      defaultExploreModel = 'gemma-4-26b-a4b-it';
+      FOCUS_AREA_MODELS.explore = defaultExploreModel;
+      logger.info('Model selector: Google AI available, explore uses gemma-4-26b-a4b-it');
+    } else {
+      logger.info('Model selector: No Google AI key, explore uses claude-sonnet-4-6');
+    }
+  } catch (error: any) {
+    logger.warn('Model selector: failed to fetch platform config, using defaults', {
+      error: error.message,
+    });
+  }
+}
 
 /**
  * Tool complexity mapping - determines which model to use based on tool

@@ -9,12 +9,12 @@ import express from 'express';
 import axios from 'axios';
 import { asyncHandler } from '../middleware/error-handler';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 
 const router = express.Router();
 const logger = createLogger('perf-router');
 
-const qaLoopExecutorUrl =
-  process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+const qaLoopExecutorUrl = env.QA_LOOP_EXECUTOR_URL;
 
 function perfHeaders(req: express.Request): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -23,7 +23,7 @@ function perfHeaders(req: express.Request): Record<string, string> {
   return headers;
 }
 
-function forwardError(error: any, label: string, res: express.Response): void {
+function forwardError(error: any, label: string, req: express.Request, res: express.Response): void {
   logger.error(`Perf proxy error: ${label}`, {
     message: error.message,
     status: error.response?.status,
@@ -39,7 +39,7 @@ function forwardError(error: any, label: string, res: express.Response): void {
       details: error.response.data?.error || error.response.data || 'Upstream error',
     });
   } else {
-    res.status(502).json({ error: label, details: 'Performance testing service unavailable' });
+    res.status(502).json({ error: label, details: (req as any).t('errors:service.perfTestUnavailable') });
   }
 }
 
@@ -53,7 +53,7 @@ router.post('/run', asyncHandler(async (req, res) => {
     );
     res.json(response.data);
   } catch (error: any) {
-    forwardError(error, 'Failed to start performance test', res);
+    forwardError(error, 'Failed to start performance test', req, res);
   }
 }));
 
@@ -67,7 +67,7 @@ router.post('/stop/:id', asyncHandler(async (req, res) => {
     );
     res.json(response.data);
   } catch (error: any) {
-    forwardError(error, 'Failed to stop performance test', res);
+    forwardError(error, 'Failed to stop performance test', req, res);
   }
 }));
 
@@ -84,7 +84,7 @@ router.get('/runs', asyncHandler(async (req, res) => {
     );
     res.json(response.data);
   } catch (error: any) {
-    forwardError(error, 'Failed to list performance runs', res);
+    forwardError(error, 'Failed to list performance runs', req, res);
   }
 }));
 
@@ -97,7 +97,7 @@ router.get('/runs/:id', asyncHandler(async (req, res) => {
     );
     res.json(response.data);
   } catch (error: any) {
-    forwardError(error, 'Failed to get performance run', res);
+    forwardError(error, 'Failed to get performance run', req, res);
   }
 }));
 
@@ -110,7 +110,7 @@ router.get('/presets', asyncHandler(async (req, res) => {
     );
     res.json(response.data);
   } catch (error: any) {
-    forwardError(error, 'Failed to get presets', res);
+    forwardError(error, 'Failed to get presets', req, res);
   }
 }));
 

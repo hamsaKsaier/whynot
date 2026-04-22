@@ -1,21 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
+import { env } from '../config/env';
 
 export interface AppError extends Error {
   statusCode?: number;
   code?: string;
   details?: any;
+  messageKey?: string;
+  messageParams?: Record<string, any>;
 }
 
-/**
- * Error handling middleware
- */
 export function errorHandler(
   err: AppError | Error,
   req: Request,
   res: Response,
   next: NextFunction
 ): void {
-  // Log error
   console.error('Error:', {
     message: err.message,
     stack: err.stack,
@@ -25,40 +24,40 @@ export function errorHandler(
     statusCode: (err as AppError).statusCode
   });
 
-  // Determine status code
   const statusCode = (err as AppError).statusCode || 500;
-  
-  // Prepare error response
+  const t = (req as any).t ?? ((key: string) => key);
+
+  const appErr = err as AppError;
+  let message = err.message || t('errors:server.internal');
+  if (appErr.messageKey) {
+    message = t(appErr.messageKey, appErr.messageParams || {});
+  }
+
   const errorResponse: any = {
     success: false,
-    error: err.message || 'Internal server error',
+    error: message,
     timestamp: new Date().toISOString(),
     path: req.path
   };
 
-  // Add details in development
-  if (process.env.NODE_ENV !== 'production') {
+  if (env.NODE_ENV !== 'production') {
     errorResponse.stack = err.stack;
     if ((err as AppError).details) {
       errorResponse.details = (err as AppError).details;
     }
   }
 
-  // Handle specific error types
   if ((err as AppError).code === 'ECONNREFUSED') {
-    errorResponse.error = 'Service unavailable';
-    errorResponse.suggestion = 'The requested service is not available. Please try again later.';
+    errorResponse.error = t('errors:service.unavailable');
+    errorResponse.suggestion = t('errors:server.serviceUnavailableSuggestion');
   } else if ((err as AppError).code === 'ETIMEDOUT') {
-    errorResponse.error = 'Request timeout';
-    errorResponse.suggestion = 'The request took too long to complete. Please try again or check if the service is overloaded.';
+    errorResponse.error = t('errors:service.timeout');
+    errorResponse.suggestion = t('errors:server.timeoutSuggestion');
   }
 
   res.status(statusCode).json(errorResponse);
 }
 
-/**
- * Async error wrapper for route handlers
- */
 export function asyncHandler(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
 ) {
@@ -67,43 +66,19 @@ export function asyncHandler(
   };
 }
 
-/**
- * Create a custom error
- */
 export function createError(
   message: string,
   statusCode: number = 500,
   code?: string,
-  details?: any
+  details?: any,
+  messageKey?: string,
+  messageParams?: Record<string, any>
 ): AppError {
   const error = new Error(message) as AppError;
   error.statusCode = statusCode;
   error.code = code;
   error.details = details;
+  error.messageKey = messageKey;
+  error.messageParams = messageParams;
   return error;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

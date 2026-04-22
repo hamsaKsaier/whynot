@@ -3,13 +3,95 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 1 0 0;
+    --foreground: 0.141 0.005 286;
+    --card: 1 0 0;
+    --card-foreground: 0.141 0.005 286;
+    --popover: 1 0 0;
+    --popover-foreground: 0.141 0.005 286;
+    --primary: 0.685 0.155 220;
+    --primary-foreground: 0.985 0 0;
+    --secondary: 0.967 0.001 286;
+    --secondary-foreground: 0.210 0.006 286;
+    --muted: 0.967 0.001 286;
+    --muted-foreground: 0.552 0.016 286;
+    --accent: 0.967 0.001 286;
+    --accent-foreground: 0.210 0.006 286;
+    --destructive: 0.577 0.245 27;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.920 0.004 286;
+    --input: 0.920 0.004 286;
+    --ring: 0.685 0.155 220;
+    --chart-1: 0.685 0.155 220;
+    --chart-2: 0.6 0.18 160;
+    --chart-3: 0.55 0.2 280;
+    --chart-4: 0.65 0.2 50;
+    --chart-5: 0.6 0.15 350;
+    --selection: 0.623 0.214 259;
+    --selection-foreground: 1 0 0;
+    --radius: 0.625rem;
+    --sidebar-background: 0.985 0 0;
+    --sidebar-foreground: 0.141 0.005 286;
+    --sidebar-primary: 0.685 0.155 220;
+    --sidebar-primary-foreground: 0.985 0 0;
+    --sidebar-accent: 0.967 0.001 286;
+    --sidebar-accent-foreground: 0.210 0.006 286;
+    --sidebar-border: 0.920 0.004 286;
+    --sidebar-ring: 0.685 0.155 220;
+  }
+
+  .dark {
+    --background: 0.141 0.005 286;
+    --foreground: 0.985 0 0;
+    --card: 0.210 0.006 286;
+    --card-foreground: 0.985 0 0;
+    --popover: 0.210 0.006 286;
+    --popover-foreground: 0.985 0 0;
+    --primary: 0.746 0.155 218;
+    --primary-foreground: 0.141 0.005 286;
+    --secondary: 0.274 0.006 286;
+    --secondary-foreground: 0.985 0 0;
+    --muted: 0.274 0.006 286;
+    --muted-foreground: 0.705 0.015 286;
+    --accent: 0.372 0.013 286;
+    --accent-foreground: 0.985 0 0;
+    --destructive: 0.65 0.2 25;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.274 0.006 286;
+    --input: 0.372 0.013 286;
+    --ring: 0.746 0.155 218;
+    --chart-1: 0.746 0.155 218;
+    --chart-2: 0.7 0.18 160;
+    --chart-3: 0.65 0.2 280;
+    --chart-4: 0.75 0.2 50;
+    --chart-5: 0.7 0.15 350;
+    --selection: 0.546 0.245 264;
+    --selection-foreground: 1 0 0;
+    --sidebar-background: 0.210 0.006 286;
+    --sidebar-foreground: 0.985 0 0;
+    --sidebar-primary: 0.746 0.155 218;
+    --sidebar-primary-foreground: 0.141 0.005 286;
+    --sidebar-accent: 0.372 0.013 286;
+    --sidebar-accent-foreground: 0.985 0 0;
+    --sidebar-border: 0.274 0.006 286;
+    --sidebar-ring: 0.746 0.155 218;
+  }
+
+  * {
+    @apply border-border;
+  }
+
   body {
-    @apply bg-slate-900 text-white;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+    @apply bg-background text-foreground;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: oklch(var(--selection));
+    color: oklch(var(--selection-foreground));
   }
 
   /* Custom scrollbar */
@@ -19,43 +101,51 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-800;
+    @apply bg-muted;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-600 rounded-full;
+    @apply bg-muted-foreground/30 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-500;
+    @apply bg-muted-foreground/50;
   }
 
-  /* Focus styles for keyboard navigation */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Focus styles */
   *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-primary-500;
+    @apply outline-2 outline-offset-2 outline-ring;
   }
 
-  /* Skip to main content link */
   .skip-to-main {
-    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg;
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg;
   }
 }
 
 @layer components {
+  /* Legacy utilities kept for backward compatibility during migration */
   .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md;
+    @apply bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-slate-700 text-slate-200 px-4 py-2 rounded-lg font-medium hover:bg-slate-600 transition-all duration-200 shadow-sm;
+    @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-md font-medium hover:bg-secondary/80 transition-colors duration-150;
   }
 
   .input-field {
-    @apply w-full px-4 py-2 border border-slate-600 bg-slate-700 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200;
+    @apply w-full px-4 py-2 border border-input bg-background text-foreground rounded-md focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-colors duration-150;
   }
 
   .card {
-    @apply bg-slate-800 rounded-lg shadow-sm p-6 border border-slate-700 transition-shadow duration-200 hover:shadow-md;
+    @apply bg-card text-card-foreground rounded-lg shadow-sm p-6 border border-border;
   }
 
   /* Cypress-inspired animations */
@@ -93,49 +183,49 @@
   }
 
   .status-passed {
-    @apply bg-green-900/40 text-green-300;
+    @apply bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-300;
   }
 
   .status-failed {
-    @apply bg-red-900/40 text-red-300;
+    @apply bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-300;
   }
 
   .status-running {
-    @apply bg-blue-900/40 text-blue-300;
+    @apply bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-300;
   }
 
   .status-pending {
-    @apply bg-slate-700 text-slate-300;
+    @apply bg-muted text-muted-foreground;
   }
 
   /* Typography Hierarchy */
   h1 {
-    @apply text-3xl font-bold text-white;
+    @apply text-3xl font-bold text-foreground;
   }
 
   h2 {
-    @apply text-2xl font-semibold text-white;
+    @apply text-2xl font-semibold text-foreground;
   }
 
   h3 {
-    @apply text-xl font-semibold text-white;
+    @apply text-xl font-semibold text-foreground;
   }
 
   h4 {
-    @apply text-lg font-medium text-white;
+    @apply text-lg font-medium text-foreground;
   }
 
   /* Body text utilities */
   .text-body {
-    @apply text-base text-slate-300;
+    @apply text-base text-muted-foreground;
   }
 
   .text-small {
-    @apply text-sm text-slate-400;
+    @apply text-sm text-muted-foreground;
   }
 
   .text-tiny {
-    @apply text-xs text-slate-500;
+    @apply text-xs text-muted-foreground;
   }
 
   /* Page-level spacing */
@@ -171,20 +261,15 @@
 
   /* Consistent section headers */
   .section-title {
-    @apply text-xl font-semibold mb-4 text-white;
+    @apply text-xl font-semibold mb-4 text-foreground;
   }
 
   /* Consistent page headers */
   .page-title {
-    @apply text-2xl font-bold mb-2 text-white;
+    @apply text-2xl font-bold mb-2 text-foreground;
   }
 
   .page-subtitle {
-    @apply text-sm text-slate-400 mb-6;
+    @apply text-sm text-muted-foreground mb-6;
   }
 }
-
-
-
-
-

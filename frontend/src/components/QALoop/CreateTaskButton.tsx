@@ -1,5 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { FiExternalLink, FiCheck, FiX, FiSend } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Label } from '../ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import { ExternalLink, Check, X, Send, Loader2 } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { apiClient } from '../../services/api';
 
 interface Integration {
@@ -25,6 +45,7 @@ interface CreateTaskButtonProps {
 }
 
 export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTitle, className = '' }) => {
+  const { t } = useTranslation('runner');
   const [showModal, setShowModal] = useState(false);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [existingTasks, setExistingTasks] = useState<BugTask[]>([]);
@@ -73,7 +94,7 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
       setResult({ success: true, task: res.data });
       setExistingTasks(prev => [...prev, res.data]);
     } catch (error: any) {
-      setResult({ success: false, error: error.response?.data?.error || 'Failed to create task' });
+      setResult({ success: false, error: error.response?.data?.error || t('runner.qaLoop.createTask.failedToCreate') });
     } finally {
       setCreating(false);
     }
@@ -88,140 +109,151 @@ export const CreateTaskButton: React.FC<CreateTaskButtonProps> = ({ bugId, bugTi
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeBadgeClass = (type: string) => {
     switch (type) {
-      case 'jira': return 'bg-blue-900/30 text-blue-400';
-      case 'clickup': return 'bg-sky-900/30 text-sky-400';
-      case 'linear': return 'bg-indigo-100 text-indigo-700';
-      default: return 'bg-slate-900 text-slate-200';
+      case 'jira': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
+      case 'clickup': return 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800';
+      case 'linear': return 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
     <>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleOpen}
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-900/20 text-blue-600 hover:bg-blue-900/40 transition-colors ${className}`}
-        title="Create task in Jira/ClickUp/Linear"
+        className={cn('gap-1 text-xs h-7 px-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300', className)}
+        title={t('runner.qaLoop.createTask.tooltip')}
       >
-        <FiSend className="h-3 w-3" />
-        <span>Create Task</span>
-      </button>
+        <Send className="h-3 w-3" />
+        <span>{t('runner.qaLoop.createTask.title')}</span>
+      </Button>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
-          <div className="bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white">Create Task</h3>
-              <p className="text-sm text-slate-400 mt-1 truncate">Bug: {bugTitle}</p>
-            </div>
+      <Dialog open={showModal} onOpenChange={open => { if (!open) setShowModal(false); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('runner.qaLoop.createTask.title')}</DialogTitle>
+            <DialogDescription className="truncate">Bug: {bugTitle}</DialogDescription>
+          </DialogHeader>
 
-            <div className="p-5">
-              {loading ? (
-                <div className="text-center py-4 text-slate-400">Loading...</div>
-              ) : integrations.length === 0 ? (
-                <div className="text-center py-6">
-                  <p className="text-slate-400 mb-3">No integrations configured</p>
-                  <a
-                    href="/integrations"
-                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                  >
-                    Go to Integrations to connect Jira, ClickUp, or Linear
-                  </a>
-                </div>
-              ) : (
-                <>
-                  {/* Existing tasks */}
-                  {existingTasks.length > 0 && (
-                    <div className="mb-4">
-                      <div className="text-xs font-medium text-slate-400 uppercase mb-2">Existing Tasks</div>
-                      <div className="space-y-2">
-                        {existingTasks.map((task) => (
-                          <div key={task.id} className="flex items-center justify-between p-2 bg-slate-900 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${getTypeColor((task as any).integration_type || 'unknown')}`}>
-                                {getTypeLabel((task as any).integration_type || 'unknown')}
-                              </span>
-                              <span className="text-sm font-medium text-slate-200">{task.external_id}</span>
-                            </div>
-                            {task.external_url && (
-                              <a
-                                href={task.external_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary-600 hover:text-primary-700"
-                              >
-                                <FiExternalLink className="h-4 w-4" />
-                              </a>
-                            )}
+          <div className="space-y-4">
+            {loading ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                {t('runner.qaLoop.createTask.loading')}
+              </div>
+            ) : integrations.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground mb-3">{t('runner.qaLoop.createTask.noIntegrations')}</p>
+                <a
+                  href="/integrations"
+                  className="text-primary hover:text-primary/80 text-sm font-medium"
+                >
+                  {t('runner.qaLoop.createTask.goToIntegrations')}
+                </a>
+              </div>
+            ) : (
+              <>
+                {/* Existing tasks */}
+                {existingTasks.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">{t('runner.qaLoop.createTask.existingTasks')}</div>
+                    <div className="space-y-2">
+                      {existingTasks.map((task) => (
+                        <div key={task.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={cn('text-xs', getTypeBadgeClass((task as any).integration_type || 'unknown'))}>
+                              {getTypeLabel((task as any).integration_type || 'unknown')}
+                            </Badge>
+                            <span className="text-sm font-medium text-foreground">{task.external_id}</span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Select integration */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-slate-200 mb-1">Select Integration</label>
-                    <select
-                      value={selectedIntegration}
-                      onChange={e => setSelectedIntegration(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      {integrations.map((int) => (
-                        <option key={int.id} value={int.id}>
-                          {int.name} ({getTypeLabel(int.type)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Result message */}
-                  {result && (
-                    <div className={`p-3 rounded-lg mb-4 ${result.success ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>
-                      {result.success ? (
-                        <div className="flex items-center gap-2">
-                          <FiCheck className="h-4 w-4" />
-                          <span>Task created: <strong>{result.task?.external_id}</strong></span>
-                          {result.task?.external_url && (
-                            <a href={result.task.external_url} target="_blank" rel="noopener noreferrer" className="ml-auto">
-                              <FiExternalLink className="h-4 w-4" />
+                          {task.external_url && (
+                            <a
+                              href={task.external_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:text-primary/80"
+                            >
+                              <ExternalLink className="h-4 w-4 rtl:scale-x-[-1]" />
                             </a>
                           )}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <FiX className="h-4 w-4" />
-                          <span>{result.error}</span>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  )}
-                </>
-              )}
-            </div>
+                  </div>
+                )}
 
-            <div className="p-5 border-t border-slate-700 flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-slate-200 bg-slate-900 rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Close
-              </button>
-              {integrations.length > 0 && (
-                <button
-                  onClick={handleCreate}
-                  disabled={creating || !selectedIntegration}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  {creating ? 'Creating...' : 'Create Task'}
-                </button>
-              )}
-            </div>
+                {/* Select integration */}
+                <div className="space-y-1.5">
+                  <Label>{t('runner.qaLoop.createTask.selectIntegration')}</Label>
+                  <Select value={selectedIntegration} onValueChange={setSelectedIntegration}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {integrations.map((int) => (
+                        <SelectItem key={int.id} value={int.id}>
+                          {int.name} ({getTypeLabel(int.type)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Result message */}
+                {result && (
+                  <div className={cn(
+                    'p-3 rounded-lg',
+                    result.success
+                      ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+                      : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+                  )}>
+                    {result.success ? (
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4" />
+                        <span>{t('runner.qaLoop.createTask.taskCreated')} <strong>{result.task?.external_id}</strong></span>
+                        {result.task?.external_url && (
+                          <a href={result.task.external_url} target="_blank" rel="noopener noreferrer" className="ms-auto">
+                            <ExternalLink className="h-4 w-4 rtl:scale-x-[-1]" />
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <X className="h-4 w-4" />
+                        <span>{result.error}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModal(false)}>
+              {t('runner.qaLoop.createTask.close')}
+            </Button>
+            {integrations.length > 0 && (
+              <Button
+                onClick={handleCreate}
+                disabled={creating || !selectedIntegration}
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('runner.qaLoop.createTask.creating')}
+                  </>
+                ) : (
+                  t('runner.qaLoop.createTask.title')
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -1,0 +1,386 @@
+{
+  "admin": {
+    "nav": {
+      "superadminTitle": "Super-Admin",
+      "dashboard": "Dashboard",
+      "analytics": "Analysen",
+      "users": "Benutzer",
+      "plans": "Tarife",
+      "subscriptions": "Abonnements",
+      "credits": "Guthaben",
+      "announcements": "Ankündigungen",
+      "auditLog": "Prüfprotokoll",
+      "settings": "Einstellungen",
+      "featureFlags": "Feature-Flags",
+      "billingConfig": "Abrechnungskonfiguration",
+      "aiProviders": "KI-Anbieter",
+      "organizations": "Organisationen",
+      "usageTracking": "Nutzungsverfolgung",
+      "usage": "Nutzung",
+      "management": "Verwaltung",
+      "system": "System",
+      "comingSoon": "Demnächst verfügbar",
+      "sections": {
+        "platform": "Plattform",
+        "billing": "Abrechnung",
+        "flagsAi": "Flags & KI",
+        "insights": "Einblicke",
+        "content": "Inhalte",
+        "settings": "Einstellungen"
+      }
+    },
+    "common": {
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "create": "Erstellen",
+      "update": "Aktualisieren",
+      "export": "Exportieren",
+      "exportCSV": "Als CSV exportieren",
+      "exportJSON": "Als JSON exportieren",
+      "confirm": "Bestätigen",
+      "search": "Suchen...",
+      "noData": "Keine Daten gefunden",
+      "loading": "Wird geladen...",
+      "processing": "Wird verarbeitet...",
+      "actions": "Aktionen",
+      "selected": "{{count}} ausgewählt",
+      "clear": "Zurücksetzen",
+      "previousPage": "Vorherige Seite",
+      "nextPage": "Nächste Seite",
+      "selectAll": "Alle auswählen",
+      "selectRow": "Zeile {{id}} auswählen",
+      "pageOf": "Seite {{current}} von {{total}}",
+      "signOut": "Abmelden",
+      "typeToConfirm": "Geben Sie {{text}} zur Bestätigung ein",
+      "apply": "Anwenden",
+      "from": "Von",
+      "to": "Bis",
+      "selectDateRange": "Zeitraum auswählen",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "Letzte 7 Tage",
+        "last30Days": "Letzte 30 Tage",
+        "last90Days": "Letzte 90 Tage",
+        "thisYear": "Dieses Jahr"
+      },
+      "logoAlt": "WhyNot — KI-gestützte QA-Plattform"
+    },
+    "login": {
+      "title": "Admin-Anmeldung",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "signIn": "Anmelden",
+      "signingIn": "Anmeldung läuft...",
+      "adminOnly": "Nur für Administratoren. Reguläre Benutzer können sich hier nicht anmelden.",
+      "failed": "Anmeldung fehlgeschlagen. Administratorzugang erforderlich."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "totalUsers": "Benutzer gesamt",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "activePlans": "Aktive Tarife",
+      "recentSignups": "Letzte Registrierungen",
+      "subscriptionsByPlan": "Abonnements nach Tarif",
+      "recentUsers": "Neueste Benutzer",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "plan": "Tarif",
+        "credits": "Guthaben",
+        "joined": "Beigetreten"
+      },
+      "subscribers": "{{count}} Abonnenten",
+      "noUsers": "Noch keine Benutzer",
+      "noSubscriptionData": "Keine Abonnementdaten",
+      "creditsLabel": "Guthaben",
+      "quickActions": {
+        "users": "Benutzer",
+        "plans": "Tarife",
+        "analytics": "Analytik",
+        "settings": "Einstellungen"
+      }
+    },
+    "users": {
+      "title": "Benutzer",
+      "totalUsers": "{{count}} Benutzer gesamt",
+      "searchPlaceholder": "Nach Name oder E-Mail suchen...",
+      "allRoles": "Alle Rollen",
+      "exportSelected": "Auswahl exportieren",
+      "emailSelected": "Auswahl per E-Mail kontaktieren",
+      "noUsersFound": "Keine Benutzer gefunden",
+      "viewDetail": "Details anzeigen",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "role": "Rolle",
+        "plan": "Tarif",
+        "credits": "Guthaben",
+        "joined": "Beigetreten"
+      },
+      "roles": {
+        "user": "Benutzer",
+        "admin": "Administrator",
+        "superAdmin": "Super-Administrator"
+      }
+    },
+    "userDetail": {
+      "impersonate": "Identität annehmen",
+      "resetPassword": "Passwort zurücksetzen",
+      "ban": "Sperren",
+      "unban": "Entsperren",
+      "banTitle": "Benutzer sperren",
+      "banDescription": "Sind Sie sicher, dass Sie {{name}} sperren möchten? Der Zugang zum Konto wird sofort entzogen.",
+      "banConfirm": "Benutzer sperren",
+      "tabs": {
+        "overview": "Übersicht",
+        "subscription": "Abonnement",
+        "flags": "Flags",
+        "audit": "Prüfprotokoll"
+      },
+      "role": "Rolle",
+      "id": "ID",
+      "joined": "Beigetreten",
+      "grantCredits": "Gewähren",
+      "revokeCredits": "Entziehen",
+      "amount": "Betrag",
+      "description": "Beschreibung",
+      "reason": "Grund...",
+      "notFound": "Benutzer nicht gefunden.",
+      "noPlan": "Kein Tarif",
+      "credits": "Guthaben",
+      "forcePlan": "Tarif erzwingen",
+      "selectPlan": "Tarif auswählen",
+      "choosePlan": "Tarif auswählen...",
+      "applyPlan": "Tarif anwenden",
+      "flagOverrides": "Feature-Flag-Überschreibungen",
+      "noFlags": "Keine Flag-Überschreibungen für den Arbeitsbereich dieses Benutzers.",
+      "defaultGrant": "Admin-Gutschrift",
+      "defaultRevoke": "Admin-Widerruf"
+    },
+    "organizations": {
+      "title": "Organisationen",
+      "totalOrgs": "{{count}} Organisationen",
+      "searchPlaceholder": "Nach Name suchen...",
+      "noOrgsFound": "Keine Organisationen gefunden",
+      "notFound": "Organisation nicht gefunden.",
+      "backToOrgs": "Zurück zu Organisationen",
+      "noMembers": "Keine Mitglieder gefunden",
+      "columns": {
+        "name": "Name",
+        "owner": "Besitzer",
+        "plan": "Tarif",
+        "status": "Status",
+        "credits": "Guthaben",
+        "created": "Erstellt"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "Übersicht",
+        "members": "Mitglieder",
+        "subscription": "Abonnement",
+        "flags": "Flags",
+        "audit": "Prüfprotokoll"
+      },
+      "details": "Organisationsdetails",
+      "name": "Name",
+      "id": "ID",
+      "owner": "Besitzer",
+      "created": "Erstellt",
+      "credits": "Guthaben",
+      "plan": "Tarif",
+      "status": "Status",
+      "selectPlan": "Tarif auswählen...",
+      "subscriptionDetails": "Abonnementdetails",
+      "periodEnd": "Periodenende",
+      "trialEnd": "Testende",
+      "flagOverrides": "Feature-Flag-Überschreibungen",
+      "noFlagOverrides": "Keine Flag-Überschreibungen für diese Organisation.",
+      "none": "Keine"
+    },
+    "plans": {
+      "title": "Tarife",
+      "newPlan": "Neuer Tarif",
+      "editPlan": "Tarif bearbeiten",
+      "createPlan": "Tarif erstellen",
+      "saveChanges": "Änderungen speichern",
+      "archivePlan": "Tarif archivieren",
+      "archiveDescription": "Sind Sie sicher, dass Sie \"{{name}}\" archivieren möchten? Bestehende Abonnenten sind nicht betroffen, aber neue Abonnements werden deaktiviert.",
+      "archive": "Archivieren",
+      "restore": "Wiederherstellen",
+      "syncStripe": "Mit Stripe synchronisieren",
+      "noPlans": "Noch keine Tarife erstellt.",
+      "details": "Details",
+      "featureFlags": "Feature-Flags",
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Beschreibung",
+        "price": "Preis ($)",
+        "billingInterval": "Abrechnungsintervall",
+        "creditsPerPeriod": "Guthaben / Zeitraum",
+        "trialDays": "Testzeitraum (Tage)",
+        "sortOrder": "Sortierreihenfolge",
+        "public": "Öffentlich",
+        "enterprise": "Enterprise"
+      },
+      "intervals": {
+        "monthly": "Monatlich",
+        "yearly": "Jährlich",
+        "oneTime": "Einmalig"
+      },
+      "badges": {
+        "archived": "Archiviert",
+        "hidden": "Verborgen",
+        "custom": "Individuell"
+      }
+    },
+    "subscriptions": {
+      "title": "Abonnements",
+      "allStatuses": "Alle Status",
+      "noSubscriptions": "Keine Abonnements gefunden",
+      "columns": {
+        "workspace": "Arbeitsbereich",
+        "owner": "Inhaber",
+        "plan": "Tarif",
+        "status": "Status",
+        "credits": "Guthaben",
+        "periodEnd": "Periodenende"
+      },
+      "statuses": {
+        "active": "Aktiv",
+        "trialing": "Testzeitraum",
+        "pastDue": "Überfällig",
+        "canceled": "Gekündigt"
+      }
+    },
+    "credits": {
+      "title": "Guthaben",
+      "description": "Guthabenstand aller Benutzer",
+      "grantCredits": "Guthaben gewähren",
+      "grantDescription": "Gewähren Sie einem bestimmten Arbeitsbereich Guthaben.",
+      "workspaceId": "Arbeitsbereich-ID",
+      "amount": "Betrag",
+      "noUsers": "Keine Benutzer gefunden",
+      "columns": {
+        "user": "Benutzer",
+        "email": "E-Mail",
+        "plan": "Tarif",
+        "credits": "Guthaben"
+      }
+    },
+    "analytics": {
+      "title": "Analysen",
+      "totalUsers": "Benutzer gesamt",
+      "activeSubscriptions": "Aktive Abonnements",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "signups": "Registrierungen (letzte 30 Tage)",
+      "revenueByPlan": "Umsatz nach Tarif",
+      "creditUsage": "Guthabenverbrauch (letzte 30 Tage)",
+      "cancellations": "Kündigungen (letzte 90 Tage)",
+      "noCancellations": "Keine Kündigungen in diesem Zeitraum"
+    },
+    "auditLog": {
+      "title": "Prüfprotokoll",
+      "allActions": "Alle Aktionen",
+      "noEntries": "Keine Prüfprotokolleinträge gefunden",
+      "columns": {
+        "time": "Zeitpunkt",
+        "actor": "Akteur",
+        "action": "Aktion",
+        "target": "Ziel",
+        "details": "Details"
+      },
+      "actions": {
+        "roleChange": "Rollenänderung",
+        "userSuspend": "Benutzer gesperrt",
+        "userUnsuspend": "Benutzer entsperrt",
+        "impersonate": "Identität angenommen",
+        "creditsGrant": "Guthaben gewährt",
+        "creditsRevoke": "Guthaben entzogen",
+        "planArchive": "Tarif archiviert",
+        "planRestore": "Tarif wiederhergestellt",
+        "settingsUpdate": "Einstellungen aktualisiert",
+        "announcementCreate": "Ankündigung erstellt",
+        "announcementUpdate": "Ankündigung aktualisiert",
+        "announcementDelete": "Ankündigung gelöscht"
+      }
+    },
+    "settings": {
+      "title": "Systemeinstellungen",
+      "tabs": {
+        "general": "Allgemein",
+        "credits": "Guthabenkosten",
+        "email": "E-Mail",
+        "webhooks": "Webhooks",
+        "security": "Sicherheit"
+      },
+      "noSettings": "Keine Einstellungen in dieser Kategorie.",
+      "saveFailed": "Speichern fehlgeschlagen"
+    },
+    "announcements": {
+      "title": "Ankündigungen",
+      "newAnnouncement": "Neue Ankündigung",
+      "editAnnouncement": "Ankündigung bearbeiten",
+      "deleteAnnouncement": "Ankündigung löschen",
+      "deleteDescription": "Sind Sie sicher, dass Sie \"{{title}}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "noAnnouncements": "Keine Ankündigungen",
+      "immediate": "Sofort",
+      "fields": {
+        "title": "Titel",
+        "body": "Inhalt",
+        "type": "Typ",
+        "active": "Aktiv",
+        "startsAt": "Beginnt am",
+        "endsAt": "Endet am"
+      },
+      "types": {
+        "info": "Information",
+        "warning": "Warnung",
+        "success": "Erfolg",
+        "error": "Fehler"
+      },
+      "columns": {
+        "title": "Titel",
+        "type": "Typ",
+        "active": "Aktiv",
+        "schedule": "Zeitplan"
+      }
+    },
+    "status": {
+      "active": "Aktiv",
+      "trialing": "Testzeitraum",
+      "paused": "Pausiert",
+      "pastDue": "Überfällig",
+      "canceled": "Gekündigt",
+      "banned": "Gesperrt",
+      "suspended": "Gesperrt",
+      "expired": "Abgelaufen"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Seite nicht gefunden",
+        "description": "Die gesuchte Seite existiert nicht oder wurde verschoben."
+      },
+      "serverError": {
+        "title": "Serverfehler",
+        "description": "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut."
+      },
+      "forbidden": {
+        "title": "Zugriff verboten",
+        "description": "Sie haben keine Berechtigung für diesen Bereich. Super-Administratorzugang erforderlich."
+      },
+      "accessDenied": {
+        "title": "Zugriff verweigert",
+        "description": "Dieser Bereich ist Super-Administratoren vorbehalten. Kontaktieren Sie Ihren Administrator, wenn Sie glauben, dass dies ein Fehler ist.",
+        "goToAdmin": "Zum Admin-Panel"
+      },
+      "backHome": "Zurück zum Dashboard",
+      "backToLogin": "Zurück zur Anmeldung"
+    }
+  }
+}

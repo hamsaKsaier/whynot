@@ -1,0 +1,386 @@
+{
+  "admin": {
+    "nav": {
+      "superadminTitle": "المسؤول الأعلى",
+      "dashboard": "لوحة التحكم",
+      "analytics": "التحليلات",
+      "users": "المستخدمون",
+      "plans": "الخطط",
+      "subscriptions": "الاشتراكات",
+      "credits": "الأرصدة",
+      "announcements": "الإعلانات",
+      "auditLog": "سجل التدقيق",
+      "settings": "الإعدادات",
+      "featureFlags": "إشارات الميزات",
+      "billingConfig": "إعدادات الفوترة",
+      "aiProviders": "مزودو الذكاء الاصطناعي",
+      "organizations": "المؤسسات",
+      "usageTracking": "تتبع الاستخدام",
+      "usage": "الاستخدام",
+      "management": "الإدارة",
+      "system": "النظام",
+      "comingSoon": "قريبًا",
+      "sections": {
+        "platform": "المنصة",
+        "billing": "الفوترة",
+        "flagsAi": "الأعلام والذكاء الاصطناعي",
+        "insights": "التحليلات",
+        "content": "المحتوى",
+        "settings": "الإعدادات"
+      }
+    },
+    "common": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "edit": "تعديل",
+      "create": "إنشاء",
+      "update": "تحديث",
+      "export": "تصدير",
+      "exportCSV": "تصدير كـ CSV",
+      "exportJSON": "تصدير كـ JSON",
+      "confirm": "تأكيد",
+      "search": "بحث...",
+      "noData": "لا توجد بيانات",
+      "loading": "جارٍ التحميل...",
+      "processing": "جارٍ المعالجة...",
+      "actions": "الإجراءات",
+      "selected": "{{count}} محدد",
+      "clear": "مسح",
+      "previousPage": "الصفحة السابقة",
+      "nextPage": "الصفحة التالية",
+      "selectAll": "تحديد الكل",
+      "selectRow": "تحديد الصف {{id}}",
+      "pageOf": "الصفحة {{current}} من {{total}}",
+      "signOut": "تسجيل الخروج",
+      "typeToConfirm": "اكتب {{text}} للتأكيد",
+      "apply": "تطبيق",
+      "from": "من",
+      "to": "إلى",
+      "selectDateRange": "تحديد نطاق التاريخ",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "آخر 7 أيام",
+        "last30Days": "آخر 30 يومًا",
+        "last90Days": "آخر 90 يومًا",
+        "thisYear": "هذا العام"
+      },
+      "logoAlt": "WhyNot — منصة ضمان الجودة بالذكاء الاصطناعي"
+    },
+    "login": {
+      "title": "تسجيل دخول المسؤول",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "signIn": "تسجيل الدخول",
+      "signingIn": "جارٍ تسجيل الدخول...",
+      "adminOnly": "الوصول مخصص للمسؤولين فقط. لا يمكن للمستخدمين العاديين تسجيل الدخول هنا.",
+      "failed": "فشل تسجيل الدخول. مطلوب صلاحيات المسؤول."
+    },
+    "dashboard": {
+      "title": "لوحة التحكم",
+      "totalUsers": "إجمالي المستخدمين",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "activePlans": "الخطط النشطة",
+      "recentSignups": "التسجيلات الأخيرة",
+      "subscriptionsByPlan": "الاشتراكات حسب الخطة",
+      "recentUsers": "المستخدمون الجدد",
+      "columns": {
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
+        "plan": "الخطة",
+        "credits": "الأرصدة",
+        "joined": "تاريخ الانضمام"
+      },
+      "subscribers": "{{count}} مشترك",
+      "noUsers": "لا يوجد مستخدمون بعد",
+      "noSubscriptionData": "لا توجد بيانات اشتراكات",
+      "creditsLabel": "أرصدة",
+      "quickActions": {
+        "users": "المستخدمون",
+        "plans": "الخطط",
+        "analytics": "التحليلات",
+        "settings": "الإعدادات"
+      }
+    },
+    "users": {
+      "title": "المستخدمون",
+      "totalUsers": "{{count}} مستخدم إجمالي",
+      "searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني...",
+      "allRoles": "جميع الأدوار",
+      "exportSelected": "تصدير المحدد",
+      "emailSelected": "مراسلة المحدد",
+      "noUsersFound": "لم يتم العثور على مستخدمين",
+      "viewDetail": "عرض التفاصيل",
+      "columns": {
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
+        "role": "الدور",
+        "plan": "الخطة",
+        "credits": "الأرصدة",
+        "joined": "تاريخ الانضمام"
+      },
+      "roles": {
+        "user": "مستخدم",
+        "admin": "مسؤول",
+        "superAdmin": "مسؤول أعلى"
+      }
+    },
+    "userDetail": {
+      "impersonate": "انتحال الهوية",
+      "resetPassword": "إعادة تعيين كلمة المرور",
+      "ban": "حظر",
+      "unban": "إلغاء الحظر",
+      "banTitle": "حظر المستخدم",
+      "banDescription": "هل أنت متأكد من رغبتك في حظر {{name}}؟ سيفقد الوصول إلى حسابه فورًا.",
+      "banConfirm": "حظر المستخدم",
+      "tabs": {
+        "overview": "نظرة عامة",
+        "subscription": "الاشتراك",
+        "flags": "الأعلام",
+        "audit": "السجل"
+      },
+      "role": "الدور",
+      "id": "المعرف",
+      "joined": "انضم",
+      "grantCredits": "منح",
+      "revokeCredits": "سحب",
+      "amount": "المبلغ",
+      "description": "الوصف",
+      "reason": "السبب...",
+      "notFound": "المستخدم غير موجود.",
+      "noPlan": "بدون خطة",
+      "credits": "رصيد",
+      "forcePlan": "فرض الخطة",
+      "selectPlan": "اختر الخطة",
+      "choosePlan": "اختر خطة...",
+      "applyPlan": "تطبيق الخطة",
+      "flagOverrides": "تجاوزات أعلام الميزات",
+      "noFlags": "لا توجد تجاوزات أعلام لمساحة عمل هذا المستخدم.",
+      "defaultGrant": "منحة إدارية",
+      "defaultRevoke": "سحب إداري"
+    },
+    "organizations": {
+      "title": "المؤسسات",
+      "totalOrgs": "{{count}} مؤسسة",
+      "searchPlaceholder": "البحث بالاسم...",
+      "noOrgsFound": "لم يتم العثور على مؤسسات",
+      "notFound": "المؤسسة غير موجودة.",
+      "backToOrgs": "العودة إلى المؤسسات",
+      "noMembers": "لم يتم العثور على أعضاء",
+      "columns": {
+        "name": "الاسم",
+        "owner": "المالك",
+        "plan": "الخطة",
+        "status": "الحالة",
+        "credits": "الرصيد",
+        "created": "تاريخ الإنشاء"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "نظرة عامة",
+        "members": "الأعضاء",
+        "subscription": "الاشتراك",
+        "flags": "الأعلام",
+        "audit": "السجل"
+      },
+      "details": "تفاصيل المؤسسة",
+      "name": "الاسم",
+      "id": "المعرف",
+      "owner": "المالك",
+      "created": "تاريخ الإنشاء",
+      "credits": "الرصيد",
+      "plan": "الخطة",
+      "status": "الحالة",
+      "selectPlan": "اختر خطة...",
+      "subscriptionDetails": "تفاصيل الاشتراك",
+      "periodEnd": "نهاية الفترة",
+      "trialEnd": "نهاية الفترة التجريبية",
+      "flagOverrides": "تجاوزات أعلام الميزات",
+      "noFlagOverrides": "لم يتم تعيين تجاوزات أعلام لهذه المؤسسة.",
+      "none": "لا يوجد"
+    },
+    "plans": {
+      "title": "الخطط",
+      "newPlan": "خطة جديدة",
+      "editPlan": "تعديل الخطة",
+      "createPlan": "إنشاء خطة",
+      "saveChanges": "حفظ التغييرات",
+      "archivePlan": "أرشفة الخطة",
+      "archiveDescription": "هل أنت متأكد من رغبتك في أرشفة \"{{name}}\"؟ لن يتأثر المشتركون الحاليون، لكن الاشتراكات الجديدة ستكون معطلة.",
+      "archive": "أرشفة",
+      "restore": "استعادة",
+      "syncStripe": "مزامنة مع Stripe",
+      "noPlans": "لم يتم إنشاء خطط بعد.",
+      "details": "التفاصيل",
+      "featureFlags": "إشارات الميزات",
+      "fields": {
+        "name": "الاسم",
+        "slug": "المعرّف",
+        "description": "الوصف",
+        "price": "السعر ($)",
+        "billingInterval": "فترة الفوترة",
+        "creditsPerPeriod": "الأرصدة / الفترة",
+        "trialDays": "أيام التجربة",
+        "sortOrder": "ترتيب العرض",
+        "public": "عامة",
+        "enterprise": "مؤسسات"
+      },
+      "intervals": {
+        "monthly": "شهري",
+        "yearly": "سنوي",
+        "oneTime": "لمرة واحدة"
+      },
+      "badges": {
+        "archived": "مؤرشفة",
+        "hidden": "مخفية",
+        "custom": "مخصصة"
+      }
+    },
+    "subscriptions": {
+      "title": "الاشتراكات",
+      "allStatuses": "جميع الحالات",
+      "noSubscriptions": "لم يتم العثور على اشتراكات",
+      "columns": {
+        "workspace": "مساحة العمل",
+        "owner": "المالك",
+        "plan": "الخطة",
+        "status": "الحالة",
+        "credits": "الأرصدة",
+        "periodEnd": "نهاية الفترة"
+      },
+      "statuses": {
+        "active": "نشط",
+        "trialing": "فترة تجريبية",
+        "pastDue": "متأخر السداد",
+        "canceled": "ملغى"
+      }
+    },
+    "credits": {
+      "title": "الأرصدة",
+      "description": "أرصدة جميع المستخدمين",
+      "grantCredits": "منح أرصدة",
+      "grantDescription": "منح أرصدة لمساحة عمل محددة.",
+      "workspaceId": "معرّف مساحة العمل",
+      "amount": "المبلغ",
+      "noUsers": "لم يتم العثور على مستخدمين",
+      "columns": {
+        "user": "المستخدم",
+        "email": "البريد الإلكتروني",
+        "plan": "الخطة",
+        "credits": "الأرصدة"
+      }
+    },
+    "analytics": {
+      "title": "التحليلات",
+      "totalUsers": "إجمالي المستخدمين",
+      "activeSubscriptions": "الاشتراكات النشطة",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "signups": "التسجيلات (آخر 30 يومًا)",
+      "revenueByPlan": "الإيرادات حسب الخطة",
+      "creditUsage": "استخدام الأرصدة (آخر 30 يومًا)",
+      "cancellations": "الإلغاءات (آخر 90 يومًا)",
+      "noCancellations": "لا توجد إلغاءات في هذه الفترة"
+    },
+    "auditLog": {
+      "title": "سجل التدقيق",
+      "allActions": "جميع الإجراءات",
+      "noEntries": "لم يتم العثور على سجلات تدقيق",
+      "columns": {
+        "time": "الوقت",
+        "actor": "المنفذ",
+        "action": "الإجراء",
+        "target": "الهدف",
+        "details": "التفاصيل"
+      },
+      "actions": {
+        "roleChange": "تغيير الدور",
+        "userSuspend": "تعليق المستخدم",
+        "userUnsuspend": "إلغاء تعليق المستخدم",
+        "impersonate": "انتحال الهوية",
+        "creditsGrant": "منح أرصدة",
+        "creditsRevoke": "سحب أرصدة",
+        "planArchive": "أرشفة الخطة",
+        "planRestore": "استعادة الخطة",
+        "settingsUpdate": "تحديث الإعدادات",
+        "announcementCreate": "إنشاء إعلان",
+        "announcementUpdate": "تحديث إعلان",
+        "announcementDelete": "حذف إعلان"
+      }
+    },
+    "settings": {
+      "title": "إعدادات النظام",
+      "tabs": {
+        "general": "عام",
+        "credits": "تكاليف الأرصدة",
+        "email": "البريد الإلكتروني",
+        "webhooks": "Webhooks",
+        "security": "الأمان"
+      },
+      "noSettings": "لا توجد إعدادات في هذه الفئة.",
+      "saveFailed": "فشل الحفظ"
+    },
+    "announcements": {
+      "title": "الإعلانات",
+      "newAnnouncement": "إعلان جديد",
+      "editAnnouncement": "تعديل الإعلان",
+      "deleteAnnouncement": "حذف الإعلان",
+      "deleteDescription": "هل أنت متأكد من رغبتك في حذف \"{{title}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+      "noAnnouncements": "لا توجد إعلانات",
+      "immediate": "فوري",
+      "fields": {
+        "title": "العنوان",
+        "body": "المحتوى",
+        "type": "النوع",
+        "active": "نشط",
+        "startsAt": "يبدأ في",
+        "endsAt": "ينتهي في"
+      },
+      "types": {
+        "info": "معلومات",
+        "warning": "تحذير",
+        "success": "نجاح",
+        "error": "خطأ"
+      },
+      "columns": {
+        "title": "العنوان",
+        "type": "النوع",
+        "active": "نشط",
+        "schedule": "الجدول الزمني"
+      }
+    },
+    "status": {
+      "active": "نشط",
+      "trialing": "فترة تجريبية",
+      "paused": "متوقف مؤقتًا",
+      "pastDue": "متأخر السداد",
+      "canceled": "ملغى",
+      "banned": "محظور",
+      "suspended": "معلّق",
+      "expired": "منتهي الصلاحية"
+    },
+    "errors": {
+      "notFound": {
+        "title": "الصفحة غير موجودة",
+        "description": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها."
+      },
+      "serverError": {
+        "title": "خطأ في الخادم",
+        "description": "حدث خطأ ما. يرجى المحاولة مرة أخرى لاحقًا."
+      },
+      "forbidden": {
+        "title": "الوصول محظور",
+        "description": "ليس لديك صلاحية للوصول إلى هذه المنطقة. مطلوب صلاحيات المسؤول الأعلى."
+      },
+      "accessDenied": {
+        "title": "تم رفض الوصول",
+        "description": "هذه المنطقة مخصصة للمسؤولين الأعلى فقط. تواصل مع المسؤول إذا كنت تعتقد أن هذا خطأ.",
+        "goToAdmin": "الانتقال إلى لوحة الإدارة"
+      },
+      "backHome": "العودة إلى لوحة التحكم",
+      "backToLogin": "العودة إلى تسجيل الدخول"
+    }
+  }
+}

@@ -1,14 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
 import path from 'path';
+import { env } from '../config/env';
 import { WorkflowOrchestrator } from '../workflow/workflow-orchestrator';
 import { UserStory, TestCase } from '../../shared/types';
 import { errorHandler, asyncHandler, createError } from '../middleware/error-handler';
 import { requestLogger } from '../middleware/request-logger';
 import { validate, schemas, sanitizeUrl, sanitizeText } from '../middleware/validation';
 import { apiRateLimiter, testExecutionRateLimiter, testGenerationRateLimiter, qaLoopSessionRateLimiter, loginRateLimiter, registerRateLimiter, publicEndpointRateLimiter } from '../middleware/rate-limit';
+import { buildCorsOrigins } from '../utils/cors-origins';
 import { createLogger } from '../../shared/logger/logger';
 import { metrics } from '../../shared/utils/metrics';
 import { TestCaseRepository } from '../../shared/database/repositories/test-case-repository';
@@ -23,25 +24,49 @@ import type { ExecutionEntity, StepResultEntity } from '../../shared/database/re
 import { ExecutionResult, StepResult } from '../../shared/types';
 import { query } from '../../shared/database/connection';
 import { requireAuth } from '../middleware/auth';
-import { requireAdmin, requireSuperAdmin } from '../middleware/admin-auth';
+import { requireSuperAdmin } from '../middleware/admin-auth';
 import * as authService from '../services/auth-service';
 import { WorkspaceRepository } from '../../shared/database/repositories/workspace-repository';
 import { PlanRepository } from '../../shared/database/repositories/plan-repository';
 import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
 import { CreditRepository } from '../../shared/database/repositories/credit-repository';
-import { BillingService } from '../services/billing-service';
-import { StripeService } from '../services/stripe-service';
+import { PaymentService } from '../payments/payment-service';
 import { InvoiceRepository } from '../../shared/database/repositories/invoice-repository';
 import { UserRepository } from '../../shared/database/repositories/user-repository';
 import { startCleanupScheduler, runCleanup } from '../services/cleanup-service';
+import { seedAdminUser } from '../../shared/database/seeds/admin-user';
 import { requireCredits, deductCredits } from '../middleware/credit-gate';
+import { recordUsageEvent } from '../utils/usage-tracker';
 import { requireFeature, requireFeatureLimit } from '../middleware/feature-gate';
 import { requireActiveSubscription } from '../middleware/subscription-check';
 import { AuditRepository } from '../../shared/database/repositories/audit-repository';
 import { SystemSettingsRepository } from '../../shared/database/repositories/system-settings-repository';
 import { AnnouncementRepository } from '../../shared/database/repositories/announcement-repository';
-
-dotenv.config();
+import { i18nMiddleware } from '../middleware/i18n';
+import { FeatureFlagRepository } from '../../shared/database/repositories/feature-flag-repository';
+import { BillingConfigRepository } from '../../shared/database/repositories/billing-config-repository';
+import { isValidFeatureKey } from '../../shared/constants/platform-features';
+import { invalidateFlag, invalidateOrg, resolveAllFlags } from '../utils/feature-flags';
+import { stripeWebhookRouter } from './webhooks/stripe';
+import { generateText } from 'ai';
+import { PlatformAiConfigRepository } from '../../shared/database/repositories/platform-ai-config-repository';
+import { DecryptionKeyMismatchError } from '../utils/crypto/secret-cipher';
+import { platformKeyCache } from '../utils/ai/platform-key-cache';
+import { selectAIProvider } from '../utils/ai/select-ai-provider';
+import { providerBaseUrl } from '../utils/ai/provider-base-url';
+import type { AIProviderName } from '../utils/ai/detect-provider';
+import { requireInternalNetwork } from '../middleware/internal-network';
+import { getAllPlatformConfigs } from '../utils/ai/get-platform-ai-model';
+import { meBillingRouter } from './me/billing';
+import { meUsageRouter } from './me/usage';
+import { PLANS, isPlanSlug } from '../../shared/constants/pricing';
+import meProfileRouter from './me/profile';
+import mePasswordRouter from './me/password';
+import meOrganizationRouter from './me/organization';
+import meApiKeysRouter from './me/api-keys';
+import meLanguageRouter from './me/language';
+import meNotificationsRouter from './me/notifications';
+import meAccountRouter from './me/account';
 
 /**
  * Transform database entity to frontend TestCase format
@@ -119,7 +144,7 @@ function transformExecutionWithSteps(
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 const logger = createLogger('gateway');
 
 // Trust the first proxy (Railway's reverse proxy) so express-rate-limit
@@ -141,10 +166,7 @@ app.use(helmet({
   },
 }));
 
-const corsOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5183',
-  process.env.ADMIN_FRONTEND_URL || 'http://localhost:5184',
-].filter(o => o && o !== '*'); // Never allow wildcard origins
+const corsOrigins = buildCorsOrigins();
 app.use(cors({
   origin: corsOrigins,
   credentials: true,
@@ -153,33 +175,16 @@ app.use(cors({
   exposedHeaders: ['X-Request-ID', 'RateLimit-*']
 }));
 // Stripe webhook needs raw body for signature verification — must be before express.json()
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'] as string;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    logger.warn('STRIPE_WEBHOOK_SECRET not configured, skipping webhook');
-    res.status(400).json({ error: 'Webhook secret not configured' });
-    return;
-  }
-
-  try {
-    const Stripe = require('stripe');
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-    const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    await stripeService.handleWebhookEvent(event);
-    res.json({ received: true });
-  } catch (err: any) {
-    logger.error('Stripe webhook error', err);
-    res.status(400).json({ error: `Webhook error: ${err.message}` });
-  }
-});
+app.use(stripeWebhookRouter);
 
 app.use(express.json({ limit: '12mb' })); // Allow document uploads (base64 encoded files)
 app.use(express.urlencoded({ extended: true, limit: '12mb' }));
 
 // Request logging middleware (before routes)
 app.use(requestLogger);
+
+// i18n middleware — sets req.lang and req.t() based on Accept-Language header
+app.use(i18nMiddleware);
 
 // Apply general rate limiting to all API routes
 app.use('/api', apiRateLimiter);
@@ -188,13 +193,13 @@ app.use('/api', apiRateLimiter);
 app.use('/api/screenshots', express.static(path.join(__dirname, '../../screenshots')));
 
 // Serve video recordings (v2)
-const videoDir = process.env.VIDEO_DIR || '/tmp/videos';
+const videoDir = env.VIDEO_DIR;
 app.use('/api/videos', express.static(videoDir));
 
 // Initialize orchestrator
 const orchestrator = new WorkflowOrchestrator(
-  process.env.AI_SERVICE_URL || 'http://localhost:8000',
-  process.env.TEST_EXECUTOR_URL || 'http://localhost:3001'
+  env.AI_SERVICE_URL,
+  env.TEST_EXECUTOR_URL
 );
 
 // Initialize repositories
@@ -209,13 +214,15 @@ const workspaceRepository = new WorkspaceRepository();
 const planRepository = new PlanRepository();
 const subscriptionRepository = new SubscriptionRepository();
 const creditRepository = new CreditRepository();
-const billingService = new BillingService();
-const stripeService = new StripeService();
+// PaymentService is static — no instantiation needed
 const invoiceRepository = new InvoiceRepository();
 const adminUserRepository = new UserRepository();
 const auditRepository = new AuditRepository();
 const systemSettingsRepository = new SystemSettingsRepository();
 const announcementRepository = new AnnouncementRepository();
+const featureFlagRepository = new FeatureFlagRepository();
+const billingConfigRepository = new BillingConfigRepository();
+const platformAiConfigRepository = new PlatformAiConfigRepository();
 
 /** Fire-and-forget audit logging helper */
 function auditLog(req: Express.Request, action: string, targetType?: string, targetId?: string, details?: Record<string, any>) {
@@ -238,15 +245,15 @@ app.get('/health', async (req, res) => {
     service: 'gateway',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
+    environment: env.NODE_ENV,
     version: '1.0.0',
     dependencies: {
       aiService: {
-        url: process.env.AI_SERVICE_URL || 'http://localhost:8000',
+        url: env.AI_SERVICE_URL,
         status: 'unknown' // Could check actual connectivity
       },
       testExecutor: {
-        url: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001',
+        url: env.TEST_EXECUTOR_URL,
         status: 'unknown' // Could check actual connectivity
       }
     }
@@ -256,8 +263,8 @@ app.get('/health', async (req, res) => {
   try {
     const axios = require('axios');
     const [aiHealth, executorHealth] = await Promise.allSettled([
-      axios.get(`${process.env.AI_SERVICE_URL || 'http://localhost:8000'}/health`, { timeout: 2000 }).catch(() => null),
-      axios.get(`${process.env.TEST_EXECUTOR_URL || 'http://localhost:3001'}/health`, { timeout: 2000 }).catch(() => null)
+      axios.get(`${env.AI_SERVICE_URL}/health`, { timeout: 2000 }).catch(() => null),
+      axios.get(`${env.TEST_EXECUTOR_URL}/health`, { timeout: 2000 }).catch(() => null)
     ]);
 
     if (aiHealth.status === 'fulfilled' && aiHealth.value?.status === 200) {
@@ -292,12 +299,15 @@ app.post('/api/auth/register', registerRateLimiter, validate(schemas.register), 
 app.post('/api/auth/login', loginRateLimiter, validate(schemas.login), asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const result = await authService.login(String(email), String(password));
+  if (result.user.role === 'super_admin') {
+    auditLog(req as any, 'superadmin.login', 'user', result.user.id, { email: result.user.email });
+  }
   res.json({ success: true, ...result });
 }));
 
-app.post('/api/auth/logout', (_req, res) => {
+app.post('/api/auth/logout', (req, res) => {
   // JWT is stateless; client drops the token
-  res.json({ success: true, message: 'Logged out successfully' });
+  res.json({ success: true, message: (req as any).t('success:auth.loggedOut') });
 });
 
 app.get('/api/auth/me', requireAuth, asyncHandler(async (req, res) => {
@@ -314,7 +324,7 @@ app.get('/api/auth/github', (_req, res) => {
 
 app.get('/api/auth/github/callback', asyncHandler(async (req, res) => {
   const { code } = req.query;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = env.FRONTEND_URL;
   if (!code || typeof code !== 'string') {
     return res.redirect(`${frontendUrl}/login?error=no_code`);
   }
@@ -337,7 +347,7 @@ app.get('/api/auth/google', (_req, res) => {
 
 app.get('/api/auth/google/callback', asyncHandler(async (req, res) => {
   const { code } = req.query;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = env.FRONTEND_URL;
   if (!code || typeof code !== 'string') {
     return res.redirect(`${frontendUrl}/login?error=no_code`);
   }
@@ -359,7 +369,7 @@ import { sendPasswordResetEmail } from '../services/email-service';
 app.post('/api/auth/forgot-password', loginRateLimiter, asyncHandler(async (req, res) => {
   const { email } = req.body;
   if (!email || typeof email !== 'string') {
-    return res.json({ success: true, message: 'If an account exists, a reset email has been sent' });
+    return res.json({ success: true, message: (req as any).t('success:auth.resetEmailSent') });
   }
   const users = await query<{ id: string; email: string }>('SELECT id, email FROM users WHERE email = $1', [email.trim().toLowerCase()]);
   if (users.length > 0) {
@@ -369,20 +379,20 @@ app.post('/api/auth/forgot-password', loginRateLimiter, asyncHandler(async (req,
     await query('UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3', [resetToken, expires, user.id]);
     sendPasswordResetEmail(email.trim().toLowerCase(), resetToken).catch(() => {});
   }
-  res.json({ success: true, message: 'If an account exists, a reset email has been sent' });
+  res.json({ success: true, message: (req as any).t('success:auth.resetEmailSent') });
 }));
 
 app.post('/api/auth/reset-password', loginRateLimiter, asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || typeof token !== 'string' || !newPassword || typeof newPassword !== 'string') {
-    throw createError('Token and new password are required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:auth.tokenRequired'), 400, 'VALIDATION_ERROR');
   }
   if (newPassword.length < 8) {
-    throw createError('Password must be at least 8 characters', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:auth.passwordMinLength'), 400, 'VALIDATION_ERROR');
   }
   const rows = await query<{ id: string }>('SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()', [token]);
   if (rows.length === 0) {
-    throw createError('Invalid or expired reset token', 400, 'INVALID_TOKEN');
+    throw createError((req as any).t('errors:auth.invalidResetToken'), 400, 'INVALID_TOKEN');
   }
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await query('UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2', [passwordHash, rows[0].id]);
@@ -405,7 +415,7 @@ app.post('/api/workspaces', requireAuth, validate(schemas.createWorkspace), asyn
 app.get('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
   const workspace = await workspaceRepository.findById(req.params.id);
   if (!workspace || workspace.owner_id !== req.user!.id) {
-    throw createError('Workspace not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
   }
   res.json({ success: true, workspace });
 }));
@@ -413,11 +423,11 @@ app.get('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
 app.put('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
   const { name } = req.body;
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    throw createError('Workspace name is required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.workspaceNameRequired'), 400, 'VALIDATION_ERROR');
   }
   const workspace = await workspaceRepository.findById(req.params.id);
   if (!workspace || workspace.owner_id !== req.user!.id) {
-    throw createError('Workspace not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
   }
   const updated = await workspaceRepository.update(req.params.id, name.trim());
   res.json({ success: true, workspace: updated });
@@ -426,19 +436,23 @@ app.put('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
 app.delete('/api/workspaces/:id', requireAuth, asyncHandler(async (req, res) => {
   const workspace = await workspaceRepository.findById(req.params.id);
   if (!workspace || workspace.owner_id !== req.user!.id) {
-    throw createError('Workspace not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'NOT_FOUND');
   }
   const count = await workspaceRepository.countByUserId(req.user!.id);
   if (count <= 1) {
-    throw createError('Cannot delete your only workspace', 400, 'LAST_WORKSPACE');
+    throw createError((req as any).t('errors:business.lastWorkspace'), 400, 'LAST_WORKSPACE');
   }
   await workspaceRepository.delete(req.params.id);
-  res.json({ success: true, message: 'Workspace deleted' });
+  res.json({ success: true, message: (req as any).t('success:workspace.deleted') });
 }));
 
 // ─── Public routes (no auth required, with dedicated rate limiting) ──────────
 import { publicRouter } from './public-router';
 app.use('/api/public', publicEndpointRateLimiter, publicRouter);
+
+// ─── Landing lead capture (public, own rate limiter) ────────────────────────
+import { landingLeadsRouter } from './landing-leads-router';
+app.use('/api/landing', landingLeadsRouter);
 
 // ─── CI routes (API key auth — must be before requireAuth blanket) ───────────
 import { ciRouter } from './ci-router';
@@ -454,7 +468,7 @@ app.post('/api/internal/notifications', asyncHandler(async (req, res) => {
       'SELECT user_id FROM workspace_members WHERE workspace_id = $1',
       [workspaceId],
     );
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = env.FRONTEND_URL;
     for (const m of members) {
       if (type === 'scan_complete') {
         sendScanCompleteEmail(m.user_id, {
@@ -478,6 +492,30 @@ app.post('/api/internal/notifications', asyncHandler(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ─── Internal: AI Config (Docker-network only, no auth) ──────────────────
+// This endpoint MUST be declared before the `app.use('/api', requireAuth)`
+// blanket below — otherwise qa-loop-executor's platform-config fetch gets
+// 401'd by requireAuth before requireInternalNetwork can authorize the call.
+// Same placement pattern as /api/internal/notifications above.
+// Restricted by the internal-network middleware (Railway private network /
+// Docker bridge IP range check).
+app.get('/api/internal/ai-config',
+  requireInternalNetwork,
+  asyncHandler(async (_req, res) => {
+    const configs = await getAllPlatformConfigs();
+    const billingConfigRepo = new BillingConfigRepository();
+    const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
+    const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
+
+    res.json({
+      success: true,
+      providers: configs,
+      defaultProvider,
+      fallbackOrder,
+    });
+  })
+);
+
 // ─── All routes below this line require a valid JWT ───────────────────────────
 app.use('/api', requireAuth);
 
@@ -497,6 +535,19 @@ app.use('/api', bugReportRouter);
 // ─── Project credentials + notification preferences ─────────────────────────
 import { credentialsRouter } from './credentials-router';
 app.use('/api', credentialsRouter);
+
+// ─── User AI config (BYO keys) ─────────────────────────────────────────────
+import { aiConfigRouter } from './me/ai-config';
+app.use('/api/me/ai-config', aiConfigRouter);
+
+// ─── User settings routes ─────────────────────────────────────────────────
+app.use('/api/me/profile', meProfileRouter);
+app.use('/api/me/password', mePasswordRouter);
+app.use('/api/me/organization', meOrganizationRouter);
+app.use('/api/me/api-keys', meApiKeysRouter);
+app.use('/api/me/language', meLanguageRouter);
+app.use('/api/me/notifications', meNotificationsRouter);
+app.use('/api/me', meAccountRouter);
 
 // Main workflow endpoint (with stricter rate limiting)
 app.post('/api/run-test', testExecutionRateLimiter, validate(schemas.runTest), asyncHandler(async (req, res) => {
@@ -570,7 +621,7 @@ app.post('/api/generate-tests', testGenerationRateLimiter, requireActiveSubscrip
   if (user_story_id) {
     const existingUserStory = await userStoryRepository.findById(user_story_id);
     if (!existingUserStory) {
-      throw createError('User story not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.userStoryNotFound'), 404, 'NOT_FOUND');
     }
 
     sanitizedUrl = existingUserStory.website_url || website_url;
@@ -580,7 +631,7 @@ app.post('/api/generate-tests', testGenerationRateLimiter, requireActiveSubscrip
 
     // Verify project_id matches if provided
     if (project_id && existingUserStory.project_id !== project_id) {
-      throw createError('User story does not belong to the specified project', 400, 'VALIDATION_ERROR');
+      throw createError((req as any).t('errors:validation.userStoryNotInProject'), 400, 'VALIDATION_ERROR');
     }
   } else {
     // Use provided values (legacy mode or quick test)
@@ -635,6 +686,13 @@ app.post('/api/generate-tests', testGenerationRateLimiter, requireActiveSubscrip
   // Deduct credits after successful generation
   if (req.workspaceId) {
     await deductCredits(req.workspaceId, 'TEST_GENERATION', `Generated ${testCases.length} test case(s)`).catch(() => {});
+    recordUsageEvent({
+      workspaceId: req.workspaceId,
+      userId: req.user?.id,
+      eventType: 'test_generation',
+      quantity: testCases.length,
+      metadata: { testCaseCount: testCases.length },
+    });
   }
 
   // Return test cases (validation info is included in each test case's validation_result field if available)
@@ -674,6 +732,12 @@ app.post('/api/execute-test', testExecutionRateLimiter, requireActiveSubscriptio
   // Deduct credits after successful execution
   if (req.workspaceId) {
     await deductCredits(req.workspaceId, 'TEST_EXECUTION', `Executed test ${testCase.id}`).catch(() => {});
+    recordUsageEvent({
+      workspaceId: req.workspaceId,
+      userId: req.user?.id,
+      eventType: 'test_execution',
+      metadata: { testCaseId: testCase.id },
+    });
   }
 
   // Only persist execution result if it's a final status (not "starting")
@@ -708,7 +772,7 @@ app.get('/metrics', requireAuth, (req, res) => {
 app.get('/api/test-cases/:id', asyncHandler(async (req, res) => {
   const entity = await testCaseRepository.findById(req.params.id, req.workspaceId);
   if (!entity) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
   const testCase = transformTestCaseEntity(entity);
   res.json(testCase);
@@ -718,7 +782,7 @@ app.get('/api/test-cases/:id', asyncHandler(async (req, res) => {
 app.get('/api/executions/:id', asyncHandler(async (req, res) => {
   const execution = await executionRepository.findById(req.params.id, req.workspaceId);
   if (!execution) {
-    throw createError('Execution not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.executionNotFound'), 404, 'NOT_FOUND');
   }
   const steps = await executionRepository.findStepResults(req.params.id);
   const transformed = transformExecutionWithSteps(execution, steps);
@@ -757,7 +821,7 @@ app.post('/api/projects', requireFeatureLimit('max_projects', async (req) => {
 app.get('/api/projects/:id', asyncHandler(async (req, res) => {
   const project = await projectRepository.findByIdWithStats(req.params.id, req.workspaceId);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
   res.json({ project });
 }));
@@ -769,7 +833,7 @@ app.put('/api/projects/:id', asyncHandler(async (req, res) => {
   // Verify ownership
   const existing = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!existing) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   logger.info('Updating project', { projectId: req.params.id });
@@ -780,7 +844,7 @@ app.put('/api/projects/:id', asyncHandler(async (req, res) => {
   });
 
   if (!updated) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   res.json({ success: true, project: updated });
@@ -792,11 +856,11 @@ app.delete('/api/projects/:id', asyncHandler(async (req, res) => {
 
   const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   await projectRepository.delete(req.params.id);
-  res.json({ success: true, message: 'Project deleted successfully' });
+  res.json({ success: true, message: (req as any).t('success:project.deleted') });
 }));
 
 // ==================== PROJECT CONTEXT ENDPOINTS (Feature 9) ====================
@@ -805,7 +869,7 @@ app.delete('/api/projects/:id', asyncHandler(async (req, res) => {
 app.get('/api/projects/:id/context', asyncHandler(async (req, res) => {
   const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
   res.json({
     context: (project as any).context || {},
@@ -817,7 +881,7 @@ app.get('/api/projects/:id/context', asyncHandler(async (req, res) => {
 app.put('/api/projects/:id/prd', asyncHandler(async (req, res) => {
   const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
   const { user_prd } = req.body;
   await projectRepository.update(req.params.id, { user_prd: user_prd || '' } as any);
@@ -828,7 +892,7 @@ app.put('/api/projects/:id/prd', asyncHandler(async (req, res) => {
 app.delete('/api/projects/:id/context', asyncHandler(async (req, res) => {
   const project = await projectRepository.findByIdForWorkspace(req.params.id, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
   await projectRepository.update(req.params.id, { context: {} } as any);
   res.json({ success: true });
@@ -845,7 +909,7 @@ app.get('/api/projects/:id/user-stories', asyncHandler(async (req, res) => {
   // Verify project ownership
   const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   const userStories = await userStoryRepository.findByProjectIdWithStats(projectId, offset, limit);
@@ -861,7 +925,7 @@ app.post('/api/projects/:id/user-stories', validate(schemas.createUserStory), as
   // Verify project ownership
   const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   logger.info('Creating user story', { projectId, story: story.substring(0, 50) });
@@ -880,7 +944,7 @@ app.post('/api/projects/:id/user-stories', validate(schemas.createUserStory), as
 app.get('/api/user-stories/:id', asyncHandler(async (req, res) => {
   const userStory = await userStoryRepository.findByIdWithStats(req.params.id);
   if (!userStory) {
-    throw createError('User story not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.userStoryNotFound'), 404, 'NOT_FOUND');
   }
   res.json({ user_story: userStory });
 }));
@@ -897,7 +961,7 @@ app.put('/api/user-stories/:id', asyncHandler(async (req, res) => {
   });
 
   if (!updated) {
-    throw createError('User story not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.userStoryNotFound'), 404, 'NOT_FOUND');
   }
 
   res.json({ success: true, user_story: updated });
@@ -909,11 +973,11 @@ app.delete('/api/user-stories/:id', asyncHandler(async (req, res) => {
 
   const userStory = await userStoryRepository.findById(req.params.id);
   if (!userStory) {
-    throw createError('User story not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.userStoryNotFound'), 404, 'NOT_FOUND');
   }
 
   await userStoryRepository.delete(req.params.id);
-  res.json({ success: true, message: 'User story deleted successfully' });
+  res.json({ success: true, message: (req as any).t('success:userStory.deleted') });
 }));
 
 // Assign user story to folder
@@ -924,19 +988,19 @@ app.put('/api/user-stories/:id/folder', asyncHandler(async (req, res) => {
 
   const userStory = await userStoryRepository.findById(req.params.id);
   if (!userStory) {
-    throw createError('User story not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.userStoryNotFound'), 404, 'NOT_FOUND');
   }
 
   // Verify folder exists if folder_id is provided
   if (folder_id) {
     const folder = await folderRepository.findById(folder_id);
     if (!folder) {
-      throw createError('Folder not found', 404, 'NOT_FOUND');
+      throw createError((req as any).t('errors:resource.folderNotFound'), 404, 'NOT_FOUND');
     }
   }
 
   await folderRepository.assignUserStoryToFolder(req.params.id, folder_id || null);
-  res.json({ success: true, message: 'User story assigned to folder successfully' });
+  res.json({ success: true, message: (req as any).t('success:userStory.assignedToFolder') });
 }));
 
 // ==================== SETUP HOOK ENDPOINTS ====================
@@ -963,7 +1027,7 @@ app.get('/api/setup-hooks/:id', asyncHandler(async (req, res) => {
   const hook = await setupHookRepository.findById(id);
 
   if (!hook) {
-    throw createError('Setup hook not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.setupHookNotFound'), 404, 'NOT_FOUND');
   }
 
   res.json({ hook });
@@ -974,26 +1038,26 @@ app.post('/api/setup-hooks', asyncHandler(async (req, res) => {
   const { name, level, steps, enabled, test_case_id, folder_id } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    throw createError('Setup hook name is required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.setupHookNameRequired'), 400, 'VALIDATION_ERROR');
   }
 
   if (!level || !['global', 'suite', 'test_case'].includes(level)) {
-    throw createError('Level must be one of: global, suite, test_case', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.levelInvalid'), 400, 'VALIDATION_ERROR');
   }
 
   if (!Array.isArray(steps)) {
-    throw createError('Steps must be an array', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.stepsMustBeArray'), 400, 'VALIDATION_ERROR');
   }
 
   // Validate level-specific constraints
   if (level === 'global' && (test_case_id || folder_id)) {
-    throw createError('Global hooks cannot have test_case_id or folder_id', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.globalHookNoIds'), 400, 'VALIDATION_ERROR');
   }
   if (level === 'suite' && (!folder_id || test_case_id)) {
-    throw createError('Suite hooks must have folder_id and no test_case_id', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.suiteHookNeedsFolderId'), 400, 'VALIDATION_ERROR');
   }
   if (level === 'test_case' && (!test_case_id || folder_id)) {
-    throw createError('Test case hooks must have test_case_id and no folder_id', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.testCaseHookNeedsTestCaseId'), 400, 'VALIDATION_ERROR');
   }
 
   logger.info('Creating setup hook', { name, level });
@@ -1016,19 +1080,19 @@ app.put('/api/setup-hooks/:id', asyncHandler(async (req, res) => {
 
   const existingHook = await setupHookRepository.findById(id);
   if (!existingHook) {
-    throw createError('Setup hook not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.setupHookNotFound'), 404, 'NOT_FOUND');
   }
 
   const updates: any = {};
   if (name !== undefined) {
     if (typeof name !== 'string' || name.trim().length === 0) {
-      throw createError('Setup hook name must be a non-empty string', 400, 'VALIDATION_ERROR');
+      throw createError((req as any).t('errors:validation.setupHookNameNonEmpty'), 400, 'VALIDATION_ERROR');
     }
     updates.name = name.trim();
   }
   if (steps !== undefined) {
     if (!Array.isArray(steps)) {
-      throw createError('Steps must be an array', 400, 'VALIDATION_ERROR');
+      throw createError((req as any).t('errors:validation.stepsMustBeArray'), 400, 'VALIDATION_ERROR');
     }
     updates.steps = steps;
   }
@@ -1046,11 +1110,11 @@ app.delete('/api/setup-hooks/:id', asyncHandler(async (req, res) => {
 
   const existingHook = await setupHookRepository.findById(id);
   if (!existingHook) {
-    throw createError('Setup hook not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.setupHookNotFound'), 404, 'NOT_FOUND');
   }
 
   await setupHookRepository.delete(id);
-  res.json({ success: true, message: 'Setup hook deleted successfully' });
+  res.json({ success: true, message: (req as any).t('success:setupHook.deleted') });
 }));
 
 // Get setup hooks for a test case (includes global, suite, and test_case level)
@@ -1060,7 +1124,7 @@ app.get('/api/test-cases/:testCaseId/setup-hooks', asyncHandler(async (req, res)
   // Verify test case exists within this workspace
   const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
   // Get folder_id from test case's user_story if available
@@ -1092,7 +1156,7 @@ app.get('/api/projects/:projectId/folders', asyncHandler(async (req, res) => {
   // Verify project ownership
   const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   const folders = await folderRepository.listByProjectWithStats(projectId);
@@ -1105,7 +1169,7 @@ app.post('/api/projects/:projectId/folders', asyncHandler(async (req, res) => {
   const { name, color } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    throw createError('Folder name is required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.folderNameRequired'), 400, 'VALIDATION_ERROR');
   }
 
   logger.info('Creating folder', { projectId, name });
@@ -1113,7 +1177,7 @@ app.post('/api/projects/:projectId/folders', asyncHandler(async (req, res) => {
   // Verify project ownership
   const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   const folder = await folderRepository.create({
@@ -1130,7 +1194,7 @@ app.get('/api/folders/:id', asyncHandler(async (req, res) => {
   const folder = await folderRepository.findById(req.params.id);
 
   if (!folder) {
-    throw createError('Folder not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.folderNotFound'), 404, 'NOT_FOUND');
   }
 
   res.json({ folder });
@@ -1145,7 +1209,7 @@ app.put('/api/folders/:id', asyncHandler(async (req, res) => {
   const updates: { name?: string; color?: string } = {};
   if (name !== undefined) {
     if (typeof name !== 'string' || name.trim().length === 0) {
-      throw createError('Folder name cannot be empty', 400, 'VALIDATION_ERROR');
+      throw createError((req as any).t('errors:validation.folderNameNonEmpty'), 400, 'VALIDATION_ERROR');
     }
     updates.name = name.trim();
   }
@@ -1156,7 +1220,7 @@ app.put('/api/folders/:id', asyncHandler(async (req, res) => {
   const folder = await folderRepository.update(req.params.id, updates);
 
   if (!folder) {
-    throw createError('Folder not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.folderNotFound'), 404, 'NOT_FOUND');
   }
 
   res.json({ success: true, folder });
@@ -1168,11 +1232,11 @@ app.delete('/api/folders/:id', asyncHandler(async (req, res) => {
 
   const folder = await folderRepository.findById(req.params.id);
   if (!folder) {
-    throw createError('Folder not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.folderNotFound'), 404, 'NOT_FOUND');
   }
 
   await folderRepository.delete(req.params.id);
-  res.json({ success: true, message: 'Folder deleted successfully' });
+  res.json({ success: true, message: (req as any).t('success:folder.deleted') });
 }));
 
 // ==================== TEST CASE ENDPOINTS ====================
@@ -1222,13 +1286,13 @@ app.put('/api/test-cases/:id', validate(schemas.executeTest), asyncHandler(async
   // Verify the test case belongs to this workspace before mutating
   const existing = await testCaseRepository.findById(id, req.workspaceId);
   if (!existing) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
   logger.info('Updating test case', { testCaseId: id });
   const updated = await testCaseRepository.update(id, updates);
   if (!updated) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
   const testCase = transformTestCaseEntity(updated);
@@ -1242,16 +1306,16 @@ app.delete('/api/test-cases/:id', asyncHandler(async (req, res) => {
   // Verify the test case belongs to this workspace before deleting
   const existing = await testCaseRepository.findById(id, req.workspaceId);
   if (!existing) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
   logger.info('Deleting test case', { testCaseId: id });
   const deleted = await testCaseRepository.delete(id);
   if (!deleted) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
-  res.json({ success: true, message: 'Test case deleted successfully' });
+  res.json({ success: true, message: (req as any).t('success:testCase.deleted') });
 }));
 
 // Get flow data for visualization
@@ -1499,7 +1563,7 @@ app.get('/api/flow-data', asyncHandler(async (req, res) => {
     res.json({ projects: flowData });
   } catch (error: any) {
     logger.error('Error fetching flow data', error);
-    throw createError('Failed to fetch flow data', 500, 'INTERNAL_ERROR');
+    throw createError((req as any).t('errors:business.fetchFlowFailed'), 500, 'INTERNAL_ERROR');
   }
 }));
 
@@ -1512,7 +1576,7 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
   // Verify project ownership
   const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
   if (!project) {
-    throw createError('Project not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
   }
 
   // Get all test cases for this project (from test_cases table linked via test_suite → user_story → project)
@@ -1646,7 +1710,7 @@ app.get('/api/projects/:projectId/test-cases-by-category', asyncHandler(async (r
 app.post('/api/projects/:projectId/run-all-tests', asyncHandler(async (req, res) => {
   const projectId = req.params.projectId;
   const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
-  if (!project) throw createError('Project not found', 404, 'NOT_FOUND');
+  if (!project) throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
 
   // Fetch all test cases for this project
   const testCases = await query<any>(`
@@ -1657,11 +1721,11 @@ app.post('/api/projects/:projectId/run-all-tests', asyncHandler(async (req, res)
   `, [projectId]);
 
   if (testCases.length === 0) {
-    return res.json({ success: true, results: [], message: 'No test cases to run' });
+    return res.json({ success: true, results: [], message: (req as any).t('success:testCase.noTestCases') });
   }
 
   // Queue execution through the test executor service
-  const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3002';
+  const testExecutorUrl = env.TEST_EXECUTOR_URL;
   const results: any[] = [];
 
   for (const tc of testCases) {
@@ -1696,7 +1760,7 @@ app.post('/api/projects/:projectId/run-all-tests', asyncHandler(async (req, res)
 app.post('/api/projects/:projectId/run-category/:category', asyncHandler(async (req, res) => {
   const { projectId, category } = req.params;
   const project = await projectRepository.findByIdForWorkspace(projectId, req.workspaceId!);
-  if (!project) throw createError('Project not found', 404, 'NOT_FOUND');
+  if (!project) throw createError((req as any).t('errors:resource.projectNotFound'), 404, 'NOT_FOUND');
 
   const testCases = await query<any>(`
     SELECT tc.id, tc.name, tc.playwright_code, tc.steps, tc.requires_auth
@@ -1707,10 +1771,10 @@ app.post('/api/projects/:projectId/run-category/:category', asyncHandler(async (
   `, [projectId, category]);
 
   if (testCases.length === 0) {
-    return res.json({ success: true, results: [], message: 'No test cases in this category' });
+    return res.json({ success: true, results: [], message: (req as any).t('success:testCase.noCategoryTests') });
   }
 
-  const testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3002';
+  const testExecutorUrl = env.TEST_EXECUTOR_URL;
   const results: any[] = [];
 
   for (const tc of testCases) {
@@ -1750,7 +1814,7 @@ app.get('/api/test-cases/:id/baselines', asyncHandler(async (req, res) => {
   // Verify test case exists within this workspace
   const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
   const baselines = await visualRegressionRepository.getBaselinesByTestCase(testCaseId);
@@ -1765,7 +1829,7 @@ app.get('/api/test-cases/:testCaseId/baselines/:stepId', asyncHandler(async (req
   // Verify test case exists within this workspace
   const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
   const baselines = await visualRegressionRepository.getBaselineHistory(testCaseId, stepId);
@@ -1778,20 +1842,20 @@ app.post('/api/test-cases/:testCaseId/baselines', asyncHandler(async (req, res) 
   const { step_id, screenshot_path, execution_id } = req.body;
 
   if (!step_id || !screenshot_path) {
-    throw createError('step_id and screenshot_path are required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.stepIdAndScreenshotRequired'), 400, 'VALIDATION_ERROR');
   }
 
   // Verify test case exists within this workspace
   const testCase = await testCaseRepository.findById(testCaseId, req.workspaceId);
   if (!testCase) {
-    throw createError('Test case not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.testCaseNotFound'), 404, 'NOT_FOUND');
   }
 
   // Calculate screenshot hash
   const fs = require('fs');
   const crypto = require('crypto');
   if (!fs.existsSync(screenshot_path)) {
-    throw createError('Screenshot file not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.screenshotNotFound'), 404, 'NOT_FOUND');
   }
   const screenshotBuffer = fs.readFileSync(screenshot_path);
   const screenshotHash = crypto.createHash('sha256').update(screenshotBuffer).digest('hex');
@@ -1810,7 +1874,7 @@ app.post('/api/test-cases/:testCaseId/baselines', asyncHandler(async (req, res) 
     res.status(201).json({ success: true, baseline });
   } catch (baselineErr: any) {
     logger.warn('Failed to create visual baseline (non-critical)', { error: baselineErr.message });
-    res.status(201).json({ success: true, baseline: null, warning: 'Baseline creation failed but is non-critical' });
+    res.status(201).json({ success: true, baseline: null, warning: (req as any).t('errors:service.baselineNonCritical') });
   }
 }));
 
@@ -1820,15 +1884,15 @@ app.put('/api/test-cases/:testCaseId/baselines/:baselineId/lock', asyncHandler(a
   const { is_locked } = req.body;
 
   if (typeof is_locked !== 'boolean') {
-    throw createError('is_locked must be a boolean', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.isLockedMustBeBoolean'), 400, 'VALIDATION_ERROR');
   }
 
   const success = await visualRegressionRepository.setBaselineLock(baselineId, is_locked);
   if (!success) {
-    throw createError('Baseline not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.baselineNotFound'), 404, 'NOT_FOUND');
   }
 
-  res.json({ success: true, message: `Baseline ${is_locked ? 'locked' : 'unlocked'}` });
+  res.json({ success: true, message: (req as any).t(is_locked ? 'success:baseline.locked' : 'success:baseline.unlocked') });
 }));
 
 // Get visual comparisons for an execution
@@ -1838,7 +1902,7 @@ app.get('/api/executions/:id/visual-comparisons', asyncHandler(async (req, res) 
   // Verify execution exists within this workspace
   const execution = await executionRepository.findById(executionId, req.workspaceId);
   if (!execution) {
-    throw createError('Execution not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.executionNotFound'), 404, 'NOT_FOUND');
   }
 
   const comparisons = await visualRegressionRepository.getComparisonsByExecution(executionId);
@@ -1871,12 +1935,12 @@ app.put('/api/visual-regressions/:id/ignore', asyncHandler(async (req, res) => {
   const { ignored } = req.body;
 
   if (typeof ignored !== 'boolean') {
-    throw createError('ignored must be a boolean', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.ignoredMustBeBoolean'), 400, 'VALIDATION_ERROR');
   }
 
   const comparison = await visualRegressionRepository.updateComparison(comparisonId, { ignored });
   if (!comparison) {
-    throw createError('Visual comparison not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.visualComparisonNotFound'), 404, 'NOT_FOUND');
   }
 
   res.json({ success: true, comparison });
@@ -1886,7 +1950,7 @@ app.put('/api/visual-regressions/:id/ignore', asyncHandler(async (req, res) => {
 
 app.get('/api/dashboard/stats', requireAuth, asyncHandler(async (req, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceRequired') });
 
   // Run all queries in parallel for speed
   const [testCaseRows, executionRows, qaSessionRows, bugRows, recentSessionRows] = await Promise.all([
@@ -1937,7 +2001,7 @@ app.get('/api/dashboard/stats', requireAuth, asyncHandler(async (req, res) => {
 
 app.get('/api/environments', requireAuth, asyncHandler(async (req, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceRequired') });
 
   const rows = await query(
     'SELECT * FROM saved_environments WHERE workspace_id = $1 ORDER BY name ASC',
@@ -1948,10 +2012,10 @@ app.get('/api/environments', requireAuth, asyncHandler(async (req, res) => {
 
 app.post('/api/environments', requireAuth, asyncHandler(async (req, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceRequired') });
 
   const { name, url, description } = req.body;
-  if (!name || !url) return res.status(400).json({ error: 'name and url are required' });
+  if (!name || !url) return res.status(400).json({ error: (req as any).t('errors:validation.nameAndUrlRequired') });
 
   const rows = await query(
     'INSERT INTO saved_environments (workspace_id, name, url, description) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -1962,7 +2026,7 @@ app.post('/api/environments', requireAuth, asyncHandler(async (req, res) => {
 
 app.put('/api/environments/:id', requireAuth, asyncHandler(async (req, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceRequired') });
 
   const { id } = req.params;
   const { name, url, description } = req.body;
@@ -1977,13 +2041,13 @@ app.put('/api/environments/:id', requireAuth, asyncHandler(async (req, res) => {
     [name, url, description, id, workspaceId]
   );
 
-  if (rows.length === 0) return res.status(404).json({ error: 'Environment not found' });
+  if (rows.length === 0) return res.status(404).json({ error: (req as any).t('errors:resource.environmentNotFound') });
   res.json({ success: true, environment: rows[0] });
 }));
 
 app.delete('/api/environments/:id', requireAuth, asyncHandler(async (req, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceRequired') });
 
   const { id } = req.params;
   const rows = await query(
@@ -1991,7 +2055,7 @@ app.delete('/api/environments/:id', requireAuth, asyncHandler(async (req, res) =
     [id, workspaceId]
   );
 
-  if (rows.length === 0) return res.status(404).json({ error: 'Environment not found' });
+  if (rows.length === 0) return res.status(404).json({ error: (req as any).t('errors:resource.environmentNotFound') });
   res.json({ success: true });
 }));
 
@@ -2047,7 +2111,7 @@ const integrationService = new IntegrationService();
 app.get('/api/integrations', requireAuth, asyncHandler(async (req: any, res) => {
   const workspaceId = req.query.workspace_id as string;
   if (!workspaceId) {
-    return res.status(400).json({ error: 'workspace_id query param is required' });
+    return res.status(400).json({ error: (req as any).t('errors:validation.workspaceIdRequired') });
   }
   const integrations = await integrationService.getIntegrations(workspaceId);
   // Strip sensitive config fields from response
@@ -2066,10 +2130,10 @@ app.get('/api/integrations', requireAuth, asyncHandler(async (req: any, res) => 
 app.post('/api/integrations', requireAuth, asyncHandler(async (req: any, res) => {
   const { workspace_id, type, name, config } = req.body;
   if (!workspace_id || !type || !name || !config) {
-    return res.status(400).json({ error: 'workspace_id, type, name, and config are required' });
+    return res.status(400).json({ error: (req as any).t('errors:validation.integrationFieldsRequired') });
   }
   if (!['jira', 'clickup', 'linear'].includes(type)) {
-    return res.status(400).json({ error: 'type must be jira, clickup, or linear' });
+    return res.status(400).json({ error: (req as any).t('errors:validation.integrationTypeInvalid') });
   }
   const integration = await integrationService.createIntegration({ workspace_id, type, name, config });
   res.status(201).json(integration);
@@ -2079,7 +2143,7 @@ app.post('/api/integrations', requireAuth, asyncHandler(async (req: any, res) =>
 app.post('/api/integrations/:id/test', requireAuth, asyncHandler(async (req: any, res) => {
   const integration = await integrationService.getIntegration(req.params.id);
   if (!integration) {
-    return res.status(404).json({ error: 'Integration not found' });
+    return res.status(404).json({ error: (req as any).t('errors:resource.integrationNotFound') });
   }
   const result = await integrationService.testConnection(integration);
   res.json(result);
@@ -2089,7 +2153,7 @@ app.post('/api/integrations/:id/test', requireAuth, asyncHandler(async (req: any
 app.patch('/api/integrations/:id', requireAuth, asyncHandler(async (req: any, res) => {
   const updated = await integrationService.updateIntegration(req.params.id, req.body);
   if (!updated) {
-    return res.status(404).json({ error: 'Integration not found' });
+    return res.status(404).json({ error: (req as any).t('errors:resource.integrationNotFound') });
   }
   res.json(updated);
 }));
@@ -2098,7 +2162,7 @@ app.patch('/api/integrations/:id', requireAuth, asyncHandler(async (req: any, re
 app.delete('/api/integrations/:id', requireAuth, asyncHandler(async (req: any, res) => {
   const deleted = await integrationService.deleteIntegration(req.params.id);
   if (!deleted) {
-    return res.status(404).json({ error: 'Integration not found' });
+    return res.status(404).json({ error: (req as any).t('errors:resource.integrationNotFound') });
   }
   res.json({ success: true });
 }));
@@ -2108,7 +2172,7 @@ app.post('/api/bugs/:bugId/create-task', requireAuth, asyncHandler(async (req: a
   const { bugId } = req.params;
   const { integration_id, priority, labels } = req.body;
   if (!integration_id) {
-    return res.status(400).json({ error: 'integration_id is required' });
+    return res.status(400).json({ error: (req as any).t('errors:validation.integrationIdRequired') });
   }
   try {
     const task = await integrationService.createTaskFromBug(bugId, integration_id, { priority, labels });
@@ -2127,18 +2191,13 @@ app.get('/api/bugs/:bugId/tasks', requireAuth, asyncHandler(async (req: any, res
 // ── Auto-Fix Routes (Phase 4) ─────────────────────────────────────────────────
 
 import { AutoFixService } from '../services/auto-fix-service';
-let autoFixService: AutoFixService | null = null;
-try {
-  autoFixService = new AutoFixService();
-} catch (e: any) {
-  logger.warn('Auto-fix service not available (missing ANTHROPIC_API_KEY)', { error: e.message });
-}
+const autoFixService = new AutoFixService();
 
 // List GitHub repos for workspace
 app.get('/api/github-repos', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const workspaceId = req.query.workspace_id as string;
-  if (!workspaceId) return res.status(400).json({ error: 'workspace_id is required' });
+  if (!workspaceId) return res.status(400).json({ error: (req as any).t('errors:validation.workspaceIdBodyRequired') });
   const repos = await autoFixService.getRepos(workspaceId);
   // Strip access tokens from response
   const safe = repos.map(r => ({ ...r, access_token: r.access_token ? '••••' : null }));
@@ -2147,10 +2206,10 @@ app.get('/api/github-repos', requireAuth, asyncHandler(async (req: any, res) => 
 
 // Connect a GitHub repo
 app.post('/api/github-repos', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const { workspace_id, owner, repo, default_branch, access_token } = req.body;
   if (!workspace_id || !owner || !repo || !access_token) {
-    return res.status(400).json({ error: 'workspace_id, owner, repo, and access_token are required' });
+    return res.status(400).json({ error: (req as any).t('errors:validation.githubRepoFieldsRequired') });
   }
   const result = await autoFixService.createRepo({ workspace_id, owner, repo, default_branch, access_token });
   res.status(201).json({ ...result, access_token: '••••' });
@@ -2158,40 +2217,40 @@ app.post('/api/github-repos', requireAuth, asyncHandler(async (req: any, res) =>
 
 // Test GitHub repo connection
 app.post('/api/github-repos/:id/test', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const result = await autoFixService.testRepoConnection(req.params.id);
   res.json(result);
 }));
 
 // Delete GitHub repo
 app.delete('/api/github-repos/:id', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const deleted = await autoFixService.deleteRepo(req.params.id);
-  if (!deleted) return res.status(404).json({ error: 'Repo not found' });
+  if (!deleted) return res.status(404).json({ error: (req as any).t('errors:resource.repoNotFound') });
   res.json({ success: true });
 }));
 
 // Start auto-fix for a bug (async)
 app.post('/api/bugs/:bugId/auto-fix', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const { bugId } = req.params;
   const { github_repo_id } = req.body;
-  if (!github_repo_id) return res.status(400).json({ error: 'github_repo_id is required' });
+  if (!github_repo_id) return res.status(400).json({ error: (req as any).t('errors:validation.githubRepoIdRequired') });
   const attempt = await autoFixService.startAutoFix(bugId, github_repo_id);
   res.status(202).json(attempt);
 }));
 
 // Get auto-fix attempt status
 app.get('/api/auto-fix/:attemptId', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const attempt = await autoFixService.getAttempt(req.params.attemptId);
-  if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+  if (!attempt) return res.status(404).json({ error: (req as any).t('errors:resource.attemptNotFound') });
   res.json(attempt);
 }));
 
 // Get all auto-fix attempts for a bug
 app.get('/api/bugs/:bugId/auto-fix', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const attempts = await autoFixService.getAttemptsForBug(req.params.bugId);
   res.json(attempts);
 }));
@@ -2199,10 +2258,10 @@ app.get('/api/bugs/:bugId/auto-fix', requireAuth, asyncHandler(async (req: any, 
 // Start auto-fix + retest loop (the killer feature)
 // Fix code → Create PR → Retest → Iterate until quality target hit
 app.post('/api/bugs/:bugId/auto-fix-loop', requireAuth, asyncHandler(async (req: any, res) => {
-  if (!autoFixService) return res.status(503).json({ error: 'Auto-fix service not available' });
+  if (!autoFixService) return res.status(503).json({ error: (req as any).t('errors:service.autoFixUnavailable') });
   const { bugId } = req.params;
   const { github_repo_id, max_iterations, quality_threshold, auto_merge } = req.body;
-  if (!github_repo_id) return res.status(400).json({ error: 'github_repo_id is required' });
+  if (!github_repo_id) return res.status(400).json({ error: (req as any).t('errors:validation.githubRepoIdRequired') });
 
   const attempt = await autoFixService.startAutoFixLoop(bugId, github_repo_id, {
     maxIterations: max_iterations || 3,
@@ -2239,7 +2298,7 @@ app.get('/api/plans', asyncHandler(async (_req, res) => {
 app.get('/api/plans/:slug', asyncHandler(async (req, res) => {
   const plan = await planRepository.findBySlug(req.params.slug);
   if (!plan || plan.is_archived) {
-    throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+    throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
   }
   const features = await planRepository.getFeatures(plan.id);
   const featureMap: Record<string, string> = {};
@@ -2248,11 +2307,17 @@ app.get('/api/plans/:slug', asyncHandler(async (req, res) => {
 }));
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ME BILLING ROUTES (subscription lifecycle + PAYG)
+// ═══════════════════════════════════════════════════════════════════════════════
+app.use('/api/me/billing', requireAuth, meBillingRouter);
+app.use('/api/me/usage', requireAuth, meUsageRouter);
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // BILLING ROUTES (authenticated — for workspace billing page)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 app.get('/api/billing/subscription', requireAuth, asyncHandler(async (req: any, res) => {
-  const data = await billingService.getWorkspaceSubscription(req.workspaceId);
+  const data = await PaymentService.getWorkspaceSubscription(req.workspaceId);
   if (!data) {
     return res.json({ success: true, subscription: null, plan: null, features: {} });
   }
@@ -2273,21 +2338,30 @@ app.get('/api/billing/credits/history', requireAuth, asyncHandler(async (req: an
 }));
 
 app.get('/api/billing/usage', requireAuth, asyncHandler(async (req: any, res) => {
-  const usage = await billingService.getUsageSummary(req.workspaceId);
+  const usage = await PaymentService.getUsageSummary(req.workspaceId);
   res.json({ success: true, usage });
 }));
 
 app.post('/api/billing/checkout', requireAuth, asyncHandler(async (req: any, res) => {
   const { plan_id } = req.body;
-  if (!plan_id) throw createError('plan_id is required', 400, 'MISSING_PLAN_ID');
-  const email = req.user!.email || '';
-  const name = req.user!.name || '';
-  const session = await stripeService.createCheckoutSession(req.workspaceId, plan_id, email, name);
-  res.json({ success: true, ...session });
+  if (!plan_id) throw createError((req as any).t('errors:validation.planIdRequired'), 400, 'MISSING_PLAN_ID');
+  const plan = await planRepository.findById(plan_id);
+  if (!plan) throw createError((req as any).t('billing:plan.notFound'), 404, 'PLAN_NOT_FOUND');
+  const session = await PaymentService.createCheckoutSession(
+    {
+      orgId: req.workspaceId,
+      plan: plan.slug,
+      tier: plan.slug,
+      successUrl: env.STRIPE_SUCCESS_URL,
+      cancelUrl: env.STRIPE_CANCEL_URL,
+    },
+    { userId: req.user!.id, orgId: req.workspaceId },
+  );
+  res.json({ success: true, sessionId: session.sessionId, url: session.url });
 }));
 
 app.post('/api/billing/portal', requireAuth, asyncHandler(async (req: any, res) => {
-  const result = await stripeService.createPortalSession(req.workspaceId);
+  const result = await PaymentService.createPortalSession(req.workspaceId);
   res.json({ success: true, ...result });
 }));
 
@@ -2298,22 +2372,22 @@ app.get('/api/billing/invoices', requireAuth, asyncHandler(async (req: any, res)
 
 app.post('/api/billing/cancel', requireAuth, asyncHandler(async (req: any, res) => {
   const immediate = req.body.immediate === true;
-  await stripeService.cancelSubscription(req.workspaceId, immediate);
-  res.json({ success: true, message: immediate ? 'Subscription canceled immediately' : 'Subscription will cancel at period end' });
+  await PaymentService.cancelSubscription(req.workspaceId, immediate);
+  res.json({ success: true, message: immediate ? (req as any).t('success:subscription.canceledImmediately') : (req as any).t('success:subscription.cancelAtPeriodEnd') });
 }));
 
 app.post('/api/billing/reactivate', requireAuth, asyncHandler(async (req: any, res) => {
-  await stripeService.reactivateSubscription(req.workspaceId);
-  res.json({ success: true, message: 'Subscription reactivated' });
+  await PaymentService.reactivateSubscription(req.workspaceId);
+  res.json({ success: true, message: (req as any).t('success:subscription.reactivated') });
 }));
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADMIN ROUTES (requireAuth + requireAdmin)
+// ADMIN ROUTES (requireAuth + requireSuperAdmin)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── Admin: Plan Management ─────────────────────────────────────────────────
 
-app.get('/api/admin/plans', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+app.get('/api/admin/plans', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
   const plans = await planRepository.findAllWithFeatures();
   const plansWithCounts = await Promise.all(
     plans.map(async (plan) => ({
@@ -2324,63 +2398,66 @@ app.get('/api/admin/plans', requireAuth, requireAdmin, asyncHandler(async (_req,
   res.json({ success: true, plans: plansWithCounts });
 }));
 
-app.post('/api/admin/plans', requireAuth, requireAdmin, validate(schemas.createPlan), asyncHandler(async (req: any, res) => {
+app.post('/api/admin/plans', requireAuth, requireSuperAdmin, validate(schemas.createPlan), asyncHandler(async (req: any, res) => {
   const existing = await planRepository.findBySlug(req.body.slug);
   if (existing) {
-    throw createError('Plan with this slug already exists', 409, 'SLUG_EXISTS');
+    throw createError((req as any).t('errors:business.planSlugExists'), 409, 'SLUG_EXISTS');
   }
   const plan = await planRepository.create(req.body);
+  auditLog(req, 'plan.create', 'plan', plan.id, { name: plan.name, slug: plan.slug });
   res.status(201).json({ success: true, plan });
 }));
 
-app.get('/api/admin/plans/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/plans/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const plan = await planRepository.findById(req.params.id);
-  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
   const features = await planRepository.getFeatures(plan.id);
   const subscriberCount = await planRepository.countSubscribers(plan.id);
   res.json({ success: true, plan: { ...plan, features, subscriber_count: subscriberCount } });
 }));
 
-app.put('/api/admin/plans/:id', requireAuth, requireAdmin, validate(schemas.updatePlan), asyncHandler(async (req, res) => {
+app.put('/api/admin/plans/:id', requireAuth, requireSuperAdmin, validate(schemas.updatePlan), asyncHandler(async (req, res) => {
+  const before = await planRepository.findById(req.params.id);
   const plan = await planRepository.update(req.params.id, req.body);
-  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
+  auditLog(req as any, 'plan.update', 'plan', req.params.id, { before: { name: before?.name, price_cents: before?.price_cents, trial_days: before?.trial_days }, after: { name: plan.name, price_cents: plan.price_cents, trial_days: plan.trial_days } });
   res.json({ success: true, plan });
 }));
 
-app.post('/api/admin/plans/:id/archive', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.post('/api/admin/plans/:id/archive', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const plan = await planRepository.archive(req.params.id);
-  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
   auditLog(req as any, 'plan.archive', 'plan', req.params.id, { name: plan.name });
   res.json({ success: true, plan });
 }));
 
-app.post('/api/admin/plans/:id/restore', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.post('/api/admin/plans/:id/restore', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const plan = await planRepository.restore(req.params.id);
-  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
   auditLog(req as any, 'plan.restore', 'plan', req.params.id, { name: plan.name });
   res.json({ success: true, plan });
 }));
 
-app.post('/api/admin/plans/:id/features', requireAuth, requireAdmin, validate(schemas.setPlanFeatures), asyncHandler(async (req, res) => {
+app.post('/api/admin/plans/:id/features', requireAuth, requireSuperAdmin, validate(schemas.setPlanFeatures), asyncHandler(async (req, res) => {
   const plan = await planRepository.findById(req.params.id);
-  if (!plan) throw createError('Plan not found', 404, 'PLAN_NOT_FOUND');
+  if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
   const features = await planRepository.setFeatures(plan.id, req.body.features);
   res.json({ success: true, features });
 }));
 
-app.delete('/api/admin/plans/:id/features/:key', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.delete('/api/admin/plans/:id/features/:key', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   await planRepository.removeFeature(req.params.id, req.params.key);
   res.json({ success: true });
 }));
 
-app.post('/api/admin/plans/:id/sync-stripe', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
-  const result = await stripeService.syncPlanToStripe(req.params.id);
+app.post('/api/admin/plans/:id/sync-stripe', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const result = await PaymentService.syncPlanToStripe(req.params.id);
   res.json({ success: true, ...result });
 }));
 
 // ─── Admin: User Management ─────────────────────────────────────────────────
 
-app.get('/api/admin/users', requireAuth, requireAdmin, asyncHandler(async (req: any, res) => {
+app.get('/api/admin/users', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
   const search = req.query.search as string | undefined;
@@ -2420,9 +2497,9 @@ app.get('/api/admin/users', requireAuth, requireAdmin, asyncHandler(async (req: 
   res.json({ success: true, users: usersWithPlans, total: result.total });
 }));
 
-app.get('/api/admin/users/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/users/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const user = await adminUserRepository.findById(req.params.id);
-  if (!user) throw createError('User not found', 404, 'USER_NOT_FOUND');
+  if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
 
   const workspaces = await workspaceRepository.findAllByUserId(user.id);
   const workspacesWithSubs = await Promise.all(
@@ -2463,51 +2540,51 @@ app.get('/api/admin/users/:id', requireAuth, requireAdmin, asyncHandler(async (r
 app.put('/api/admin/users/:id/role', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const { role } = req.body;
   if (!['user', 'admin', 'super_admin'].includes(role)) {
-    throw createError('Invalid role', 400, 'INVALID_ROLE');
+    throw createError((req as any).t('errors:business.invalidRole'), 400, 'INVALID_ROLE');
   }
   const user = await adminUserRepository.updateRole(req.params.id, role);
-  if (!user) throw createError('User not found', 404, 'USER_NOT_FOUND');
+  if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
   auditLog(req as any, 'user.role_change', 'user', req.params.id, { new_role: role });
   res.json({ success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 }));
 
 // ─── Admin: Credit Management ───────────────────────────────────────────────
 
-app.get('/api/admin/workspaces/:wsId/credits', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/workspaces/:wsId/credits', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const balance = await creditRepository.getBalance(req.params.wsId);
   res.json({ success: true, balance });
 }));
 
-app.post('/api/admin/workspaces/:wsId/credits/grant', requireAuth, requireAdmin, validate(schemas.grantCredits), asyncHandler(async (req: any, res) => {
-  const txn = await billingService.grantCredits(
+app.post('/api/admin/workspaces/:wsId/credits/grant', requireAuth, requireSuperAdmin, validate(schemas.grantCredits), asyncHandler(async (req: any, res) => {
+  await PaymentService.grantCredits(
     req.params.wsId,
     req.body.amount,
     req.body.description,
-    req.user!.id
+    req.user!.id,
   );
   auditLog(req, 'credits.grant', 'workspace', req.params.wsId, { amount: req.body.amount });
-  res.json({ success: true, transaction: txn });
+  res.json({ success: true });
 }));
 
-app.post('/api/admin/workspaces/:wsId/credits/revoke', requireAuth, requireAdmin, validate(schemas.revokeCredits), asyncHandler(async (req: any, res) => {
+app.post('/api/admin/workspaces/:wsId/credits/revoke', requireAuth, requireSuperAdmin, validate(schemas.revokeCredits), asyncHandler(async (req: any, res) => {
   try {
-    const txn = await billingService.revokeCredits(
+    await PaymentService.revokeCredits(
       req.params.wsId,
       req.body.amount,
       req.body.description,
-      req.user!.id
+      req.user!.id,
     );
     auditLog(req, 'credits.revoke', 'workspace', req.params.wsId, { amount: req.body.amount });
-    res.json({ success: true, transaction: txn });
+    res.json({ success: true });
   } catch (err: any) {
     if (err.message === 'Insufficient credits') {
-      throw createError('Workspace does not have enough credits to revoke', 400, 'INSUFFICIENT_CREDITS');
+      throw createError((req as any).t('errors:business.insufficientCredits'), 400, 'INSUFFICIENT_CREDITS');
     }
     throw err;
   }
 }));
 
-app.get('/api/admin/workspaces/:wsId/credits/history', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/workspaces/:wsId/credits/history', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
   const result = await creditRepository.getTransactions(req.params.wsId, { offset, limit });
@@ -2516,7 +2593,7 @@ app.get('/api/admin/workspaces/:wsId/credits/history', requireAuth, requireAdmin
 
 // ─── Admin: Subscription Management ─────────────────────────────────────────
 
-app.get('/api/admin/subscriptions', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/subscriptions', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
   const status = req.query.status as string | undefined;
@@ -2547,15 +2624,15 @@ app.get('/api/admin/subscriptions', requireAuth, requireAdmin, asyncHandler(asyn
   res.json({ success: true, subscriptions: enriched, total: result.total });
 }));
 
-app.get('/api/admin/workspaces/:wsId/subscription', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
-  const data = await billingService.getWorkspaceSubscription(req.params.wsId);
-  if (!data) throw createError('No subscription found', 404, 'NO_SUBSCRIPTION');
+app.get('/api/admin/workspaces/:wsId/subscription', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const data = await PaymentService.getWorkspaceSubscription(req.params.wsId);
+  if (!data) throw createError((req as any).t('errors:resource.subscriptionNotFound'), 404, 'NO_SUBSCRIPTION');
   res.json({ success: true, ...data });
 }));
 
-app.put('/api/admin/workspaces/:wsId/subscription', requireAuth, requireAdmin, validate(schemas.adminUpdateSubscription), asyncHandler(async (req, res) => {
+app.put('/api/admin/workspaces/:wsId/subscription', requireAuth, requireSuperAdmin, validate(schemas.adminUpdateSubscription), asyncHandler(async (req, res) => {
   const sub = await subscriptionRepository.findByWorkspaceId(req.params.wsId);
-  if (!sub) throw createError('No subscription found', 404, 'NO_SUBSCRIPTION');
+  if (!sub) throw createError((req as any).t('errors:resource.subscriptionNotFound'), 404, 'NO_SUBSCRIPTION');
 
   const updates: any = {};
   if (req.body.plan_id) updates.plan_id = req.body.plan_id;
@@ -2567,7 +2644,7 @@ app.put('/api/admin/workspaces/:wsId/subscription', requireAuth, requireAdmin, v
 
 // ─── Admin: Overview Stats ──────────────────────────────────────────────────
 
-app.get('/api/admin/stats/overview', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+app.get('/api/admin/stats/overview', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
   const totalUsers = await adminUserRepository.countAll();
   const subscriptionsByPlan = await subscriptionRepository.countByPlan();
 
@@ -2594,7 +2671,7 @@ app.get('/api/admin/stats/overview', requireAuth, requireAdmin, asyncHandler(asy
 
 // --- Analytics ---
 
-app.get('/api/admin/analytics/overview', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+app.get('/api/admin/analytics/overview', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
   const totalUsers = await adminUserRepository.countAll();
   const subscriptionsByPlan = await subscriptionRepository.countByPlan();
 
@@ -2608,6 +2685,16 @@ app.get('/api/admin/analytics/overview', requireAuth, requireAdmin, asyncHandler
     activeSubscriptions += count;
   }
 
+  const dauRows = await query<{ count: string }>(
+    `SELECT COUNT(DISTINCT id) as count FROM users WHERE last_login_at >= NOW() - INTERVAL '1 day'`
+  ).catch(() => [{ count: '0' }]);
+  const mauRows = await query<{ count: string }>(
+    `SELECT COUNT(DISTINCT id) as count FROM users WHERE last_login_at >= NOW() - INTERVAL '30 days'`
+  ).catch(() => [{ count: '0' }]);
+  const churnRows = await query<{ count: string }>(
+    `SELECT COUNT(*) as count FROM workspace_subscriptions WHERE canceled_at IS NOT NULL AND canceled_at >= NOW() - INTERVAL '30 days'`
+  ).catch(() => [{ count: '0' }]);
+
   res.json({
     success: true,
     overview: {
@@ -2615,12 +2702,15 @@ app.get('/api/admin/analytics/overview', requireAuth, requireAdmin, asyncHandler
       active_subscriptions: activeSubscriptions,
       mrr_cents: mrr,
       arr_cents: mrr * 12,
+      dau: parseInt(dauRows[0]?.count || '0', 10),
+      mau: parseInt(mauRows[0]?.count || '0', 10),
+      churn_30d: parseInt(churnRows[0]?.count || '0', 10),
       subscriptions_by_plan: subscriptionsByPlan,
     },
   });
 }));
 
-app.get('/api/admin/analytics/signups', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/analytics/signups', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const days = parseInt(req.query.days as string) || 30;
   const result = await query<{ date: string; count: string }>(
     `SELECT DATE(created_at) as date, COUNT(*) as count
@@ -2633,7 +2723,7 @@ app.get('/api/admin/analytics/signups', requireAuth, requireAdmin, asyncHandler(
   res.json({ success: true, signups: result.map(r => ({ date: r.date, count: parseInt(r.count, 10) })) });
 }));
 
-app.get('/api/admin/analytics/revenue', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+app.get('/api/admin/analytics/revenue', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
   const result = await query<{ plan_name: string; subscriber_count: string; mrr_cents: string }>(
     `SELECT p.name as plan_name, COUNT(ws.id) as subscriber_count, p.price_cents * COUNT(ws.id) as mrr_cents
      FROM workspace_subscriptions ws
@@ -2652,7 +2742,7 @@ app.get('/api/admin/analytics/revenue', requireAuth, requireAdmin, asyncHandler(
   });
 }));
 
-app.get('/api/admin/analytics/usage', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/analytics/usage', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const days = parseInt(req.query.days as string) || 30;
   const result = await query<{ date: string; credits_used: string }>(
     `SELECT DATE(created_at) as date, ABS(SUM(amount)) as credits_used
@@ -2665,7 +2755,7 @@ app.get('/api/admin/analytics/usage', requireAuth, requireAdmin, asyncHandler(as
   res.json({ success: true, usage: result.map(r => ({ date: r.date, credits_used: parseInt(r.credits_used, 10) })) });
 }));
 
-app.get('/api/admin/analytics/churn', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.get('/api/admin/analytics/churn', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const days = parseInt(req.query.days as string) || 90;
   const result = await query<{ date: string; cancellations: string }>(
     `SELECT DATE(canceled_at) as date, COUNT(*) as cancellations
@@ -2680,9 +2770,9 @@ app.get('/api/admin/analytics/churn', requireAuth, requireAdmin, asyncHandler(as
 
 // --- User Management (extended) ---
 
-app.post('/api/admin/users/:id/suspend', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.post('/api/admin/users/:id/suspend', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const user = await adminUserRepository.findById(req.params.id);
-  if (!user) throw createError('User not found', 404, 'NOT_FOUND');
+  if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
 
   await adminUserRepository.updateRole(req.params.id, 'user'); // keep role but mark suspended via subscription
   // Suspend by deactivating subscription
@@ -2692,12 +2782,12 @@ app.post('/api/admin/users/:id/suspend', requireAuth, requireAdmin, asyncHandler
   }
 
   auditLog(req as any, 'user.suspend', 'user', req.params.id);
-  res.json({ success: true, message: 'User suspended' });
+  res.json({ success: true, message: (req as any).t('success:user.suspended') });
 }));
 
-app.post('/api/admin/users/:id/unsuspend', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.post('/api/admin/users/:id/unsuspend', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const user = await adminUserRepository.findById(req.params.id);
-  if (!user) throw createError('User not found', 404, 'NOT_FOUND');
+  if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
 
   const workspaces = await workspaceRepository.findAllByUserId(req.params.id);
   for (const ws of workspaces) {
@@ -2705,17 +2795,17 @@ app.post('/api/admin/users/:id/unsuspend', requireAuth, requireAdmin, asyncHandl
   }
 
   auditLog(req as any, 'user.unsuspend', 'user', req.params.id);
-  res.json({ success: true, message: 'User unsuspended' });
+  res.json({ success: true, message: (req as any).t('success:user.unsuspended') });
 }));
 
 app.post('/api/admin/users/:id/impersonate', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const targetUser = await adminUserRepository.findById(req.params.id);
-  if (!targetUser) throw createError('User not found', 404, 'NOT_FOUND');
+  if (!targetUser) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'NOT_FOUND');
 
   // Generate short-lived token (1 hour) for impersonation
   const jwt = await import('jsonwebtoken');
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw createError('JWT secret not configured', 500, 'CONFIG_ERROR');
+  const secret = env.JWT_SECRET;
+  if (!secret) throw createError((req as any).t('errors:auth.jwtNotConfigured'), 500, 'CONFIG_ERROR');
 
   const token = jwt.default.sign(
     { id: targetUser.id, email: targetUser.email, name: targetUser.name, role: targetUser.role },
@@ -2727,16 +2817,289 @@ app.post('/api/admin/users/:id/impersonate', requireAuth, requireSuperAdmin, asy
   res.json({ success: true, token, user: { id: targetUser.id, name: targetUser.name, email: targetUser.email } });
 }));
 
+// --- Admin: Reset Password ---
+
+app.post('/api/admin/users/:id/reset-password', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const user = await adminUserRepository.findById(req.params.id);
+  if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
+  if (!user.email) throw createError((req as any).t('errors:auth.noEmailAddress'), 400, 'NO_EMAIL');
+
+  const crypto = await import('crypto');
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const resetExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+  await query(
+    `UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3`,
+    [resetToken, resetExpiry, req.params.id]
+  );
+
+  auditLog(req, 'user.reset_password', 'user', req.params.id, { email: user.email });
+  res.json({ success: true, message: (req as any).t('success:admin.passwordResetInitiated'), resetToken });
+}));
+
+// --- Admin: Move User to Organization ---
+
+app.patch('/api/admin/users/:id/organization', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { workspaceId } = req.body;
+  if (!workspaceId) throw createError((req as any).t('errors:validation.workspaceIdBodyRequired'), 400, 'VALIDATION_ERROR');
+
+  const user = await adminUserRepository.findById(req.params.id);
+  if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
+
+  const targetWorkspace = await workspaceRepository.findById(workspaceId);
+  if (!targetWorkspace) throw createError((req as any).t('errors:resource.workspaceNotFound'), 404, 'WORKSPACE_NOT_FOUND');
+
+  const previousWorkspaces = await workspaceRepository.findAllByUserId(user.id);
+  const previousIds = previousWorkspaces.map(w => w.id);
+
+  await query(
+    `UPDATE workspaces SET owner_id = $1 WHERE owner_id = $2`,
+    [targetWorkspace.owner_id, user.id]
+  );
+  await query(
+    `UPDATE workspaces SET owner_id = $1 WHERE id = $2`,
+    [user.id, workspaceId]
+  );
+
+  auditLog(req, 'user.move_organization', 'user', req.params.id, {
+    before: { workspaceIds: previousIds },
+    after: { workspaceId },
+  });
+
+  res.json({ success: true, message: (req as any).t('success:admin.userMovedToOrganization') });
+}));
+
+// --- Admin: Force Set Plan ---
+
+app.patch('/api/admin/users/:id/plan', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { planId } = req.body;
+  if (!planId) throw createError((req as any).t('errors:validation.planIdRequired'), 400, 'VALIDATION_ERROR');
+
+  const user = await adminUserRepository.findById(req.params.id);
+  if (!user) throw createError((req as any).t('errors:resource.userNotFound'), 404, 'USER_NOT_FOUND');
+
+  const plan = await planRepository.findById(planId);
+  if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
+
+  const workspaces = await workspaceRepository.findAllByUserId(user.id);
+  if (workspaces.length === 0) throw createError((req as any).t('errors:workspace.noWorkspace'), 400, 'NO_WORKSPACE');
+
+  const primaryWs = workspaces[0];
+  const existingSub = await subscriptionRepository.findByWorkspaceId(primaryWs.id);
+  const beforePlanId = existingSub?.plan_id || null;
+
+  if (existingSub) {
+    await subscriptionRepository.update(existingSub.id, { plan_id: planId, status: 'active' });
+  } else {
+    await subscriptionRepository.create({ workspace_id: primaryWs.id, plan_id: planId, status: 'active' });
+  }
+
+  auditLog(req, 'user.force_plan', 'user', req.params.id, {
+    before: { planId: beforePlanId },
+    after: { planId },
+    planName: plan.name,
+  });
+
+  res.json({ success: true, message: (req as any).t('success:admin.planUpdated', { planName: plan.name }) });
+}));
+
+// --- Admin: Organizations (Workspaces) ---
+
+app.get('/api/admin/organizations', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const search = req.query.q as string || req.query.search as string || undefined;
+
+  const conditions: string[] = [];
+  const values: any[] = [];
+  let paramIndex = 1;
+
+  if (search) {
+    conditions.push(`(w.name ILIKE $${paramIndex})`);
+    values.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countResult = await query<{ count: string }>(
+    `SELECT COUNT(*) as count FROM workspaces w ${whereClause}`,
+    values
+  );
+  const total = parseInt(countResult[0]?.count || '0', 10);
+
+  values.push(limit, offset);
+  const orgs = await query<any>(
+    `SELECT w.*, u.name as owner_name, u.email as owner_email
+     FROM workspaces w
+     LEFT JOIN users u ON u.id = w.owner_id
+     ${whereClause}
+     ORDER BY w.created_at DESC
+     LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+    values
+  );
+
+  const enriched = await Promise.all(
+    orgs.map(async (org: any) => {
+      const sub = await subscriptionRepository.findByWorkspaceId(org.id);
+      let planName = null;
+      if (sub) {
+        const plan = await planRepository.findById(sub.plan_id);
+        planName = plan?.name || null;
+      }
+      const balance = await creditRepository.getBalance(org.id);
+      const memberCount = await query<{ count: string }>(
+        `SELECT COUNT(*) as count FROM workspaces WHERE owner_id = $1`,
+        [org.owner_id]
+      );
+      return {
+        id: org.id,
+        name: org.name,
+        ownerId: org.owner_id,
+        ownerName: org.owner_name,
+        ownerEmail: org.owner_email,
+        planName,
+        status: sub?.status || 'none',
+        credits: balance?.balance || 0,
+        memberCount: parseInt(memberCount[0]?.count || '1', 10),
+        createdAt: org.created_at,
+      };
+    })
+  );
+
+  res.json({ success: true, organizations: enriched, total });
+}));
+
+app.get('/api/admin/organizations/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const org = await workspaceRepository.findById(req.params.id);
+  if (!org) throw createError((req as any).t('errors:resource.organizationNotFound'), 404, 'ORG_NOT_FOUND');
+
+  const owner = await adminUserRepository.findById(org.owner_id);
+  const sub = await subscriptionRepository.findByWorkspaceId(org.id);
+  const balance = await creditRepository.getBalance(org.id);
+  let plan = null;
+  if (sub) {
+    plan = await planRepository.findById(sub.plan_id);
+  }
+
+  const members = await query<any>(
+    `SELECT u.id, u.name, u.email, u.role, u.created_at
+     FROM users u
+     JOIN workspaces w ON w.owner_id = u.id
+     WHERE w.id = $1
+     ORDER BY u.created_at ASC`,
+    [org.id]
+  );
+
+  const auditEntries = await auditRepository.findAll({
+    target_id: org.id,
+    limit: 20,
+  });
+
+  const rawOverrides = await featureFlagRepository.listOrgOverrides(org.id);
+  const flagOverrides = rawOverrides.map(o => ({ key: o.flag_key, enabled: o.enabled }));
+
+  res.json({
+    success: true,
+    organization: {
+      id: org.id,
+      name: org.name,
+      ownerId: org.owner_id,
+      ownerName: owner?.name || null,
+      ownerEmail: owner?.email || null,
+      createdAt: org.created_at,
+    },
+    subscription: sub ? {
+      id: sub.id,
+      planId: sub.plan_id,
+      planName: plan?.name || null,
+      status: sub.status,
+      currentPeriodEnd: sub.current_period_end,
+      trialEnd: sub.trial_end,
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+    } : null,
+    credits: balance?.balance || 0,
+    members,
+    flagOverrides: flagOverrides || [],
+    auditLog: auditEntries.entries || [],
+  });
+}));
+
+app.patch('/api/admin/organizations/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const org = await workspaceRepository.findById(req.params.id);
+  if (!org) throw createError((req as any).t('errors:resource.organizationNotFound'), 404, 'ORG_NOT_FOUND');
+
+  const before: Record<string, any> = { name: org.name };
+  const after: Record<string, any> = {};
+
+  if (req.body.name && req.body.name !== org.name) {
+    await workspaceRepository.update(org.id, req.body.name);
+    after.name = req.body.name;
+  }
+
+  if (req.body.status) {
+    const sub = await subscriptionRepository.findByWorkspaceId(org.id);
+    if (sub) {
+      before.status = sub.status;
+      await subscriptionRepository.update(sub.id, { status: req.body.status });
+      after.status = req.body.status;
+    }
+  }
+
+  if (req.body.planId) {
+    const plan = await planRepository.findById(req.body.planId);
+    if (!plan) throw createError((req as any).t('errors:resource.planNotFound'), 404, 'PLAN_NOT_FOUND');
+    const sub = await subscriptionRepository.findByWorkspaceId(org.id);
+    if (sub) {
+      before.planId = sub.plan_id;
+      await subscriptionRepository.update(sub.id, { plan_id: req.body.planId });
+      after.planId = req.body.planId;
+      after.planName = plan.name;
+    } else {
+      await subscriptionRepository.create({ workspace_id: org.id, plan_id: req.body.planId, status: 'active' });
+      after.planId = req.body.planId;
+      after.planName = plan.name;
+    }
+  }
+
+  auditLog(req, 'organization.update', 'organization', org.id, { before, after });
+  res.json({ success: true, message: (req as any).t('success:admin.organizationUpdated') });
+}));
+
+app.post('/api/admin/organizations/:id/flags/:key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { id: orgId, key } = req.params;
+  const { enabled } = req.body;
+
+  if (!isValidFeatureKey(key)) {
+    throw createError((req as any).t('errors:flags.unknownKey'), 400, 'UNKNOWN_FLAG_KEY');
+  }
+
+  const org = await workspaceRepository.findById(orgId);
+  if (!org) throw createError((req as any).t('errors:resource.organizationNotFound'), 404, 'ORG_NOT_FOUND');
+
+  const before = await featureFlagRepository.getOrgOverride(orgId, key);
+  await featureFlagRepository.upsertOverride(orgId, key, enabled, req.user?.id || '');
+  invalidateFlag(orgId, key as any);
+
+  auditLog(req, 'organization.flag_override', 'organization', orgId, {
+    flag_key: key,
+    before: before ? before.enabled : null,
+    after: enabled,
+  });
+
+  res.json({ success: true });
+}));
+
 // --- System Settings ---
 
-app.get('/api/admin/settings', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+app.get('/api/admin/settings', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
   const settings = await systemSettingsRepository.getAll();
   res.json({ success: true, settings });
 }));
 
 app.put('/api/admin/settings/:key', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const { value } = req.body;
-  if (value === undefined || value === null) throw createError('Value is required', 400, 'VALIDATION_ERROR');
+  if (value === undefined || value === null) throw createError((req as any).t('errors:validation.valueRequired'), 400, 'VALIDATION_ERROR');
 
   const setting = await systemSettingsRepository.set(req.params.key, String(value), req.user!.id);
   auditLog(req as any, 'settings.update', 'setting', req.params.key, { value });
@@ -2750,14 +3113,14 @@ app.get('/api/announcements/active', asyncHandler(async (_req, res) => {
   res.json({ success: true, announcements });
 }));
 
-app.get('/api/admin/announcements', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+app.get('/api/admin/announcements', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
   const announcements = await announcementRepository.findAll();
   res.json({ success: true, announcements });
 }));
 
-app.post('/api/admin/announcements', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.post('/api/admin/announcements', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const { title, body, type, is_active, starts_at, ends_at } = req.body;
-  if (!title) throw createError('Title is required', 400, 'VALIDATION_ERROR');
+  if (!title) throw createError((req as any).t('errors:validation.titleRequired'), 400, 'VALIDATION_ERROR');
 
   const announcement = await announcementRepository.create({
     title,
@@ -2773,7 +3136,7 @@ app.post('/api/admin/announcements', requireAuth, requireAdmin, asyncHandler(asy
   res.status(201).json({ success: true, announcement });
 }));
 
-app.put('/api/admin/announcements/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.put('/api/admin/announcements/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const { title, body, type, is_active, starts_at, ends_at } = req.body;
   const announcement = await announcementRepository.update(req.params.id, {
     title,
@@ -2784,55 +3147,660 @@ app.put('/api/admin/announcements/:id', requireAuth, requireAdmin, asyncHandler(
     ends_at: ends_at ? new Date(ends_at) : ends_at === null ? null : undefined,
   });
 
-  if (!announcement) throw createError('Announcement not found', 404, 'NOT_FOUND');
+  if (!announcement) throw createError((req as any).t('errors:resource.announcementNotFound'), 404, 'NOT_FOUND');
   auditLog(req as any, 'announcement.update', 'announcement', req.params.id);
   res.json({ success: true, announcement });
 }));
 
-app.delete('/api/admin/announcements/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+app.delete('/api/admin/announcements/:id', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
   const deleted = await announcementRepository.delete(req.params.id);
-  if (!deleted) throw createError('Announcement not found', 404, 'NOT_FOUND');
+  if (!deleted) throw createError((req as any).t('errors:resource.announcementNotFound'), 404, 'NOT_FOUND');
   auditLog(req as any, 'announcement.delete', 'announcement', req.params.id);
   res.json({ success: true });
 }));
 
 // --- Audit Log ---
 
-app.get('/api/admin/audit-log', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
-  const offset = parseInt(req.query.offset as string) || 0;
+app.get('/api/admin/audit-log', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { cursor, actor_id, action, target_type, target_id, from, to } = req.query as Record<string, string>;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-  const { actor_id, action, target_type, target_id } = req.query as Record<string, string>;
 
-  const result = await auditRepository.findAll({
-    offset,
+  const result = await auditRepository.findCursorPaginated({
+    cursor: cursor || undefined,
     limit,
     actor_id: actor_id || undefined,
     action: action || undefined,
     target_type: target_type || undefined,
     target_id: target_id || undefined,
+    from: from || undefined,
+    to: to || undefined,
   });
 
   res.json({ success: true, ...result });
 }));
 
+// ─── Admin: Usage Tracking ─────────────────────────────────────────────────
+
+app.get('/api/admin/usage', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { cursor, org_id, from, to } = req.query as Record<string, string>;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+
+  try {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (cursor) {
+      try {
+        const decoded = Buffer.from(cursor, 'base64').toString('utf8');
+        const [ts, id] = decoded.split('|');
+        conditions.push(`(created_at, id) < ($${paramIndex}, $${paramIndex + 1})`);
+        params.push(ts, id);
+        paramIndex += 2;
+      } catch { /* invalid cursor */ }
+    }
+
+    if (org_id) { conditions.push(`workspace_id = $${paramIndex++}`); params.push(org_id); }
+    if (from) { conditions.push(`created_at >= $${paramIndex++}`); params.push(from); }
+    if (to) { conditions.push(`created_at <= $${paramIndex++}`); params.push(to); }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const rows = await query<any>(
+      `SELECT * FROM usage_events ${where} ORDER BY created_at DESC, id DESC LIMIT $${paramIndex}`,
+      [...params, limit + 1]
+    );
+
+    const hasMore = rows.length > limit;
+    const entries = hasMore ? rows.slice(0, limit) : rows;
+    let nextCursor: string | null = null;
+    if (hasMore && entries.length > 0) {
+      const last = entries[entries.length - 1];
+      const ts = last.created_at instanceof Date ? last.created_at.toISOString() : String(last.created_at);
+      nextCursor = Buffer.from(`${ts}|${last.id}`).toString('base64');
+    }
+
+    res.json({ success: true, entries, nextCursor });
+  } catch (err: any) {
+    if (err?.code === '42P01') {
+      res.json({ success: true, entries: [], nextCursor: null });
+      return;
+    }
+    throw err;
+  }
+}));
+
+app.get('/api/admin/usage/summary', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
+  try {
+    const byOrg = await query<{ workspace_id: string; event_count: string; total_credits: string }>(
+      `SELECT workspace_id, COUNT(*) as event_count, COALESCE(SUM(credits_consumed), 0) as total_credits
+       FROM usage_events
+       GROUP BY workspace_id
+       ORDER BY total_credits DESC
+       LIMIT 50`
+    );
+    const byType = await query<{ event_type: string; event_count: string; total_credits: string }>(
+      `SELECT event_type, COUNT(*) as event_count, COALESCE(SUM(credits_consumed), 0) as total_credits
+       FROM usage_events
+       GROUP BY event_type
+       ORDER BY total_credits DESC`
+    );
+    const daily = await query<{ date: string; event_count: string; total_credits: string }>(
+      `SELECT DATE(created_at) as date, COUNT(*) as event_count, COALESCE(SUM(credits_consumed), 0) as total_credits
+       FROM usage_events
+       WHERE created_at >= NOW() - INTERVAL '30 days'
+       GROUP BY DATE(created_at)
+       ORDER BY date`
+    );
+    res.json({
+      success: true,
+      byOrg: byOrg.map(r => ({ workspaceId: r.workspace_id, eventCount: parseInt(r.event_count, 10), totalCredits: parseInt(r.total_credits, 10) })),
+      byType: byType.map(r => ({ eventType: r.event_type, eventCount: parseInt(r.event_count, 10), totalCredits: parseInt(r.total_credits, 10) })),
+      daily: daily.map(r => ({ date: r.date, eventCount: parseInt(r.event_count, 10), totalCredits: parseInt(r.total_credits, 10) })),
+    });
+  } catch (err: any) {
+    if (err?.code === '42P01') {
+      res.json({ success: true, byOrg: [], byType: [], daily: [] });
+      return;
+    }
+    throw err;
+  }
+}));
+
+// ─── Admin: Feature Flags ───────────────────────────────────────────────────
+
+app.get('/api/admin/feature-flags', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
+  const flags = await featureFlagRepository.listFlags();
+  res.json({ success: true, flags });
+}));
+
+app.get('/api/admin/feature-flags/:orgId', requireAuth, requireSuperAdmin, asyncHandler(async (req, res) => {
+  const rows = await featureFlagRepository.listAllOrgOverridesWithFlags(req.params.orgId);
+  res.json({ success: true, flags: rows });
+}));
+
+app.put('/api/admin/feature-flags/:orgId/:key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { orgId, key } = req.params;
+  const t = (req as any).t;
+
+  if (!isValidFeatureKey(key)) {
+    throw createError(t('errors:flags.unknownKey'), 400, 'UNKNOWN_FLAG_KEY');
+  }
+
+  const { enabled } = req.body;
+  if (typeof enabled !== 'boolean') {
+    throw createError((req as any).t('errors:validation.enabledMustBeBoolean'), 400, 'INVALID_BODY');
+  }
+
+  const before = await featureFlagRepository.getOrgOverride(orgId, key);
+  const override = await featureFlagRepository.upsertOverride(orgId, key, enabled, req.user.id);
+  invalidateFlag(orgId, key as any);
+
+  auditLog(req, 'feature_flag.override_set', 'feature_flag', key, {
+    target_org_id: orgId,
+    flag_key: key,
+    before: before ? before.enabled : null,
+    after: enabled,
+  });
+
+  res.json({ success: true, override, message: t('success:flags.updated') });
+}));
+
+app.delete('/api/admin/feature-flags/:orgId/:key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { orgId, key } = req.params;
+  const t = (req as any).t;
+
+  if (!isValidFeatureKey(key)) {
+    throw createError(t('errors:flags.unknownKey'), 400, 'UNKNOWN_FLAG_KEY');
+  }
+
+  const before = await featureFlagRepository.getOrgOverride(orgId, key);
+  await featureFlagRepository.deleteOverride(orgId, key);
+  invalidateFlag(orgId, key as any);
+
+  auditLog(req, 'feature_flag.override_cleared', 'feature_flag', key, {
+    target_org_id: orgId,
+    flag_key: key,
+    before: before ? before.enabled : null,
+    after: null,
+  });
+
+  res.json({ success: true });
+}));
+
+// ─── Admin: Billing Config ──────────────────────────────────────────────────
+
+const BILLING_CONFIG_KEYS = ['trial_days', 'currency', 'payg_rates', 'grace_period_days', 'credits_low_threshold_cents', 'payg_charge_buffer_cents'] as const;
+
+app.get('/api/admin/billing-config', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
+  const all = await billingConfigRepository.getAll();
+  const config: Record<string, string> = {};
+  for (const row of all) {
+    config[row.key] = row.value;
+  }
+  res.json({ success: true, config });
+}));
+
+app.patch('/api/admin/billing-config', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const updates = req.body as Record<string, string>;
+
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
+    throw createError(req.t('errors:validation.bodyMustBeJsonObject'), 400, 'INVALID_BODY');
+  }
+
+  const changes: Record<string, { before: string | null; after: string }> = {};
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (!BILLING_CONFIG_KEYS.includes(key as any)) {
+      throw createError(req.t('errors:validation.unknownBillingConfigKey', { key }), 400, 'UNKNOWN_KEY');
+    }
+    if (typeof value !== 'string') {
+      throw createError(req.t('errors:validation.valueMustBeString', { key }), 400, 'INVALID_VALUE');
+    }
+
+    if (key === 'trial_days' || key === 'grace_period_days') {
+      const parsed = parseInt(value, 10);
+      if (isNaN(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+        throw createError(req.t('errors:validation.mustBeNonNegativeInteger', { key }), 400, 'INVALID_VALUE');
+      }
+    }
+
+    if (key === 'credits_low_threshold_cents' || key === 'payg_charge_buffer_cents') {
+      try {
+        const n = BigInt(value);
+        if (n < 0n) throw new Error();
+      } catch {
+        throw createError(req.t('errors:validation.mustBeNonNegativeBigint', { key }), 400, 'INVALID_VALUE');
+      }
+    }
+
+    if (key === 'payg_rates') {
+      try {
+        const parsed = JSON.parse(value);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error();
+        for (const [, v] of Object.entries(parsed)) {
+          if (typeof v !== 'string' && typeof v !== 'number') throw new Error();
+          const n = BigInt(v as string | number);
+          if (n < 0n) throw new Error();
+        }
+      } catch {
+        throw createError(req.t('errors:validation.paygRatesMustBeValid'), 400, 'INVALID_VALUE');
+      }
+    }
+
+    if (key === 'currency') {
+      if (!/^[a-z]{3}$/.test(value)) {
+        throw createError(req.t('errors:validation.currencyMustBeValid'), 400, 'INVALID_VALUE');
+      }
+    }
+
+    const before = await billingConfigRepository.get(key);
+    await billingConfigRepository.set(key, value);
+    changes[key] = { before, after: value };
+  }
+
+  auditLog(req, 'billing_config.update', 'billing_config', undefined, changes);
+
+  const all = await billingConfigRepository.getAll();
+  const config: Record<string, string> = {};
+  for (const row of all) {
+    config[row.key] = row.value;
+  }
+
+  res.json({ success: true, config });
+}));
+
+// ─── Admin: AI Providers ────────────────────────────────────────────────────
+
+const KNOWN_AI_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter'] as const;
+
+function isKnownProvider(p: string): p is (typeof KNOWN_AI_PROVIDERS)[number] {
+  return (KNOWN_AI_PROVIDERS as readonly string[]).includes(p);
+}
+
+app.get('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
+  const [configs, defaultProvider, fallbackOrder] = await Promise.all([
+    platformAiConfigRepository.listAll(),
+    billingConfigRepository.getDefaultAiProvider(),
+    billingConfigRepository.getAiFallbackOrder(),
+  ]);
+
+  const providers = configs.map((c) => ({
+    provider: c.provider,
+    displayName: c.display_name,
+    enabled: c.is_active,
+    rateLimit: c.rate_limit,
+    hasKey: c.hasKey,
+    hasFallbackKey: c.hasFallbackKey,
+    maskedKey: c.maskedKey,
+    maskedFallbackKey: c.maskedFallbackKey,
+    defaultModel: c.default_model || '',
+    models: c.models || [],
+  }));
+
+  res.json({
+    success: true,
+    providers,
+    defaultProvider: defaultProvider || { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+    fallbackOrder: fallbackOrder.length > 0 ? fallbackOrder : [...KNOWN_AI_PROVIDERS],
+  });
+}));
+
+app.patch('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { providers } = req.body;
+
+  if (!Array.isArray(providers)) {
+    throw createError(req.t('errors:validation.workspaceRequired') || 'Body must contain a "providers" array', 400, 'INVALID_BODY');
+  }
+
+  for (const entry of providers) {
+    if (!entry || typeof entry !== 'object') {
+      throw createError(req.t('errors:validation.providerEntryInvalid'), 400, 'INVALID_ENTRY');
+    }
+    if (typeof entry.provider !== 'string' || !isKnownProvider(entry.provider)) {
+      throw createError(req.t('errors:ai.unknownProvider', { provider: entry.provider }) || 'Unknown provider', 400, 'INVALID_ENTRY');
+    }
+  }
+
+  const results = [];
+  for (const entry of providers) {
+    const provider = entry.provider as string;
+    if (typeof entry.enabled === 'boolean') {
+      if (entry.enabled) {
+        await platformAiConfigRepository.setActive(provider, true);
+      } else {
+        await platformAiConfigRepository.setActive(provider, false);
+      }
+    }
+    if (entry.rateLimit !== undefined) {
+      const rl = Number(entry.rateLimit);
+      if (!Number.isInteger(rl) || rl < 0) {
+        throw createError(req.t('errors:ai.invalidRateLimit') || 'Rate limit must be a non-negative integer', 400, 'INVALID_ENTRY');
+      }
+      await platformAiConfigRepository.updateRateLimit(provider, rl);
+    }
+    if (typeof entry.defaultModel === 'string' && entry.defaultModel.length > 0) {
+      await platformAiConfigRepository.updateDefaultModel(provider, entry.defaultModel);
+    }
+    if (Array.isArray(entry.models)) {
+      await platformAiConfigRepository.updateModels(provider, entry.models);
+    }
+    platformKeyCache.invalidate(provider);
+    const updated = await platformAiConfigRepository.findByProvider(provider);
+    if (updated) results.push(updated);
+  }
+
+  auditLog(req, 'ai_providers.update', 'platform_ai_config', undefined, {
+    updatedProviders: providers.map((p: any) => p.provider),
+  });
+
+  const [allConfigs, defaultProvider, fallbackOrder] = await Promise.all([
+    platformAiConfigRepository.listAll(),
+    billingConfigRepository.getDefaultAiProvider(),
+    billingConfigRepository.getAiFallbackOrder(),
+  ]);
+
+  res.json({
+    success: true,
+    providers: allConfigs.map((c) => ({
+      provider: c.provider,
+      displayName: c.display_name,
+      enabled: c.is_active,
+      rateLimit: c.rate_limit,
+      hasKey: c.hasKey,
+      hasFallbackKey: c.hasFallbackKey,
+      maskedKey: c.maskedKey,
+      maskedFallbackKey: c.maskedFallbackKey,
+      defaultModel: c.default_model || '',
+      models: c.models || [],
+    })),
+    defaultProvider: defaultProvider || { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+    fallbackOrder: fallbackOrder.length > 0 ? fallbackOrder : [...KNOWN_AI_PROVIDERS],
+  });
+}));
+
+// ─── Admin: AI Provider Key Management ──────────────────────────────────────
+
+app.post('/api/admin/ai-providers/:provider/key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  const { apiKey } = req.body;
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+    throw createError(req.t('errors:ai.keyRequired') || 'API key is required', 400, 'KEY_REQUIRED');
+  }
+  if (apiKey.length > 500) {
+    throw createError(req.t('errors:ai.keyTooLong') || 'API key exceeds maximum length', 400, 'KEY_TOO_LONG');
+  }
+
+  const updated = await platformAiConfigRepository.upsertKey(provider, apiKey.trim());
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.key-set', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasKey: true, maskedKey: updated.maskedKey });
+}));
+
+app.delete('/api/admin/ai-providers/:provider/key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  await platformAiConfigRepository.removeKey(provider);
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.key-removed', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasKey: false });
+}));
+
+app.post('/api/admin/ai-providers/:provider/fallback-key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  const { apiKey } = req.body;
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+    throw createError(req.t('errors:ai.keyRequired') || 'API key is required', 400, 'KEY_REQUIRED');
+  }
+  if (apiKey.length > 500) {
+    throw createError(req.t('errors:ai.keyTooLong') || 'API key exceeds maximum length', 400, 'KEY_TOO_LONG');
+  }
+
+  const updated = await platformAiConfigRepository.upsertFallbackKey(provider, apiKey.trim());
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.fallback-key-set', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasFallbackKey: true, maskedFallbackKey: updated.maskedFallbackKey });
+}));
+
+app.delete('/api/admin/ai-providers/:provider/fallback-key', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  await platformAiConfigRepository.removeFallbackKey(provider);
+  platformKeyCache.invalidate(provider);
+
+  auditLog(req, 'ai-provider.fallback-key-removed', 'platform_ai_config', provider, { provider });
+
+  res.json({ success: true, provider, hasFallbackKey: false });
+}));
+
+// ─── Admin: AI Provider Test Connection ─────────────────────────────────────
+
+app.post('/api/admin/ai-providers/:provider/test', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider } = req.params;
+  if (!isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+
+  const useFallback = req.query.useFallback === 'true';
+
+  let apiKey: string | null;
+  try {
+    apiKey = useFallback
+      ? await platformAiConfigRepository.getDecryptedFallbackKey(provider)
+      : await platformAiConfigRepository.getDecryptedKey(provider);
+  } catch (err) {
+    if (err instanceof DecryptionKeyMismatchError) {
+      res.json({
+        success: false,
+        error:
+          req.t('errors:ai.keyDecryptFailed', { provider }) ||
+          `Stored API key for ${provider} can no longer be decrypted (encryption key changed). Please re-enter the key.`,
+        code: 'KEY_DECRYPT_FAILED',
+        provider,
+      });
+      return;
+    }
+    throw err;
+  }
+
+  if (!apiKey) {
+    res.json({
+      success: false,
+      error: req.t('errors:ai.testNoKey', { provider }) || `No API key configured for ${provider}`,
+      provider,
+    });
+    return;
+  }
+
+  const config = await platformAiConfigRepository.findByProvider(provider);
+  const model = config?.default_model || '';
+  const apiUrl = providerBaseUrl(provider as AIProviderName);
+
+  const start = Date.now();
+  try {
+    const aiProvider = selectAIProvider({ apiUrl, apiKey, provider: provider as AIProviderName });
+    await generateText({
+      model: aiProvider(model),
+      prompt: 'Say "ok"',
+      maxOutputTokens: 16,
+    });
+    const latencyMs = Date.now() - start;
+    res.json({ success: true, ok: true, latencyMs, provider });
+  } catch (err: any) {
+    const latencyMs = Date.now() - start;
+    logger.warn('AI provider test failed', { provider, error: err.message });
+    res.json({
+      success: true,
+      ok: false,
+      error: err.message || 'Connection test failed',
+      latencyMs,
+      provider,
+    });
+  }
+}));
+
+// ─── Admin: AI Provider Default Model & Fallback Order ──────────────────────
+
+app.patch('/api/admin/ai-providers/default-model', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { provider, model } = req.body;
+
+  if (!provider || typeof provider !== 'string' || !isKnownProvider(provider)) {
+    throw createError(req.t('errors:ai.invalidProvider', { provider }) || `Unknown AI provider: ${provider}`, 400, 'INVALID_PROVIDER');
+  }
+  if (!model || typeof model !== 'string') {
+    throw createError(req.t('errors:ai.modelNotAvailable', { model, provider }) || `Model is required`, 400, 'INVALID_MODEL');
+  }
+
+  const config = await platformAiConfigRepository.findByProvider(provider);
+  if (!config || !config.is_active) {
+    throw createError(req.t('errors:ai.providerNotActive', { provider }) || `Provider ${provider} is not active`, 400, 'PROVIDER_NOT_ACTIVE');
+  }
+  if (config.models.length > 0 && !config.models.includes(model)) {
+    throw createError(req.t('errors:ai.modelNotAvailable', { model, provider }) || `Model ${model} is not available for ${provider}`, 400, 'MODEL_NOT_AVAILABLE');
+  }
+
+  await billingConfigRepository.setDefaultAiProvider(provider, model);
+  platformKeyCache.invalidate();
+
+  auditLog(req, 'ai-provider.default-changed', 'platform_ai_config', provider, { provider, model });
+
+  res.json({ success: true, defaultProvider: { provider, model } });
+}));
+
+app.patch('/api/admin/ai-providers/fallback-order', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { order } = req.body;
+
+  if (!Array.isArray(order)) {
+    throw createError(req.t('errors:ai.invalidFallbackOrder') || 'Fallback order must be an array', 400, 'INVALID_ORDER');
+  }
+
+  const uniqueOrder = new Set(order);
+  if (uniqueOrder.size !== order.length) {
+    throw createError(req.t('errors:ai.invalidFallbackOrder') || 'Fallback order must not contain duplicates', 400, 'INVALID_ORDER');
+  }
+  for (const p of order) {
+    if (!isKnownProvider(p)) {
+      throw createError(req.t('errors:ai.invalidFallbackOrder') || `Unknown provider in fallback order: ${p}`, 400, 'INVALID_ORDER');
+    }
+  }
+  if (order.length !== KNOWN_AI_PROVIDERS.length) {
+    throw createError(req.t('errors:ai.invalidFallbackOrder') || 'Fallback order must include all known providers', 400, 'INVALID_ORDER');
+  }
+
+  await billingConfigRepository.setAiFallbackOrder(order);
+  platformKeyCache.invalidate();
+
+  auditLog(req, 'ai-provider.fallback-order-changed', 'platform_ai_config', undefined, { order });
+
+  res.json({ success: true, fallbackOrder: order });
+}));
+
+// ─── User: AI Providers (public) ────────────────────────────────────────────
+
+app.get('/api/me/ai-providers', requireAuth, asyncHandler(async (req: any, res) => {
+  const configs = await platformAiConfigRepository.findActive();
+
+  const providers = configs.map((c) => ({
+    provider: c.provider,
+    displayName: c.display_name,
+    models: c.models || [],
+    defaultModel: c.default_model || '',
+  }));
+
+  // Always include custom (OpenAI-compatible) option
+  providers.push({
+    provider: 'custom',
+    displayName: 'Custom (OpenAI-compatible)',
+    models: [],
+    defaultModel: '',
+  });
+
+  // Determine user's subscription tier
+  let tier: 'byo_keys' | 'managed_payg' = 'byo_keys';
+  if (req.workspaceId) {
+    const subscription = await subscriptionRepository.findByWorkspaceId(req.workspaceId);
+    if (subscription) {
+      const plan = await planRepository.findById(subscription.plan_id);
+      if (plan && isPlanSlug(plan.slug)) {
+        tier = PLANS[plan.slug].tier;
+      }
+    }
+  }
+
+  const hasPlatformKeys = configs.length > 0;
+  const platformDefault = await billingConfigRepository.getDefaultAiProvider();
+
+  res.json({
+    success: true,
+    providers,
+    tier,
+    hasPlatformKeys,
+    platformDefault,
+  });
+}));
+
+// ─── User: Feature Flags ────────────────────────────────────────────────────
+
+app.get('/api/me/flags', requireAuth, asyncHandler(async (req: any, res) => {
+  const orgId = req.workspaceId;
+  if (!orgId) {
+    throw createError((req as any).t('errors:workspace.notResolved'), 401, 'WORKSPACE_REQUIRED');
+  }
+  const flags = await resolveAllFlags(orgId);
+  res.json({ success: true, flags });
+}));
+
+// Note: /api/internal/ai-config was moved above the `app.use('/api', requireAuth)`
+// line so qa-loop-executor's platform-config fetch isn't 401'd before the
+// requireInternalNetwork check can run. See earlier in this file for the
+// route definition.
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  logger.info('Gateway service started', {
-    port: PORT,
-    aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:8000',
-    testExecutorUrl: process.env.TEST_EXECUTOR_URL || 'http://localhost:3001'
-  });
+export { app };
 
-  // Start screenshot cleanup scheduler (runs once on startup + every 24h)
-  startCleanupScheduler();
+if (env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    logger.info('Gateway service started', {
+      port: PORT,
+      aiServiceUrl: env.AI_SERVICE_URL,
+      testExecutorUrl: env.TEST_EXECUTOR_URL
+    });
 
-  // Start QA Monitor scheduler (checks every 60s for due monitors)
-  import('../services/qa-monitor-scheduler').then(({ startMonitorScheduler }) => {
-    startMonitorScheduler();
-  }).catch(err => {
-    logger.warn('QA Monitor scheduler failed to start', { error: err.message });
+    startCleanupScheduler();
+
+    if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
+      seedAdminUser(env.ADMIN_EMAIL, env.ADMIN_PASSWORD, env.ADMIN_NAME)
+        .then(() => logger.info('Admin user seeded'))
+        .catch((err: any) => logger.error('Admin seed failed', { error: err.message }));
+    }
+
+    import('../services/qa-monitor-scheduler').then(({ startMonitorScheduler }) => {
+      startMonitorScheduler();
+    }).catch(err => {
+      logger.warn('QA Monitor scheduler failed to start', { error: err.message });
+    });
   });
-});
+}
 

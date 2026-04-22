@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiPlus, FiBook } from 'react-icons/fi';
 import { Select } from '../common/Select';
 import { Button } from '../common/Button';
@@ -25,6 +26,7 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
   onCreateUserStory,
   disabled = false,
 }) => {
+  const { t } = useTranslation('runner');
   const [isNewUserStoryModalOpen, setIsNewUserStoryModalOpen] = useState(false);
   const [newUserStoryText, setNewUserStoryText] = useState('');
   const [newUserStoryContext, setNewUserStoryContext] = useState('');
@@ -62,7 +64,7 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="block text-sm font-medium text-slate-200">
-              User Story <span className="text-red-500">*</span>
+              {t('runner.step2.userStory')} <span className="text-red-500">*</span>
             </label>
             <Button
               variant="secondary"
@@ -71,8 +73,8 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
               className="text-xs"
               disabled={disabled}
             >
-              <FiPlus className="mr-1 h-3 w-3" />
-              New Story
+              <FiPlus className="me-1 h-3 w-3" />
+              {t('runner.step2.newStory')}
             </Button>
           </div>
           <Select
@@ -81,20 +83,20 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
             onChange={onUserStoryChange}
             placeholder={
               loadingUserStories
-                ? 'Loading user stories...'
-                : 'Select a user story'
+                ? t('runner.step2.loadingStories')
+                : t('runner.step2.selectStory')
             }
             error={error}
             disabled={disabled || loadingUserStories}
           />
           {userStories.length === 0 && !loadingUserStories && (
             <p className="mt-1 text-sm text-slate-400">
-              No user stories in this project.{' '}
+              {t('runner.step2.noStories')}{' '}
               <button
                 onClick={() => setIsNewUserStoryModalOpen(true)}
                 className="text-primary-600 hover:underline"
               >
-                Add one
+                {t('runner.step2.addOne')}
               </button>
             </p>
           )}
@@ -115,21 +117,21 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
       <Modal
         isOpen={isNewUserStoryModalOpen}
         onClose={() => setIsNewUserStoryModalOpen(false)}
-        title="Add User Story"
+        title={t('runner.step2.addUserStory')}
         size="lg"
       >
         <div className="space-y-4">
           <Textarea
-            label="User Story"
-            placeholder="As a user, I want to..."
+            label={t('runner.step2.userStory')}
+            placeholder={t('runner.step2.storyPlaceholder')}
             value={newUserStoryText}
             onChange={(e) => setNewUserStoryText(e.target.value)}
             rows={4}
             required
           />
           <Textarea
-            label="Additional Context"
-            placeholder="Any additional requirements or context (optional)"
+            label={t('runner.step2.additionalContext')}
+            placeholder={t('runner.step2.contextPlaceholder')}
             value={newUserStoryContext}
             onChange={(e) => setNewUserStoryContext(e.target.value)}
             rows={2}
@@ -141,14 +143,14 @@ export const TestInputFormStep2: React.FC<TestInputFormStep2Props> = ({
             onClick={() => setIsNewUserStoryModalOpen(false)}
             disabled={creatingUserStory}
           >
-            Cancel
+            {t('runner.step2.cancel')}
           </Button>
           <Button
             onClick={handleCreateUserStory}
             isLoading={creatingUserStory}
             disabled={!newUserStoryText.trim()}
           >
-            Add User Story
+            {t('runner.step2.addUserStory')}
           </Button>
         </ModalFooter>
       </Modal>

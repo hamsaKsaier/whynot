@@ -7,6 +7,22 @@ import { createLogger } from '../../shared/logger/logger';
 
 const logger = createLogger('playwright-runner');
 
+/**
+ * Diagnostics payload captured by the caller (qa-loop-executor) when a
+ * test fails. Populated via Chrome DevTools MCP after the Playwright
+ * subprocess returns. Enables the self-healing retry flow.
+ */
+export interface PlaywrightDiagnostics {
+  consoleTail?: Array<{ level?: string; text?: string }>;
+  failedRequests?: Array<{
+    method?: string;
+    url?: string;
+    status?: number;
+    statusText?: string;
+  }>;
+  capturedAt?: string;
+}
+
 export interface PlaywrightRunResult {
   passed: boolean;
   exitCode: number;
@@ -17,6 +33,8 @@ export interface PlaywrightRunResult {
   error?: string;
   humanError?: string;
   retryCount?: number;
+  /** Populated on failure by the qa-loop-executor caller — see ChromeDevToolsMCP. */
+  diagnostics?: PlaywrightDiagnostics;
 }
 
 /**
@@ -194,44 +212,84 @@ export async function runPlaywrightCode(
   }
 ): Promise<PlaywrightRunResult> {
   const timeoutMs = options?.timeoutMs ?? 30_000;
+  // Outer belt-and-suspenders timeout: executePlaywrightRun has its own
+  // hard-deadline inside the test body, but if the browser LAUNCH hangs or
+  // the finally-block's graceful close hangs, nothing else would stop it.
+  // This outer Promise.race guarantees runPlaywrightCode returns within
+  // hardTimeoutMs no matter what the Playwright subprocess is doing.
+  const hardTimeoutMs = timeoutMs + 15_000; // 45s absolute ceiling
   const screenshotsDir = options?.screenshotsDir ?? path.join(os.tmpdir(), 'pw-screenshots');
   const maxRetries = 2;
   let lastResult: PlaywrightRunResult | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const result = await executePlaywrightRun(playwrightCode, {
-      timeoutMs,
-      screenshotsDir,
-      env: options?.env,
-      attempt,
-      credentials: options?.credentials,
-    });
+    let hardTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result: PlaywrightRunResult = await Promise.race([
+        executePlaywrightRun(playwrightCode, {
+          timeoutMs,
+          screenshotsDir,
+          env: options?.env,
+          attempt,
+          credentials: options?.credentials,
+        }),
+        new Promise<PlaywrightRunResult>((_, reject) => {
+          hardTimer = setTimeout(
+            () => reject(new Error(`HARD_TIMEOUT_${hardTimeoutMs}ms_subprocess_killed`)),
+            hardTimeoutMs,
+          );
+        }),
+      ]);
 
-    result.retryCount = attempt;
-    lastResult = result;
+      result.retryCount = attempt;
+      lastResult = result;
 
-    // If the test passed, return immediately
-    if (result.passed) {
-      return result;
-    }
+      // If the test passed, return immediately
+      if (result.passed) {
+        return result;
+      }
 
-    // If this is an assertion failure, don't retry — it's a legitimate test result
-    if (result.error && isAssertionFailure(result.error)) {
-      logger.info('Assertion failure detected, not retrying', {
-        attempt,
-        exitCode: result.exitCode,
-      });
-      return result;
-    }
+      // If this is an assertion failure, don't retry — it's a legitimate test result
+      if (result.error && isAssertionFailure(result.error)) {
+        logger.info('Assertion failure detected, not retrying', {
+          attempt,
+          exitCode: result.exitCode,
+        });
+        return result;
+      }
 
-    // If we have retries left, log and continue
-    if (attempt < maxRetries) {
-      logger.warn('Process-level failure, retrying', {
-        attempt: attempt + 1,
-        maxRetries,
-        exitCode: result.exitCode,
-        errorSnippet: (result.error || '').slice(0, 200),
-      });
+      // If we have retries left, log and continue
+      if (attempt < maxRetries) {
+        logger.warn('Process-level failure, retrying', {
+          attempt: attempt + 1,
+          maxRetries,
+          exitCode: result.exitCode,
+          errorSnippet: (result.error || '').slice(0, 200),
+        });
+      }
+    } catch (err: any) {
+      // HARD_TIMEOUT fired — subprocess was force-killed. Return a clean
+      // failure result rather than propagating the exception; no more retries.
+      if (err.message?.startsWith('HARD_TIMEOUT_')) {
+        logger.error('Hard timeout fired — Playwright subprocess force-killed', {
+          attempt,
+          hardTimeoutMs,
+        });
+        return {
+          passed: false,
+          exitCode: -1,
+          stdout: '',
+          stderr: err.message,
+          screenshots: [],
+          duration: hardTimeoutMs,
+          error: 'Test timed out — subprocess was force-killed',
+          humanError: 'Test execution hung and was forcibly terminated. Likely a bad selector or infinite wait.',
+          retryCount: attempt,
+        };
+      }
+      throw err;
+    } finally {
+      if (hardTimer) clearTimeout(hardTimer);
     }
   }
 
@@ -288,18 +346,23 @@ async function executePlaywrightRun(
   try {
     logger.info('Launching browser for Playwright execution', { runId, attempt });
 
-    // Launch browser directly
+    // Launch browser directly. 20s launch cap — if chromium itself hangs
+    // starting up, fail fast and let the retry loop try again.
     browser = await chromium.launch({
       headless: true,
+      timeout: 20_000,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     });
     const context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
     });
 
-    // Set default timeouts
-    context.setDefaultTimeout(timeoutMs);
-    context.setDefaultNavigationTimeout(timeoutMs);
+    // Tighter operation-level timeouts than the overall `timeoutMs` budget.
+    // Individual action stalls get detected in seconds, not at the end of
+    // the run. The outer Promise.race in runPlaywrightCode is the final
+    // safety net if these individual caps don't fire.
+    context.setDefaultTimeout(Math.min(timeoutMs, 8_000));
+    context.setDefaultNavigationTimeout(Math.min(timeoutMs, 12_000));
 
     const page = await context.newPage();
 
@@ -348,7 +411,30 @@ async function executePlaywrightRun(
     const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
     const testFn = new AsyncFunction('page', 'browser', 'context', rewrittenCode);
 
-    await testFn(page, browser, context);
+    // Inner hard-deadline (timeoutMs) around testFn itself. Complements the
+    // outer Promise.race in runPlaywrightCode: if testFn hangs internally,
+    // this rejects inside the try/finally so the browser-close in finally
+    // runs cleanly. Without this, the outer 45s timer would reject up-stack
+    // but the in-flight testFn keeps awaiting, leaking the chromium subprocess
+    // because the finally never executes.
+    let hardTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const hardDeadline = new Promise<never>((_, reject) => {
+      hardTimeoutHandle = setTimeout(
+        () => reject(new Error(`Hard timeout: test execution exceeded ${timeoutMs}ms`)),
+        timeoutMs,
+      );
+    });
+
+    // Suppress the unhandled rejection that fires when the browser is closed
+    // (in the finally block below) while testFn is still awaiting internally.
+    const testExecution = testFn(page, browser, context) as Promise<void>;
+    testExecution.catch(() => {});
+
+    try {
+      await Promise.race([testExecution, hardDeadline]);
+    } finally {
+      clearTimeout(hardTimeoutHandle);
+    }
 
     // Capture after screenshot on success
     await page.screenshot({ path: afterScreenshot, fullPage: true }).catch(() => {});
@@ -408,12 +494,30 @@ async function executePlaywrightRun(
       humanError: parsePlaywrightError(rawError),
     };
   } finally {
-    // Always close browser
+    // Always close browser. If graceful close hangs (known failure mode
+    // when a crashed page holds a mutex), race a 5s deadline and then
+    // SIGKILL the underlying chromium subprocess. Without this, a hung
+    // close() blocks the entire runPlaywrightCode return path.
     if (browser) {
       try {
-        await browser.close();
-      } catch {
-        // Ignore cleanup errors
+        await Promise.race([
+          browser.close(),
+          new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error('browser_close_timeout_5s')), 5000),
+          ),
+        ]);
+      } catch (closeErr: any) {
+        logger.warn('browser.close() stalled — force-killing chromium subprocess', {
+          error: closeErr?.message,
+        });
+        try {
+          const browserProcess: any = (browser as any)._process;
+          if (browserProcess && typeof browserProcess.kill === 'function' && !browserProcess.killed) {
+            browserProcess.kill('SIGKILL');
+          }
+        } catch {
+          // final fallback — nothing else we can do
+        }
       }
     }
   }

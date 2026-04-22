@@ -1,0 +1,16 @@
+FROM node:20-slim
+
+WORKDIR /app/gateway
+
+COPY gateway/package*.json ./
+COPY gateway/tsconfig.json ./
+
+RUN npm install
+
+COPY gateway/src/ ./src/
+COPY gateway/shared/ ./shared/
+COPY gateway/vitest.config.ts ./
+COPY shared/ /app/shared/
+RUN rm -rf /app/shared/node_modules && ln -s /app/gateway/node_modules /app/shared/node_modules
+
+CMD ["npx", "vitest", "run", "--coverage"]

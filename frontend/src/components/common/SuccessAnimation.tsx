@@ -37,19 +37,18 @@ export const SuccessAnimation: React.FC<SuccessAnimationProps> = ({
     >
       <div
         className={`
-          bg-slate-800 rounded-xl shadow-2xl p-6 flex flex-col items-center gap-3
-          transform transition-all duration-300
-          ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
+          bg-card rounded-xl shadow-sm p-6 flex flex-col items-center gap-3
+          transform transition-opacity duration-150
+          ${isVisible ? 'opacity-100' : 'opacity-0'}
         `}
       >
         <div className="relative">
-          <div className="absolute inset-0 bg-green-900/30 rounded-full animate-ping opacity-75" />
-          <div className="relative bg-green-900/200 rounded-full p-3">
-            <FiCheck className="h-8 w-8 text-white" />
+          <div className="relative bg-green-900/20 rounded-full p-3">
+            <FiCheck className="h-8 w-8 text-primary-foreground" />
           </div>
         </div>
         {message && (
-          <p className="text-sm font-medium text-white">{message}</p>
+          <p className="text-sm font-medium text-foreground">{message}</p>
         )}
       </div>
     </div>

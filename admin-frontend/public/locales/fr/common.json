@@ -1,0 +1,386 @@
+{
+  "admin": {
+    "nav": {
+      "superadminTitle": "Super Admin",
+      "dashboard": "Tableau de bord",
+      "analytics": "Analytique",
+      "users": "Utilisateurs",
+      "plans": "Plans",
+      "subscriptions": "Abonnements",
+      "credits": "Cr\u00e9dits",
+      "announcements": "Annonces",
+      "auditLog": "Journal d'audit",
+      "settings": "Param\u00e8tres",
+      "featureFlags": "Feature flags",
+      "billingConfig": "Configuration de facturation",
+      "aiProviders": "Fournisseurs IA",
+      "organizations": "Organisations",
+      "usageTracking": "Suivi de consommation",
+      "usage": "Consommation",
+      "management": "Gestion",
+      "system": "Syst\u00e8me",
+      "comingSoon": "Bient\u00f4t disponible",
+      "sections": {
+        "platform": "Plateforme",
+        "billing": "Facturation",
+        "flagsAi": "Flags & IA",
+        "insights": "Analyses",
+        "content": "Contenu",
+        "settings": "Param\u00e8tres"
+      }
+    },
+    "common": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "create": "Cr\u00e9er",
+      "update": "Mettre \u00e0 jour",
+      "export": "Exporter",
+      "exportCSV": "Exporter en CSV",
+      "exportJSON": "Exporter en JSON",
+      "confirm": "Confirmer",
+      "search": "Rechercher\u2026",
+      "noData": "Aucune donn\u00e9e trouv\u00e9e",
+      "loading": "Chargement\u2026",
+      "processing": "Traitement en cours\u2026",
+      "actions": "Actions",
+      "selected": "{{count}} s\u00e9lectionn\u00e9(s)",
+      "clear": "Effacer",
+      "previousPage": "Page pr\u00e9c\u00e9dente",
+      "nextPage": "Page suivante",
+      "selectAll": "Tout s\u00e9lectionner",
+      "selectRow": "S\u00e9lectionner la ligne {{id}}",
+      "pageOf": "Page {{current}} sur {{total}}",
+      "signOut": "Se d\u00e9connecter",
+      "typeToConfirm": "Saisissez {{text}} pour confirmer",
+      "apply": "Appliquer",
+      "from": "Du",
+      "to": "Au",
+      "selectDateRange": "S\u00e9lectionner une plage de dates",
+      "dateRange": "{{from}} \u2014 {{to}}",
+      "presets": {
+        "last7Days": "7 derniers jours",
+        "last30Days": "30 derniers jours",
+        "last90Days": "90 derniers jours",
+        "thisYear": "Cette ann\u00e9e"
+      },
+      "logoAlt": "WhyNot \u2014 Plateforme QA par IA"
+    },
+    "login": {
+      "title": "Connexion administrateur",
+      "email": "E-mail",
+      "password": "Mot de passe",
+      "signIn": "Se connecter",
+      "signingIn": "Connexion en cours\u2026",
+      "adminOnly": "Acc\u00e8s r\u00e9serv\u00e9 aux administrateurs. Les utilisateurs standard ne peuvent pas se connecter ici.",
+      "failed": "\u00c9chec de la connexion. Acc\u00e8s administrateur requis."
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "totalUsers": "Utilisateurs totaux",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "activePlans": "Plans actifs",
+      "recentSignups": "Inscriptions r\u00e9centes",
+      "subscriptionsByPlan": "Abonnements par plan",
+      "recentUsers": "Utilisateurs r\u00e9cents",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "plan": "Plan",
+        "credits": "Cr\u00e9dits",
+        "joined": "Inscrit le"
+      },
+      "subscribers": "{{count}} abonné(s)",
+      "noUsers": "Aucun utilisateur pour le moment",
+      "noSubscriptionData": "Aucune donnée d'abonnement",
+      "creditsLabel": "crédits",
+      "quickActions": {
+        "users": "Utilisateurs",
+        "plans": "Plans",
+        "analytics": "Analytique",
+        "settings": "Paramètres"
+      }
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "totalUsers": "{{count}} utilisateurs au total",
+      "searchPlaceholder": "Rechercher par nom ou e-mail\u2026",
+      "allRoles": "Tous les r\u00f4les",
+      "exportSelected": "Exporter la s\u00e9lection",
+      "emailSelected": "Envoyer un e-mail \u00e0 la s\u00e9lection",
+      "noUsersFound": "Aucun utilisateur trouv\u00e9",
+      "viewDetail": "Voir les d\u00e9tails",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "role": "R\u00f4le",
+        "plan": "Plan",
+        "credits": "Cr\u00e9dits",
+        "joined": "Inscrit le"
+      },
+      "roles": {
+        "user": "Utilisateur",
+        "admin": "Administrateur",
+        "superAdmin": "Super administrateur"
+      }
+    },
+    "userDetail": {
+      "impersonate": "Prendre l'identit\u00e9",
+      "resetPassword": "R\u00e9initialiser le mot de passe",
+      "ban": "Bannir",
+      "unban": "D\u00e9bannir",
+      "banTitle": "Bannir l'utilisateur",
+      "banDescription": "\u00cates-vous s\u00fbr de vouloir bannir {{name}}\u00a0? L'acc\u00e8s \u00e0 son compte sera imm\u00e9diatement r\u00e9voqu\u00e9.",
+      "banConfirm": "Bannir l'utilisateur",
+      "tabs": {
+        "overview": "Aper\u00e7u",
+        "subscription": "Abonnement",
+        "flags": "Feature flags",
+        "audit": "Audit"
+      },
+      "role": "R\u00f4le",
+      "id": "ID",
+      "joined": "Inscrit le",
+      "grantCredits": "Attribuer",
+      "revokeCredits": "R\u00e9voquer",
+      "amount": "Montant",
+      "description": "Description",
+      "reason": "Raison\u2026",
+      "notFound": "Utilisateur introuvable.",
+      "noPlan": "Aucun forfait",
+      "credits": "cr\u00e9dits",
+      "forcePlan": "Forcer le forfait",
+      "selectPlan": "S\u00e9lectionner un forfait",
+      "choosePlan": "Choisir un forfait\u2026",
+      "applyPlan": "Appliquer le forfait",
+      "flagOverrides": "Exceptions de feature flags",
+      "noFlags": "Aucune exception de feature flag pour l'espace de travail de cet utilisateur.",
+      "defaultGrant": "Attribution administrative",
+      "defaultRevoke": "R\u00e9vocation administrative"
+    },
+    "organizations": {
+      "title": "Organisations",
+      "totalOrgs": "{{count}} organisations au total",
+      "searchPlaceholder": "Rechercher par nom\u2026",
+      "noOrgsFound": "Aucune organisation trouv\u00e9e",
+      "notFound": "Organisation introuvable.",
+      "backToOrgs": "Retour aux organisations",
+      "noMembers": "Aucun membre trouv\u00e9",
+      "columns": {
+        "name": "Nom",
+        "owner": "Propri\u00e9taire",
+        "plan": "Forfait",
+        "status": "Statut",
+        "credits": "Cr\u00e9dits",
+        "created": "Cr\u00e9\u00e9 le"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "Aper\u00e7u",
+        "members": "Membres",
+        "subscription": "Abonnement",
+        "flags": "Feature flags",
+        "audit": "Audit"
+      },
+      "details": "D\u00e9tails de l'organisation",
+      "name": "Nom",
+      "id": "ID",
+      "owner": "Propri\u00e9taire",
+      "created": "Cr\u00e9\u00e9 le",
+      "credits": "Cr\u00e9dits",
+      "plan": "Forfait",
+      "status": "Statut",
+      "selectPlan": "S\u00e9lectionner un forfait\u2026",
+      "subscriptionDetails": "D\u00e9tails de l'abonnement",
+      "periodEnd": "Fin de p\u00e9riode",
+      "trialEnd": "Fin d'essai",
+      "flagOverrides": "Exceptions de feature flags",
+      "noFlagOverrides": "Aucune exception de feature flag d\u00e9finie pour cette organisation.",
+      "none": "Aucun"
+    },
+    "plans": {
+      "title": "Plans",
+      "newPlan": "Nouveau plan",
+      "editPlan": "Modifier le plan",
+      "createPlan": "Cr\u00e9er un plan",
+      "saveChanges": "Enregistrer les modifications",
+      "archivePlan": "Archiver le plan",
+      "archiveDescription": "\u00cates-vous s\u00fbr de vouloir archiver \u00ab\u00a0{{name}}\u00a0\u00bb\u00a0? Les abonn\u00e9s existants ne seront pas affect\u00e9s, mais les nouveaux abonnements seront d\u00e9sactiv\u00e9s.",
+      "archive": "Archiver",
+      "restore": "Restaurer",
+      "syncStripe": "Synchroniser avec Stripe",
+      "noPlans": "Aucun plan cr\u00e9\u00e9 pour le moment.",
+      "details": "D\u00e9tails",
+      "featureFlags": "Feature flags",
+      "fields": {
+        "name": "Nom",
+        "slug": "Slug",
+        "description": "Description",
+        "price": "Prix ($)",
+        "billingInterval": "Intervalle de facturation",
+        "creditsPerPeriod": "Cr\u00e9dits / P\u00e9riode",
+        "trialDays": "Jours d'essai",
+        "sortOrder": "Ordre d'affichage",
+        "public": "Public",
+        "enterprise": "Entreprise"
+      },
+      "intervals": {
+        "monthly": "Mensuel",
+        "yearly": "Annuel",
+        "oneTime": "Unique"
+      },
+      "badges": {
+        "archived": "Archiv\u00e9",
+        "hidden": "Masqu\u00e9",
+        "custom": "Personnalis\u00e9"
+      }
+    },
+    "subscriptions": {
+      "title": "Abonnements",
+      "allStatuses": "Tous les statuts",
+      "noSubscriptions": "Aucun abonnement trouv\u00e9",
+      "columns": {
+        "workspace": "Espace de travail",
+        "owner": "Propri\u00e9taire",
+        "plan": "Plan",
+        "status": "Statut",
+        "credits": "Cr\u00e9dits",
+        "periodEnd": "Fin de p\u00e9riode"
+      },
+      "statuses": {
+        "active": "Actif",
+        "trialing": "En essai",
+        "pastDue": "En retard de paiement",
+        "canceled": "Annul\u00e9"
+      }
+    },
+    "credits": {
+      "title": "Cr\u00e9dits",
+      "description": "Soldes de cr\u00e9dits de tous les utilisateurs",
+      "grantCredits": "Attribuer des cr\u00e9dits",
+      "grantDescription": "Attribuer des cr\u00e9dits \u00e0 un espace de travail sp\u00e9cifique.",
+      "workspaceId": "ID de l'espace de travail",
+      "amount": "Montant",
+      "noUsers": "Aucun utilisateur trouv\u00e9",
+      "columns": {
+        "user": "Utilisateur",
+        "email": "E-mail",
+        "plan": "Plan",
+        "credits": "Cr\u00e9dits"
+      }
+    },
+    "analytics": {
+      "title": "Analytique",
+      "totalUsers": "Utilisateurs totaux",
+      "activeSubscriptions": "Abonnements actifs",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "signups": "Inscriptions (30 derniers jours)",
+      "revenueByPlan": "Revenus par plan",
+      "creditUsage": "Consommation de cr\u00e9dits (30 derniers jours)",
+      "cancellations": "R\u00e9siliations (90 derniers jours)",
+      "noCancellations": "Aucune r\u00e9siliation sur cette p\u00e9riode"
+    },
+    "auditLog": {
+      "title": "Journal d'audit",
+      "allActions": "Toutes les actions",
+      "noEntries": "Aucune entr\u00e9e d'audit trouv\u00e9e",
+      "columns": {
+        "time": "Date/Heure",
+        "actor": "Auteur",
+        "action": "Action",
+        "target": "Cible",
+        "details": "D\u00e9tails"
+      },
+      "actions": {
+        "roleChange": "Changement de r\u00f4le",
+        "userSuspend": "Suspension d'utilisateur",
+        "userUnsuspend": "R\u00e9activation d'utilisateur",
+        "impersonate": "Prise d'identit\u00e9",
+        "creditsGrant": "Attribution de cr\u00e9dits",
+        "creditsRevoke": "R\u00e9vocation de cr\u00e9dits",
+        "planArchive": "Archivage de plan",
+        "planRestore": "Restauration de plan",
+        "settingsUpdate": "Mise \u00e0 jour des param\u00e8tres",
+        "announcementCreate": "Cr\u00e9ation d'annonce",
+        "announcementUpdate": "Mise \u00e0 jour d'annonce",
+        "announcementDelete": "Suppression d'annonce"
+      }
+    },
+    "settings": {
+      "title": "Param\u00e8tres syst\u00e8me",
+      "tabs": {
+        "general": "G\u00e9n\u00e9ral",
+        "credits": "Co\u00fbts en cr\u00e9dits",
+        "email": "E-mail",
+        "webhooks": "Webhooks",
+        "security": "S\u00e9curit\u00e9"
+      },
+      "noSettings": "Aucun param\u00e8tre dans cette cat\u00e9gorie.",
+      "saveFailed": "\u00c9chec de l'enregistrement"
+    },
+    "announcements": {
+      "title": "Annonces",
+      "newAnnouncement": "Nouvelle annonce",
+      "editAnnouncement": "Modifier l'annonce",
+      "deleteAnnouncement": "Supprimer l'annonce",
+      "deleteDescription": "\u00cates-vous s\u00fbr de vouloir supprimer \u00ab\u00a0{{title}}\u00a0\u00bb\u00a0? Cette action est irr\u00e9versible.",
+      "noAnnouncements": "Aucune annonce",
+      "immediate": "Imm\u00e9diat",
+      "fields": {
+        "title": "Titre",
+        "body": "Contenu",
+        "type": "Type",
+        "active": "Actif",
+        "startsAt": "D\u00e9but",
+        "endsAt": "Fin"
+      },
+      "types": {
+        "info": "Information",
+        "warning": "Avertissement",
+        "success": "Succ\u00e8s",
+        "error": "Erreur"
+      },
+      "columns": {
+        "title": "Titre",
+        "type": "Type",
+        "active": "Actif",
+        "schedule": "Planification"
+      }
+    },
+    "status": {
+      "active": "Actif",
+      "trialing": "En essai",
+      "paused": "En pause",
+      "pastDue": "En retard de paiement",
+      "canceled": "Annulé",
+      "banned": "Banni",
+      "suspended": "Suspendu",
+      "expired": "Expiré"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Page introuvable",
+        "description": "La page que vous recherchez n'existe pas ou a été déplacée."
+      },
+      "serverError": {
+        "title": "Erreur serveur",
+        "description": "Un problème est survenu. Veuillez réessayer plus tard."
+      },
+      "forbidden": {
+        "title": "Accès interdit",
+        "description": "Vous n'avez pas les droits pour accéder à cette zone. Un accès super administrateur est requis."
+      },
+      "accessDenied": {
+        "title": "Accès refusé",
+        "description": "Cette zone est réservée aux super administrateurs. Contactez votre administrateur si vous pensez qu'il s'agit d'une erreur.",
+        "goToAdmin": "Aller au panneau d'administration"
+      },
+      "backHome": "Retour au tableau de bord",
+      "backToLogin": "Retour à la connexion"
+    }
+  }
+}

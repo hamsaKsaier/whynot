@@ -10,7 +10,7 @@ interface TestSuiteNodeData {
 
 export const TestSuiteNode: React.FC<NodeProps<TestSuiteNodeData>> = ({ data }) => {
   return (
-    <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 border-l-4 border-l-orange-500 min-w-[220px] max-w-[260px] transition-all duration-200 hover:shadow-md">
+    <div className="bg-card rounded-xl shadow-sm border border-border border-s-4 border-s-orange-500 min-w-[220px] max-w-[260px] transition-colors duration-150 hover:bg-muted/50">
       <Handle
         type="target"
         position={Position.Top}
@@ -25,11 +25,11 @@ export const TestSuiteNode: React.FC<NodeProps<TestSuiteNodeData>> = ({ data }) 
             Test Suite
           </span>
         </div>
-        <div className="font-bold text-white text-sm leading-snug truncate">
+        <div className="font-bold text-foreground text-sm leading-snug truncate">
           {data.label}
         </div>
         {data.description && (
-          <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
             {data.description}
           </p>
         )}

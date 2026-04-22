@@ -7,8 +7,8 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY services/qa-loop-executor/package*.json ./
+COPY services/qa-loop-executor/tsconfig.json ./
 
 # Install dependencies
 RUN npm install
@@ -33,7 +33,7 @@ COPY shared/ /shared/
 RUN ln -s /app/node_modules /shared/node_modules
 
 # Copy source code
-COPY src/ ./src/
+COPY services/qa-loop-executor/src/ ./src/
 
 # Build TypeScript
 RUN npm run build

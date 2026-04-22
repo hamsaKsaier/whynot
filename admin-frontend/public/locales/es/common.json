@@ -1,0 +1,386 @@
+{
+  "admin": {
+    "nav": {
+      "superadminTitle": "Super Admin",
+      "dashboard": "Panel de control",
+      "analytics": "Analíticas",
+      "users": "Usuarios",
+      "plans": "Planes",
+      "subscriptions": "Suscripciones",
+      "credits": "Créditos",
+      "announcements": "Anuncios",
+      "auditLog": "Registro de auditoría",
+      "settings": "Configuración",
+      "featureFlags": "Feature flags",
+      "billingConfig": "Configuración de facturación",
+      "aiProviders": "Proveedores de IA",
+      "organizations": "Organizaciones",
+      "usageTracking": "Seguimiento de uso",
+      "usage": "Uso",
+      "management": "Gestión",
+      "system": "Sistema",
+      "comingSoon": "Próximamente",
+      "sections": {
+        "platform": "Plataforma",
+        "billing": "Facturación",
+        "flagsAi": "Flags e IA",
+        "insights": "Análisis",
+        "content": "Contenido",
+        "settings": "Configuración"
+      }
+    },
+    "common": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "create": "Crear",
+      "update": "Actualizar",
+      "export": "Exportar",
+      "exportCSV": "Exportar como CSV",
+      "exportJSON": "Exportar como JSON",
+      "confirm": "Confirmar",
+      "search": "Buscar...",
+      "noData": "No se encontraron datos",
+      "loading": "Cargando...",
+      "processing": "Procesando...",
+      "actions": "Acciones",
+      "selected": "{{count}} seleccionados",
+      "clear": "Limpiar",
+      "previousPage": "Página anterior",
+      "nextPage": "Página siguiente",
+      "selectAll": "Seleccionar todo",
+      "selectRow": "Seleccionar fila {{id}}",
+      "pageOf": "Página {{current}} de {{total}}",
+      "signOut": "Cerrar sesión",
+      "typeToConfirm": "Escriba {{text}} para confirmar",
+      "apply": "Aplicar",
+      "from": "Desde",
+      "to": "Hasta",
+      "selectDateRange": "Seleccionar rango de fechas",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "Últimos 7 días",
+        "last30Days": "Últimos 30 días",
+        "last90Days": "Últimos 90 días",
+        "thisYear": "Este año"
+      },
+      "logoAlt": "WhyNot — Plataforma QA con IA"
+    },
+    "login": {
+      "title": "Inicio de sesión de administrador",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "signIn": "Iniciar sesión",
+      "signingIn": "Iniciando sesión...",
+      "adminOnly": "Acceso solo para administradores. Los usuarios regulares no pueden iniciar sesión aquí.",
+      "failed": "Inicio de sesión fallido. Se requiere acceso de administrador."
+    },
+    "dashboard": {
+      "title": "Panel de control",
+      "totalUsers": "Total de usuarios",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "activePlans": "Planes activos",
+      "recentSignups": "Registros recientes",
+      "subscriptionsByPlan": "Suscripciones por plan",
+      "recentUsers": "Usuarios recientes",
+      "columns": {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "plan": "Plan",
+        "credits": "Créditos",
+        "joined": "Registrado"
+      },
+      "subscribers": "{{count}} suscriptores",
+      "noUsers": "Aún no hay usuarios",
+      "noSubscriptionData": "No hay datos de suscripción",
+      "creditsLabel": "créditos",
+      "quickActions": {
+        "users": "Usuarios",
+        "plans": "Planes",
+        "analytics": "Analíticas",
+        "settings": "Configuración"
+      }
+    },
+    "users": {
+      "title": "Usuarios",
+      "totalUsers": "{{count}} usuarios en total",
+      "searchPlaceholder": "Buscar por nombre o correo...",
+      "allRoles": "Todos los roles",
+      "exportSelected": "Exportar seleccionados",
+      "emailSelected": "Enviar correo a seleccionados",
+      "noUsersFound": "No se encontraron usuarios",
+      "viewDetail": "Ver detalles",
+      "columns": {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "role": "Rol",
+        "plan": "Plan",
+        "credits": "Créditos",
+        "joined": "Registrado"
+      },
+      "roles": {
+        "user": "Usuario",
+        "admin": "Administrador",
+        "superAdmin": "Superadministrador"
+      }
+    },
+    "userDetail": {
+      "impersonate": "Suplantar identidad",
+      "resetPassword": "Restablecer contraseña",
+      "ban": "Suspender",
+      "unban": "Reactivar",
+      "banTitle": "Suspender usuario",
+      "banDescription": "¿Está seguro de que desea suspender a {{name}}? Perderá el acceso a su cuenta de inmediato.",
+      "banConfirm": "Suspender usuario",
+      "tabs": {
+        "overview": "Resumen",
+        "subscription": "Suscripción",
+        "flags": "Flags",
+        "audit": "Auditoría"
+      },
+      "role": "Rol",
+      "id": "ID",
+      "joined": "Registrado",
+      "grantCredits": "Otorgar",
+      "revokeCredits": "Revocar",
+      "amount": "Monto",
+      "description": "Descripción",
+      "reason": "Motivo...",
+      "notFound": "Usuario no encontrado.",
+      "noPlan": "Sin plan",
+      "credits": "créditos",
+      "forcePlan": "Forzar plan",
+      "selectPlan": "Seleccionar plan",
+      "choosePlan": "Elegir un plan...",
+      "applyPlan": "Aplicar plan",
+      "flagOverrides": "Excepciones de flags",
+      "noFlags": "No hay excepciones de flags para el espacio de trabajo de este usuario.",
+      "defaultGrant": "Otorgamiento administrativo",
+      "defaultRevoke": "Revocación administrativa"
+    },
+    "organizations": {
+      "title": "Organizaciones",
+      "totalOrgs": "{{count}} organizaciones",
+      "searchPlaceholder": "Buscar por nombre...",
+      "noOrgsFound": "No se encontraron organizaciones",
+      "notFound": "Organización no encontrada.",
+      "backToOrgs": "Volver a organizaciones",
+      "noMembers": "No se encontraron miembros",
+      "columns": {
+        "name": "Nombre",
+        "owner": "Propietario",
+        "plan": "Plan",
+        "status": "Estado",
+        "credits": "Créditos",
+        "created": "Creado"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "Resumen",
+        "members": "Miembros",
+        "subscription": "Suscripción",
+        "flags": "Flags",
+        "audit": "Auditoría"
+      },
+      "details": "Detalles de la organización",
+      "name": "Nombre",
+      "id": "ID",
+      "owner": "Propietario",
+      "created": "Creado",
+      "credits": "Créditos",
+      "plan": "Plan",
+      "status": "Estado",
+      "selectPlan": "Seleccionar plan...",
+      "subscriptionDetails": "Detalles de la suscripción",
+      "periodEnd": "Fin del período",
+      "trialEnd": "Fin de la prueba",
+      "flagOverrides": "Excepciones de flags",
+      "noFlagOverrides": "No hay excepciones de flags para esta organización.",
+      "none": "Ninguno"
+    },
+    "plans": {
+      "title": "Planes",
+      "newPlan": "Nuevo plan",
+      "editPlan": "Editar plan",
+      "createPlan": "Crear plan",
+      "saveChanges": "Guardar cambios",
+      "archivePlan": "Archivar plan",
+      "archiveDescription": "¿Está seguro de que desea archivar \"{{name}}\"? Los suscriptores actuales no se verán afectados, pero las nuevas suscripciones se deshabilitarán.",
+      "archive": "Archivar",
+      "restore": "Restaurar",
+      "syncStripe": "Sincronizar con Stripe",
+      "noPlans": "Aún no se han creado planes.",
+      "details": "Detalles",
+      "featureFlags": "Feature flags",
+      "fields": {
+        "name": "Nombre",
+        "slug": "Slug",
+        "description": "Descripción",
+        "price": "Precio ($)",
+        "billingInterval": "Intervalo de facturación",
+        "creditsPerPeriod": "Créditos / Período",
+        "trialDays": "Días de prueba",
+        "sortOrder": "Orden de clasificación",
+        "public": "Público",
+        "enterprise": "Empresarial"
+      },
+      "intervals": {
+        "monthly": "Mensual",
+        "yearly": "Anual",
+        "oneTime": "Único"
+      },
+      "badges": {
+        "archived": "Archivado",
+        "hidden": "Oculto",
+        "custom": "Personalizado"
+      }
+    },
+    "subscriptions": {
+      "title": "Suscripciones",
+      "allStatuses": "Todos los estados",
+      "noSubscriptions": "No se encontraron suscripciones",
+      "columns": {
+        "workspace": "Espacio de trabajo",
+        "owner": "Propietario",
+        "plan": "Plan",
+        "status": "Estado",
+        "credits": "Créditos",
+        "periodEnd": "Fin del período"
+      },
+      "statuses": {
+        "active": "Activa",
+        "trialing": "En prueba",
+        "pastDue": "Vencida",
+        "canceled": "Cancelada"
+      }
+    },
+    "credits": {
+      "title": "Créditos",
+      "description": "Saldos de créditos de todos los usuarios",
+      "grantCredits": "Otorgar créditos",
+      "grantDescription": "Otorgar créditos a un espacio de trabajo específico.",
+      "workspaceId": "ID del espacio de trabajo",
+      "amount": "Monto",
+      "noUsers": "No se encontraron usuarios",
+      "columns": {
+        "user": "Usuario",
+        "email": "Correo electrónico",
+        "plan": "Plan",
+        "credits": "Créditos"
+      }
+    },
+    "analytics": {
+      "title": "Analíticas",
+      "totalUsers": "Total de usuarios",
+      "activeSubscriptions": "Suscripciones activas",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "signups": "Registros (últimos 30 días)",
+      "revenueByPlan": "Ingresos por plan",
+      "creditUsage": "Uso de créditos (últimos 30 días)",
+      "cancellations": "Cancelaciones (últimos 90 días)",
+      "noCancellations": "Sin cancelaciones en este período"
+    },
+    "auditLog": {
+      "title": "Registro de auditoría",
+      "allActions": "Todas las acciones",
+      "noEntries": "No se encontraron entradas de auditoría",
+      "columns": {
+        "time": "Hora",
+        "actor": "Actor",
+        "action": "Acción",
+        "target": "Objetivo",
+        "details": "Detalles"
+      },
+      "actions": {
+        "roleChange": "Cambio de rol",
+        "userSuspend": "Suspensión de usuario",
+        "userUnsuspend": "Reactivación de usuario",
+        "impersonate": "Suplantación de identidad",
+        "creditsGrant": "Otorgamiento de créditos",
+        "creditsRevoke": "Revocación de créditos",
+        "planArchive": "Archivado de plan",
+        "planRestore": "Restauración de plan",
+        "settingsUpdate": "Actualización de configuración",
+        "announcementCreate": "Creación de anuncio",
+        "announcementUpdate": "Actualización de anuncio",
+        "announcementDelete": "Eliminación de anuncio"
+      }
+    },
+    "settings": {
+      "title": "Configuración del sistema",
+      "tabs": {
+        "general": "General",
+        "credits": "Costos de créditos",
+        "email": "Correo electrónico",
+        "webhooks": "Webhooks",
+        "security": "Seguridad"
+      },
+      "noSettings": "No hay configuraciones en esta categoría.",
+      "saveFailed": "Error al guardar"
+    },
+    "announcements": {
+      "title": "Anuncios",
+      "newAnnouncement": "Nuevo anuncio",
+      "editAnnouncement": "Editar anuncio",
+      "deleteAnnouncement": "Eliminar anuncio",
+      "deleteDescription": "¿Está seguro de que desea eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
+      "noAnnouncements": "No hay anuncios",
+      "immediate": "Inmediato",
+      "fields": {
+        "title": "Título",
+        "body": "Contenido",
+        "type": "Tipo",
+        "active": "Activo",
+        "startsAt": "Inicia el",
+        "endsAt": "Finaliza el"
+      },
+      "types": {
+        "info": "Información",
+        "warning": "Advertencia",
+        "success": "Éxito",
+        "error": "Error"
+      },
+      "columns": {
+        "title": "Título",
+        "type": "Tipo",
+        "active": "Activo",
+        "schedule": "Programación"
+      }
+    },
+    "status": {
+      "active": "Activo",
+      "trialing": "En prueba",
+      "paused": "Pausado",
+      "pastDue": "Vencido",
+      "canceled": "Cancelado",
+      "banned": "Suspendido",
+      "suspended": "Suspendido",
+      "expired": "Expirado"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Página no encontrada",
+        "description": "La página que busca no existe o ha sido movida."
+      },
+      "serverError": {
+        "title": "Error del servidor",
+        "description": "Algo salió mal. Por favor, inténtelo de nuevo más tarde."
+      },
+      "forbidden": {
+        "title": "Acceso prohibido",
+        "description": "No tiene permiso para acceder a esta área. Se requiere acceso de super administrador."
+      },
+      "accessDenied": {
+        "title": "Acceso denegado",
+        "description": "Esta área está restringida a super administradores. Contacte a su administrador si cree que esto es un error.",
+        "goToAdmin": "Ir al panel de administración"
+      },
+      "backHome": "Volver al panel",
+      "backToLogin": "Volver al inicio de sesión"
+    }
+  }
+}

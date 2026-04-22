@@ -20,6 +20,7 @@ import crypto from 'crypto';
 import { asyncHandler, createError } from '../middleware/error-handler';
 import { query } from '../../shared/database/connection';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 
 const router = express.Router();
 const logger = createLogger('integrations-router');
@@ -30,7 +31,7 @@ const ALGORITHM = 'aes-256-cbc';
 const IV_LENGTH = 16;
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
+  const key = env.ENCRYPTION_KEY;
   if (!key) {
     throw new Error('ENCRYPTION_KEY environment variable is required for token encryption');
   }
@@ -75,7 +76,7 @@ router.post('/clickup/connect', asyncHandler(async (req, res) => {
   const { apiToken } = req.body;
 
   if (!apiToken || typeof apiToken !== 'string') {
-    throw createError('apiToken is required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.apiTokenRequired'), 400, 'VALIDATION_ERROR');
   }
 
   // Verify the token works
@@ -84,7 +85,7 @@ router.post('/clickup/connect', asyncHandler(async (req, res) => {
   });
 
   if (!verifyRes.ok) {
-    throw createError('Invalid ClickUp API token', 400, 'INVALID_TOKEN');
+    throw createError((req as any).t('errors:integration.clickupInvalidToken'), 400, 'INVALID_TOKEN');
   }
 
   const userData: any = await verifyRes.json();
@@ -108,7 +109,7 @@ router.get('/clickup/workspaces', asyncHandler(async (req, res) => {
   const integration = await getUserIntegration(userId, 'clickup');
 
   if (!integration?.encrypted_token) {
-    throw createError('ClickUp not connected', 400, 'NOT_CONNECTED');
+    throw createError((req as any).t('errors:integration.clickupNotConnected'), 400, 'NOT_CONNECTED');
   }
 
   const token = decrypt(integration.encrypted_token);
@@ -117,7 +118,7 @@ router.get('/clickup/workspaces', asyncHandler(async (req, res) => {
   });
 
   if (!response.ok) {
-    throw createError(`ClickUp API error: ${response.status}`, 502, 'CLICKUP_API_ERROR');
+    throw createError((req as any).t('errors:integration.clickupApiError', { status: String(response.status) }), 502, 'CLICKUP_API_ERROR');
   }
 
   const data: any = await response.json();
@@ -139,7 +140,7 @@ router.get('/clickup/lists/:workspaceId', asyncHandler(async (req, res) => {
   const integration = await getUserIntegration(userId, 'clickup');
 
   if (!integration?.encrypted_token) {
-    throw createError('ClickUp not connected', 400, 'NOT_CONNECTED');
+    throw createError((req as any).t('errors:integration.clickupNotConnected'), 400, 'NOT_CONNECTED');
   }
 
   const token = decrypt(integration.encrypted_token);
@@ -150,7 +151,7 @@ router.get('/clickup/lists/:workspaceId', asyncHandler(async (req, res) => {
   });
 
   if (!spacesRes.ok) {
-    throw createError(`ClickUp API error: ${spacesRes.status}`, 502, 'CLICKUP_API_ERROR');
+    throw createError((req as any).t('errors:integration.clickupApiError', { status: String(spacesRes.status) }), 502, 'CLICKUP_API_ERROR');
   }
 
   const spacesData: any = await spacesRes.json();
@@ -202,7 +203,7 @@ router.post('/clickup/save-config', asyncHandler(async (req, res) => {
   const { workspaceId, workspaceName, listId, listName } = req.body;
 
   if (!listId) {
-    throw createError('listId is required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.listIdRequired'), 400, 'VALIDATION_ERROR');
   }
 
   await query(
@@ -281,7 +282,7 @@ router.post('/github/save-config', asyncHandler(async (req, res) => {
   const { repoOwner, repoName } = req.body;
 
   if (!repoOwner || !repoName) {
-    throw createError('repoOwner and repoName are required', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.repoFieldsRequired'), 400, 'VALIDATION_ERROR');
   }
 
   // Upsert github config
@@ -371,16 +372,16 @@ function mapSeverityToClickUpPriority(severity: string): number {
 async function reportBugToClickUp(bug: BugRow, userId: string): Promise<{ externalUrl: string }> {
   const integration = await getUserIntegration(userId, 'clickup');
   if (!integration?.encrypted_token) {
-    throw createError('ClickUp not connected. Go to Settings > Integrations to connect.', 400, 'NOT_CONNECTED');
+    throw createError('ClickUp not connected', 400, 'NOT_CONNECTED', undefined, 'errors:integration.clickupNotConnected');
   }
 
   const config = integration.config || {};
   if (!config.listId) {
-    throw createError('ClickUp list not configured. Go to Settings > Integrations to select a list.', 400, 'NOT_CONFIGURED');
+    throw createError('ClickUp list not configured', 400, 'NOT_CONFIGURED', undefined, 'errors:integration.clickupNotConfigured');
   }
 
   const token = decrypt(integration.encrypted_token);
-  const baseUrl = process.env.FRONTEND_URL || process.env.GATEWAY_URL || 'http://localhost:3010';
+  const baseUrl = env.FRONTEND_URL || env.GATEWAY_URL || 'http://localhost:3010';
   const description = buildBugMarkdown(bug, baseUrl);
 
   const taskData = {
@@ -398,7 +399,7 @@ async function reportBugToClickUp(bug: BugRow, userId: string): Promise<{ extern
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw createError(`ClickUp API error: ${response.status} - ${errorText}`, 502, 'CLICKUP_API_ERROR');
+    throw createError(`ClickUp API error: ${response.status}`, 502, 'CLICKUP_API_ERROR', undefined, 'errors:integration.clickupApiError', { status: String(response.status) });
   }
 
   const result: any = await response.json();
@@ -411,7 +412,7 @@ async function reportBugToGithub(bug: BugRow, userId: string, workspaceId: strin
   const config = integration?.config || {};
 
   if (!config.repoOwner || !config.repoName) {
-    throw createError('GitHub repo not configured. Go to Settings > Integrations to select a repo.', 400, 'NOT_CONFIGURED');
+    throw createError('GitHub repo not configured', 400, 'NOT_CONFIGURED', undefined, 'errors:integration.githubNotConfigured');
   }
 
   // Get the access token from github_repos table
@@ -421,11 +422,11 @@ async function reportBugToGithub(bug: BugRow, userId: string, workspaceId: strin
   );
 
   if (!repos[0]?.access_token) {
-    throw createError('GitHub repo access token not found. Connect the repo in Settings > GitHub Repos.', 400, 'NO_TOKEN');
+    throw createError('GitHub repo access token not found', 400, 'NO_TOKEN', undefined, 'errors:integration.githubNoToken');
   }
 
   const token = repos[0].access_token;
-  const baseUrl = process.env.FRONTEND_URL || process.env.GATEWAY_URL || 'http://localhost:3010';
+  const baseUrl = env.FRONTEND_URL || env.GATEWAY_URL || 'http://localhost:3010';
   const body = buildBugMarkdown(bug, baseUrl);
 
   // Determine labels based on severity
@@ -449,7 +450,7 @@ async function reportBugToGithub(bug: BugRow, userId: string, workspaceId: strin
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw createError(`GitHub API error: ${response.status} - ${errorText}`, 502, 'GITHUB_API_ERROR');
+    throw createError(`GitHub API error: ${response.status}`, 502, 'GITHUB_API_ERROR');
   }
 
   const result: any = await response.json();
@@ -464,7 +465,7 @@ bugReportRouter.post('/bugs/:bugId/report', asyncHandler(async (req, res) => {
   const { provider } = req.body;
 
   if (!provider || !['clickup', 'github'].includes(provider)) {
-    throw createError('provider must be "clickup" or "github"', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.providerInvalid'), 400, 'VALIDATION_ERROR');
   }
 
   // Load bug
@@ -476,7 +477,7 @@ bugReportRouter.post('/bugs/:bugId/report', asyncHandler(async (req, res) => {
   );
 
   if (bugs.length === 0) {
-    throw createError('Bug not found', 404, 'NOT_FOUND');
+    throw createError((req as any).t('errors:resource.bugNotFound'), 404, 'NOT_FOUND');
   }
 
   const bug = bugs[0];
@@ -507,7 +508,7 @@ bugReportRouter.post('/sessions/:sessionId/report-all', asyncHandler(async (req,
   const { provider } = req.body;
 
   if (!provider || !['clickup', 'github'].includes(provider)) {
-    throw createError('provider must be "clickup" or "github"', 400, 'VALIDATION_ERROR');
+    throw createError((req as any).t('errors:validation.providerInvalid'), 400, 'VALIDATION_ERROR');
   }
 
   // Load all unreported bugs from session

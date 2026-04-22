@@ -22,12 +22,12 @@ import { asyncHandler, createError } from '../middleware/error-handler';
 import { validate } from '../middleware/validation';
 import { query } from '../../shared/database/connection';
 import { createLogger } from '../../shared/logger/logger';
+import { env } from '../config/env';
 
 const router = express.Router();
 const logger = createLogger('ci-router');
 
-const qaLoopExecutorUrl =
-  process.env.QA_LOOP_EXECUTOR_URL || 'http://localhost:3002';
+const qaLoopExecutorUrl = env.QA_LOOP_EXECUTOR_URL;
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ router.post('/scan', requireApiKeyAuth, validate(ciScanSchema), asyncHandler(asy
     res.status(201).json({
       sessionId,
       status: 'running',
-      message: 'QA scan started. Poll GET /api/ci/results/:sessionId for results.',
+      message: req.t('success:ci.scanStarted'),
       resultsUrl: `/api/ci/results/${sessionId}`,
     });
   } catch (error: any) {
@@ -91,7 +91,7 @@ router.post('/scan', requireApiKeyAuth, validate(ciScanSchema), asyncHandler(asy
     });
 
     res.status(error.response?.status || 503).json({
-      error: 'Failed to start QA scan',
+      error: req.t('errors:service.ciScanStartFailed'),
       details: error.response?.data?.error || error.message,
     });
   }
@@ -168,9 +168,9 @@ router.get('/results/:sessionId', requireApiKeyAuth, asyncHandler(async (req: an
     }
   } catch (error: any) {
     if (error.response?.status === 404) {
-      res.status(404).json({ error: 'Scan session not found' });
+      res.status(404).json({ error: req.t('errors:resource.scanNotFound') });
     } else {
-      res.status(500).json({ error: 'Failed to get scan results' });
+      res.status(500).json({ error: req.t('errors:service.ciScanResultsFailed') });
     }
   }
 }));
@@ -182,7 +182,7 @@ router.get('/results/:sessionId', requireApiKeyAuth, asyncHandler(async (req: an
  */
 router.get('/keys', requireAuth, asyncHandler(async (req: any, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: req.t('errors:validation.workspaceRequired') });
 
   const keys = await query<any>(
     `SELECT id, name, key_prefix, last_used_at, is_active, created_at
@@ -200,7 +200,7 @@ router.get('/keys', requireAuth, asyncHandler(async (req: any, res) => {
  */
 router.post('/keys', requireAuth, validate(createKeySchema), asyncHandler(async (req: any, res) => {
   const workspaceId = req.workspaceId;
-  if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
+  if (!workspaceId) return res.status(400).json({ error: req.t('errors:validation.workspaceRequired') });
 
   const { name } = req.body;
   const { key, hash, prefix } = generateApiKey();
@@ -218,7 +218,7 @@ router.post('/keys', requireAuth, validate(createKeySchema), asyncHandler(async 
     key,
     prefix,
     name,
-    message: 'Save this key — it will not be shown again.',
+    message: req.t('success:ci.apiKeySaved'),
   });
 }));
 
@@ -236,7 +236,7 @@ router.delete('/keys/:id', requireAuth, asyncHandler(async (req: any, res) => {
   );
 
   if (result.length === 0) {
-    return res.status(404).json({ error: 'API key not found' });
+    return res.status(404).json({ error: req.t('errors:resource.apiKeyNotFound') });
   }
 
   logger.info('CI API key revoked', { keyId: req.params.id });

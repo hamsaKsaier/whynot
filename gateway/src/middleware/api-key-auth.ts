@@ -46,7 +46,8 @@ export async function requireApiKeyAuth(req: Request, res: Response, next: NextF
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer wn_ci_')) {
-      res.status(401).json({ error: 'Missing or invalid API key. Use Authorization: Bearer wn_ci_...' });
+      const t = (req as any).t ?? ((k: string) => k);
+      res.status(401).json({ error: t('errors:auth.apiKeyMissing') });
       return;
     }
 
@@ -61,7 +62,8 @@ export async function requireApiKeyAuth(req: Request, res: Response, next: NextF
     );
 
     if (results.length === 0) {
-      res.status(401).json({ error: 'Invalid or deactivated API key' });
+      const t = (req as any).t ?? ((k: string) => k);
+      res.status(401).json({ error: t('errors:auth.apiKeyInvalid') });
       return;
     }
 
@@ -86,6 +88,7 @@ export async function requireApiKeyAuth(req: Request, res: Response, next: NextF
     next();
   } catch (error: any) {
     logger.error('API key auth error', { error: error.message });
-    res.status(500).json({ error: 'Authentication error' });
+    const t = (req as any).t ?? ((k: string) => k);
+    res.status(500).json({ error: t('errors:auth.error') });
   }
 }

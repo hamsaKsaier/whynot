@@ -37,9 +37,10 @@ async function getWorkspaceFeatures(workspaceId: string): Promise<Record<string,
 export function requireFeature(featureKey: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const t = (req as any).t ?? ((k: string) => k);
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        res.status(401).json({ success: false, error: 'Workspace not resolved' });
+        res.status(401).json({ success: false, error: t('errors:workspace.notResolved') });
         return;
       }
 
@@ -50,7 +51,7 @@ export function requireFeature(featureKey: string) {
       if (!value || value === 'false' || value === '0') {
         res.status(403).json({
           success: false,
-          error: 'Feature not available on your current plan',
+          error: t('errors:feature.notAvailable'),
           code: 'FEATURE_NOT_AVAILABLE',
           details: {
             feature: featureKey,
@@ -80,9 +81,10 @@ export function requireFeatureLimit(
 ) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const t = (req as any).t ?? ((k: string) => k);
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        res.status(401).json({ success: false, error: 'Workspace not resolved' });
+        res.status(401).json({ success: false, error: t('errors:workspace.notResolved') });
         return;
       }
 
@@ -105,7 +107,7 @@ export function requireFeatureLimit(
       if (currentCount >= limit) {
         res.status(403).json({
           success: false,
-          error: `You have reached the limit of ${limit} for this feature`,
+          error: t('errors:feature.limitReached', { limit }),
           code: 'FEATURE_LIMIT_REACHED',
           details: {
             feature: featureKey,

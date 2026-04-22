@@ -1,16 +1,13 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiPlay, FiFileText } from 'react-icons/fi';
-import { Tabs } from '../components/common/Tabs';
+import { useTranslation } from 'react-i18next';
+import { Play, FileText } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { TestRunsContent } from './TestRunsPage';
 import { TestCasesContent } from './TestCasesPage';
 
-const TABS = [
-  { id: 'runs', label: 'Test Runs', icon: <FiPlay className="h-4 w-4" /> },
-  { id: 'cases', label: 'Test Cases', icon: <FiFileText className="h-4 w-4" /> },
-];
-
 export const TestResultsPage: React.FC = () => {
+  const { t } = useTranslation('results');
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'runs';
 
@@ -20,17 +17,30 @@ export const TestResultsPage: React.FC = () => {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white">Test Results</h1>
-        <p className="text-slate-400 mt-1">View test runs and manage test cases</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{t('results.title')}</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('results.subtitle')}</p>
       </div>
 
-      <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="runs" className="gap-1.5 flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            {t('results.testRuns.tabLabel')}
+          </TabsTrigger>
+          <TabsTrigger value="cases" className="gap-1.5 flex-1 sm:flex-initial text-xs sm:text-sm">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            {t('results.testCases.tabLabel')}
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="mt-6">
-        {activeTab === 'runs' && <TestRunsContent />}
-        {activeTab === 'cases' && <TestCasesContent />}
-      </div>
+        <TabsContent value="runs">
+          <TestRunsContent />
+        </TabsContent>
+        <TabsContent value="cases">
+          <TestCasesContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

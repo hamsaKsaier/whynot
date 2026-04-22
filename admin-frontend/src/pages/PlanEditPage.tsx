@@ -1,12 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getAdminPlan, createPlan, updatePlan, setPlanFeatures } from '../services/api';
-import { FiPlus, FiX } from 'react-icons/fi';
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Plus, X, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Textarea } from '../components/ui/textarea'
+import { Switch } from '../components/ui/switch'
+import { Badge } from '../components/ui/badge'
+import { Skeleton } from '../components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { dollarsToCents, centsToDollars } from '../lib/money'
+import { getAdminPlan, createPlan, updatePlan, setPlanFeatures } from '../services/api'
 
-export const PlanEditPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const isNew = !id;
+export function PlanEditPage() {
+  const { t } = useTranslation('superadmin')
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const isNew = !id
 
   const [form, setForm] = useState({
     name: '',
@@ -19,18 +38,19 @@ export const PlanEditPage: React.FC = () => {
     is_custom: false,
     is_public: true,
     sort_order: 0,
-  });
+  })
 
-  const [features, setFeatures] = useState<Array<{ key: string; value: string }>>([]);
-  const [newFeatureKey, setNewFeatureKey] = useState('');
-  const [newFeatureValue, setNewFeatureValue] = useState('');
-  const [loading, setLoading] = useState(!isNew);
-  const [saving, setSaving] = useState(false);
+  const [priceDollars, setPriceDollars] = useState('0.00')
+  const [features, setFeatures] = useState<Array<{ key: string; value: string }>>([])
+  const [newFeatureKey, setNewFeatureKey] = useState('')
+  const [newFeatureValue, setNewFeatureValue] = useState('')
+  const [loading, setLoading] = useState(!isNew)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (id) {
       getAdminPlan(id).then((data) => {
-        const p = data.plan;
+        const p = data.plan
         setForm({
           name: p.name,
           slug: p.slug,
@@ -42,214 +62,243 @@ export const PlanEditPage: React.FC = () => {
           is_custom: p.is_custom,
           is_public: p.is_public,
           sort_order: p.sort_order || 0,
-        });
+        })
+        setPriceDollars(centsToDollars(p.price_cents).toFixed(2))
         setFeatures(
           (p.features || []).map((f: any) => ({ key: f.feature_key, value: f.feature_value }))
-        );
-        setLoading(false);
-      });
+        )
+        setLoading(false)
+      })
     }
-  }, [id]);
+  }, [id])
 
   const handleNameChange = (name: string) => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       name,
-      ...(isNew ? { slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') } : {}),
-    }));
-  };
+      ...(isNew
+        ? { slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') }
+        : {}),
+    }))
+  }
 
   const addFeature = () => {
-    if (!newFeatureKey) return;
-    setFeatures(prev => [...prev, { key: newFeatureKey, value: newFeatureValue || 'true' }]);
-    setNewFeatureKey('');
-    setNewFeatureValue('');
-  };
+    if (!newFeatureKey) return
+    setFeatures((prev) => [...prev, { key: newFeatureKey, value: newFeatureValue || 'true' }])
+    setNewFeatureKey('')
+    setNewFeatureValue('')
+  }
 
   const removeFeature = (index: number) => {
-    setFeatures(prev => prev.filter((_, i) => i !== index));
-  };
+    setFeatures((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault()
+    setSaving(true)
     try {
-      let planId = id;
+      const payload = { ...form, price_cents: dollarsToCents(priceDollars) }
+      let planId = id
       if (isNew) {
-        const result = await createPlan(form);
-        planId = result.plan.id;
+        const result = await createPlan(payload)
+        planId = result.plan.id
       } else {
-        await updatePlan(id!, form);
+        await updatePlan(id!, payload)
       }
 
-      // Save features
       if (planId && features.length > 0) {
-        const featureMap: Record<string, string> = {};
-        features.forEach(f => { featureMap[f.key] = f.value; });
-        await setPlanFeatures(planId, featureMap);
+        const featureMap: Record<string, string> = {}
+        features.forEach((f) => { featureMap[f.key] = f.value })
+        await setPlanFeatures(planId, featureMap)
       }
 
-      navigate('/plans');
+      navigate('/plans')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
-  if (loading) return <div className="animate-pulse h-64 bg-slate-700 rounded-lg" />;
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-96" />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-white mb-6">{isNew ? 'Create Plan' : 'Edit Plan'}</h1>
+      <AdminPageHeader
+        title={isNew ? t('plans.createPlan') : t('plans.editPlan')}
+        breadcrumbs={[
+          { label: t('plans.breadcrumbs.plans'), to: '/plans' },
+          { label: isNew ? t('plans.breadcrumbs.new') : form.name },
+        ]}
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Name</label>
-              <input
-                value={form.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Slug</label>
-              <input
-                value={form.slug}
-                onChange={(e) => setForm(prev => ({ ...prev, slug: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-                required
-                pattern="[a-z0-9-]+"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Description</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-              rows={2}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Price (cents)</label>
-              <input
-                type="number"
-                value={form.price_cents}
-                onChange={(e) => setForm(prev => ({ ...prev, price_cents: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Billing Interval</label>
-              <select
-                value={form.billing_interval}
-                onChange={(e) => setForm(prev => ({ ...prev, billing_interval: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-              >
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-                <option value="one_time">One-time</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Credits / Period</label>
-              <input
-                type="number"
-                value={form.credits_per_period}
-                onChange={(e) => setForm(prev => ({ ...prev, credits_per_period: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Trial Days</label>
-              <input
-                type="number"
-                value={form.trial_days}
-                onChange={(e) => setForm(prev => ({ ...prev, trial_days: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1">Sort Order</label>
-              <input
-                type="number"
-                value={form.sort_order}
-                onChange={(e) => setForm(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-slate-600 rounded-lg text-sm"
-              />
-            </div>
-            <div className="flex flex-col justify-end gap-2">
-              <label className="flex items-center text-sm">
-                <input type="checkbox" checked={form.is_public} onChange={(e) => setForm(prev => ({ ...prev, is_public: e.target.checked }))} className="mr-2" />
-                Public
-              </label>
-              <label className="flex items-center text-sm">
-                <input type="checkbox" checked={form.is_custom} onChange={(e) => setForm(prev => ({ ...prev, is_custom: e.target.checked }))} className="mr-2" />
-                Custom (Enterprise)
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Feature Flags</h2>
-
-          <div className="space-y-2 mb-4">
-            {features.map((f, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="flex-1 text-sm font-mono bg-slate-900 px-3 py-1.5 rounded">{f.key}</span>
-                <span className="text-sm font-mono bg-slate-900 px-3 py-1.5 rounded w-32">{f.value}</span>
-                <button type="button" onClick={() => removeFeature(i)} className="p-1 text-red-500 hover:bg-red-900/20 rounded">
-                  <FiX className="h-4 w-4" />
-                </button>
+      <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('plans.details')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">{t('plans.fields.name')}</Label>
+                <Input id="name" value={form.name} onChange={(e) => handleNameChange(e.target.value)} required />
               </div>
-            ))}
-          </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="slug">{t('plans.fields.slug')}</Label>
+                <Input
+                  id="slug"
+                  value={form.slug}
+                  onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
+                  required
+                  pattern="[a-z0-9-]+"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="desc">{t('plans.fields.description')}</Label>
+              <Textarea
+                id="desc"
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="price">{t('plans.fields.price')}</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={priceDollars}
+                  onChange={(e) => setPriceDollars(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t('plans.fields.billingInterval')}</Label>
+                <Select
+                  value={form.billing_interval}
+                  onValueChange={(v) => setForm((p) => ({ ...p, billing_interval: v as any }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">{t('plans.intervals.monthly')}</SelectItem>
+                    <SelectItem value="yearly">{t('plans.intervals.yearly')}</SelectItem>
+                    <SelectItem value="one_time">{t('plans.intervals.oneTime')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="credits">{t('plans.fields.creditsPerPeriod')}</Label>
+                <Input
+                  id="credits"
+                  type="number"
+                  value={form.credits_per_period}
+                  onChange={(e) => setForm((p) => ({ ...p, credits_per_period: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="trial">{t('plans.fields.trialDays')}</Label>
+                <Input
+                  id="trial"
+                  type="number"
+                  value={form.trial_days}
+                  onChange={(e) => setForm((p) => ({ ...p, trial_days: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sort">{t('plans.fields.sortOrder')}</Label>
+                <Input
+                  id="sort"
+                  type="number"
+                  value={form.sort_order}
+                  onChange={(e) => setForm((p) => ({ ...p, sort_order: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="flex flex-col justify-end gap-3 pb-1">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="public" className="cursor-pointer">{t('plans.fields.public')}</Label>
+                  <Switch
+                    id="public"
+                    checked={form.is_public}
+                    onCheckedChange={(v) => setForm((p) => ({ ...p, is_public: v }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="custom" className="cursor-pointer">{t('plans.fields.enterprise')}</Label>
+                  <Switch
+                    id="custom"
+                    checked={form.is_custom}
+                    onCheckedChange={(v) => setForm((p) => ({ ...p, is_custom: v }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <label className="text-xs text-slate-400">Key</label>
-              <input
-                value={newFeatureKey}
-                onChange={(e) => setNewFeatureKey(e.target.value)}
-                placeholder="max_projects"
-                className="w-full px-3 py-1.5 border border-slate-600 rounded-lg text-sm"
-              />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('plans.featureFlags')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {features.length > 0 && (
+              <div className="space-y-2">
+                {features.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <code className="flex-1 text-sm bg-muted px-3 py-1.5 rounded-md">{f.key}</code>
+                    <code className="text-sm bg-muted px-3 py-1.5 rounded-md w-32">{f.value}</code>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeFeature(i)}>
+                      <X className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">{t('plans.fields.featureKey')}</Label>
+                <Input
+                  value={newFeatureKey}
+                  onChange={(e) => setNewFeatureKey(e.target.value)}
+                  placeholder="max_projects"
+                />
+              </div>
+              <div className="w-32 space-y-1">
+                <Label className="text-xs">{t('plans.fields.featureValue')}</Label>
+                <Input
+                  value={newFeatureValue}
+                  onChange={(e) => setNewFeatureValue(e.target.value)}
+                  placeholder="true"
+                />
+              </div>
+              <Button type="button" variant="outline" size="icon" onClick={addFeature}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="w-32">
-              <label className="text-xs text-slate-400">Value</label>
-              <input
-                value={newFeatureValue}
-                onChange={(e) => setNewFeatureValue(e.target.value)}
-                placeholder="true"
-                className="w-full px-3 py-1.5 border border-slate-600 rounded-lg text-sm"
-              />
-            </div>
-            <button type="button" onClick={addFeature} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700">
-              <FiPlus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => navigate('/plans')} className="px-4 py-2 border border-slate-600 rounded-lg text-sm hover:bg-slate-900">
-            Cancel
-          </button>
-          <button type="submit" disabled={saving} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 disabled:opacity-50">
-            {saving ? 'Saving...' : isNew ? 'Create Plan' : 'Save Changes'}
-          </button>
+          <Button type="button" variant="outline" onClick={() => navigate('/plans')}>
+            {t('common:admin.common.cancel')}
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 me-1.5 animate-spin" />}
+            {isNew ? t('plans.createPlan') : t('plans.saveChanges')}
+          </Button>
         </div>
       </form>
     </div>
-  );
-};
+  )
+}
+
+export { PlanEditPage as default }

@@ -8,22 +8,32 @@
  *  │  PHASE BANNER   [Auth] [Exploring] [Testing] [Done]  │
  *  │                                                      │
  *  │  ┌─────────────────────┐  ┌────────────────────────┐│
- *  │  │  LIVE BROWSER       │  │  🧠 AI THINKING        ││
+ *  │  │  LIVE BROWSER       │  │  AI THINKING           ││
  *  │  │  (big screenshot)   │  │  (streaming typewriter)││
  *  │  └─────────────────────┘  └────────────────────────┘│
  *  │                                                      │
  *  │  ┌────────────────── ACTION FEED ─────────────────┐ │
- *  │  │  🌐 navigate  /dashboard          08:40:12     │ │
- *  │  │  🖱️  click     [data-nav="courses"] 08:40:14   │ │
- *  │  │  ✅ save_test  "Nav test"           08:40:16   │ │
+ *  │  │  navigate  /dashboard          08:40:12        │ │
+ *  │  │  click     [data-nav="courses"] 08:40:14       │ │
+ *  │  │  save_test  "Nav test"           08:40:16      │ │
  *  │  └────────────────────────────────────────────────┘ │
  *  │                                                      │
  *  │  [Pages] [Tests] [Bugs] [Cost]  (animated counters)  │
  *  └──────────────────────────────────────────────────────┘
  */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TestRunActivity } from '../../hooks/useSessionManager';
 import { CostInfo } from '../../hooks/useQALoopStream';
+
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 // ── Icons (inline SVG so no import overhead) ─────────────────────────────────
 const Icons = {
@@ -69,7 +79,7 @@ const Icons = {
   ),
   brain: () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 01-2.5-2.5M14.5 2A2.5 2.5 0 0112 4.5"/>
+      <path d="M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 01-2.5-2.5M14.5 2A2.5 2.5 0 0012 4.5"/>
       <path d="M5 8a4 4 0 014 4 4 4 0 01-4 4 4 4 0 010-8z"/>
       <path d="M19 8a4 4 0 00-4 4 4 4 0 004 4 4 4 0 000-8z"/>
       <path d="M5 12H3M19 12h2M8 5.5l-2-2M16 5.5l2-2M8 18.5l-2 2M16 18.5l2 2"/>
@@ -112,11 +122,11 @@ const TOOL_CONFIG: Record<string, { label: string; color: string; bg: string; ic
   navigate:          { label: 'Navigate',    color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: 'navigate' },
   click:             { label: 'Click',       color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: 'click' },
   type_text:         { label: 'Type',        color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: 'type' },
-  save_test_case:    { label: 'Test Case ✓', color: '#4ade80', bg: 'rgba(74,222,128,0.15)',  icon: 'test' },
+  save_test_case:    { label: 'Test Case',   color: '#4ade80', bg: 'rgba(74,222,128,0.15)',  icon: 'test' },
   add_bug:           { label: 'Bug Found!',  color: '#f87171', bg: 'rgba(248,113,113,0.15)', icon: 'bug' },
   get_page_elements: { label: 'Scan Page',   color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  icon: 'explore' },
   get_session_state: { label: 'Check State', color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', icon: 'state' },
-  mark_page_explored:{ label: 'Marked ✓',   color: '#22d3ee', bg: 'rgba(34,211,238,0.12)',  icon: 'explore' },
+  mark_page_explored:{ label: 'Marked',      color: '#22d3ee', bg: 'rgba(34,211,238,0.12)',  icon: 'explore' },
   add_page:          { label: 'Page Added',  color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: 'navigate' },
   add_note:          { label: 'Note',        color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  icon: 'note' },
 };
@@ -126,24 +136,24 @@ const getToolConfig = (tool: string) =>
 
 // ── Phase config ──────────────────────────────────────────────────────────────
 const PHASE_CONFIG: Record<string, { label: string; color: string; pulse: boolean }> = {
-  auth_exploration:         { label: '🔐 Auth Testing',    color: '#f59e0b', pulse: true },
-  auth_exploration_complete:{ label: '🔐 Auth Done',       color: '#22c55e', pulse: false },
-  login:                    { label: '🔑 Logging In',      color: '#60a5fa', pulse: true },
-  login_complete:           { label: '🔑 Logged In',       color: '#22c55e', pulse: false },
-  resume_login:             { label: '🔁 Resuming Login',  color: '#a78bfa', pulse: true },
-  exploring:                { label: '🌐 Exploring',       color: '#34d399', pulse: true },
-  test_execution:           { label: '🧪 Running Tests',   color: '#818cf8', pulse: true },
-  running_tests:            { label: '🧪 Running Tests',   color: '#818cf8', pulse: true },
-  cost_update:              { label: '💡 Calculating',     color: '#fbbf24', pulse: false },
-  resume_no_credentials:    { label: '⚠️ No Credentials',  color: '#f87171', pulse: false },
-  correction:               { label: '🔧 Correcting Tests', color: '#fbbf24', pulse: true },
-  correction_retest:        { label: '🔧 Re-testing',       color: '#a78bfa', pulse: true },
-  correction_complete:      { label: '🔧 Correction Done',  color: '#22c55e', pulse: false },
-  correction_error:         { label: '⚠️ Correction Error',  color: '#f87171', pulse: false },
+  auth_exploration:         { label: 'Auth Testing',       color: '#f59e0b', pulse: true },
+  auth_exploration_complete:{ label: 'Auth Done',          color: '#22c55e', pulse: false },
+  login:                    { label: 'Logging In',         color: '#60a5fa', pulse: true },
+  login_complete:           { label: 'Logged In',          color: '#22c55e', pulse: false },
+  resume_login:             { label: 'Resuming Login',     color: '#a78bfa', pulse: true },
+  exploring:                { label: 'Exploring',          color: '#34d399', pulse: true },
+  test_execution:           { label: 'Running Tests',      color: '#818cf8', pulse: true },
+  running_tests:            { label: 'Running Tests',      color: '#818cf8', pulse: true },
+  cost_update:              { label: 'Calculating',        color: '#fbbf24', pulse: false },
+  resume_no_credentials:    { label: 'No Credentials',     color: '#f87171', pulse: false },
+  correction:               { label: 'Correcting Tests',   color: '#fbbf24', pulse: true },
+  correction_retest:        { label: 'Re-testing',         color: '#a78bfa', pulse: true },
+  correction_complete:      { label: 'Correction Done',    color: '#22c55e', pulse: false },
+  correction_error:         { label: 'Correction Error',   color: '#f87171', pulse: false },
 };
 
 const getPhaseConfig = (phase: string | null) =>
-  phase ? (PHASE_CONFIG[phase] ?? { label: `⚡ ${phase}`, color: '#94a3b8', pulse: false }) : null;
+  phase ? (PHASE_CONFIG[phase] ?? { label: phase, color: '#94a3b8', pulse: false }) : null;
 
 // ── AI Thinking line parser ───────────────────────────────────────────────────
 interface ThinkingLine {
@@ -239,15 +249,15 @@ function parseThinkingLines(raw: string): ThinkingLine[] {
 }
 
 const THINKING_LINE_STYLES: Record<ThinkingLine['type'], { color: string; borderColor?: string; icon: string }> = {
-  navigate:   { color: 'text-sky-400',     icon: '\u25CF' },
-  screenshot: { color: 'text-slate-500',   icon: '\uD83D\uDCF8' },
-  form:       { color: 'text-sky-400',     icon: '\u25CF' },
-  click:      { color: 'text-sky-400',     icon: '\u25CF' },
-  bug:        { color: 'text-red-400',     borderColor: 'border-l-4 border-red-500', icon: '\uD83D\uDC1B' },
-  test:       { color: 'text-emerald-400', borderColor: 'border-l-4 border-emerald-500', icon: '\uD83E\uDDEA' },
-  page:       { color: 'text-blue-400',    icon: '\uD83D\uDD0D' },
-  error:      { color: 'text-amber-400',   icon: '\u26A0\uFE0F' },
-  text:       { color: 'text-slate-300',   icon: '\u25CF' },
+  navigate:   { color: 'text-sky-500 dark:text-sky-400',       icon: '\u25CF' },
+  screenshot: { color: 'text-muted-foreground',                icon: '\uD83D\uDCF8' },
+  form:       { color: 'text-sky-500 dark:text-sky-400',       icon: '\u25CF' },
+  click:      { color: 'text-sky-500 dark:text-sky-400',       icon: '\u25CF' },
+  bug:        { color: 'text-red-500 dark:text-red-400',       borderColor: 'border-s-4 border-red-500', icon: '\uD83D\uDC1B' },
+  test:       { color: 'text-emerald-500 dark:text-emerald-400', borderColor: 'border-s-4 border-emerald-500', icon: '\uD83E\uDDEA' },
+  page:       { color: 'text-blue-500 dark:text-blue-400',     icon: '\uD83D\uDD0D' },
+  error:      { color: 'text-amber-500 dark:text-amber-400',   icon: '\u26A0\uFE0F' },
+  text:       { color: 'text-foreground',                      icon: '\u25CF' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -277,8 +287,8 @@ function safePathname(url: string | null): string {
 /** Animated "live" dot */
 const LiveDot: React.FC<{ active?: boolean }> = ({ active = true }) => (
   <span className="relative flex h-2.5 w-2.5">
-    {active && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />}
-    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${active ? 'bg-green-400' : 'bg-slate-9000'}`} />
+    {active && <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />}
+    <span className={cn("relative inline-flex rounded-full h-2.5 w-2.5", active ? 'bg-green-400' : 'bg-muted-foreground')} />
   </span>
 );
 
@@ -288,22 +298,22 @@ const StatTile: React.FC<{
   label: string;
   color: string;
   icon: React.ReactNode;
-  pulse?: boolean;
-}> = ({ value, label, color, icon, pulse }) => (
-  <div className="flex flex-col items-center justify-center bg-gray-800/60 border border-gray-700/50 rounded-xl px-4 py-3 min-w-[90px] gap-1">
-    <div className="flex items-center gap-1.5" style={{ color }}>
-      {icon}
-      <span className={`text-2xl font-bold tabular-nums ${pulse ? 'animate-pulse' : ''}`}>{value}</span>
-    </div>
-    <span className="text-xs text-slate-500 font-medium tracking-wide uppercase">{label}</span>
-  </div>
+}> = ({ value, label, color, icon }) => (
+  <Card className="shadow-none flex-1 min-w-[72px]">
+    <CardContent className="flex flex-col items-center justify-center px-2 sm:px-4 py-2 sm:py-3 gap-0.5 sm:gap-1">
+      <div className="flex items-center gap-1 sm:gap-1.5" style={{ color }}>
+        {icon}
+        <span className="text-lg sm:text-2xl font-bold tabular-nums">{value}</span>
+      </div>
+      <span className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide uppercase">{label}</span>
+    </CardContent>
+  </Card>
 );
 
 /** Single action feed row */
 const ActionRow: React.FC<{
   call: { tool: string; input: any; result?: any; timestamp: string };
-  isNew?: boolean;
-}> = ({ call, isNew }) => {
+}> = ({ call }) => {
   const cfg = getToolConfig(call.tool);
   const IconComp = Icons[cfg.icon] || Icons.explore;
   const hint = call.input?.url
@@ -318,26 +328,26 @@ const ActionRow: React.FC<{
 
   return (
     <div
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-xs transition-all duration-300 ${isNew ? 'scale-[1.01]' : ''}`}
+      className="flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border text-xs"
       style={{ background: cfg.bg, borderColor: cfg.color + '30' }}
     >
       <span style={{ color: cfg.color }} className="shrink-0 flex items-center">
         <IconComp />
       </span>
-      <span className="font-semibold shrink-0" style={{ color: cfg.color, minWidth: '88px' }}>
+      <span className="font-semibold shrink-0 hidden sm:inline" style={{ color: cfg.color, minWidth: '88px' }}>
         {cfg.label}
       </span>
       {hint && (
-        <span className="text-slate-500 truncate flex-1 font-mono text-[11px]" title={hint}>
+        <span className="text-muted-foreground truncate sm:break-all flex-1 font-mono text-[10px] sm:text-[11px] min-w-0" title={hint}>
           {hint}
         </span>
       )}
-      <span className="text-slate-400 shrink-0 ml-auto flex items-center gap-1">
+      <span className="text-muted-foreground shrink-0 ms-auto flex items-center gap-1">
         {call.result !== undefined
-          ? <span className="text-green-400">✓</span>
-          : <span className="animate-spin w-3 h-3 border border-slate-500 border-t-slate-300 rounded-full inline-block" />
+          ? <span className="text-green-500">&#10003;</span>
+          : <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
         }
-        {formatTimestamp(call.timestamp)}
+        <span className="hidden sm:inline">{formatTimestamp(call.timestamp)}</span>
       </span>
     </div>
   );
@@ -347,25 +357,25 @@ const ActionRow: React.FC<{
 const StatusIcons = {
   running: () => (
     <span className="inline-flex w-5 h-5 items-center justify-center">
-      <span className="w-4 h-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+      <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
     </span>
   ),
   passed: () => (
-    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-green-900/200/20">
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/20">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 13l4 4L19 7"/>
       </svg>
     </span>
   ),
   failed: () => (
-    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-900/200/20">
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>
     </span>
   ),
   needsReview: () => (
-    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-amber-500/20">
+    <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/20">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 9v4M12 17h.01"/>
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -376,12 +386,6 @@ const StatusIcons = {
 
 /**
  * Map raw backend status to user-facing display status.
- * - "confirmed" + observedResult="pass" → Passed (green)
- * - "confirmed" + observedResult="fail" → Failed (red)
- * - "failed" / "error" → Failed (red)
- * - "mismatch" → Needs Review (amber)
- * - "passed" → Passed (green)
- * - "running" → Running (blue)
  */
 type DisplayStatus = 'running' | 'passed' | 'failed' | 'needsReview';
 
@@ -393,17 +397,16 @@ function getDisplayStatus(activity: TestRunActivity): DisplayStatus {
     return activity.observedResult === 'fail' ? 'failed' : 'passed';
   }
   if (s === 'passed') return 'passed';
-  // failed, error, or anything else
   return 'failed';
 }
 
 const DISPLAY_STATUS_CONFIG: Record<DisplayStatus, {
-  label: string; bg: string; border: string; text: string; badgeBg: string; badgeText: string;
+  label: string; bg: string; border: string; text: string; badgeClasses: string;
 }> = {
-  running:     { label: 'Running',      bg: 'rgba(96,165,250,0.15)',  border: '#60a5fa40', text: '#60a5fa', badgeBg: 'bg-blue-900/200/20',   badgeText: 'text-blue-300' },
-  passed:      { label: 'Passed',       bg: 'rgba(74,222,128,0.15)',  border: '#4ade8040', text: '#4ade80', badgeBg: 'bg-green-900/200/20',  badgeText: 'text-green-300' },
-  failed:      { label: 'Failed',       bg: 'rgba(248,113,113,0.15)', border: '#f8717140', text: '#f87171', badgeBg: 'bg-red-900/200/20',    badgeText: 'text-red-300' },
-  needsReview: { label: 'Needs Review', bg: 'rgba(245,158,11,0.15)',  border: '#f59e0b40', text: '#f59e0b', badgeBg: 'bg-amber-500/20',  badgeText: 'text-amber-300' },
+  running:     { label: 'Running',      bg: 'rgba(96,165,250,0.15)',  border: '#60a5fa40', text: '#60a5fa', badgeClasses: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' },
+  passed:      { label: 'Passed',       bg: 'rgba(74,222,128,0.15)',  border: '#4ade8040', text: '#4ade80', badgeClasses: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' },
+  failed:      { label: 'Failed',       bg: 'rgba(248,113,113,0.15)', border: '#f8717140', text: '#f87171', badgeClasses: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' },
+  needsReview: { label: 'Needs Review', bg: 'rgba(245,158,11,0.15)',  border: '#f59e0b40', text: '#f59e0b', badgeClasses: 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
 };
 
 /** Test result notification */
@@ -418,14 +421,14 @@ const TestResultBadge: React.FC<{ activity: TestRunActivity }> = ({ activity }) 
       style={{ background: cfg.bg, borderColor: cfg.border }}
     >
       <IconComp />
-      <span className="font-medium text-gray-200 truncate flex-1" title={activity.testCaseName}>
+      <span className="font-medium text-foreground truncate flex-1" title={activity.testCaseName}>
         {activity.testCaseName}
       </span>
-      <span className={`shrink-0 px-2 py-0.5 rounded-full font-semibold text-[11px] ${cfg.badgeBg} ${cfg.badgeText}`}>
+      <Badge variant="outline" className={cn("shrink-0 text-[11px]", cfg.badgeClasses)}>
         {cfg.label}
-      </span>
+      </Badge>
       {activity.durationMs && (
-        <span className="shrink-0 text-slate-500 text-[11px]">
+        <span className="shrink-0 text-muted-foreground text-[11px]">
           {(activity.durationMs / 1000).toFixed(1)}s
         </span>
       )}
@@ -480,6 +483,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   testsGenerated = 0,
   bugsFound = 0,
 }) => {
+  const { t } = useTranslation('runner');
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const thinkingContainerRef = useRef<HTMLDivElement>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -495,7 +499,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
     return () => clearInterval(interval);
   }, [sessionStartTime, isRunning]);
 
-  // ── Auto-scroll feed (scoped to container — never scrolls the page) ────────
+  // ── Auto-scroll feed (scoped to container -- never scrolls the page) ────────
   useEffect(() => {
     const el = feedContainerRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -517,7 +521,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   // Parse thinking text into structured lines
   const thinkingLines = useMemo(() => parseThinkingLines(thinkingText.slice(-5000)), [thinkingText]);
 
-  // Last 30 tool calls reversed (newest first in reverse, but we show oldest→newest)
+  // Last 40 tool calls
   const displayCalls = useMemo(() => toolCalls.slice(-40), [toolCalls]);
 
   return (
@@ -525,86 +529,95 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
 
       {/* ── Phase Banner ─────────────────────────────────────────────────────── */}
       {(isRunning || phaseConfig) && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border"
-          style={{
-            background: phaseConfig ? phaseConfig.color + '15' : 'rgba(99,102,241,0.1)',
-            borderColor: phaseConfig ? phaseConfig.color + '40' : '#0284c740',
-          }}
-        >
-          <LiveDot active={isRunning} />
-          {phaseConfig && (
-            <span
-              className={`font-semibold text-sm ${phaseConfig.pulse && isRunning ? 'animate-pulse' : ''}`}
-              style={{ color: phaseConfig.color }}
-            >
-              {phaseConfig.label}
-            </span>
-          )}
-          {currentMessage && (
-            <span className="text-sm text-slate-500 truncate flex-1">{currentMessage}</span>
-          )}
-          {!currentMessage && !phaseConfig && isRunning && (
-            <span className="text-sm text-slate-500 animate-pulse">AI is working…</span>
-          )}
-          {elapsedMs > 0 && (
-            <span className="ml-auto flex items-center gap-1 text-xs text-slate-500 shrink-0">
-              <Icons.clock /> {formatTime(elapsedMs)}
-            </span>
-          )}
-        </div>
+        <Card className="shadow-none">
+          <CardContent className="flex items-center gap-3 px-4 py-2.5"
+            style={{
+              background: phaseConfig ? phaseConfig.color + '15' : undefined,
+              borderColor: phaseConfig ? phaseConfig.color + '40' : undefined,
+            }}
+          >
+            <LiveDot active={isRunning} />
+            {phaseConfig && (
+              <span
+                className="font-semibold text-sm"
+                style={{ color: phaseConfig.color }}
+              >
+                {phaseConfig.label}
+              </span>
+            )}
+            {currentMessage && (
+              <span className="text-sm text-muted-foreground truncate flex-1">{currentMessage}</span>
+            )}
+            {!currentMessage && !phaseConfig && isRunning && (
+              <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" /> {t('runner.qaLoop.liveMonitor.aiWorking')}
+              </span>
+            )}
+            {elapsedMs > 0 && (
+              <span className="ms-auto flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                <Icons.clock /> {formatTime(elapsedMs)}
+              </span>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* ── Collapsed AI Preview Status Bar ──────────────────────────────────── */}
       {!showPreview && isRunning && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-slate-300 text-sm">
-              AI is scanning... {pagesExplored} pages found, {testsGenerated} test cases generated
-            </span>
-          </div>
-          <button
-            onClick={() => setShowPreview(true)}
-            className="text-sky-400 hover:text-sky-300 text-sm flex items-center gap-1"
-          >
-            Show AI Preview
-          </button>
-        </div>
+        <Card className="shadow-none">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <LiveDot active />
+              <span className="text-foreground text-sm">
+                {t('runner.qaLoop.liveMonitor.scanningStatus', { pages: pagesExplored, tests: testsGenerated })}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPreview(true)}
+              className="text-sky-500 hover:text-sky-400"
+            >
+              {t('runner.qaLoop.liveMonitor.showAiPreview')}
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── Main Grid: Browser + Thinking ────────────────────────────────────── */}
-      {showPreview && (<div className={`grid gap-4 ${expandedPreview ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[3fr_2fr]'}`}>
+      {showPreview && (<div className={cn("grid gap-4", expandedPreview ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[3fr_2fr]')}>
 
         {/* Browser Preview */}
-        <div className="rounded-xl overflow-hidden border border-gray-700/60 bg-gray-900/80"
-          style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5), 0 0 1px rgba(99,102,241,0.3) inset' }}>
+        <Card className="overflow-hidden shadow-sm">
           {/* Browser chrome bar */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/90 border-b border-gray-700/50">
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
             <div className="flex gap-1.5">
               <div className="w-3 h-3 rounded-full bg-red-400/70" />
               <div className="w-3 h-3 rounded-full bg-yellow-400/70" />
               <div className="w-3 h-3 rounded-full bg-green-400/70" />
             </div>
-            <div className="flex-1 flex items-center gap-2 mx-2 bg-gray-700/50 rounded-md px-3 py-1">
+            <div className="flex-1 flex items-center gap-2 mx-2 bg-muted rounded-md px-3 py-1">
               <Icons.monitor />
-              <span className="text-xs text-slate-500 truncate font-mono">
-                {currentUrl || '—'}
+              <span className="text-xs text-muted-foreground truncate font-mono">
+                {currentUrl || '\u2014'}
               </span>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
               onClick={() => setExpandedPreview(!expandedPreview)}
-              className="text-slate-500 hover:text-gray-200 transition-colors p-1"
               title={expandedPreview ? 'Minimize' : 'Expand'}
             >
               {expandedPreview ? <Icons.compress /> : <Icons.expand />}
-            </button>
+            </Button>
           </div>
           {/* Screenshot area with loading states */}
-          <div className={`relative ${expandedPreview ? 'h-[520px]' : 'h-64 lg:h-80'} bg-gray-950 flex items-center justify-center`}>
+          <div className={cn("relative bg-background flex items-center justify-center", expandedPreview ? 'h-[50vh] lg:h-[600px]' : 'h-[50vh] lg:h-[600px]')}>
             {currentScreenshot ? (
               <img
                 src={currentScreenshot}
-                alt="Live browser view"
+                alt={t('runner.qaLoop.liveMonitor.liveBrowserView')}
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   console.warn('Screenshot image failed to load, clearing');
@@ -615,96 +628,82 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 }}
               />
             ) : (
-              <div className="flex flex-col items-center gap-4 text-slate-400">
+              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 {isRunning ? (
                   thinkingText ? (
                     /* Phase 2: AI is working but no screenshot yet */
                     <>
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full border-2 border-sky-500/30 border-t-sky-400 animate-spin" />
-                        <span className="absolute inset-0 flex items-center justify-center text-lg">&#129504;</span>
-                      </div>
-                      <span className="text-sm text-sky-300 animate-pulse">AI is exploring your website...</span>
+                      <Loader2 className="h-10 w-10 animate-spin text-sky-500" />
+                      <span className="text-sm text-sky-500">{t('runner.qaLoop.liveMonitor.aiExploring')}</span>
                       <div className="flex gap-1">
                         {[0, 1, 2, 3, 4].map(i => (
-                          <div key={i} className="w-8 h-1 rounded-full bg-sky-900 overflow-hidden">
-                            <div className="h-full bg-sky-500 rounded-full animate-pulse" style={{ animationDelay: `${i * 0.2}s`, width: '60%' }} />
-                          </div>
+                          <Skeleton key={i} className="w-8 h-1 rounded-full" />
                         ))}
                       </div>
                     </>
                   ) : (
                     /* Phase 1: Just started, connecting */
                     <>
-                      <div className="w-12 h-12 rounded-full border-2 border-indigo-500/30 border-t-indigo-400 animate-spin" />
-                      <span className="text-sm text-slate-400">&#128260; Connecting to AI agent...</span>
+                      <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
+                      <span className="text-sm text-muted-foreground">{t('runner.qaLoop.liveMonitor.connecting')}</span>
                       {/* Loading skeleton */}
                       <div className="w-48 space-y-2 mt-2">
-                        <div className="h-2 bg-slate-800 rounded animate-pulse" />
-                        <div className="h-2 bg-slate-800 rounded animate-pulse w-3/4" style={{ animationDelay: '0.2s' }} />
-                        <div className="h-2 bg-slate-800 rounded animate-pulse w-1/2" style={{ animationDelay: '0.4s' }} />
+                        <Skeleton className="h-2 w-full" />
+                        <Skeleton className="h-2 w-3/4" />
+                        <Skeleton className="h-2 w-1/2" />
                       </div>
                     </>
                   )
                 ) : (
                   <>
                     <Icons.monitor />
-                    <span className="text-sm">No preview available</span>
+                    <span className="text-sm">{t('runner.qaLoop.liveMonitor.noPreview')}</span>
                   </>
                 )}
               </div>
             )}
             {/* Live indicator overlay */}
             {isRunning && currentScreenshot && (
-              <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/70 rounded-full px-2 py-1">
+              <div className="absolute top-2 end-2 flex items-center gap-1.5 bg-background/80 rounded-full px-2 py-1 border border-border">
                 <LiveDot />
-                <span className="text-xs text-green-400 font-semibold">LIVE</span>
+                <span className="text-xs text-green-500 font-semibold">LIVE</span>
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
-        {/* AI Thinking Panel — Structured Action View */}
+        {/* AI Thinking Panel -- Structured Action View */}
         {!expandedPreview && (
-          <div className="rounded-xl border border-[#334155] bg-[#0f172a] overflow-hidden flex flex-col"
-            style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}>
+          <Card className="overflow-hidden flex flex-col shadow-sm">
             {/* Header */}
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-800/90 border-b border-[#334155]">
-              <span className="text-green-400"><Icons.brain /></span>
-              <span className="text-sm font-semibold text-gray-200">AI Thinking</span>
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50 border-b border-border">
+              <span className="text-green-500"><Icons.brain /></span>
+              <span className="text-sm font-semibold text-foreground">{t('runner.qaLoop.liveMonitor.aiThinking')}</span>
               {thinkingText && isRunning && (
-                <span className="ml-1 flex gap-0.5">
-                  {[0, 1, 2].map(i => (
-                    <span key={i} className="w-1 h-1 rounded-full bg-green-400 animate-bounce"
-                      style={{ animationDelay: `${i * 0.15}s` }} />
-                  ))}
-                </span>
+                <Loader2 className="h-3 w-3 animate-spin text-green-500 ms-1" />
               )}
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowThinking(!showThinking)}
-                className="ml-auto text-xs text-slate-400 hover:text-slate-500 transition-colors px-2 py-0.5 rounded bg-gray-700/50"
+                className="ms-auto text-xs text-muted-foreground"
               >
-                {showThinking ? 'Hide' : 'Show'}
-              </button>
+                {showThinking ? t('runner.qaLoop.liveMonitor.hide') : t('runner.qaLoop.liveMonitor.show')}
+              </Button>
             </div>
             {/* Structured Content */}
             {showThinking ? (
-              <div ref={thinkingContainerRef} className="flex-1 overflow-y-auto font-mono text-sm"
-                style={{ minHeight: '200px', maxHeight: '400px' }}>
+              <div ref={thinkingContainerRef} className="flex-1 overflow-y-auto font-mono text-xs sm:text-sm h-[40vh] md:h-[50vh] lg:h-[500px]"
+                aria-live="polite">
                 {thinkingLines.length === 0 ? (
                   <div className="p-4">
                     {isRunning ? (
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <span className="flex gap-0.5">
-                          {[0, 1, 2].map(i => (
-                            <span key={i} className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce"
-                              style={{ animationDelay: `${i * 0.15}s` }} />
-                          ))}
-                        </span>
-                        <span className="text-[13px] italic">Waiting for AI response...</span>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span className="text-[13px] italic">{t('runner.qaLoop.liveMonitor.waitingForAi')}</span>
                       </div>
                     ) : (
-                      <span className="text-slate-500 italic text-[13px]">Session is paused or stopped.</span>
+                      <span className="text-muted-foreground italic text-[13px]">{t('runner.qaLoop.liveMonitor.sessionPaused')}</span>
                     )}
                   </div>
                 ) : (
@@ -713,13 +712,16 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                     return (
                       <div
                         key={idx}
-                        className={`flex items-start gap-2 py-2 px-4 text-[13px] ${style.color} ${style.borderColor || ''} ${
-                          idx < thinkingLines.length - 1 ? 'border-b border-[#1e293b]' : ''
-                        }`}
+                        className={cn(
+                          "flex items-start gap-2 py-2 px-4 text-[13px]",
+                          style.color,
+                          style.borderColor || '',
+                          idx < thinkingLines.length - 1 ? 'border-b border-border' : ''
+                        )}
                       >
                         <span className="shrink-0 w-5 text-center">{style.icon}</span>
                         <span className="flex-1 break-words">{line.text}</span>
-                        <span className="shrink-0 text-[11px] text-slate-600 ml-auto tabular-nums">{line.timestamp}</span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground ms-auto tabular-nums">{line.timestamp}</span>
                       </div>
                     );
                   })
@@ -727,38 +729,40 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
                 {/* Blinking cursor while streaming */}
                 {isRunning && thinkingText && (
                   <div className="px-4 py-1">
-                    <span className="inline-block w-2 h-3 bg-green-400 animate-pulse" />
+                    <span className="inline-block w-2 h-3 bg-green-500" />
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-xs text-slate-400 p-4">
-                Click "Show" to see AI reasoning
+              <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground p-4">
+                {t('runner.qaLoop.liveMonitor.clickShowReasoning')}
               </div>
             )}
-          </div>
+          </Card>
         )}
 
         {/* Hide Preview button */}
         <div className="col-span-full flex justify-end mt-1">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowPreview(false)}
-            className="text-slate-400 hover:text-slate-300 text-xs flex items-center gap-1"
+            className="text-muted-foreground text-xs"
           >
-            Hide Preview
-          </button>
+            {t('runner.qaLoop.liveMonitor.hidePreview')}
+          </Button>
         </div>
       </div>)}
 
       {/* ── Stats Bar ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3 justify-start">
-        <StatTile value={iteration || 0} label="Iteration" color="#818cf8"
-          icon={<Icons.spark />} pulse={isRunning} />
-        <StatTile value={pagesExplored} label="Pages" color="#60a5fa"
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-wrap gap-2 sm:gap-3 justify-start">
+        <StatTile value={iteration || 0} label={t('runner.qaLoop.liveMonitor.iteration')} color="#818cf8"
+          icon={<Icons.spark />} />
+        <StatTile value={pagesExplored} label={t('runner.qaLoop.liveMonitor.pages')} color="#60a5fa"
           icon={<Icons.navigate />} />
-        <StatTile value={testsGenerated} label="Tests" color="#4ade80"
+        <StatTile value={testsGenerated} label={t('runner.qaLoop.liveMonitor.tests')} color="#4ade80"
           icon={<Icons.test />} />
-        <StatTile value={bugsFound} label="Bugs" color="#f87171"
+        <StatTile value={bugsFound} label={t('runner.qaLoop.liveMonitor.bugs')} color="#f87171"
           icon={<Icons.bug />} />
         {testRunActivity.length > 0 && (() => {
           const passedCount = testRunActivity.filter(a => getDisplayStatus(a) === 'passed').length;
@@ -767,87 +771,88 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
           return (
             <>
               {passedCount > 0 && (
-                <StatTile value={passedCount} label="Passed" color="#4ade80" icon={<Icons.test />} />
+                <StatTile value={passedCount} label={t('runner.qaLoop.liveMonitor.passed')} color="#4ade80" icon={<Icons.test />} />
               )}
               {failedCount > 0 && (
-                <StatTile value={failedCount} label="Failed" color="#f87171" icon={<Icons.bug />} />
+                <StatTile value={failedCount} label={t('runner.qaLoop.liveMonitor.failed')} color="#f87171" icon={<Icons.bug />} />
               )}
               {reviewCount > 0 && (
-                <StatTile value={reviewCount} label="Review" color="#f59e0b" icon={<Icons.explore />} />
+                <StatTile value={reviewCount} label={t('runner.qaLoop.liveMonitor.review')} color="#f59e0b" icon={<Icons.explore />} />
               )}
             </>
           );
         })()}
-        {/* Credits/cost removed from QA Loop — shown only on Billing page */}
+        {/* Credits/cost removed from QA Loop -- shown only on Billing page */}
       </div>
 
       {/* ── Test Execution Feed ───────────────────────────────────────────────── */}
       {testRunActivity.length > 0 && (
-        <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 border-b border-gray-700/50 flex-wrap">
-            <span className="text-indigo-400"><Icons.test /></span>
-            <span className="text-sm font-semibold text-gray-200">Test Execution</span>
+        <Card className="overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 border-b border-border flex-wrap">
+            <span className="text-indigo-500"><Icons.test /></span>
+            <span className="text-sm font-semibold text-foreground">{t('runner.qaLoop.liveMonitor.testExecution')}</span>
             {(() => {
               const p = testRunActivity.filter(a => getDisplayStatus(a) === 'passed').length;
               const f = testRunActivity.filter(a => getDisplayStatus(a) === 'failed').length;
               const r = testRunActivity.filter(a => getDisplayStatus(a) === 'needsReview').length;
               return (
                 <>
-                  {p > 0 && <span className="text-xs bg-green-900/50 text-green-300 px-2 py-0.5 rounded-full">{p} passed</span>}
-                  {f > 0 && <span className="text-xs bg-red-900/50 text-red-300 px-2 py-0.5 rounded-full">{f} failed</span>}
-                  {r > 0 && <span className="text-xs bg-amber-900/50 text-amber-300 px-2 py-0.5 rounded-full">{r} needs review</span>}
+                  {p > 0 && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800">{t('runner.qaLoop.results.passedCount', { count: p })}</Badge>}
+                  {f > 0 && <Badge variant="outline" className="text-xs bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800">{t('runner.qaLoop.results.failedCount', { count: f })}</Badge>}
+                  {r > 0 && <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-800">{t('runner.qaLoop.liveMonitor.needsReviewCount', { count: r })}</Badge>}
                 </>
               );
             })()}
           </div>
-          <div className="p-3 space-y-1.5 max-h-48 overflow-y-auto">
+          <div className="p-2 sm:p-3 space-y-1.5 max-h-36 sm:max-h-48 overflow-y-auto" aria-live="polite">
             {[...testRunActivity].reverse().map(activity => (
               <TestResultBadge key={activity.testCaseId} activity={activity} />
             ))}
           </div>
           {testRunActivity.some(a => a.failureReason) && (
-            <div className="px-4 pb-3 text-xs text-red-400 truncate border-t border-gray-700/30 pt-2">
-              ⚠ {testRunActivity.find(a => a.failureReason)?.failureReason}
+            <div className="px-4 pb-3 text-xs text-red-500 truncate border-t border-border pt-2">
+              {testRunActivity.find(a => a.failureReason)?.failureReason}
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* ── Action Feed ──────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-700/60 bg-gray-900/80 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 border-b border-gray-700/50">
-          <span className="text-sky-400"><Icons.spark /></span>
-          <span className="text-sm font-semibold text-gray-200">Action Feed</span>
+      <Card className="overflow-hidden shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 border-b border-border">
+          <span className="text-sky-500"><Icons.spark /></span>
+          <span className="text-sm font-semibold text-foreground">{t('runner.qaLoop.liveMonitor.actionFeed')}</span>
           {toolCalls.length > 0 && (
-            <span className="ml-1 text-xs bg-sky-900/50 text-sky-300 px-2 py-0.5 rounded-full">
+            <Badge variant="outline" className="ms-1 text-xs bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300 border-sky-200 dark:border-sky-800">
               {toolCalls.length}
-            </span>
+            </Badge>
           )}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowToolCalls(!showToolCalls)}
-            className="ml-auto text-xs text-slate-400 hover:text-slate-500 transition-colors px-2 py-0.5 rounded bg-gray-700/50"
+            className="ms-auto text-xs text-muted-foreground"
           >
-            {showToolCalls ? 'Hide' : 'Show'}
-          </button>
+            {showToolCalls ? t('runner.qaLoop.liveMonitor.hide') : t('runner.qaLoop.liveMonitor.show')}
+          </Button>
         </div>
         {showToolCalls && (
-          <div ref={feedContainerRef} className="p-3 space-y-1.5 max-h-72 overflow-y-auto">
+          <div ref={feedContainerRef} className="p-2 sm:p-3 space-y-1 sm:space-y-1.5 max-h-[40vh] sm:max-h-72 lg:max-h-96 overflow-y-auto" aria-live="polite">
             {displayCalls.length === 0 ? (
-              <div className="text-slate-400 text-sm py-3 text-center italic">
-                {isRunning ? 'Waiting for first action…' : 'No actions recorded'}
+              <div className="text-muted-foreground text-sm py-3 text-center italic">
+                {isRunning ? t('runner.qaLoop.liveMonitor.waitingForAction') : t('runner.qaLoop.liveMonitor.noActions')}
               </div>
             ) : (
               displayCalls.map((call, idx) => (
                 <ActionRow
                   key={idx}
                   call={call}
-                  isNew={idx >= prevToolCallsLen.current - 1}
                 />
               ))
             )}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

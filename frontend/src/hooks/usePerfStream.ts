@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { config } from '@/config';
 
 export interface PerfMetric {
   timestamp: string;
@@ -72,11 +73,7 @@ export function usePerfStream(): UsePerfStreamReturn {
   }, []);
 
   const createConnection = useCallback((runId: string) => {
-    const baseWsUrl = import.meta.env.VITE_QA_LOOP_WS_URL || (
-      window.location.protocol === 'https:'
-        ? `wss://${window.location.host}`
-        : 'ws://localhost:3012'
-    );
+    const baseWsUrl = config.qaLoopWsUrl;
 
     const fullUrl = `${baseWsUrl}/ws/perf?runId=${runId}`;
     console.log('[PERF-WS] Connecting:', fullUrl);

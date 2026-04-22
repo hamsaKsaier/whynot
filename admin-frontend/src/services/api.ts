@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { config } from '@/config';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = config.apiUrl;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -194,6 +195,43 @@ export const impersonateUser = async (id: string) => {
   return res.data;
 };
 
+export const resetUserPassword = async (id: string) => {
+  const res = await apiClient.post(`/admin/users/${id}/reset-password`);
+  return res.data;
+};
+
+export const moveUserOrganization = async (id: string, workspaceId: string) => {
+  const res = await apiClient.patch(`/admin/users/${id}/organization`, { workspaceId });
+  return res.data;
+};
+
+export const forceUserPlan = async (id: string, planId: string) => {
+  const res = await apiClient.patch(`/admin/users/${id}/plan`, { planId });
+  return res.data;
+};
+
+// ─── Admin: Organizations ─────────────────────────────────────────────────
+
+export const getAdminOrganizations = async (params?: { offset?: number; limit?: number; search?: string }) => {
+  const res = await apiClient.get('/admin/organizations', { params });
+  return res.data;
+};
+
+export const getAdminOrganization = async (id: string) => {
+  const res = await apiClient.get(`/admin/organizations/${id}`);
+  return res.data;
+};
+
+export const updateOrganization = async (id: string, data: { name?: string; status?: string; planId?: string }) => {
+  const res = await apiClient.patch(`/admin/organizations/${id}`, data);
+  return res.data;
+};
+
+export const setOrgFlagOverrideViaOrg = async (orgId: string, key: string, enabled: boolean) => {
+  const res = await apiClient.post(`/admin/organizations/${orgId}/flags/${key}`, { enabled });
+  return res.data;
+};
+
 // ─── Phase 6: System Settings ───────────────────────────────────────────────
 
 export const getSystemSettings = async () => {
@@ -230,9 +268,118 @@ export const deleteAnnouncement = async (id: string) => {
 
 // ─── Phase 6: Audit Log ────────────────────────────────────────────────────
 
-export const getAuditLog = async (params?: { offset?: number; limit?: number; actor_id?: string; action?: string; target_type?: string }) => {
+export const getAuditLog = async (params?: { cursor?: string; limit?: number; actor_id?: string; action?: string; target_type?: string; target_id?: string; from?: string; to?: string }) => {
   const res = await apiClient.get('/admin/audit-log', { params });
   return res.data;
+};
+
+// ─── Admin: Usage Tracking ────────────────────────────────────────────────
+
+export const getUsageEvents = async (params?: { cursor?: string; limit?: number; org_id?: string; from?: string; to?: string }) => {
+  const res = await apiClient.get('/admin/usage', { params });
+  return res.data;
+};
+
+export const getUsageSummary = async () => {
+  const res = await apiClient.get('/admin/usage/summary');
+  return res.data;
+};
+
+// ─── Phase 5: Feature Flags ───────────────────────────────────────────────
+
+export const getFeatureFlags = async () => {
+  const res = await apiClient.get('/admin/feature-flags');
+  return res.data;
+};
+
+export const getOrgFeatureFlags = async (orgId: string) => {
+  const res = await apiClient.get(`/admin/feature-flags/${orgId}`);
+  return res.data;
+};
+
+export const setOrgFlagOverride = async (orgId: string, key: string, enabled: boolean) => {
+  const res = await apiClient.put(`/admin/feature-flags/${orgId}/${key}`, { enabled });
+  return res.data;
+};
+
+export const clearOrgFlagOverride = async (orgId: string, key: string) => {
+  const res = await apiClient.delete(`/admin/feature-flags/${orgId}/${key}`);
+  return res.data;
+};
+
+// ─── Admin: Billing Config ─────────────────────────────────────────────────
+
+export const getBillingConfig = async () => {
+  const res = await apiClient.get('/admin/billing-config');
+  return res.data;
+};
+
+export const updateBillingConfig = async (updates: Record<string, string>) => {
+  const res = await apiClient.patch('/admin/billing-config', updates);
+  return res.data;
+};
+
+// ─── Admin: AI Providers ──────────────────────────────────────────────────
+
+export interface AIProviderEntry {
+  provider: string;
+  displayName: string;
+  enabled: boolean;
+  rateLimit: number;
+  hasKey: boolean;
+  hasFallbackKey: boolean;
+  maskedKey: string | null;
+  maskedFallbackKey: string | null;
+  defaultModel: string;
+  models: string[];
+}
+
+export interface AIProvidersConfig {
+  providers: AIProviderEntry[];
+  defaultProvider: { provider: string; model: string };
+  fallbackOrder: string[];
+}
+
+export const getAIProviders = async (): Promise<AIProvidersConfig> => {
+  const res = await apiClient.get('/admin/ai-providers');
+  return res.data;
+};
+
+export const updateAIProviders = async (providers: Partial<AIProviderEntry>[]): Promise<AIProvidersConfig> => {
+  const res = await apiClient.patch('/admin/ai-providers', { providers });
+  return res.data;
+};
+
+export const setProviderKey = async (provider: string, apiKey: string): Promise<{ hasKey: boolean; maskedKey: string }> => {
+  const res = await apiClient.post(`/admin/ai-providers/${provider}/key`, { apiKey });
+  return res.data;
+};
+
+export const removeProviderKey = async (provider: string): Promise<void> => {
+  await apiClient.delete(`/admin/ai-providers/${provider}/key`);
+};
+
+export const setProviderFallbackKey = async (provider: string, apiKey: string): Promise<{ hasFallbackKey: boolean; maskedFallbackKey: string }> => {
+  const res = await apiClient.post(`/admin/ai-providers/${provider}/fallback-key`, { apiKey });
+  return res.data;
+};
+
+export const removeProviderFallbackKey = async (provider: string): Promise<void> => {
+  await apiClient.delete(`/admin/ai-providers/${provider}/fallback-key`);
+};
+
+export const testProviderKey = async (provider: string, useFallback?: boolean): Promise<{ ok: boolean; latencyMs?: number; error?: string }> => {
+  const params = useFallback ? '?useFallback=true' : '';
+  const res = await apiClient.post(`/admin/ai-providers/${provider}/test${params}`);
+  return res.data;
+};
+
+export const setDefaultModel = async (provider: string, model: string): Promise<void> => {
+  await apiClient.patch('/admin/ai-providers/default-model', { provider, model });
+};
+
+export const setFallbackOrder = async (order: string[]): Promise<void> => {
+  await apiClient.patch('/admin/ai-providers/fallback-order', { order });
 };
 
 export default apiClient;

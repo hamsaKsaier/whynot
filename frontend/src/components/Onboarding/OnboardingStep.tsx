@@ -27,15 +27,15 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
-        <p className="text-slate-400">{description}</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">{title}</h2>
+        <p className="text-muted-foreground">{description}</p>
       </div>
 
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-card rounded-lg p-6 border border-border">
         {content}
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-slate-700">
+      <div className="flex items-center justify-between pt-4 border-t border-border">
         {showSkip && (
           <Button variant="secondary" onClick={onSkip}>
             Skip
@@ -43,7 +43,7 @@ export const OnboardingStep: React.FC<OnboardingStepProps> = ({
         )}
         {!showSkip && <div />}
         
-        <div className="flex gap-3 ml-auto">
+        <div className="flex gap-3 ms-auto">
           {isLast ? (
             <Button onClick={onGetStarted}>
               Get Started

@@ -8,6 +8,7 @@ import { getToolsForFocusArea } from './tools/tool-definitions';
 import { ClaudeModel, calculateCost, getModelDisplayName, MODEL_CAPABILITIES } from './model-selector';
 import { QALoopRepository } from './repositories/qa-loop-repository';
 import { combineDocuments, ParsedDocument } from './document-parser';
+import { getPlatformKey } from './platform-config';
 
 /** Mirror of FocusArea from loop-orchestrator (defined here to avoid a circular import). */
 type FocusArea = 'explore' | 'chaos' | 'retest' | 'investigate';
@@ -42,7 +43,7 @@ export interface IterationResult {
 }
 
 export class ClaudeSession {
-  private client: Anthropic;
+  private client: Anthropic | null = null;
   private sessionId: string;
   private config: LoopConfig;
   private toolExecutor: ToolExecutor;
@@ -67,12 +68,6 @@ export class ClaudeSession {
     preloadedDocumentContext?: string | null,
     onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void
   ) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
-    }
-
-    this.client = new Anthropic({ apiKey });
     this.sessionId = sessionId;
     this.config = config;
     this.toolExecutor = new ToolExecutor(sessionId, config, mcpBrowser, onTestCaseCreated);
@@ -90,6 +85,18 @@ export class ClaudeSession {
     if (preloadedDocumentContext !== undefined) {
       this.documentContext = preloadedDocumentContext;
     }
+  }
+
+  /** Lazily initialize the Anthropic client using the platform key. */
+  private async getClient(): Promise<Anthropic> {
+    if (!this.client) {
+      const apiKey = await getPlatformKey('anthropic');
+      if (!apiKey) {
+        throw new Error('No Anthropic API key configured on platform');
+      }
+      this.client = new Anthropic({ apiKey });
+    }
+    return this.client;
   }
 
   /**
@@ -204,7 +211,8 @@ export class ClaudeSession {
         // Make the API call with streaming using dynamic model.
         // Pass system as a content-block array so Anthropic prompt caching applies
         // to the (static) system prompt across iterations.
-        const stream = await this.client.messages.stream({
+        const client = await this.getClient();
+        const stream = await client.messages.stream({
           model,
           max_tokens: maxTokens,
           system: [

@@ -1,0 +1,481 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.creditsLow in ar 1`] = `
+"<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[ar:billing.creditsLow.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[ar:billing.creditsLow.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.creditsLow in de 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[de:billing.creditsLow.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[de:billing.creditsLow.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.creditsLow in en 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[en:billing.creditsLow.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[en:billing.creditsLow.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.creditsLow in es 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[es:billing.creditsLow.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[es:billing.creditsLow.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.creditsLow in fr 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[fr:billing.creditsLow.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[fr:billing.creditsLow.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentFailed in ar 1`] = `
+"<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[ar:billing.paymentFailed.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[ar:billing.paymentFailed.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentFailed in de 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[de:billing.paymentFailed.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[de:billing.paymentFailed.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentFailed in en 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[en:billing.paymentFailed.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[en:billing.paymentFailed.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentFailed in es 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[es:billing.paymentFailed.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[es:billing.paymentFailed.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentFailed in fr 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[fr:billing.paymentFailed.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[fr:billing.paymentFailed.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentSuccess in ar 1`] = `
+"<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[ar:billing.paymentSuccess.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[ar:billing.paymentSuccess.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentSuccess in de 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[de:billing.paymentSuccess.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[de:billing.paymentSuccess.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentSuccess in en 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[en:billing.paymentSuccess.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[en:billing.paymentSuccess.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentSuccess in es 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[es:billing.paymentSuccess.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[es:billing.paymentSuccess.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.paymentSuccess in fr 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[fr:billing.paymentSuccess.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[fr:billing.paymentSuccess.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.renewalReminder in ar 1`] = `
+"<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[ar:billing.renewalReminder.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[ar:billing.renewalReminder.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.renewalReminder in de 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[de:billing.renewalReminder.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[de:billing.renewalReminder.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.renewalReminder in en 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[en:billing.renewalReminder.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[en:billing.renewalReminder.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.renewalReminder in es 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[es:billing.renewalReminder.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[es:billing.renewalReminder.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.renewalReminder in fr 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[fr:billing.renewalReminder.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[fr:billing.renewalReminder.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.subscriptionCreated in ar 1`] = `
+"<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[ar:billing.subscriptionCreated.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[ar:billing.subscriptionCreated.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.subscriptionCreated in de 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[de:billing.subscriptionCreated.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[de:billing.subscriptionCreated.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.subscriptionCreated in en 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[en:billing.subscriptionCreated.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[en:billing.subscriptionCreated.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.subscriptionCreated in es 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[es:billing.subscriptionCreated.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[es:billing.subscriptionCreated.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.subscriptionCreated in fr 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[fr:billing.subscriptionCreated.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[fr:billing.subscriptionCreated.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.trialEnding in ar 1`] = `
+"<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[ar:billing.trialEnding.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[ar:billing.trialEnding.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.trialEnding in de 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[de:billing.trialEnding.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[de:billing.trialEnding.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.trialEnding in en 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[en:billing.trialEnding.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[en:billing.trialEnding.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.trialEnding in es 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[es:billing.trialEnding.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[es:billing.trialEnding.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;
+
+exports[`Email template rendering > HTML snapshots per language > snapshot: billing.trialEnding in fr 1`] = `
+"<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;padding:32px 16px;">
+<tr><td>
+<div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;">
+<p style="font-size:14px;line-height:1.6;">[fr:billing.trialEnding.body]</p><p style="text-align:center;"><a href="#" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;">[fr:billing.trialEnding.cta]</a></p>
+</div>
+<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:24px;">WhyNot QA</p>
+</td></tr>
+</table>
+</body></html>"
+`;

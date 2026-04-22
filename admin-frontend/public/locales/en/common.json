@@ -1,0 +1,386 @@
+{
+  "admin": {
+    "nav": {
+      "superadminTitle": "Super Admin",
+      "dashboard": "Dashboard",
+      "analytics": "Analytics",
+      "users": "Users",
+      "plans": "Plans",
+      "subscriptions": "Subscriptions",
+      "credits": "Credits",
+      "announcements": "Announcements",
+      "auditLog": "Audit Log",
+      "settings": "Settings",
+      "featureFlags": "Feature Flags",
+      "billingConfig": "Billing Config",
+      "aiProviders": "AI Providers",
+      "organizations": "Organizations",
+      "usageTracking": "Usage Tracking",
+      "usage": "Usage",
+      "management": "Management",
+      "system": "System",
+      "comingSoon": "Coming Soon",
+      "sections": {
+        "platform": "Platform",
+        "billing": "Billing",
+        "flagsAi": "Flags & AI",
+        "insights": "Insights",
+        "content": "Content",
+        "settings": "Settings"
+      }
+    },
+    "common": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "create": "Create",
+      "update": "Update",
+      "export": "Export",
+      "exportCSV": "Export as CSV",
+      "exportJSON": "Export as JSON",
+      "confirm": "Confirm",
+      "search": "Search...",
+      "noData": "No data found",
+      "loading": "Loading...",
+      "processing": "Processing...",
+      "actions": "Actions",
+      "selected": "{{count}} selected",
+      "clear": "Clear",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "selectAll": "Select all",
+      "selectRow": "Select row {{id}}",
+      "pageOf": "Page {{current}} of {{total}}",
+      "signOut": "Sign out",
+      "typeToConfirm": "Type {{text}} to confirm",
+      "apply": "Apply",
+      "from": "From",
+      "to": "To",
+      "selectDateRange": "Select date range",
+      "dateRange": "{{from}} — {{to}}",
+      "presets": {
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "last90Days": "Last 90 days",
+        "thisYear": "This year"
+      },
+      "logoAlt": "WhyNot — AI QA platform"
+    },
+    "login": {
+      "title": "Admin Login",
+      "email": "Email",
+      "password": "Password",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "adminOnly": "Admin access only. Regular users cannot log in here.",
+      "failed": "Login failed. Admin access required."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "totalUsers": "Total Users",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "activePlans": "Active Plans",
+      "recentSignups": "Recent Signups",
+      "subscriptionsByPlan": "Subscriptions by Plan",
+      "recentUsers": "Recent Users",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "plan": "Plan",
+        "credits": "Credits",
+        "joined": "Joined"
+      },
+      "subscribers": "{{count}} subscribers",
+      "noUsers": "No users yet",
+      "noSubscriptionData": "No subscription data",
+      "creditsLabel": "credits",
+      "quickActions": {
+        "users": "Users",
+        "plans": "Plans",
+        "analytics": "Analytics",
+        "settings": "Settings"
+      }
+    },
+    "users": {
+      "title": "Users",
+      "totalUsers": "{{count}} total users",
+      "searchPlaceholder": "Search by name or email...",
+      "allRoles": "All Roles",
+      "exportSelected": "Export selected",
+      "emailSelected": "Email selected",
+      "noUsersFound": "No users found",
+      "viewDetail": "View Details",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "plan": "Plan",
+        "credits": "Credits",
+        "joined": "Joined"
+      },
+      "roles": {
+        "user": "User",
+        "admin": "Admin",
+        "superAdmin": "Super Admin"
+      }
+    },
+    "userDetail": {
+      "impersonate": "Impersonate",
+      "resetPassword": "Reset Password",
+      "ban": "Ban",
+      "unban": "Unban",
+      "banTitle": "Ban User",
+      "banDescription": "Are you sure you want to ban {{name}}? They will lose access to their account immediately.",
+      "banConfirm": "Ban User",
+      "tabs": {
+        "overview": "Overview",
+        "subscription": "Subscription",
+        "flags": "Flags",
+        "audit": "Audit"
+      },
+      "role": "Role",
+      "id": "ID",
+      "joined": "Joined",
+      "grantCredits": "Grant",
+      "revokeCredits": "Revoke",
+      "amount": "Amount",
+      "description": "Description",
+      "reason": "Reason...",
+      "notFound": "User not found.",
+      "noPlan": "No plan",
+      "credits": "credits",
+      "forcePlan": "Force Plan",
+      "selectPlan": "Select Plan",
+      "choosePlan": "Choose a plan...",
+      "applyPlan": "Apply Plan",
+      "flagOverrides": "Feature Flag Overrides",
+      "noFlags": "No flag overrides for this user's workspace.",
+      "defaultGrant": "Admin grant",
+      "defaultRevoke": "Admin revoke"
+    },
+    "organizations": {
+      "title": "Organizations",
+      "totalOrgs": "{{count}} total organizations",
+      "searchPlaceholder": "Search by name...",
+      "noOrgsFound": "No organizations found",
+      "notFound": "Organization not found.",
+      "backToOrgs": "Back to Organizations",
+      "noMembers": "No members found",
+      "columns": {
+        "name": "Name",
+        "owner": "Owner",
+        "plan": "Plan",
+        "status": "Status",
+        "credits": "Credits",
+        "created": "Created"
+      }
+    },
+    "orgDetail": {
+      "tabs": {
+        "overview": "Overview",
+        "members": "Members",
+        "subscription": "Subscription",
+        "flags": "Flags",
+        "audit": "Audit"
+      },
+      "details": "Organization Details",
+      "name": "Name",
+      "id": "ID",
+      "owner": "Owner",
+      "created": "Created",
+      "credits": "Credits",
+      "plan": "Plan",
+      "status": "Status",
+      "selectPlan": "Select plan...",
+      "subscriptionDetails": "Subscription Details",
+      "periodEnd": "Period End",
+      "trialEnd": "Trial End",
+      "flagOverrides": "Feature Flag Overrides",
+      "noFlagOverrides": "No flag overrides set for this organization.",
+      "none": "None"
+    },
+    "plans": {
+      "title": "Plans",
+      "newPlan": "New Plan",
+      "editPlan": "Edit Plan",
+      "createPlan": "Create Plan",
+      "saveChanges": "Save Changes",
+      "archivePlan": "Archive Plan",
+      "archiveDescription": "Are you sure you want to archive \"{{name}}\"? Existing subscribers won't be affected, but new subscriptions will be disabled.",
+      "archive": "Archive",
+      "restore": "Restore",
+      "syncStripe": "Sync to Stripe",
+      "noPlans": "No plans created yet.",
+      "details": "Details",
+      "featureFlags": "Feature Flags",
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "description": "Description",
+        "price": "Price ($)",
+        "billingInterval": "Billing Interval",
+        "creditsPerPeriod": "Credits / Period",
+        "trialDays": "Trial Days",
+        "sortOrder": "Sort Order",
+        "public": "Public",
+        "enterprise": "Enterprise"
+      },
+      "intervals": {
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "oneTime": "One-time"
+      },
+      "badges": {
+        "archived": "Archived",
+        "hidden": "Hidden",
+        "custom": "Custom"
+      }
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "allStatuses": "All Statuses",
+      "noSubscriptions": "No subscriptions found",
+      "columns": {
+        "workspace": "Workspace",
+        "owner": "Owner",
+        "plan": "Plan",
+        "status": "Status",
+        "credits": "Credits",
+        "periodEnd": "Period End"
+      },
+      "statuses": {
+        "active": "Active",
+        "trialing": "Trialing",
+        "pastDue": "Past Due",
+        "canceled": "Canceled"
+      }
+    },
+    "credits": {
+      "title": "Credits",
+      "description": "Credit balances across all users",
+      "grantCredits": "Grant Credits",
+      "grantDescription": "Grant credits to a specific workspace.",
+      "workspaceId": "Workspace ID",
+      "amount": "Amount",
+      "noUsers": "No users found",
+      "columns": {
+        "user": "User",
+        "email": "Email",
+        "plan": "Plan",
+        "credits": "Credits"
+      }
+    },
+    "analytics": {
+      "title": "Analytics",
+      "totalUsers": "Total Users",
+      "activeSubscriptions": "Active Subscriptions",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "signups": "Signups (Last 30 days)",
+      "revenueByPlan": "Revenue by Plan",
+      "creditUsage": "Credit Usage (Last 30 days)",
+      "cancellations": "Cancellations (Last 90 days)",
+      "noCancellations": "No cancellations in this period"
+    },
+    "auditLog": {
+      "title": "Audit Log",
+      "allActions": "All Actions",
+      "noEntries": "No audit entries found",
+      "columns": {
+        "time": "Time",
+        "actor": "Actor",
+        "action": "Action",
+        "target": "Target",
+        "details": "Details"
+      },
+      "actions": {
+        "roleChange": "Role Change",
+        "userSuspend": "User Suspend",
+        "userUnsuspend": "User Unsuspend",
+        "impersonate": "Impersonate",
+        "creditsGrant": "Credits Grant",
+        "creditsRevoke": "Credits Revoke",
+        "planArchive": "Plan Archive",
+        "planRestore": "Plan Restore",
+        "settingsUpdate": "Settings Update",
+        "announcementCreate": "Announcement Create",
+        "announcementUpdate": "Announcement Update",
+        "announcementDelete": "Announcement Delete"
+      }
+    },
+    "settings": {
+      "title": "System Settings",
+      "tabs": {
+        "general": "General",
+        "credits": "Credit Costs",
+        "email": "Email",
+        "webhooks": "Webhooks",
+        "security": "Security"
+      },
+      "noSettings": "No settings in this category.",
+      "saveFailed": "Failed to save"
+    },
+    "announcements": {
+      "title": "Announcements",
+      "newAnnouncement": "New Announcement",
+      "editAnnouncement": "Edit Announcement",
+      "deleteAnnouncement": "Delete Announcement",
+      "deleteDescription": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
+      "noAnnouncements": "No announcements",
+      "immediate": "Immediate",
+      "fields": {
+        "title": "Title",
+        "body": "Body",
+        "type": "Type",
+        "active": "Active",
+        "startsAt": "Starts At",
+        "endsAt": "Ends At"
+      },
+      "types": {
+        "info": "Info",
+        "warning": "Warning",
+        "success": "Success",
+        "error": "Error"
+      },
+      "columns": {
+        "title": "Title",
+        "type": "Type",
+        "active": "Active",
+        "schedule": "Schedule"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "trialing": "Trialing",
+      "paused": "Paused",
+      "pastDue": "Past Due",
+      "canceled": "Canceled",
+      "banned": "Banned",
+      "suspended": "Suspended",
+      "expired": "Expired"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Page Not Found",
+        "description": "The page you're looking for doesn't exist or has been moved."
+      },
+      "serverError": {
+        "title": "Server Error",
+        "description": "Something went wrong on our end. Please try again later."
+      },
+      "forbidden": {
+        "title": "Access Forbidden",
+        "description": "You don't have permission to access this area. Super administrator access is required."
+      },
+      "accessDenied": {
+        "title": "Access Denied",
+        "description": "This area is restricted to super administrators. Contact your administrator if you believe this is an error.",
+        "goToAdmin": "Go to Admin Panel"
+      },
+      "backHome": "Back to Dashboard",
+      "backToLogin": "Back to Login"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FiPlus, FiEdit, FiTrash2, FiServer, FiZap, FiExternalLink } from 'react-icons/fi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -20,6 +21,7 @@ import {
 export const EnvironmentsContent: React.FC = () => <EnvironmentsPage embedded />;
 
 export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+  const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { success, error: showError } = useToastContext();
 
@@ -40,7 +42,7 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       const { environments: envs } = await getEnvironments();
       setEnvironments(envs);
     } catch (err: any) {
-      showError(err.response?.data?.error || err.message || 'Failed to load environments');
+      showError(err.response?.data?.error || err.message || t('dashboard.environments.loadError'));
     } finally {
       setLoading(false);
     }
@@ -71,15 +73,15 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       if (editingEnv) {
         const { environment } = await updateEnvironment(editingEnv.id, formData);
         setEnvironments(prev => prev.map(e => e.id === editingEnv.id ? environment : e));
-        success('Environment updated');
+        success(t('dashboard.environments.updated'));
       } else {
         const { environment } = await createEnvironment(formData);
         setEnvironments(prev => [...prev, environment]);
-        success('Environment created');
+        success(t('dashboard.environments.created'));
       }
       setModalOpen(false);
     } catch (err: any) {
-      showError(err.response?.data?.error || err.message || 'Failed to save environment');
+      showError(err.response?.data?.error || err.message || t('dashboard.environments.saveError'));
     } finally {
       setSaving(false);
     }
@@ -90,9 +92,9 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
     try {
       await deleteEnvironment(deleteTarget.id);
       setEnvironments(prev => prev.filter(e => e.id !== deleteTarget.id));
-      success('Environment deleted');
+      success(t('dashboard.environments.deleted'));
     } catch (err: any) {
-      showError(err.response?.data?.error || err.message || 'Failed to delete environment');
+      showError(err.response?.data?.error || err.message || t('dashboard.environments.deleteError'));
     } finally {
       setDeleteTarget(null);
     }
@@ -105,54 +107,54 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
   return (
     <div>
       {!embedded && (
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-white">Environments</h1>
-            <p className="text-slate-400 mt-1">Manage test environments and URLs</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('dashboard.environments.title')}</h1>
+            <p className="text-muted-foreground mt-1">{t('dashboard.environments.subtitle')}</p>
           </div>
-          <Button onClick={openCreateModal} className="flex items-center space-x-2">
+          <Button onClick={openCreateModal} className="flex w-full sm:w-auto items-center justify-center gap-2">
             <FiPlus className="h-4 w-4" />
-            <span>New Environment</span>
+            <span>{t('dashboard.environments.new')}</span>
           </Button>
         </div>
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <SkeletonCard count={3} />
         </div>
       ) : environments.length === 0 ? (
         <Card className="py-14 px-8">
           <EmptyState
             icon={<FiServer />}
-            title="No environments yet"
-            description="Environments let you save base URLs for different deployment stages — Production, Staging, Local — so the QA Loop can test across your pipeline without re-typing URLs every time."
+            title={t('dashboard.environments.emptyTitle')}
+            description={t('dashboard.environments.emptyDescription')}
             action={
               <div className="flex gap-3">
                 <Button onClick={openCreateModal}>
-                  <FiPlus className="mr-2 h-4 w-4" />
-                  Add Environment
+                  <FiPlus className="me-2 h-4 w-4" />
+                  {t('dashboard.environments.add')}
                 </Button>
                 <Button variant="secondary" onClick={() => navigate('/qa-loop')}>
-                  <FiZap className="mr-2 h-4 w-4" />
-                  Skip — go to QA Loop
+                  <FiZap className="me-2 h-4 w-4" />
+                  {t('dashboard.environments.skipToQaLoop')}
                 </Button>
               </div>
             }
-            tip="Environments are optional. You can always paste a URL directly into QA Loop."
+            tip={t('dashboard.environments.tip')}
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {environments.map((env) => (
-            <Card key={env.id} className="p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-white">{env.name}</h3>
-                <div className="flex items-center space-x-1">
+            <Card key={env.id} className="p-4 hover:bg-muted/50 transition-colors">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3 className="font-semibold text-foreground min-w-0 truncate">{env.name}</h3>
+                <div className="flex items-center flex-shrink-0">
                   <button
                     onClick={() => handleUseInQALoop(env)}
-                    className="p-1.5 rounded hover:bg-green-900/20 transition-colors"
-                    title="Use in QA Loop"
+                    className="p-2 rounded hover:bg-green-900/20 transition-colors"
+                    title={t('dashboard.environments.useInQaLoop')}
                   >
                     <FiZap className="h-4 w-4 text-green-600" />
                   </button>
@@ -160,30 +162,30 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
                     href={env.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 rounded hover:bg-slate-900 transition-colors"
-                    title="Open URL"
+                    className="p-2 rounded hover:bg-muted transition-colors"
+                    title={t('dashboard.environments.openUrl')}
                   >
-                    <FiExternalLink className="h-4 w-4 text-slate-400" />
+                    <FiExternalLink className="h-4 w-4 text-muted-foreground rtl:scale-x-[-1]" />
                   </a>
                   <button
                     onClick={() => openEditModal(env)}
-                    className="p-1.5 rounded hover:bg-slate-900 transition-colors"
-                    title="Edit"
+                    className="p-2 rounded hover:bg-muted transition-colors"
+                    title={t('dashboard.environments.edit')}
                   >
-                    <FiEdit className="h-4 w-4 text-slate-400" />
+                    <FiEdit className="h-4 w-4 text-muted-foreground" />
                   </button>
                   <button
                     onClick={() => setDeleteTarget(env)}
-                    className="p-1.5 rounded hover:bg-red-900/20 transition-colors"
-                    title="Delete"
+                    className="p-2 rounded hover:bg-red-900/20 transition-colors"
+                    title={t('dashboard.environments.delete')}
                   >
                     <FiTrash2 className="h-4 w-4 text-red-600" />
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-primary-600 mb-2 break-all truncate">{env.url}</p>
+              <p className="text-sm text-primary-600 mb-2 truncate">{env.url}</p>
               {env.description && (
-                <p className="text-xs text-slate-400">{env.description}</p>
+                <p className="text-xs text-muted-foreground">{env.description}</p>
               )}
             </Card>
           ))}
@@ -194,25 +196,25 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingEnv ? 'Edit Environment' : 'New Environment'}
+        title={editingEnv ? t('dashboard.environments.editTitle') : t('dashboard.environments.newTitle')}
         size="sm"
       >
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">
-              Environment Name
+            <label className="block text-sm font-medium text-foreground mb-1">
+              {t('dashboard.environments.nameLabel')}
             </label>
             <Input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Production, Staging"
+              placeholder={t('dashboard.environments.namePlaceholder')}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">
-              Base URL
+            <label className="block text-sm font-medium text-foreground mb-1">
+              {t('dashboard.environments.urlLabel')}
             </label>
             <Input
               type="url"
@@ -223,14 +225,14 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">
-              Description
+            <label className="block text-sm font-medium text-foreground mb-1">
+              {t('dashboard.environments.descriptionLabel')}
             </label>
             <Input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Optional description"
+              placeholder={t('dashboard.environments.descriptionPlaceholder')}
             />
           </div>
           <div className="flex items-center justify-end space-x-2 pt-2">
@@ -239,10 +241,10 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
               variant="secondary"
               onClick={() => setModalOpen(false)}
             >
-              Cancel
+              {t('dashboard.environments.cancel')}
             </Button>
             <Button type="submit" disabled={saving || !formData.name || !formData.url}>
-              {saving ? 'Saving…' : editingEnv ? 'Update' : 'Create'}
+              {saving ? t('dashboard.environments.saving') : editingEnv ? t('dashboard.environments.update') : t('dashboard.environments.create')}
             </Button>
           </div>
         </form>
@@ -251,9 +253,9 @@ export const EnvironmentsPage: React.FC<{ embedded?: boolean }> = ({ embedded })
       {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={!!deleteTarget}
-        title="Delete Environment"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title={t('dashboard.environments.deleteTitle')}
+        message={t('dashboard.environments.deleteConfirm', { name: deleteTarget?.name })}
+        confirmText={t('dashboard.environments.delete')}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         variant="danger"
