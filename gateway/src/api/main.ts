@@ -492,6 +492,30 @@ app.post('/api/internal/notifications', asyncHandler(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ─── Internal: AI Config (Docker-network only, no auth) ──────────────────
+// This endpoint MUST be declared before the `app.use('/api', requireAuth)`
+// blanket below — otherwise qa-loop-executor's platform-config fetch gets
+// 401'd by requireAuth before requireInternalNetwork can authorize the call.
+// Same placement pattern as /api/internal/notifications above.
+// Restricted by the internal-network middleware (Railway private network /
+// Docker bridge IP range check).
+app.get('/api/internal/ai-config',
+  requireInternalNetwork,
+  asyncHandler(async (_req, res) => {
+    const configs = await getAllPlatformConfigs();
+    const billingConfigRepo = new BillingConfigRepository();
+    const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
+    const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
+
+    res.json({
+      success: true,
+      providers: configs,
+      defaultProvider,
+      fallbackOrder,
+    });
+  })
+);
+
 // ─── All routes below this line require a valid JWT ───────────────────────────
 app.use('/api', requireAuth);
 
@@ -3746,27 +3770,10 @@ app.get('/api/me/flags', requireAuth, asyncHandler(async (req: any, res) => {
   res.json({ success: true, flags });
 }));
 
-// ── Internal: AI Config (Docker-network only, no auth) ──────────────────
-// This endpoint is NOT exposed to the public internet.
-// It is accessed only by internal services on the Docker network.
-// Restricted by Docker network configuration + IP allowlist middleware.
-
-app.get('/api/internal/ai-config',
-  requireInternalNetwork,
-  asyncHandler(async (_req, res) => {
-    const configs = await getAllPlatformConfigs();
-    const billingConfigRepo = new BillingConfigRepository();
-    const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
-    const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
-
-    res.json({
-      success: true,
-      providers: configs,
-      defaultProvider,
-      fallbackOrder,
-    });
-  })
-);
+// Note: /api/internal/ai-config was moved above the `app.use('/api', requireAuth)`
+// line so qa-loop-executor's platform-config fetch isn't 401'd before the
+// requireInternalNetwork check can run. See earlier in this file for the
+// route definition.
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
