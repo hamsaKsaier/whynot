@@ -35,9 +35,23 @@ export type AgentEvent =
   | { type: 'form.discovered';     agent: AgentType; at: string; data: { url: string; formId: string; fields: string[]; method?: string } }
   | { type: 'endpoint.discovered'; agent: AgentType; at: string; data: { url: string; method: string; path?: string } }
   | { type: 'bug.confirmed';       agent: AgentType; at: string; data: { bugId: string; severity: string; title: string; pageUrl?: string } }
-  | { type: 'test.saved';          agent: AgentType; at: string; data: { testCaseId: string; name: string; category?: string } };
+  | { type: 'test.saved';          agent: AgentType; at: string; data: { testCaseId: string; name: string; category?: string } }
+  // v4 Phase 2: lifecycle events used by parallel agents to coordinate
+  // without polling the DB. agent.complete tells subscribers (e.g.
+  // Security waiting on Exploratory's forms) to stop idling. The string
+  // 'orchestrator' carrier is accepted for scan-scoped events.
+  | { type: 'agent.complete';      agent: AgentType; at: string; data: { status: 'done' | 'error' | 'killed_idle'; pagesExplored?: number; bugsFound?: number } }
+  | { type: 'scan.cost_cap_hit';   agent: 'orchestrator' | AgentType; at: string; data: { trackedCostCents: number; estimatedRealCostCents: number; capCents: number } };
 
 export type AgentEventType = AgentEvent['type'];
+
+/**
+ * v4 Phase 2 backpressure: cap per-type event retention so a runaway
+ * publisher (e.g. Exploratory emitting 100 pages/sec) does not grow the
+ * replay buffer unboundedly. Sized generously — 1000 events × 5 types =
+ * 5000 retained, still O(tens of KB) in memory. Overflows log once.
+ */
+const MAX_EVENTS_PER_TYPE = 1000;
 
 /**
  * Check the feature flag in one place. Orchestrator reads this at scan
@@ -46,6 +60,14 @@ export type AgentEventType = AgentEvent['type'];
  */
 export function isV4EventBusEnabled(): boolean {
   return process.env.ENABLE_V4_EVENT_BUS === 'true';
+}
+
+/**
+ * v4 Phase 2: parallel execution flag. Requires the event bus to also
+ * be on — parallel agents coordinate entirely through the bus.
+ */
+export function isV4ParallelEnabled(): boolean {
+  return process.env.ENABLE_V4_PARALLEL === 'true' && isV4EventBusEnabled();
 }
 
 /**
@@ -63,10 +85,27 @@ export class AgentEventBus extends EventEmitter {
   /** Per-agent subscription record for the instrumentation block. */
   private subscribersByAgent: Record<string, Set<AgentEventType>> = {};
 
+  /** Per-type count used for backpressure enforcement (Phase 2). */
+  private countsByType: Record<string, number> = {};
+
+  /** One-shot log tag so overflow is reported exactly once per type. */
+  private overflowLogged: Set<string> = new Set();
+
+  /** Phase 2: agents observe this via `on('scan.cost_cap_hit', ...)` to exit early. */
+  private scanHaltedFlag = false;
+
   constructor(sessionId: string) {
     super();
-    this.setMaxListeners(20);
+    // Phase 2: 20 listeners was sized for Phase 1 (sequential). Parallel
+    // agents plus lifecycle listeners push us higher — 50 gives headroom
+    // without masking a genuine subscribe-leak bug if one ever appears.
+    this.setMaxListeners(50);
     this.sessionId = sessionId;
+  }
+
+  /** True once a scan.cost_cap_hit event has been published. */
+  isScanHalted(): boolean {
+    return this.scanHaltedFlag;
   }
 
   /**
@@ -75,13 +114,29 @@ export class AgentEventBus extends EventEmitter {
    * wildcard `*` listener for generic logging / telemetry.
    */
   publish(event: AgentEvent): void {
-    this.events.push(event);
+    // Phase 2 backpressure: stop appending once a type hits the cap. We
+    // still fire the listener so live subscribers keep receiving events,
+    // but the replay buffer stops growing. Logged once per type so the
+    // signal is visible in Railway logs without flooding.
+    const typeCount = this.countsByType[event.type] || 0;
+    if (typeCount < MAX_EVENTS_PER_TYPE) {
+      this.events.push(event);
+      this.countsByType[event.type] = typeCount + 1;
+    } else if (!this.overflowLogged.has(event.type)) {
+      this.overflowLogged.add(event.type);
+      logger.warn('event bus replay cap reached — live delivery only from here', {
+        sessionId: this.sessionId,
+        type: event.type,
+        cap: MAX_EVENTS_PER_TYPE,
+      });
+    }
     logger.debug('event bus publish', {
       sessionId: this.sessionId,
       type: event.type,
       agent: event.agent,
       at: event.at,
     });
+    if (event.type === 'scan.cost_cap_hit') this.scanHaltedFlag = true;
     this.emit(event.type, event);
     this.emit('*', event);
   }
@@ -128,7 +183,11 @@ export class AgentEventBus extends EventEmitter {
     return this.events.length;
   }
 
-  /** Event counts grouped by type — fed into the breakdown log. */
+  /**
+   * Event counts grouped by type — fed into the breakdown log.
+   * Uses the per-type counter so overflowed events still count, even
+   * after they drop out of the replay buffer.
+   */
   eventCountsByType(): Record<AgentEventType, number> {
     const counts: Record<string, number> = {
       'page.discovered': 0,
@@ -136,8 +195,10 @@ export class AgentEventBus extends EventEmitter {
       'endpoint.discovered': 0,
       'bug.confirmed': 0,
       'test.saved': 0,
+      'agent.complete': 0,
+      'scan.cost_cap_hit': 0,
     };
-    for (const ev of this.events) counts[ev.type]++;
+    for (const [k, v] of Object.entries(this.countsByType)) counts[k] = v;
     return counts as Record<AgentEventType, number>;
   }
 

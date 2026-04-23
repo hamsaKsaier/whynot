@@ -26,6 +26,17 @@ export class APITesterAgent extends BaseAgent {
     super(config, mcpBrowser, cdpMcp);
   }
 
+  async run() {
+    // v4 Phase 2: in parallel mode, block on the first endpoint.discovered
+    // event from Exploratory. Same shape as Security's form wait — 2 min
+    // cap, heartbeat during idle. If nothing arrives we still proceed
+    // because API tester's prompt can navigate known OrangeHRM endpoints.
+    if (this.isParallelMode()) {
+      await this.waitForFirstEvent('endpoint.discovered', 'exploratory', 120_000);
+    }
+    return super.run();
+  }
+
   protected buildToolSchemas(): Record<string, { description: string; parameters: z.ZodType }> {
     const agentTools = getToolSchemasForAgent('api_tester');
 

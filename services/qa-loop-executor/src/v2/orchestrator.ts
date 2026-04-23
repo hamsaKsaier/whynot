@@ -21,7 +21,8 @@ import { ParallelTestExecutor } from '../parallel-test-executor';
 import { SessionPlanStore } from './session-plan';
 import { AgentBoard } from './agent-board';
 import { AgentType, AgentConfig, AgentResult, SessionPlan, PlanObjective } from './types';
-import { AgentEventBus, isV4EventBusEnabled } from './agent-event-bus';
+import { AgentEventBus, isV4EventBusEnabled, isV4ParallelEnabled } from './agent-event-bus';
+import { AgentBrowserFactory, AgentBrowserPair } from './agent-browser-factory';
 import { QALeadAgent } from './agents/qa-lead';
 import { ExploratoryTesterAgent } from './agents/exploratory-tester';
 import { SecurityTesterAgent } from './agents/security-tester';
@@ -79,6 +80,17 @@ export class V2Orchestrator {
   // Instantiated in run() only when ENABLE_V4_EVENT_BUS=true; otherwise
   // stays null and every callsite falls back to v3 board-on-start reads.
   private eventBus: AgentEventBus | null = null;
+  // v4 Phase 2: per-agent browser factory + live parallel mode.
+  // `browserFactory` is null in sequential mode (v3 / Phase 1). When
+  // parallel mode is on, each browser-using agent (Exploratory,
+  // Security, API Tester) gets its own Playwright + CDP pair from the
+  // factory and the three run concurrently under Promise.allSettled.
+  private browserFactory: AgentBrowserFactory | null = null;
+  private parallelMode: boolean = false;
+  // Phase 2 telemetry: per-agent start/end timestamps for the
+  // v4Parallel breakdown log. Populated by runAgent's telemetry hook.
+  private agentStartTimes: Record<string, string> = {};
+  private agentEndTimes: Record<string, string> = {};
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
@@ -130,6 +142,18 @@ export class V2Orchestrator {
         logger.info('V4 event bus active for session', {
           sessionId: this.sessionId,
           feature: 'ENABLE_V4_EVENT_BUS',
+        });
+      }
+      // v4 Phase 2: parallel mode needs both flags. Fails closed if the
+      // event bus flag is off — parallel agents coordinate entirely
+      // through the bus, so running parallel without it would silently
+      // revert to Phase 1's sequential behavior.
+      if (isV4ParallelEnabled()) {
+        this.parallelMode = true;
+        this.browserFactory = new AgentBrowserFactory(this.sessionId);
+        logger.info('V4 parallel mode active for session', {
+          sessionId: this.sessionId,
+          feature: 'ENABLE_V4_PARALLEL',
         });
       }
 
@@ -198,57 +222,147 @@ export class V2Orchestrator {
         },
       });
 
-      // ─── Phase 3: Run Exploratory Tester ───────────────────────
-      emitToSession(this.sessionId, {
-        type: 'status_update',
-        data: { phase: 'exploration', message: 'Exploratory Tester starting browser exploration...' },
-      });
+      // ─── Phase 3+4: Exploratory / Security / API Tester ───────
+      //
+      // Parallel mode (v4 Phase 2): the three browser-using agents run
+      // concurrently under Promise.allSettled. Each gets its own
+      // browser pair from AgentBrowserFactory. Security and API tester
+      // wait-for-first-event on the bus (form.discovered /
+      // endpoint.discovered from Exploratory) before running their AI
+      // loops, so they don't burn budget against an empty queue.
+      //
+      // Sequential mode (v3 / Phase 1): original waterfall preserved
+      // unchanged — Exploratory runs, then Security, then API Tester.
+      const allResults: AgentResult[] = [];
 
-      const exploratoryResult = await this.runExploratoryTester(plan);
-
-      logger.info('Exploratory Tester completed', {
-        sessionId: this.sessionId,
-        pages: exploratoryResult.pagesExplored,
-        tests: exploratoryResult.testsGenerated,
-        bugs: exploratoryResult.bugsFound,
-        status: exploratoryResult.status,
-      });
-
-      // ─── Phase 4: Security + API Testers (sequential, same browser) ─
-      const allResults: AgentResult[] = [exploratoryResult];
-      this.accumulateCost(exploratoryResult);
-
-      // Security Tester — reads forms from board, tests XSS/SQLi/CSRF
-      if (!this.stopRequested && !this.costBudgetExceeded()) {
+      if (this.parallelMode && this.browserFactory) {
         emitToSession(this.sessionId, {
           type: 'status_update',
-          data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
+          data: { phase: 'parallel_agents', message: 'Exploratory + Security + API Tester running in parallel...' },
         });
-        const securityResult = await this.runAgent('security', plan);
-        allResults.push(securityResult);
-        this.accumulateCost(securityResult);
-        logger.info('Security Tester completed', {
-          sessionId: this.sessionId,
-          bugs: securityResult.bugsFound,
-          status: securityResult.status,
-        });
-      }
 
-      // API Tester — reads endpoints from board, tests edge cases via fetch()
-      if (!this.stopRequested && !this.costBudgetExceeded()) {
+        // Spawn one browser pair per agent. Each pair takes ~4–8s to
+        // cold-start, so we spawn them concurrently. If any pair fails
+        // to start we abort the parallel launch — the alternative would
+        // be degrading to a mix of parallel/sequential which is worse
+        // to debug than a clean failure.
+        const [exPair, secPair, apiPair] = await Promise.all([
+          this.browserFactory.spawnForAgent('exploratory'),
+          this.browserFactory.spawnForAgent('security'),
+          this.browserFactory.spawnForAgent('api_tester'),
+        ]);
+
+        // Per-agent login when credentials are provided. Each browser
+        // has its own cookie jar — we cannot share auth state between
+        // the three Chromium instances. Logins run concurrently because
+        // they hit independent browsers.
+        if (this.config.loginCredentials) {
+          const loginCreds = this.config.loginCredentials;
+          await Promise.allSettled([
+            this.performLoginOnBrowser(exPair.playwright, loginCreds),
+            this.performLoginOnBrowser(secPair.playwright, loginCreds),
+            this.performLoginOnBrowser(apiPair.playwright, loginCreds),
+          ]);
+        }
+
+        const parallelSettled = await Promise.allSettled([
+          this.runAgent('exploratory', plan, exPair),
+          (async () => {
+            if (this.stopRequested || this.eventBus?.isScanHalted?.()) {
+              return { agentType: 'security' as AgentType, status: 'error' as const,
+                pagesExplored: 0, testsGenerated: 0, bugsFound: 0,
+                apiEndpointsTested: 0, error: 'scan halted before security start' };
+            }
+            return this.runAgent('security', plan, secPair);
+          })(),
+          (async () => {
+            if (this.stopRequested || this.eventBus?.isScanHalted?.()) {
+              return { agentType: 'api_tester' as AgentType, status: 'error' as const,
+                pagesExplored: 0, testsGenerated: 0, bugsFound: 0,
+                apiEndpointsTested: 0, error: 'scan halted before api_tester start' };
+            }
+            return this.runAgent('api_tester', plan, apiPair);
+          })(),
+        ]);
+
+        for (const outcome of parallelSettled) {
+          if (outcome.status === 'fulfilled') {
+            allResults.push(outcome.value);
+            this.accumulateCost(outcome.value);
+          } else {
+            // A fulfilled-but-errored AgentResult is captured in the
+            // first branch; this arm is only for true runAgent throws
+            // (shouldn't happen because runAgent catches internally).
+            logger.error('Parallel agent rejected unexpectedly', {
+              sessionId: this.sessionId,
+              reason: String(outcome.reason),
+            });
+            allResults.push({
+              agentType: 'exploratory',
+              status: 'error',
+              pagesExplored: 0,
+              testsGenerated: 0,
+              bugsFound: 0,
+              apiEndpointsTested: 0,
+              error: `runAgent threw: ${String(outcome.reason).slice(0, 200)}`,
+            });
+          }
+        }
+
+        logger.info('Parallel trio completed', {
+          sessionId: this.sessionId,
+          results: allResults.map(r => ({ agent: r.agentType, status: r.status, bugs: r.bugsFound, tests: r.testsGenerated })),
+        });
+      } else {
+        // ─── Sequential path (v3 / Phase 1) ──────────────────────────
         emitToSession(this.sessionId, {
           type: 'status_update',
-          data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
+          data: { phase: 'exploration', message: 'Exploratory Tester starting browser exploration...' },
         });
-        const apiResult = await this.runAgent('api_tester', plan);
-        allResults.push(apiResult);
-        this.accumulateCost(apiResult);
-        logger.info('API Tester completed', {
+
+        const exploratoryResult = await this.runExploratoryTester(plan);
+
+        logger.info('Exploratory Tester completed', {
           sessionId: this.sessionId,
-          bugs: apiResult.bugsFound,
-          endpoints: apiResult.apiEndpointsTested,
-          status: apiResult.status,
+          pages: exploratoryResult.pagesExplored,
+          tests: exploratoryResult.testsGenerated,
+          bugs: exploratoryResult.bugsFound,
+          status: exploratoryResult.status,
         });
+
+        allResults.push(exploratoryResult);
+        this.accumulateCost(exploratoryResult);
+
+        if (!this.stopRequested && !this.costBudgetExceeded()) {
+          emitToSession(this.sessionId, {
+            type: 'status_update',
+            data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
+          });
+          const securityResult = await this.runAgent('security', plan);
+          allResults.push(securityResult);
+          this.accumulateCost(securityResult);
+          logger.info('Security Tester completed', {
+            sessionId: this.sessionId,
+            bugs: securityResult.bugsFound,
+            status: securityResult.status,
+          });
+        }
+
+        if (!this.stopRequested && !this.costBudgetExceeded()) {
+          emitToSession(this.sessionId, {
+            type: 'status_update',
+            data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
+          });
+          const apiResult = await this.runAgent('api_tester', plan);
+          allResults.push(apiResult);
+          this.accumulateCost(apiResult);
+          logger.info('API Tester completed', {
+            sessionId: this.sessionId,
+            bugs: apiResult.bugsFound,
+            endpoints: apiResult.apiEndpointsTested,
+            status: apiResult.status,
+          });
+        }
       }
 
       // ─── Phase 5: Auto Tester (runs last, no browser needed) ──
@@ -628,6 +742,49 @@ export class V2Orchestrator {
         });
       }
 
+      // v4 Phase 2: parallel execution telemetry. Wall-clock is the
+      // headline metric — target ≤20 min vs v3's ~36 min. Always logged
+      // (enabled=false on sequential scans) so A/B comparison grepping
+      // is symmetric with the event bus block.
+      const pStarts = this.agentStartTimes;
+      const pEnds = this.agentEndTimes;
+      // Wall-clock is the max end minus the min start across all four
+      // agents — captures both the parallel trio window and the
+      // sequential Auto Tester tail.
+      const allStarts = Object.values(pStarts);
+      const allEnds = Object.values(pEnds);
+      const scanWallClockMs = allStarts.length > 0 && allEnds.length > 0
+        ? (Math.max(...allEnds.map(s => Date.parse(s))) -
+           Math.min(...allStarts.map(s => Date.parse(s))))
+        : 0;
+      // Max concurrent agents via a sweep over all [start, end] intervals:
+      // Phase 2 should show 3 when parallel, 1 when sequential.
+      let maxConcurrent = 0;
+      const events: Array<{ at: number; delta: number }> = [];
+      for (const [agent, at] of Object.entries(pStarts)) {
+        const end = pEnds[agent];
+        if (!end) continue;
+        events.push({ at: Date.parse(at), delta: +1 });
+        events.push({ at: Date.parse(end), delta: -1 });
+      }
+      events.sort((a, b) => a.at - b.at || b.delta - a.delta);
+      let active = 0;
+      for (const ev of events) {
+        active += ev.delta;
+        if (active > maxConcurrent) maxConcurrent = active;
+      }
+      logger.info('Scan cost breakdown — v4Parallel', {
+        sessionId: this.sessionId,
+        v4Parallel: {
+          enabled: this.parallelMode,
+          startTimes: pStarts,
+          endTimes: pEnds,
+          maxConcurrentAgents: maxConcurrent,
+          browsersLaunched: this.browserFactory?.getSpawnedCount() ?? 0,
+          totalWallClockSec: Math.round(scanWallClockMs / 1000),
+        },
+      });
+
     } catch (err: any) {
       // User-initiated stop produces agent errors (MCP browser force-killed
       // mid-tool-call etc). That's expected — don't flip the DB status to
@@ -659,6 +816,11 @@ export class V2Orchestrator {
       }
       if (this.mcpBrowser) {
         await this.mcpBrowser.forceStop().catch(() => {});
+      }
+      // v4 Phase 2: dispose every per-agent pair the factory spawned.
+      // Best-effort — disposeAll internally allSettleds each stop.
+      if (this.browserFactory) {
+        await this.browserFactory.disposeAll().catch(() => {});
       }
     }
   }
@@ -789,6 +951,22 @@ export class V2Orchestrator {
             message: `Cost cap reached (~$${(estimatedRealCents / 100).toFixed(2)} estimated real cost). Skipping remaining agents; synthesis will run on partial data.`,
           },
         });
+        // v4 Phase 2: broadcast on the bus so any currently-running
+        // parallel agent can exit on its next tool boundary. The brief
+        // explicitly accepts a 1.2× cap overshoot (one in-flight
+        // generateText per agent cannot be unwound atomically).
+        try {
+          this.eventBus?.publish({
+            type: 'scan.cost_cap_hit',
+            agent: 'orchestrator',
+            at: new Date().toISOString(),
+            data: {
+              trackedCostCents: this.cumulativeCostCents,
+              estimatedRealCostCents: estimatedRealCents,
+              capCents: MAX_SESSION_COST_CENTS,
+            },
+          });
+        } catch { /* non-fatal */ }
       }
       return true;
     }
@@ -803,7 +981,23 @@ export class V2Orchestrator {
    * agents (Exploratory, Security, API) so cookies / auth state persist.
    * If the browser died mid-session, we restart it here before the next agent.
    */
-  private async runAgent(agentType: AgentType, plan: SessionPlan): Promise<AgentResult> {
+  /**
+   * v4 Phase 2: optional per-agent browser pair. When non-null, this
+   * agent uses its own Playwright + CDP pair from the factory instead
+   * of the shared `this.mcpBrowser` + `this.cdpMcp`. Set by the
+   * parallel launch path in run() and passed down here so runAgent can
+   * hand the right browser pair to the agent's constructor.
+   */
+  private async runAgent(
+    agentType: AgentType,
+    plan: SessionPlan,
+    dedicatedPair?: AgentBrowserPair,
+  ): Promise<AgentResult> {
+    // Record start time for v4Parallel telemetry. Always — parallel mode
+    // uses it to measure concurrent wall-clock, sequential mode uses it
+    // to correlate log lines if we ever need to diff the two.
+    this.agentStartTimes[agentType] = new Date().toISOString();
+
     const agentConfig: AgentConfig = {
       sessionId: this.sessionId,
       agentType,
@@ -815,11 +1009,16 @@ export class V2Orchestrator {
       // Null when the flag is off — all downstream consumers (BoardTools,
       // ReportTools, Security's hydrateFormQueueFromBus) no-op on null.
       eventBus: this.eventBus,
+      // v4 Phase 2: tell the agent whether it's running concurrently
+      // with peers. Security / API reuse this to decide whether to
+      // wait-for-first-event before launching their AI loop.
+      parallelMode: this.parallelMode,
     };
 
-    // Browser-using agents: verify the shared browser is still alive, restart if not
+    // Browser-using agents: verify the shared browser is still alive, restart if not.
+    // Parallel mode skips this branch — the dedicatedPair is already started.
     const needsBrowser = agentType !== 'auto_tester' && agentType !== 'qa_lead';
-    if (needsBrowser) {
+    if (needsBrowser && !dedicatedPair) {
       if (!this.mcpBrowser || !this.mcpBrowser.connected) {
         logger.warn(`MCP browser not connected for ${agentType} — restarting`, {
           sessionId: this.sessionId,
@@ -836,6 +1035,10 @@ export class V2Orchestrator {
       }
     }
 
+    // Resolve which browser + CDP pair this agent will use.
+    const browserForAgent = dedicatedPair?.playwright ?? this.mcpBrowser;
+    const cdpForAgent = dedicatedPair?.cdp ?? this.cdpMcp;
+
     emitToSession(this.sessionId, {
       type: 'status_update',
       data: { agent: agentType, status: 'starting', message: `${agentType} agent starting...` },
@@ -845,13 +1048,13 @@ export class V2Orchestrator {
 
     switch (agentType) {
       case 'exploratory':
-        agent = new ExploratoryTesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
+        agent = new ExploratoryTesterAgent(agentConfig, browserForAgent!, cdpForAgent);
         break;
       case 'security':
-        agent = new SecurityTesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
+        agent = new SecurityTesterAgent(agentConfig, browserForAgent!, cdpForAgent);
         break;
       case 'api_tester':
-        agent = new APITesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
+        agent = new APITesterAgent(agentConfig, browserForAgent!, cdpForAgent);
         break;
       case 'auto_tester':
         // Auto Tester does NOT use the browser or CDP — only generates code
@@ -902,10 +1105,46 @@ export class V2Orchestrator {
     }
 
     let result: AgentResult;
+    let runThrew: any = null;
     try {
       result = await agent.run();
+    } catch (err: any) {
+      runThrew = err;
+      result = {
+        agentType,
+        status: 'error',
+        pagesExplored: 0,
+        testsGenerated: 0,
+        bugsFound: 0,
+        apiEndpointsTested: 0,
+        error: err?.message || String(err),
+      };
     } finally {
       clearInterval(watchdog);
+    }
+
+    // v4 Phase 2: record end time + publish agent.complete so any peer
+    // waiting on this producer (Security waiting on Exploratory, e.g.)
+    // can exit its idle loop. Do this AFTER the finally so we observe
+    // the real result.status even on the throw path.
+    this.agentEndTimes[agentType] = new Date().toISOString();
+    try {
+      this.eventBus?.publish({
+        type: 'agent.complete',
+        agent: agentType,
+        at: new Date().toISOString(),
+        data: {
+          status: result.status,
+          pagesExplored: result.pagesExplored,
+          bugsFound: result.bugsFound,
+        },
+      });
+    } catch { /* bus publish is non-fatal */ }
+    if (runThrew && result.status !== 'killed_idle') {
+      logger.error(`${agentType} agent threw`, {
+        sessionId: this.sessionId,
+        error: runThrew?.message,
+      });
     }
 
     // Fix D: persist per-agent cost + usage to qa_loop_iterations
@@ -964,37 +1203,54 @@ export class V2Orchestrator {
    */
   private async performLogin(): Promise<void> {
     if (!this.mcpBrowser || !this.config.loginCredentials) return;
+    return this.performLoginOnBrowser(this.mcpBrowser, this.config.loginCredentials);
+  }
 
-    const creds = this.config.loginCredentials;
+  /**
+   * v4 Phase 2: login against a specific browser instance. Extracted
+   * from performLogin() so parallel mode can log in each of its three
+   * independent Chromium contexts. Best-effort — a single login
+   * failure only disables auth for that agent, not the whole scan.
+   */
+  private async performLoginOnBrowser(
+    browser: MCPBrowser,
+    creds: NonNullable<LoopConfig['loginCredentials']>,
+  ): Promise<void> {
     const loginUrl = creds.loginUrl || this.config.targetUrl;
+    logger.info('Performing login', { sessionId: this.sessionId, loginUrl });
 
-    logger.info('Performing login for v2 session', { sessionId: this.sessionId, loginUrl });
+    try {
+      await browser.callTool('browser_navigate', { url: loginUrl });
+      await new Promise(r => setTimeout(r, 2000));
 
-    await this.mcpBrowser.callTool('browser_navigate', { url: loginUrl });
-    await new Promise(r => setTimeout(r, 2000));
+      if (creds.emailSelector) {
+        await browser.callTool('browser_fill', {
+          selector: creds.emailSelector,
+          value: creds.email,
+        });
+      }
+      if (creds.passwordSelector) {
+        await browser.callTool('browser_fill', {
+          selector: creds.passwordSelector,
+          value: creds.password,
+        });
+      }
+      if (creds.submitSelector) {
+        await browser.callTool('browser_click', {
+          selector: creds.submitSelector,
+        });
+      }
 
-    if (creds.emailSelector) {
-      await this.mcpBrowser.callTool('browser_fill', {
-        selector: creds.emailSelector,
-        value: creds.email,
+      await new Promise(r => setTimeout(r, 3000));
+      await browser.callTool('browser_navigate', { url: this.config.targetUrl });
+
+      logger.info('Login completed', { sessionId: this.sessionId });
+    } catch (err: any) {
+      logger.warn('Login failed on this browser — agent will continue unauthenticated', {
+        sessionId: this.sessionId,
+        error: err?.message,
       });
     }
-    if (creds.passwordSelector) {
-      await this.mcpBrowser.callTool('browser_fill', {
-        selector: creds.passwordSelector,
-        value: creds.password,
-      });
-    }
-    if (creds.submitSelector) {
-      await this.mcpBrowser.callTool('browser_click', {
-        selector: creds.submitSelector,
-      });
-    }
-
-    await new Promise(r => setTimeout(r, 3000));
-    await this.mcpBrowser.callTool('browser_navigate', { url: this.config.targetUrl });
-
-    logger.info('Login completed for v2 session', { sessionId: this.sessionId });
   }
 
   /**

@@ -135,6 +135,28 @@ export class SecurityTesterAgent extends BaseAgent {
   }
 
   async run() {
+    // v4 Phase 2: in parallel mode, Exploratory may not have discovered
+    // any forms yet when Security starts. Block on the first
+    // form.discovered event (with a generous cap) so we don't burn
+    // budget running against an empty queue. If the cap fires first or
+    // Exploratory emits agent.complete with zero forms, we still proceed
+    // — Security's initial prompt has fallback instructions to navigate
+    // directly to known OrangeHRM admin pages when the queue is thin.
+    if (this.isParallelMode()) {
+      const waited = await this.waitForFirstEvent(
+        'form.discovered',
+        'exploratory',
+        120_000, // 2 min cap is ample — Exploratory usually finds a form in <30s.
+      );
+      if (!waited) {
+        // Not fatal: empty queue path. Log so A/B can correlate.
+        const bus = this.getEventBus();
+        (this as any)?.boardEntriesAtStart; // touch to quiet strict mode
+        if (bus) {
+          // Nothing emitted — still proceed with direct-navigation fallback.
+        }
+      }
+    }
     // Must hydrate BEFORE super.run() so getInitialPrompt sees the queue.
     this.hydrateFormQueueFromBus();
     return super.run();

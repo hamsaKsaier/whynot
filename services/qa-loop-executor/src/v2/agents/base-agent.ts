@@ -245,6 +245,69 @@ export abstract class BaseAgent {
     return (this.config as any).eventBus || null;
   }
 
+  /** v4 Phase 2: parallel execution flag from the agent config. */
+  protected isParallelMode(): boolean {
+    return !!(this.config as any).parallelMode;
+  }
+
+  /**
+   * v4 Phase 2: wait until a matching bus event arrives OR the waiter's
+   * producer emits `agent.complete` OR a hard timeout fires. Heartbeat
+   * keeps the idle watchdog happy during the wait.
+   *
+   * In parallel mode, Security calls this to block on the first
+   * `form.discovered` from Exploratory before starting its AI loop —
+   * otherwise Security burns budget running against an empty queue.
+   *
+   * Returns true if at least one matching event was observed (via
+   * existing replay history OR a new arrival). Returns false if we
+   * gave up on timeout / producer complete / scan halted with nothing
+   * matching — caller should still run its AI path so we don't skip
+   * the agent entirely on a quiet scan.
+   */
+  protected async waitForFirstEvent(
+    eventType: string,
+    producerAgent: AgentType,
+    maxWaitMs: number,
+  ): Promise<boolean> {
+    const bus = this.getEventBus();
+    if (!bus) return false;
+    // Fast path: replay already has one — no point awaiting.
+    const snapshot: any[] = bus.snapshot ? bus.snapshot() : [];
+    if (snapshot.some(e => e.type === eventType)) return true;
+
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const settle = (matched: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(heartbeat);
+        clearTimeout(timer);
+        bus.off?.(eventType, onMatch);
+        bus.off?.('agent.complete', onProducerDone);
+        bus.off?.('scan.cost_cap_hit', onHalt);
+        resolve(matched);
+      };
+
+      const onMatch = () => settle(true);
+      const onProducerDone = (ev: any) => {
+        if (ev?.agent === producerAgent) settle(false);
+      };
+      const onHalt = () => settle(false);
+
+      bus.on(eventType, onMatch);
+      bus.on('agent.complete', onProducerDone);
+      bus.on('scan.cost_cap_hit', onHalt);
+
+      // Heartbeat so the watchdog doesn't trip while we legitimately idle.
+      const heartbeat = setInterval(() => this.markActivity(), 5_000);
+      if (typeof (heartbeat as any).unref === 'function') (heartbeat as any).unref();
+
+      const timer = setTimeout(() => settle(false), maxWaitMs);
+      if (typeof (timer as any).unref === 'function') (timer as any).unref();
+    });
+  }
+
   constructor(
     config: AgentConfig,
     mcpBrowser?: MCPBrowser,

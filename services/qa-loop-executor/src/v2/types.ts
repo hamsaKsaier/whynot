@@ -85,6 +85,10 @@ export interface AgentConfig {
   // is off (default) — agents fall back to v3 board-on-start reads.
   // Typed as `any` here to avoid a cyclic import of AgentEventBus.
   eventBus?: any;
+  // v4 Phase 2: when parallel mode is on, this is true so the agent's
+  // run() knows to use live event-driven waits instead of the v3 /
+  // Phase 1 "read-on-start" shortcut. False in sequential mode.
+  parallelMode?: boolean;
 }
 
 export interface AgentResult {
