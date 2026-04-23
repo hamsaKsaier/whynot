@@ -42,6 +42,7 @@ import {
   ExistingSessionInfo,
   ResultsTabs,
   AgentProgressPanel,
+  CommandCenter,
 } from '../components/QALoop';
 
 // -- Status helpers -----------------------------------------------------------
@@ -79,7 +80,17 @@ export const QALoopPage: React.FC = () => {
     toolCalls, testRunActivity, iteration, pagesExplored, testsGenerated,
     streamBugsFound, currentPhase, currentMessage, costInfo, sessionStartTime,
     wsError,
+    // v4 Phase 3 per-agent slices
+    agentStreams, leadDispatches,
   } = useSessionManager({ onSuccess: success, onError: showError });
+
+  // v4 Phase 3 Command Center view toggle. Opt-in via URL param
+  // `?view=command-center`. Falls back to the legacy LiveMonitor so
+  // nothing changes for users who haven't enabled the new view yet.
+  const commandCenterEnabled = React.useMemo(() => {
+    try { return new URLSearchParams(window.location.search).get('view') === 'command-center'; }
+    catch { return false; }
+  }, []);
 
   // -- Form state (local -- only this page + SessionForm need it) -------------
   const [targetUrl,        setTargetUrl]        = useState('');
@@ -478,6 +489,16 @@ export const QALoopPage: React.FC = () => {
                   showQualityDashboard={showQualityDashboard}
                   onToggleQualityDashboard={() => setShowQualityDashboard(v => !v)}
                 />
+
+                {/* v4 Phase 3: 4-quadrant Command Center view (opt-in via ?view=command-center) */}
+                {commandCenterEnabled && (
+                  <CommandCenter
+                    agentStreams={agentStreams || {}}
+                    leadDispatches={leadDispatches || []}
+                    sessionStartTime={sessionStartTime}
+                    isRunning={activeSession.status === 'running'}
+                  />
+                )}
 
                 {/* Live browser preview + AI thinking + tool calls */}
                 <LiveMonitor

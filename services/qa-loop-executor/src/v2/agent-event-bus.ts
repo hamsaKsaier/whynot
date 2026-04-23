@@ -41,7 +41,18 @@ export type AgentEvent =
   // Security waiting on Exploratory's forms) to stop idling. The string
   // 'orchestrator' carrier is accepted for scan-scoped events.
   | { type: 'agent.complete';      agent: AgentType; at: string; data: { status: 'done' | 'error' | 'killed_idle'; pagesExplored?: number; bugsFound?: number } }
-  | { type: 'scan.cost_cap_hit';   agent: 'orchestrator' | AgentType; at: string; data: { trackedCostCents: number; estimatedRealCostCents: number; capCents: number } };
+  | { type: 'scan.cost_cap_hit';   agent: 'orchestrator' | AgentType; at: string; data: { trackedCostCents: number; estimatedRealCostCents: number; capCents: number } }
+  // v4 Phase 3: dynamic QA Lead dispatches. The watcher (a background
+  // AI call loop) observes agent activity every 90s and can redirect,
+  // pause, resume, escalate, or terminate agents mid-scan. Each agent
+  // subscribes to the subset of events addressed to it (via data.target
+  // or data.targets) and surfaces the dispatch text into its next
+  // generateText invocation as a "LEAD DISPATCH" context block.
+  | { type: 'lead.reassign';       agent: 'qa_lead'; at: string; data: { target: AgentType; reason: string; newObjective: string } }
+  | { type: 'lead.pause';          agent: 'qa_lead'; at: string; data: { target: AgentType; reason: string } }
+  | { type: 'lead.resume';         agent: 'qa_lead'; at: string; data: { target: AgentType; reason: string } }
+  | { type: 'lead.escalate';       agent: 'qa_lead'; at: string; data: { bugId: string; reason: string; notifyAgents: AgentType[] } }
+  | { type: 'lead.terminate';      agent: 'qa_lead'; at: string; data: { reason: string } };
 
 export type AgentEventType = AgentEvent['type'];
 
@@ -68,6 +79,15 @@ export function isV4EventBusEnabled(): boolean {
  */
 export function isV4ParallelEnabled(): boolean {
   return process.env.ENABLE_V4_PARALLEL === 'true' && isV4EventBusEnabled();
+}
+
+/**
+ * v4 Phase 3: dynamic QA Lead watcher. Requires parallel mode — the
+ * watcher's only value-add is reassigning idle parallel agents; in
+ * sequential mode there's nothing to reassign against. Fails closed.
+ */
+export function isV4DynamicLeadEnabled(): boolean {
+  return process.env.ENABLE_V4_DYNAMIC_LEAD === 'true' && isV4ParallelEnabled();
 }
 
 /**
@@ -197,6 +217,11 @@ export class AgentEventBus extends EventEmitter {
       'test.saved': 0,
       'agent.complete': 0,
       'scan.cost_cap_hit': 0,
+      'lead.reassign': 0,
+      'lead.pause': 0,
+      'lead.resume': 0,
+      'lead.escalate': 0,
+      'lead.terminate': 0,
     };
     for (const [k, v] of Object.entries(this.countsByType)) counts[k] = v;
     return counts as Record<AgentEventType, number>;

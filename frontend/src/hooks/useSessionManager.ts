@@ -112,6 +112,9 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
     costInfo,
     sessionStartTime,
     error: wsError,
+    // v4 Phase 3 passthrough — consumed by CommandCenter.
+    agentStreams,
+    leadDispatches,
     clearEvents,
   } = useQALoopStream({
     sessionId: activeSession?.id,
@@ -481,6 +484,9 @@ export function useSessionManager({ onSuccess, onError }: UseSessionManagerOptio
     costInfo,
     sessionStartTime,
     wsError,
+    // v4 Phase 3
+    agentStreams,
+    leadDispatches,
     clearEvents,
   };
 }

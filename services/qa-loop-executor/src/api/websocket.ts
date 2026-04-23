@@ -52,7 +52,10 @@ export interface QALoopEvent {
   'iteration_start' | 'iteration_end' | 'page_discovered' | 'page_explored' |
   'test_generated' | 'bug_found' | 'session_complete' | 'connected' |
   'screenshot' | 'status_update' | 'test_run_start' | 'test_run_result' |
-  'cost_cap_reached';
+  'cost_cap_reached' |
+  // v4 Phase 3: lead dispatch broadcasts — the frontend Command Center
+  // reads these to show reassignment / pause / escalate moments.
+  'lead_dispatch';
   data: any;
   timestamp: string;
 }

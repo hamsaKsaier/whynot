@@ -21,8 +21,9 @@ import { ParallelTestExecutor } from '../parallel-test-executor';
 import { SessionPlanStore } from './session-plan';
 import { AgentBoard } from './agent-board';
 import { AgentType, AgentConfig, AgentResult, SessionPlan, PlanObjective } from './types';
-import { AgentEventBus, isV4EventBusEnabled, isV4ParallelEnabled } from './agent-event-bus';
+import { AgentEventBus, isV4EventBusEnabled, isV4ParallelEnabled, isV4DynamicLeadEnabled } from './agent-event-bus';
 import { AgentBrowserFactory, AgentBrowserPair } from './agent-browser-factory';
+import { QALeadWatcher, AgentRuntimeProbe, LeadDispatchSummary } from './qa-lead-watcher';
 import { QALeadAgent } from './agents/qa-lead';
 import { ExploratoryTesterAgent } from './agents/exploratory-tester';
 import { SecurityTesterAgent } from './agents/security-tester';
@@ -91,6 +92,12 @@ export class V2Orchestrator {
   // v4Parallel breakdown log. Populated by runAgent's telemetry hook.
   private agentStartTimes: Record<string, string> = {};
   private agentEndTimes: Record<string, string> = {};
+  // Phase 3: live QA Lead watcher + references to running agents so
+  // the watcher can probe lastActivityAt / progress counters without
+  // polling the DB. Populated by runAgent on each start, cleared when
+  // the watcher shuts down.
+  private leadWatcher: QALeadWatcher | null = null;
+  private liveAgents: Map<AgentType, BaseAgent> = new Map();
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
@@ -154,6 +161,23 @@ export class V2Orchestrator {
         logger.info('V4 parallel mode active for session', {
           sessionId: this.sessionId,
           feature: 'ENABLE_V4_PARALLEL',
+        });
+      }
+      // v4 Phase 3: dynamic QA Lead watcher. Gated on all three flags
+      // (isV4DynamicLeadEnabled chains through isV4ParallelEnabled
+      // which chains through isV4EventBusEnabled — see
+      // agent-event-bus.ts). The watcher is started once the bus and
+      // parallel machinery are up; it shuts down in the outer finally.
+      if (isV4DynamicLeadEnabled() && this.eventBus) {
+        this.leadWatcher = new QALeadWatcher(
+          this.sessionId,
+          this.eventBus,
+          () => this.probeLiveAgents(),
+        );
+        this.leadWatcher.start();
+        logger.info('V4 dynamic lead watcher active for session', {
+          sessionId: this.sessionId,
+          feature: 'ENABLE_V4_DYNAMIC_LEAD',
         });
       }
 
@@ -417,6 +441,26 @@ export class V2Orchestrator {
       // Attach execution summary to the report so frontend can display pass/fail
       if (execSummary) {
         (report as any).test_execution = execSummary;
+      }
+
+      // v4 Phase 3: attach a "sprint retrospective" block. Captures what
+      // the watcher did during the scan — reassignments, pauses, cost —
+      // so the report UI can show a "plan vs actual" view. Always present
+      // when the watcher ran; null otherwise.
+      if (this.leadWatcher) {
+        const s = this.leadWatcher.getSummary();
+        (report as any).retrospective = {
+          watcherInvocations: s.watcherInvocations,
+          reassignments: s.reassignments,
+          pauses: s.pauses,
+          resumes: s.resumes,
+          escalations: s.escalations,
+          terminations: s.terminations,
+          watcherCostDollars: (s.watcherCostCents / 100).toFixed(3),
+          timeline: s.notes,
+          agentStartTimes: this.agentStartTimes,
+          agentEndTimes: this.agentEndTimes,
+        };
       }
 
       // Store report in session
@@ -785,6 +829,42 @@ export class V2Orchestrator {
         },
       });
 
+      // v4 Phase 3: dynamic lead telemetry. Always logged so A/B can
+      // grep symmetrically with Phase 1 / 2 blocks. Summary pulled from
+      // the watcher; when disabled the block shows enabled=false + zeros.
+      const leadSummary: LeadDispatchSummary = this.leadWatcher
+        ? this.leadWatcher.getSummary()
+        : {
+            watcherInvocations: 0,
+            reassignments: 0,
+            pauses: 0,
+            resumes: 0,
+            escalations: 0,
+            terminations: 0,
+            watcherCostCents: 0,
+            watcherTokensInput: 0,
+            watcherTokensOutput: 0,
+            notes: [],
+          };
+      logger.info('Scan cost breakdown — v4DynamicLead', {
+        sessionId: this.sessionId,
+        v4DynamicLead: {
+          enabled: this.leadWatcher !== null,
+          watcherInvocations: leadSummary.watcherInvocations,
+          reassignments: leadSummary.reassignments,
+          pauses: leadSummary.pauses,
+          resumes: leadSummary.resumes,
+          escalations: leadSummary.escalations,
+          terminations: leadSummary.terminations,
+          watcherCostCents: leadSummary.watcherCostCents,
+          watcherTokensInput: leadSummary.watcherTokensInput,
+          watcherTokensOutput: leadSummary.watcherTokensOutput,
+          // Keep the last 20 notes for post-mortem — full list is in
+          // the bus event log for anyone who wants a verbatim timeline.
+          tailNotes: leadSummary.notes.slice(-20),
+        },
+      });
+
     } catch (err: any) {
       // User-initiated stop produces agent errors (MCP browser force-killed
       // mid-tool-call etc). That's expected — don't flip the DB status to
@@ -811,6 +891,11 @@ export class V2Orchestrator {
       }
 
     } finally {
+      // v4 Phase 3: stop the watcher first so it can't fire a new
+      // decide call against disposed browsers.
+      if (this.leadWatcher) {
+        await this.leadWatcher.join().catch(() => {});
+      }
       if (this.cdpMcp) {
         await this.cdpMcp.forceStop().catch(() => {});
       }
@@ -915,6 +1000,28 @@ export class V2Orchestrator {
    */
   private accumulateCost(result: AgentResult): void {
     this.cumulativeCostCents += result.costCents || 0;
+  }
+
+  /**
+   * v4 Phase 3: runtime snapshot of every currently-live agent. Called
+   * by the watcher every 90s. We read directly from the agent instance
+   * (last activity clock, progress counters) rather than the DB so the
+   * watcher gets sub-second-fresh state without extra query pressure.
+   */
+  private probeLiveAgents(): AgentRuntimeProbe[] {
+    const out: AgentRuntimeProbe[] = [];
+    for (const [type, agent] of this.liveAgents.entries()) {
+      out.push({
+        agentType: type,
+        lastActivityAt: agent.lastActivityAt,
+        pagesExplored: (agent as any).pagesExplored ?? 0,
+        bugsFound: (agent as any).bugsFound ?? 0,
+        testsGenerated: (agent as any).testsGenerated ?? 0,
+        completed: false,
+        pausedByLead: !!(agent as any).pausedByLead,
+      });
+    }
+    return out;
   }
 
   /**
@@ -1044,6 +1151,9 @@ export class V2Orchestrator {
       data: { agent: agentType, status: 'starting', message: `${agentType} agent starting...` },
     });
 
+    // Phase 3 probe support: announce this agent as alive so the
+    // watcher's probeLiveAgents() returns fresh data on its next tick.
+    // Removed from the map after run() resolves (see below).
     let agent: BaseAgent;
 
     switch (agentType) {
@@ -1104,6 +1214,10 @@ export class V2Orchestrator {
       (watchdog as any).unref();
     }
 
+    // v4 Phase 3: publish this agent into the live map so the watcher
+    // probe can see it. Removed in the finally regardless of outcome.
+    this.liveAgents.set(agentType, agent);
+
     let result: AgentResult;
     let runThrew: any = null;
     try {
@@ -1121,6 +1235,7 @@ export class V2Orchestrator {
       };
     } finally {
       clearInterval(watchdog);
+      this.liveAgents.delete(agentType);
     }
 
     // v4 Phase 2: record end time + publish agent.complete so any peer

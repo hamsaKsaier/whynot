@@ -236,6 +236,79 @@ export abstract class BaseAgent {
     isPromptCompressionEnabled(),
   );
 
+  // v4 Phase 3: queue of lead.* dispatches targeted at this agent.
+  // Subscribed in run() (once per agent). BaseAgent does not own the
+  // outer AI loop here — the concrete run() path (either this file's
+  // implementation or a subclass override) drains this queue into the
+  // next message before invoking generateText so the dispatch text
+  // lands as visible context. `pausedByLead` short-circuits tool calls
+  // back to the lead loop; resumed dispatches clear it.
+  protected leadDispatchQueue: Array<{ kind: 'reassign' | 'escalate'; text: string; at: string }> = [];
+  public pausedByLead: boolean = false;
+  /**
+   * Consume the current dispatch queue and return a single composed
+   * prompt block suitable for prepending to the next user message.
+   * Empty string when nothing is queued.
+   */
+  protected drainLeadDispatches(): string {
+    if (this.leadDispatchQueue.length === 0) return '';
+    const lines = this.leadDispatchQueue.map(d => `- [${d.kind}] ${d.text}`);
+    this.leadDispatchQueue = [];
+    return (
+      `DISPATCH FROM QA LEAD (v4 watcher — handle on your next tool step):\n` +
+      lines.join('\n') + '\n\n---\n\n'
+    );
+  }
+
+  /**
+   * Subscribe to lead.* events once, at agent start. Keyed by target
+   * so only dispatches addressed to this agent land in the queue.
+   * Escalations carry `notifyAgents` — we also land those for the
+   * listed peers.
+   */
+  protected subscribeToLeadDispatches(): void {
+    const bus = this.getEventBus();
+    if (!bus) return;
+    const me = this.agentType;
+    bus.on('lead.reassign', (e: any) => {
+      if (e.data?.target !== me) return;
+      this.leadDispatchQueue.push({
+        kind: 'reassign',
+        text: `${e.data.reason} — ${e.data.newObjective}`,
+        at: e.at,
+      });
+    });
+    bus.on('lead.pause', (e: any) => {
+      if (e.data?.target !== me) return;
+      this.pausedByLead = true;
+    });
+    bus.on('lead.resume', (e: any) => {
+      if (e.data?.target !== me) return;
+      this.pausedByLead = false;
+    });
+    bus.on('lead.escalate', (e: any) => {
+      const list = (e.data?.notifyAgents || []) as string[];
+      if (!list.includes(me)) return;
+      this.leadDispatchQueue.push({
+        kind: 'escalate',
+        text: `Bug ${e.data.bugId} escalated — ${e.data.reason}`,
+        at: e.at,
+      });
+    });
+    bus.on('lead.terminate', (e: any) => {
+      // Any agent observing a terminate should exit on next tool
+      // boundary. Reuse killedIdle's plumbing — same downstream effect
+      // (agent resolves with a non-done status, orchestrator records it).
+      this.killedIdle = true;
+      try { (this.abortSignal as any)?.abort?.(); } catch {}
+      logger.info('Lead terminate received — aborting agent', {
+        sessionId: this.sessionId,
+        agentType: me,
+        reason: e.data?.reason,
+      });
+    });
+  }
+
   /**
    * v4 Phase 1: session-shared event bus (null when flag is off).
    * Subclasses read from this via `this.getEventBus()` — kept `any`-typed
@@ -374,6 +447,10 @@ export abstract class BaseAgent {
     // Priority 1: initial heartbeat so the watchdog doesn't trip during
     // the first slow setup step (board init, system prompt build, etc.).
     this.markActivity();
+
+    // v4 Phase 3: subscribe to lead.* events once per agent lifetime.
+    // No-op when the bus is null (all Phase 3 env flags off).
+    this.subscribeToLeadDispatches();
 
     try {
       // Initialize board entry
@@ -667,6 +744,27 @@ export abstract class BaseAgent {
         if (boardUpdate) {
           messages.push({ role: 'user', content: boardUpdate });
         }
+      }
+
+      // v4 Phase 3: drain any pending lead.* dispatches into the next
+      // user message so the model sees the reassign/escalate order and
+      // can act on it in this outer loop's generateText. If the agent
+      // is currently paused by the lead, skip the LLM call entirely
+      // (wait for lead.resume — subsequent outer loops will retry).
+      if (this.pausedByLead) {
+        logger.info('Agent paused by lead — skipping outer loop', {
+          sessionId: this.sessionId,
+          agentType: this.agentType,
+          outerLoop,
+        });
+        this.markActivity();
+        // Short sleep so the watchdog stays happy but we don't hot-loop.
+        await new Promise(r => setTimeout(r, 5_000));
+        continue;
+      }
+      const dispatchBlock = this.drainLeadDispatches();
+      if (dispatchBlock) {
+        messages.push({ role: 'user', content: dispatchBlock });
       }
 
       // Update progress

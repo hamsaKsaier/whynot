@@ -5,7 +5,11 @@ export interface QALoopEvent {
   type: 'thinking' | 'tool_call' | 'tool_result' | 'progress' | 'error' |
   'iteration_start' | 'iteration_end' | 'page_discovered' | 'page_explored' |
   'test_generated' | 'bug_found' | 'session_complete' | 'connected' |
-  'screenshot' | 'status_update' | 'test_run_start' | 'test_run_result';
+  'screenshot' | 'status_update' | 'test_run_start' | 'test_run_result' |
+  // v4 Phase 3: backend QALeadWatcher emits these when it reassigns,
+  // pauses, resumes, or escalates. Command Center subscribes via the
+  // per-agent `pulse` field + a dedicated leadDispatches log.
+  'lead_dispatch' | 'cost_cap_reached';
   data: any;
   timestamp: string;
 }
@@ -35,6 +39,34 @@ export interface CostInfo {
   modelName: string;
 }
 
+/**
+ * v4 Phase 3: per-agent stream slice. The CommandCenter component
+ * reads these to populate the 4-quadrant live view. Legacy
+ * whole-session fields above stay in place so LiveMonitor keeps
+ * working unchanged when the Command Center is toggled off.
+ */
+export interface AgentStreamSlice {
+  thinkingText: string;
+  toolCalls: Array<{ tool: string; input: any; result?: any; timestamp: string }>;
+  bugsFound: Array<{ title: string; severity: string }>;
+  testsGenerated: string[];
+  lastActivityTs: number | null;
+  /** Set when a lead.* event arrives targeting this agent — UI highlights briefly. */
+  pulse?: 'reassign' | 'pause' | 'resume' | 'escalate' | null;
+  /** Clock when the agent first appeared — Gantt bar left edge. */
+  firstSeenTs: number | null;
+  /** Clock of last activity — Gantt bar right edge. */
+  lastSeenTs: number | null;
+}
+
+export interface LeadDispatch {
+  id: string;
+  kind: 'reassign' | 'pause' | 'resume' | 'escalate' | 'terminate';
+  target?: string;
+  message: string;
+  at: string;
+}
+
 interface UseQALoopStreamReturn {
   isConnected: boolean;
   currentScreenshot: string | null;
@@ -53,6 +85,9 @@ interface UseQALoopStreamReturn {
   costInfo: CostInfo;
   sessionStartTime: number | null;
   error: string | null;
+  // v4 Phase 3: per-agent slices for the Command Center UI.
+  agentStreams: Record<string, AgentStreamSlice>;
+  leadDispatches: LeadDispatch[];
   connect: () => void;
   disconnect: () => void;
   clearEvents: () => void;
@@ -82,6 +117,43 @@ export function useQALoopStream({
   const [costInfo, setCostInfo] = useState<CostInfo>({ totalCostCents: 0, inputTokens: 0, outputTokens: 0, modelName: '' });
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // v4 Phase 3 per-agent slices + lead dispatch log.
+  const [agentStreams, setAgentStreams] = useState<Record<string, AgentStreamSlice>>({});
+  const [leadDispatches, setLeadDispatches] = useState<LeadDispatch[]>([]);
+
+  /**
+   * Merge a partial update into a specific agent's stream slice. Creates
+   * the slice on first touch. Normalizes `firstSeenTs` on first write
+   * and bumps `lastSeenTs` / `lastActivityTs` on every call.
+   */
+  const mergeAgentSlice = useCallback((
+    agent: string,
+    patch: Partial<AgentStreamSlice>,
+  ) => {
+    setAgentStreams(prev => {
+      const now = Date.now();
+      const existing = prev[agent] ?? {
+        thinkingText: '',
+        toolCalls: [],
+        bugsFound: [],
+        testsGenerated: [],
+        lastActivityTs: now,
+        pulse: null,
+        firstSeenTs: now,
+        lastSeenTs: now,
+      };
+      return {
+        ...prev,
+        [agent]: {
+          ...existing,
+          ...patch,
+          firstSeenTs: existing.firstSeenTs ?? now,
+          lastSeenTs: now,
+          lastActivityTs: now,
+        },
+      };
+    });
+  }, []);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -110,6 +182,9 @@ export function useQALoopStream({
     setCostInfo({ totalCostCents: 0, inputTokens: 0, outputTokens: 0, modelName: '' });
     setSessionStartTime(null);
     setError(null);
+    // v4 Phase 3: reset per-agent slices + lead dispatch log.
+    setAgentStreams({});
+    setLeadDispatches([]);
     // Reset the O(1) dedup Sets to stay in sync with the cleared arrays (4.4)
     pagesDiscoveredSet.current.clear();
     pagesExploredSet.current.clear();
@@ -123,11 +198,32 @@ export function useQALoopStream({
         setSessionStartTime(prev => prev ?? Date.now());
         break;
 
-      case 'thinking':
-        setThinkingText(prev => prev + (event.data?.text || ''));
+      case 'thinking': {
+        const incoming = event.data?.text || '';
+        setThinkingText(prev => prev + incoming);
+        const agent = event.data?.agent;
+        if (agent && incoming) {
+          // Cap per-agent thinking at 4 KB so the Command Center panel
+          // never renders more than a screenful — older tail drops.
+          setAgentStreams(prev => {
+            const slot = prev[agent] ?? {
+              thinkingText: '', toolCalls: [], bugsFound: [], testsGenerated: [],
+              lastActivityTs: Date.now(), pulse: null,
+              firstSeenTs: Date.now(), lastSeenTs: Date.now(),
+            };
+            const merged = (slot.thinkingText + incoming).slice(-4000);
+            return {
+              ...prev,
+              [agent]: { ...slot, thinkingText: merged,
+                firstSeenTs: slot.firstSeenTs ?? Date.now(),
+                lastSeenTs: Date.now(), lastActivityTs: Date.now() },
+            };
+          });
+        }
         break;
+      }
 
-      case 'tool_call':
+      case 'tool_call': {
         // Cap toolCalls at 50 to prevent unbounded memory growth
         setToolCalls(prev => [...prev.slice(-49), {
           tool: event.data?.tool,
@@ -136,7 +232,31 @@ export function useQALoopStream({
         }]);
         // Add a separator between thinking blocks so they remain readable
         setThinkingText(prev => prev ? prev + '\n\n---\n\n' : '');
+        const agent = event.data?.agent;
+        if (agent) {
+          setAgentStreams(prev => {
+            const slot = prev[agent] ?? {
+              thinkingText: '', toolCalls: [], bugsFound: [], testsGenerated: [],
+              lastActivityTs: Date.now(), pulse: null,
+              firstSeenTs: Date.now(), lastSeenTs: Date.now(),
+            };
+            return {
+              ...prev,
+              [agent]: {
+                ...slot,
+                toolCalls: [...slot.toolCalls.slice(-19), {
+                  tool: event.data?.tool,
+                  input: event.data?.input,
+                  timestamp: event.timestamp,
+                }],
+                firstSeenTs: slot.firstSeenTs ?? Date.now(),
+                lastSeenTs: Date.now(), lastActivityTs: Date.now(),
+              },
+            };
+          });
+        }
         break;
+      }
 
       case 'tool_result':
         setToolCalls(prev => {
@@ -201,6 +321,12 @@ export function useQALoopStream({
       case 'test_generated':
         if (event.data?.name) {
           setTestsGenerated(prev => [...prev, event.data.name]);
+          const agent = event.data?.agent;
+          if (agent) {
+            mergeAgentSlice(agent, {
+              testsGenerated: [...(agentStreams[agent]?.testsGenerated || []), event.data.name],
+            });
+          }
         }
         break;
 
@@ -210,8 +336,80 @@ export function useQALoopStream({
             title: event.data.title,
             severity: event.data.severity || 'medium'
           }]);
+          const agent = event.data?.agent;
+          if (agent) {
+            setAgentStreams(prev => {
+              const slot = prev[agent] ?? {
+                thinkingText: '', toolCalls: [], bugsFound: [], testsGenerated: [],
+                lastActivityTs: Date.now(), pulse: null,
+                firstSeenTs: Date.now(), lastSeenTs: Date.now(),
+              };
+              return {
+                ...prev,
+                [agent]: {
+                  ...slot,
+                  bugsFound: [...slot.bugsFound, {
+                    title: event.data.title,
+                    severity: event.data.severity || 'medium',
+                  }],
+                  firstSeenTs: slot.firstSeenTs ?? Date.now(),
+                  lastSeenTs: Date.now(), lastActivityTs: Date.now(),
+                },
+              };
+            });
+          }
         }
         break;
+
+      // v4 Phase 3: lead dispatch broadcasts. Carried as
+      // { agent: 'qa_lead', message: '...' } from the backend
+      // QALeadWatcher.emitUiStatus(). We infer the dispatch kind from
+      // the message prefix — keeps the backend → frontend contract
+      // simple (no extra kind field required on QALoopEvent).
+      case 'lead_dispatch': {
+        const message: string = event.data?.message || '';
+        const lower = message.toLowerCase();
+        const kind: LeadDispatch['kind'] =
+          lower.startsWith('lead reassigned') ? 'reassign' :
+          lower.startsWith('lead paused')     ? 'pause'    :
+          lower.startsWith('lead resumed')    ? 'resume'   :
+          lower.startsWith('lead escalated')  ? 'escalate' :
+          'terminate';
+        // Parse target agent from the message prefix: "Lead reassigned security: ..."
+        const colonAt = message.indexOf(':');
+        const targetFragment = colonAt > 0 ? message.slice(0, colonAt) : message;
+        const target = targetFragment.split(/\s+/).pop();
+        setLeadDispatches(prev => [
+          ...prev.slice(-49),
+          {
+            id: `${event.timestamp}-${target ?? 'na'}`,
+            kind,
+            target,
+            message,
+            at: event.timestamp,
+          },
+        ]);
+        // Briefly flag the target agent's slice so the UI can animate.
+        if (target) {
+          setAgentStreams(prev => {
+            const slot = prev[target] ?? {
+              thinkingText: '', toolCalls: [], bugsFound: [], testsGenerated: [],
+              lastActivityTs: Date.now(), pulse: null,
+              firstSeenTs: Date.now(), lastSeenTs: Date.now(),
+            };
+            return {
+              ...prev,
+              [target]: {
+                ...slot,
+                pulse: kind === 'terminate' ? null : kind,
+                firstSeenTs: slot.firstSeenTs ?? Date.now(),
+                lastSeenTs: Date.now(),
+              },
+            };
+          });
+        }
+        break;
+      }
 
       case 'status_update':
         if (event.data?.status) setSessionStatus(event.data.status);
@@ -366,6 +564,9 @@ export function useQALoopStream({
     costInfo,
     sessionStartTime,
     error,
+    // v4 Phase 3: per-agent derived state for the Command Center.
+    agentStreams,
+    leadDispatches,
     connect,
     disconnect,
     clearEvents

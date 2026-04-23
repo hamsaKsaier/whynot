@@ -34,3 +34,6 @@ export type { ResultsTabsProps } from './ResultsTabs';
 
 export { AgentProgressPanel } from './AgentProgressPanel';
 export { ReportTab } from './ReportTab';
+
+// v4 Phase 3 — optional 4-quadrant live view; gated by ?view=command-center.
+export { CommandCenter } from './CommandCenter';
