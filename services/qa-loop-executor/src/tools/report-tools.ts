@@ -4,6 +4,8 @@ import { ToolResult } from '../tool-executor';
 import { emitToSession } from '../api/websocket';
 import { notifyGateway } from '../notifications/email-notifier';
 import { LoginCredentials } from '../loop-orchestrator';
+import type { AgentEventBus } from '../v2/agent-event-bus';
+import type { AgentType } from '../v2/types';
 
 const logger = createLogger('report-tools');
 
@@ -87,12 +89,27 @@ export class ReportTools {
   private repository: QALoopRepository;
   private onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void;
   private loginCredentials?: LoginCredentials;
+  // v4 Phase 1: optional event bus + agentType for emitting bug.confirmed
+  // and test.saved after successful DB writes. Set via setEventBusContext
+  // after construction so we don't disturb the existing constructor
+  // signature (callers in v1 paths still build ReportTools with 1-3 args).
+  private eventBus: AgentEventBus | null = null;
+  private eventBusAgentType: AgentType | null = null;
 
   constructor(sessionId: string, onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void, loginCredentials?: LoginCredentials) {
     this.sessionId = sessionId;
     this.repository = new QALoopRepository();
     this.onTestCaseCreated = onTestCaseCreated;
     this.loginCredentials = loginCredentials;
+  }
+
+  /**
+   * v4 Phase 1: attach the session's shared event bus + agent identity.
+   * No-op when the feature flag is off (caller passes null).
+   */
+  setEventBusContext(bus: AgentEventBus | null, agentType: AgentType | null): void {
+    this.eventBus = bus;
+    this.eventBusAgentType = agentType;
   }
 
   async saveTestCase(input: TestCaseInput): Promise<ToolResult> {
@@ -181,6 +198,27 @@ export class ReportTools {
         name: input.name,
         observedResult: input.observed_result
       });
+
+      // v4 Phase 1: broadcast test.saved on the session bus. Happens
+      // AFTER the DB write so the event carries the real test case id,
+      // and AFTER the non-fatal progress update so we don't publish for
+      // a test that ultimately wasn't committed.
+      if (this.eventBus && this.eventBusAgentType) {
+        try {
+          this.eventBus.publish({
+            type: 'test.saved',
+            agent: this.eventBusAgentType,
+            at: new Date().toISOString(),
+            data: {
+              testCaseId: testCase.id,
+              name: input.name,
+              category: input.feature_category || input.category,
+            },
+          });
+        } catch {
+          // Never let a bus failure fail a DB-committed save.
+        }
+      }
 
       return {
         data: {
@@ -279,6 +317,27 @@ export class ReportTools {
         title: input.title,
         severity: input.severity
       });
+
+      // v4 Phase 1: broadcast bug.confirmed on the session bus. Carries
+      // the real DB-assigned bugId (BoardTools' mirror event uses the
+      // title as a stand-in because it doesn't see the DB row id).
+      if (this.eventBus && this.eventBusAgentType) {
+        try {
+          this.eventBus.publish({
+            type: 'bug.confirmed',
+            agent: this.eventBusAgentType,
+            at: new Date().toISOString(),
+            data: {
+              bugId: bug.id,
+              severity: input.severity,
+              title: input.title,
+              pageUrl: input.page_url,
+            },
+          });
+        } catch {
+          // Bus failure must never unwind a committed bug.
+        }
+      }
 
       // Send critical bug email notification
       if (input.severity === 'critical' || input.severity === 'high') {

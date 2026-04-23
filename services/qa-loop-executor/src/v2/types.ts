@@ -81,6 +81,10 @@ export interface AgentConfig {
     email: string;
     password: string;
   };
+  // v4 Phase 1: optional shared event bus. Null when ENABLE_V4_EVENT_BUS
+  // is off (default) — agents fall back to v3 board-on-start reads.
+  // Typed as `any` here to avoid a cyclic import of AgentEventBus.
+  eventBus?: any;
 }
 
 export interface AgentResult {

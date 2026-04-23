@@ -236,6 +236,15 @@ export abstract class BaseAgent {
     isPromptCompressionEnabled(),
   );
 
+  /**
+   * v4 Phase 1: session-shared event bus (null when flag is off).
+   * Subclasses read from this via `this.getEventBus()` — kept `any`-typed
+   * in AgentConfig to dodge a cyclic import, cast here for internal use.
+   */
+  protected getEventBus(): any | null {
+    return (this.config as any).eventBus || null;
+  }
+
   constructor(
     config: AgentConfig,
     mcpBrowser?: MCPBrowser,
@@ -246,7 +255,10 @@ export abstract class BaseAgent {
     this.config = config;
     this.board = new AgentBoard();
     this.contextBuilder = new AgentContextBuilder();
-    this.boardTools = new BoardTools(config.sessionId, config.agentType);
+    // v4 Phase 1: pass the shared bus to BoardTools so writeToBoard mirrors
+    // onto the event stream. config.eventBus is null when the feature flag
+    // is off — BoardTools handles that path without emitting.
+    this.boardTools = new BoardTools(config.sessionId, config.agentType, config.eventBus || null);
     this.lastBoardPollTime = new Date().toISOString();
     this.cdpMcp = cdpMcp;
 
@@ -267,6 +279,8 @@ export abstract class BaseAgent {
         mcpBrowser,
         undefined,            // onTestCaseCreated
         cdpMcp,               // Week 2: hand CDP MCP to the tool executor
+        config.eventBus || null,
+        config.agentType,
       );
     } else {
       // Agents without a browser (auto_tester, qa_lead) still need state +
@@ -283,6 +297,8 @@ export abstract class BaseAgent {
         headlessBrowser,
         undefined,
         cdpMcp,
+        config.eventBus || null,
+        config.agentType,
       );
     }
   }

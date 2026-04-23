@@ -13,10 +13,32 @@ import { AgentConfig } from '../types';
 import { MCPBrowser } from '../../mcp-browser';
 import { getToolSchemasForAgent, ToolSchema } from '../tools/agent-tools';
 import { ToolResult } from '../../tool-executor';
+import { AgentEvent } from '../agent-event-bus';
 
 import { ChromeDevToolsMCP, filterCdpToolsForAgent } from '../../chrome-devtools-mcp';
 
+/**
+ * In-memory record of a form discovered via the v4 event bus.
+ * Phase 1 feeds these into the initial prompt. Phase 2 will consume them
+ * from a live queue as they arrive during Security's run.
+ */
+interface QueuedForm {
+  url: string;
+  formId: string;
+  fields: string[];
+  method?: string;
+  agent: string;
+}
+
 export class SecurityTesterAgent extends BaseAgent {
+  /**
+   * v4 Phase 1: forms observed via the AgentEventBus. Populated by
+   * subscribeWithReplay in run() before the agent's AI loop starts.
+   * Deduplicated by formId — the same form across multiple scan passes
+   * collapses to one queue entry.
+   */
+  private formQueueFromBus: QueuedForm[] = [];
+
   constructor(
     config: AgentConfig,
     mcpBrowser: MCPBrowser,
@@ -80,6 +102,44 @@ export class SecurityTesterAgent extends BaseAgent {
     return result;
   }
 
+  /**
+   * v4 Phase 1: subscribe to the session bus's form.discovered stream
+   * before the AI loop runs. In sequential scan mode (still the default
+   * in Phase 1), Exploratory has already finished by the time Security
+   * starts, so subscribeWithReplay delivers the full form history
+   * synchronously — same effective data as the v3 read_board-on-start
+   * path, but now plumbed through the event bus so Phase 2 can swap in
+   * live delivery without touching the data contract.
+   *
+   * No-op (returns immediately) when the feature flag is off:
+   * getEventBus() is null, and the queue stays empty so the existing
+   * boardEntriesAtStart path in getInitialPrompt still drives prompt
+   * content.
+   */
+  private hydrateFormQueueFromBus(): void {
+    const bus = this.getEventBus();
+    if (!bus) return;
+    const seen = new Set<string>();
+    bus.subscribeWithReplay('form.discovered', this.agentType, (e: AgentEvent) => {
+      if (e.type !== 'form.discovered') return;
+      if (seen.has(e.data.formId)) return;
+      seen.add(e.data.formId);
+      this.formQueueFromBus.push({
+        url: e.data.url,
+        formId: e.data.formId,
+        fields: e.data.fields,
+        method: e.data.method,
+        agent: e.agent,
+      });
+    });
+  }
+
+  async run() {
+    // Must hydrate BEFORE super.run() so getInitialPrompt sees the queue.
+    this.hydrateFormQueueFromBus();
+    return super.run();
+  }
+
   protected getInitialPrompt(): string {
     // Task 4: board-derived context (forms + known issues) lives in the
     // user message, NOT the system prompt, so the system prompt stays
@@ -91,6 +151,25 @@ export class SecurityTesterAgent extends BaseAgent {
     );
     if (contextMsg) {
       contextHeader = `CONTEXT FROM PRIOR AGENTS:\n\n${contextMsg}\n\n---\n\n`;
+    }
+
+    // v4 Phase 1: if the bus delivered any forms, append them to the
+    // context header. Complements (does not replace) the board-derived
+    // section so Scan B data is a superset of Scan A's — ensures we can
+    // detect regressions from Scan A via the A/B comparison.
+    if (this.formQueueFromBus.length > 0) {
+      const lines = this.formQueueFromBus
+        .slice(0, 20)
+        .map(f =>
+          `- ${f.method || 'POST'} ${f.url} [fields: ${f.fields.join(', ') || '(none listed)'}] ` +
+          `(from ${f.agent})`,
+        )
+        .join('\n');
+      const more = this.formQueueFromBus.length > 20
+        ? `\n... and ${this.formQueueFromBus.length - 20} more (total ${this.formQueueFromBus.length}).`
+        : '';
+      contextHeader +=
+        `LIVE FORM QUEUE (v4 event bus — form.discovered):\n${lines}${more}\n\n---\n\n`;
     }
 
     return `${contextHeader}Begin security testing for ${this.config.targetUrl}.

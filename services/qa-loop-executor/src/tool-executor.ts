@@ -41,6 +41,11 @@ export class ToolExecutor {
     mcpBrowser: MCPBrowser,
     onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void,
     cdpMcp: ChromeDevToolsMCP | null = null,
+    // v4 Phase 1: optional bus + agent identity. Plumbed into ReportTools
+    // so saveBug / saveTestCase publish bug.confirmed / test.saved events
+    // after their DB writes succeed. Null when ENABLE_V4_EVENT_BUS is off.
+    eventBus: any | null = null,
+    eventBusAgentType: any | null = null,
   ) {
     this.sessionId = sessionId;
     this.config = config;
@@ -48,6 +53,7 @@ export class ToolExecutor {
     this.cdpMcp = cdpMcp;
     this.stateTools = new StateTools(sessionId);
     this.reportTools = new ReportTools(sessionId, onTestCaseCreated, config.loginCredentials);
+    this.reportTools.setEventBusContext(eventBus, eventBusAgentType);
     this.chaosTools = new ChaosTools(sessionId);
     this.detectiveTools = new DetectiveTools(sessionId);
     this.guardianTools = new GuardianTools(sessionId);

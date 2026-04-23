@@ -21,6 +21,7 @@ import { ParallelTestExecutor } from '../parallel-test-executor';
 import { SessionPlanStore } from './session-plan';
 import { AgentBoard } from './agent-board';
 import { AgentType, AgentConfig, AgentResult, SessionPlan, PlanObjective } from './types';
+import { AgentEventBus, isV4EventBusEnabled } from './agent-event-bus';
 import { QALeadAgent } from './agents/qa-lead';
 import { ExploratoryTesterAgent } from './agents/exploratory-tester';
 import { SecurityTesterAgent } from './agents/security-tester';
@@ -74,6 +75,10 @@ export class V2Orchestrator {
   // Fix 3: cumulative tracked cost across all agents for the circuit breaker
   private cumulativeCostCents = 0;
   private circuitBreakerTripped = false;
+  // v4 Phase 1: shared in-memory event bus for live inter-agent comms.
+  // Instantiated in run() only when ENABLE_V4_EVENT_BUS=true; otherwise
+  // stays null and every callsite falls back to v3 board-on-start reads.
+  private eventBus: AgentEventBus | null = null;
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
@@ -116,9 +121,22 @@ export class V2Orchestrator {
       // Mark session as running
       await this.repository.updateSessionStatus(this.sessionId, 'running');
 
+      // v4 Phase 1: stand up the shared event bus if the feature flag
+      // is on. One bus per session — lives for the scan lifetime, GC'd
+      // when the orchestrator is dropped. When off, this.eventBus stays
+      // null and every consumer skips the publish/subscribe paths.
+      if (isV4EventBusEnabled()) {
+        this.eventBus = new AgentEventBus(this.sessionId);
+        logger.info('V4 event bus active for session', {
+          sessionId: this.sessionId,
+          feature: 'ENABLE_V4_EVENT_BUS',
+        });
+      }
+
       logger.info('V2 multi-agent session starting', {
         sessionId: this.sessionId,
         targetUrl: this.config.targetUrl,
+        v4EventBus: this.eventBus !== null,
       });
 
       emitToSession(this.sessionId, {
@@ -585,6 +603,31 @@ export class V2Orchestrator {
         },
       });
 
+      // v4 Phase 1: event bus telemetry. Always logged (with
+      // enabled=false when flag is off) so A/B comparisons can tell
+      // Scan A and Scan B apart by this single line.
+      if (this.eventBus) {
+        logger.info('Scan cost breakdown — v4EventBus', {
+          sessionId: this.sessionId,
+          v4EventBus: {
+            enabled: true,
+            totalEvents: this.eventBus.totalEvents(),
+            eventCountsByType: this.eventBus.eventCountsByType(),
+            subscribersByAgent: this.eventBus.subscriberMap(),
+          },
+        });
+      } else {
+        logger.info('Scan cost breakdown — v4EventBus', {
+          sessionId: this.sessionId,
+          v4EventBus: {
+            enabled: false,
+            totalEvents: 0,
+            eventCountsByType: {},
+            subscribersByAgent: {},
+          },
+        });
+      }
+
     } catch (err: any) {
       // User-initiated stop produces agent errors (MCP browser force-killed
       // mid-tool-call etc). That's expected — don't flip the DB status to
@@ -768,6 +811,10 @@ export class V2Orchestrator {
       plan,
       projectContext: this.config.projectContext,
       loginCredentials: this.config.loginCredentials,
+      // v4 Phase 1: thread the session's shared bus into the agent.
+      // Null when the flag is off — all downstream consumers (BoardTools,
+      // ReportTools, Security's hydrateFormQueueFromBus) no-op on null.
+      eventBus: this.eventBus,
     };
 
     // Browser-using agents: verify the shared browser is still alive, restart if not
