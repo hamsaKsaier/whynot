@@ -15,9 +15,15 @@ import { MCPBrowser } from '../../mcp-browser';
 import { getToolSchemasForAgent, ToolSchema } from '../tools/agent-tools';
 import { ToolResult } from '../../tool-executor';
 
+import { ChromeDevToolsMCP, filterCdpToolsForAgent } from '../../chrome-devtools-mcp';
+
 export class APITesterAgent extends BaseAgent {
-  constructor(config: AgentConfig, mcpBrowser: MCPBrowser) {
-    super(config, mcpBrowser);
+  constructor(
+    config: AgentConfig,
+    mcpBrowser: MCPBrowser,
+    cdpMcp: ChromeDevToolsMCP | null = null,
+  ) {
+    super(config, mcpBrowser, cdpMcp);
   }
 
   protected buildToolSchemas(): Record<string, { description: string; parameters: z.ZodType }> {
@@ -37,6 +43,17 @@ export class APITesterAgent extends BaseAgent {
       }
     }
 
+    // Week 2: Chrome DevTools network/console tools for edge-case validation
+    if (this.cdpMcp) {
+      const cdpAllowed = filterCdpToolsForAgent('api_tester', this.cdpMcp.getTools());
+      for (const tool of cdpAllowed) {
+        agentTools[tool.name] = {
+          description: tool.description || `Chrome DevTools tool: ${tool.name}`,
+          parameters: this.convertSchema(tool.input_schema),
+        };
+      }
+    }
+
     return agentTools;
   }
 
@@ -46,7 +63,8 @@ export class APITesterAgent extends BaseAgent {
   protected async executeTool(toolName: string, args: Record<string, any>): Promise<ToolResult> {
     const result = await super.executeTool(toolName, args);
 
-    if (toolName === 'save_bug' && !result.error && args.title) {
+    // Skip board write if save_bug was dedup'd
+    if (toolName === 'save_bug' && !result.error && !result.data?.deduplicated && args.title) {
       await this.boardTools.writeToBoard({
         type: 'bug',
         title: args.title,

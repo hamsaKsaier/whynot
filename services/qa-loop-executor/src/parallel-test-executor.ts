@@ -18,6 +18,17 @@ export interface MismatchInfo {
   failureStepIndex?: number;
   failureReason?: string;
   steps: any[];
+  /**
+   * Week 2: Chrome DevTools diagnostics captured right after the Playwright
+   * subprocess returned a failure. The correction phase uses this to figure
+   * out what actually broke (console errors, 5xx responses, CSP violations,
+   * etc.) and generate a better retry.
+   */
+  diagnostics?: {
+    consoleTail?: any;
+    failedRequests?: any;
+    capturedAt?: string;
+  } | null;
 }
 
 /**
@@ -47,12 +58,49 @@ export class ParallelTestExecutor {
   private repository: QALoopRepository;
   private isStopped = false;
   private testExecutorUrl: string;
+  // Week 2: Chrome DevTools MCP reference for self-healing diagnostics.
+  // When a test fails, we ask it for the console tail + failed requests.
+  private cdpMcp: { callTool: (name: string, args: any) => Promise<{ data?: any; error?: string }> } | null;
 
-  constructor(sessionId: string, config: LoopConfig, repository: QALoopRepository) {
+  constructor(
+    sessionId: string,
+    config: LoopConfig,
+    repository: QALoopRepository,
+    cdpMcp: { callTool: (name: string, args: any) => Promise<{ data?: any; error?: string }> } | null = null,
+  ) {
     this.sessionId = sessionId;
     this.config = config;
     this.repository = repository;
+    this.cdpMcp = cdpMcp;
     this.testExecutorUrl = process.env.TEST_EXECUTOR_URL || 'http://localhost:3001';
+  }
+
+  /**
+   * Week 2: capture Chrome DevTools diagnostics after a Playwright failure.
+   * Non-blocking — never throws; returns null if CDP is unavailable or errors.
+   * Feeds the V2 "correction" phase so retries have real error context.
+   */
+  private async captureDiagnostics(): Promise<any> {
+    if (!this.cdpMcp) return null;
+    try {
+      const [consoleMsgs, networkReqs] = await Promise.allSettled([
+        this.cdpMcp.callTool('cdp_list_console_messages', {}),
+        this.cdpMcp.callTool('cdp_list_network_requests', {}),
+      ]);
+      const consoleData = consoleMsgs.status === 'fulfilled' ? consoleMsgs.value?.data : null;
+      const networkData = networkReqs.status === 'fulfilled' ? networkReqs.value?.data : null;
+      return {
+        consoleTail: typeof consoleData === 'string' ? consoleData : consoleData ?? null,
+        failedRequests: typeof networkData === 'string' ? networkData : networkData ?? null,
+        capturedAt: new Date().toISOString(),
+      };
+    } catch (err: any) {
+      logger.warn('CDP diagnostics capture failed (non-fatal)', {
+        sessionId: this.sessionId,
+        error: err.message,
+      });
+      return null;
+    }
   }
 
   /**
@@ -366,7 +414,9 @@ export class ParallelTestExecutor {
           timeoutMs: 30_000,
           credentials: this.config.loginCredentials ?? undefined,
         },
-        { timeout: 60_000 }
+        // 3 attempts × 30 s hard timeout + 30 s overhead = 120 s upper bound.
+        // Previous 60 s cut retries short before the 2nd attempt could start.
+        { timeout: 120_000 }
       );
 
       const res = response.data;
@@ -383,6 +433,23 @@ export class ParallelTestExecutor {
       // For Playwright runner: map result to confirmed/mismatch
       const finalStatus = isMismatch ? 'mismatch' : (status === 'passed' ? 'confirmed' : status);
 
+      // Week 2: on failure, capture Chrome DevTools diagnostics BEFORE we
+      // log the mismatch. The diagnostics feed the correction phase so the
+      // retry agent sees why the test actually broke (console errors, 5xx
+      // responses, CSP violations, etc.) — the "self-healing" demo moment.
+      let diagnostics: any = null;
+      if (!res.passed) {
+        diagnostics = await this.captureDiagnostics();
+        if (diagnostics) {
+          logger.info('Captured CDP diagnostics for failed test', {
+            sessionId: this.sessionId,
+            testCaseId: testCase.id,
+            hasConsole: !!diagnostics.consoleTail,
+            hasNetwork: !!diagnostics.failedRequests,
+          });
+        }
+      }
+
       if (isMismatch) {
         this.mismatches.push({
           testCaseId: testCase.id,
@@ -390,8 +457,10 @@ export class ParallelTestExecutor {
           observedResult,
           executionResult: status,
           failureReason: res.error,
-          steps: testCase.steps || []
-        });
+          steps: testCase.steps || [],
+          // Week 2: surface diagnostics so the correction phase can use them
+          diagnostics,
+        } as MismatchInfo);
         logger.warn('Mismatch detected (Playwright runner)', {
           sessionId: this.sessionId,
           testCaseId: testCase.id,

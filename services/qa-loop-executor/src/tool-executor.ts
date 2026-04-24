@@ -1,6 +1,7 @@
 import { createLogger } from '../../shared/logger/logger';
 import { LoopConfig } from './loop-orchestrator';
 import { MCPBrowser } from './mcp-browser';
+import { ChromeDevToolsMCP, truncateCdpToolResult } from './chrome-devtools-mcp';
 import { StateTools } from './tools/state-tools';
 import { ReportTools } from './tools/report-tools';
 import { ChaosTools } from './tools/chaos-tools';
@@ -24,21 +25,27 @@ export class ToolExecutor {
   private sessionId: string;
   private config: LoopConfig;
   private mcpBrowser: MCPBrowser;
+  private cdpMcp: ChromeDevToolsMCP | null;
   private stateTools: StateTools;
   private reportTools: ReportTools;
   private chaosTools: ChaosTools;
   private detectiveTools: DetectiveTools;
   private guardianTools: GuardianTools;
+  // Week 2 Task 8 telemetry: per-tool call counts + truncated chars
+  public cdpCallCounts = new Map<string, number>();
+  public cdpCharsDropped = 0;
 
   constructor(
     sessionId: string,
     config: LoopConfig,
     mcpBrowser: MCPBrowser,
-    onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void
+    onTestCaseCreated?: (testCase: any, observedResult?: 'pass' | 'fail') => void,
+    cdpMcp: ChromeDevToolsMCP | null = null,
   ) {
     this.sessionId = sessionId;
     this.config = config;
     this.mcpBrowser = mcpBrowser;
+    this.cdpMcp = cdpMcp;
     this.stateTools = new StateTools(sessionId);
     this.reportTools = new ReportTools(sessionId, onTestCaseCreated, config.loginCredentials);
     this.chaosTools = new ChaosTools(sessionId);
@@ -53,6 +60,19 @@ export class ToolExecutor {
       // Route MCP browser tools (browser_navigate, browser_click, browser_snapshot, etc.)
       if (this.mcpBrowser.isMCPTool(toolName)) {
         return await this.mcpBrowser.callTool(toolName, input);
+      }
+
+      // Route Chrome DevTools MCP tools (cdp_list_console_messages, etc.).
+      // Output truncation applied BEFORE the result enters the agent's history.
+      if (this.cdpMcp && this.cdpMcp.isCdpTool(toolName)) {
+        const result = await this.cdpMcp.callTool(toolName, input);
+        this.cdpCallCounts.set(toolName, (this.cdpCallCounts.get(toolName) || 0) + 1);
+        if (result.data !== undefined) {
+          const { truncated, charsDropped } = truncateCdpToolResult(toolName, result.data, input);
+          this.cdpCharsDropped += charsDropped;
+          return { data: truncated };
+        }
+        return result;
       }
 
       switch (toolName) {

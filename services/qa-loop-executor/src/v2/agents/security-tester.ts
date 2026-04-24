@@ -14,9 +14,15 @@ import { MCPBrowser } from '../../mcp-browser';
 import { getToolSchemasForAgent, ToolSchema } from '../tools/agent-tools';
 import { ToolResult } from '../../tool-executor';
 
+import { ChromeDevToolsMCP, filterCdpToolsForAgent } from '../../chrome-devtools-mcp';
+
 export class SecurityTesterAgent extends BaseAgent {
-  constructor(config: AgentConfig, mcpBrowser: MCPBrowser) {
-    super(config, mcpBrowser);
+  constructor(
+    config: AgentConfig,
+    mcpBrowser: MCPBrowser,
+    cdpMcp: ChromeDevToolsMCP | null = null,
+  ) {
+    super(config, mcpBrowser, cdpMcp);
   }
 
   protected buildToolSchemas(): Record<string, { description: string; parameters: z.ZodType }> {
@@ -40,6 +46,17 @@ export class SecurityTesterAgent extends BaseAgent {
       }
     }
 
+    // Week 2: Chrome DevTools diagnostics — critical for header/CSP/CORS checks
+    if (this.cdpMcp) {
+      const cdpAllowed = filterCdpToolsForAgent('security', this.cdpMcp.getTools());
+      for (const tool of cdpAllowed) {
+        agentTools[tool.name] = {
+          description: tool.description || `Chrome DevTools tool: ${tool.name}`,
+          parameters: this.convertSchema(tool.input_schema),
+        };
+      }
+    }
+
     return agentTools;
   }
 
@@ -49,8 +66,8 @@ export class SecurityTesterAgent extends BaseAgent {
   protected async executeTool(toolName: string, args: Record<string, any>): Promise<ToolResult> {
     const result = await super.executeTool(toolName, args);
 
-    // Auto-write security bugs to board
-    if (toolName === 'save_bug' && !result.error && args.title) {
+    // Auto-write security bugs to board (skip dedup'd)
+    if (toolName === 'save_bug' && !result.error && !result.data?.deduplicated && args.title) {
       await this.boardTools.writeToBoard({
         type: 'security_issue',
         title: args.title,
@@ -64,7 +81,19 @@ export class SecurityTesterAgent extends BaseAgent {
   }
 
   protected getInitialPrompt(): string {
-    return `Begin security testing for ${this.config.targetUrl}.
+    // Task 4: board-derived context (forms + known issues) lives in the
+    // user message, NOT the system prompt, so the system prompt stays
+    // byte-stable across calls and Anthropic's ephemeral cache hits.
+    let contextHeader = '';
+    const contextMsg = this.contextBuilder.buildSecurityContextMessage(
+      this.config.projectContext,
+      this.boardEntriesAtStart,
+    );
+    if (contextMsg) {
+      contextHeader = `CONTEXT FROM PRIOR AGENTS:\n\n${contextMsg}\n\n---\n\n`;
+    }
+
+    return `${contextHeader}Begin security testing for ${this.config.targetUrl}.
 
 Your first step: read_board() for forms discovered by Exploratory.
 

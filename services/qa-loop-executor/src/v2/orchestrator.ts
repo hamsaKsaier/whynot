@@ -15,7 +15,9 @@ import { query } from '../../../shared/database/connection';
 import { emitToSession } from '../api/websocket';
 import { QALoopRepository } from '../repositories/qa-loop-repository';
 import { MCPBrowser } from '../mcp-browser';
+import { ChromeDevToolsMCP } from '../chrome-devtools-mcp';
 import { LoopConfig } from '../loop-orchestrator';
+import { ParallelTestExecutor } from '../parallel-test-executor';
 import { SessionPlanStore } from './session-plan';
 import { AgentBoard } from './agent-board';
 import { AgentType, AgentConfig, AgentResult, SessionPlan, PlanObjective } from './types';
@@ -24,8 +26,31 @@ import { ExploratoryTesterAgent } from './agents/exploratory-tester';
 import { SecurityTesterAgent } from './agents/security-tester';
 import { APITesterAgent } from './agents/api-tester';
 import { AutoTesterAgent } from './agents/auto-tester';
+import { BaseAgent } from './agents/base-agent';
 
 const logger = createLogger('v2-orchestrator');
+
+// ─── Cost circuit breaker constants ─────────────────────────────────────
+// Hard cap: $5.00 estimated REAL Anthropic cost per session.
+// Our DB-tracked cost (from result.usage tokens) consistently under-reports
+// actual Anthropic bill by ~5× because the AI SDK doesn't always surface
+// cache creation tokens. We multiply DB-tracked cost by this factor before
+// comparing to the cap so we stop BEFORE we blow the real-cost budget.
+const MAX_SESSION_COST_CENTS = 500;       // $5.00 real cost cap
+const COST_UNDERCOUNT_FACTOR = 5;         // Real cost ≈ DB-tracked × 5
+
+// ─── Priority 1: agent idle watchdog ────────────────────────────────────
+// If an agent makes no progress (no LLM call, no tool call step, no status
+// emission) for longer than this many minutes, the orchestrator aborts the
+// agent via AbortController, marks its result status as 'killed_idle',
+// and continues to the next agent. Tuned default of 10 min covers slow
+// MCP browser ops + model latency spikes without letting a stuck agent
+// hold the whole scan hostage for hours.
+const MAX_AGENT_IDLE_MIN = parseInt(process.env.MAX_AGENT_IDLE_MIN || '10', 10);
+// How often the watchdog polls the agent's lastActivityAt. Needs to be
+// shorter than MAX_AGENT_IDLE_MIN so we detect hangs promptly but long
+// enough to avoid spinning — 30s strikes the right balance.
+const WATCHDOG_POLL_MS = 30_000;
 
 export class V2Orchestrator {
   private sessionId: string;
@@ -34,6 +59,11 @@ export class V2Orchestrator {
   private planStore: SessionPlanStore;
   private board: AgentBoard;
   private mcpBrowser: MCPBrowser | null = null;
+  // Week 2: Chrome DevTools MCP runs alongside MCPBrowser for diagnostics
+  // (console messages, network requests, a11y tree, lighthouse). Uses its
+  // OWN Chromium instance — see chrome-devtools-mcp.ts header for the
+  // Option A-vs-B tradeoff and why we picked Option B.
+  private cdpMcp: ChromeDevToolsMCP | null = null;
   // Fix D: iteration counter for persisting cost per agent into qa_loop_iterations
   private iterationCounter = 0;
   // Demo-fix: user-initiated cancellation support. The pause/stop HTTP
@@ -41,6 +71,9 @@ export class V2Orchestrator {
   // on whichever agent is currently running, unwinding the scan cleanly.
   private stopRequested = false;
   private currentAgentAbort: AbortController | null = null;
+  // Fix 3: cumulative tracked cost across all agents for the circuit breaker
+  private cumulativeCostCents = 0;
+  private circuitBreakerTripped = false;
 
   constructor(sessionId: string, config: LoopConfig) {
     this.sessionId = sessionId;
@@ -98,6 +131,24 @@ export class V2Orchestrator {
       await this.mcpBrowser.start();
       logger.info('MCP Browser launched for v2 session', { sessionId: this.sessionId });
 
+      // Week 2: start Chrome DevTools MCP in parallel. Non-fatal — if it
+      // fails to start (e.g. npx cache cold), the scan still runs without
+      // CDP diagnostics and agents fall back to the Playwright-only path.
+      try {
+        this.cdpMcp = new ChromeDevToolsMCP(this.sessionId);
+        await this.cdpMcp.start();
+        logger.info('Chrome DevTools MCP launched for v2 session', {
+          sessionId: this.sessionId,
+          toolCount: this.cdpMcp.getTools().length,
+        });
+      } catch (cdpErr: any) {
+        logger.warn('Chrome DevTools MCP failed to start — continuing without diagnostics', {
+          sessionId: this.sessionId,
+          error: cdpErr.message,
+        });
+        this.cdpMcp = null;
+      }
+
       if (this.config.loginCredentials) {
         await this.performLogin();
       }
@@ -147,17 +198,17 @@ export class V2Orchestrator {
 
       // ─── Phase 4: Security + API Testers (sequential, same browser) ─
       const allResults: AgentResult[] = [exploratoryResult];
+      this.accumulateCost(exploratoryResult);
 
       // Security Tester — reads forms from board, tests XSS/SQLi/CSRF
-      if (!this.stopRequested) {
+      if (!this.stopRequested && !this.costBudgetExceeded()) {
         emitToSession(this.sessionId, {
           type: 'status_update',
           data: { phase: 'security', message: 'Security Tester testing forms for vulnerabilities...' },
         });
-
         const securityResult = await this.runAgent('security', plan);
         allResults.push(securityResult);
-
+        this.accumulateCost(securityResult);
         logger.info('Security Tester completed', {
           sessionId: this.sessionId,
           bugs: securityResult.bugsFound,
@@ -166,15 +217,14 @@ export class V2Orchestrator {
       }
 
       // API Tester — reads endpoints from board, tests edge cases via fetch()
-      if (!this.stopRequested) {
+      if (!this.stopRequested && !this.costBudgetExceeded()) {
         emitToSession(this.sessionId, {
           type: 'status_update',
           data: { phase: 'api_testing', message: 'API Tester testing endpoints for edge cases...' },
         });
-
         const apiResult = await this.runAgent('api_tester', plan);
         allResults.push(apiResult);
-
+        this.accumulateCost(apiResult);
         logger.info('API Tester completed', {
           sessionId: this.sessionId,
           bugs: apiResult.bugsFound,
@@ -184,21 +234,45 @@ export class V2Orchestrator {
       }
 
       // ─── Phase 5: Auto Tester (runs last, no browser needed) ──
-      if (!this.stopRequested) {
+      // Task 6 diagnostic: Scan A reported totalTests=11 but perAgent omitted
+      // auto_tester. These two logs let us tell from Railway logs exactly why
+      // — skipped due to cost cap vs stop requested vs actually ran.
+      const autoGateStop = this.stopRequested;
+      const autoGateCost = this.costBudgetExceeded();
+      logger.info('Auto Tester phase gate', {
+        sessionId: this.sessionId,
+        stopRequested: autoGateStop,
+        costBudgetExceeded: autoGateCost,
+        cumulativeCostCents: this.cumulativeCostCents,
+        willRun: !autoGateStop && !autoGateCost,
+      });
+      if (!autoGateStop && !autoGateCost) {
         emitToSession(this.sessionId, {
           type: 'status_update',
           data: { phase: 'auto_testing', message: 'Auto Tester generating Playwright regression tests...' },
         });
-
         const autoResult = await this.runAgent('auto_tester', plan);
         allResults.push(autoResult);
-
+        this.accumulateCost(autoResult);
         logger.info('Auto Tester completed', {
           sessionId: this.sessionId,
           tests: autoResult.testsGenerated,
           status: autoResult.status,
+          llmCalls: autoResult.llmCallCount,
+          pushedToAllResults: true,
+        });
+      } else {
+        logger.warn('Auto Tester SKIPPED — this is why auto_tester will be absent from perAgent', {
+          sessionId: this.sessionId,
+          reason: autoGateStop ? 'stop_requested' : 'cost_budget_exceeded',
         });
       }
+
+      // ─── Phase 5.5: Execute generated test cases ────────────────
+      // Before synthesis, run every test case saved by Auto Tester through
+      // the test-executor so last_run_status gets populated. Pass/fail
+      // counts are passed to QA Lead for the synthesis report.
+      const execSummary = await this.executeGeneratedTests();
 
       // ─── Phase 6: QA Lead synthesis ─────────────────────────────
       emitToSession(this.sessionId, {
@@ -207,6 +281,11 @@ export class V2Orchestrator {
       });
 
       const report = await this.synthesizeReport(plan, allResults);
+
+      // Attach execution summary to the report so frontend can display pass/fail
+      if (execSummary) {
+        (report as any).test_execution = execSummary;
+      }
 
       // Store report in session
       await query(
@@ -269,6 +348,243 @@ export class V2Orchestrator {
         totalPages,
       });
 
+      // ─── Compression baseline summary (Part 1 + Part 2 instrumentation) ────
+      // Aggregate token + cost totals across every agent in this session.
+      //
+      // Task 1: separate LLM calls (generateText invocations) from TOOL calls
+      //   (individual tool-call steps). Previous aggregator mislabeled
+      //   toolCallCount as "apiCalls", inflating the headline number ~30×.
+      // Task 2: average char-based composition across every LLM call so we
+      //   can see WHERE input tokens are going (system / history / context / tools).
+      // Task 3: expose the single biggest LLM call + which agent produced it.
+      const costSummary = allResults.reduce(
+        (acc, r) => ({
+          llmCalls: acc.llmCalls + (r.llmCallCount || 0),
+          toolCalls: acc.toolCalls + (r.toolCallCount || 0),
+          inputTokens: acc.inputTokens + (r.inputTokens || 0),
+          outputTokens: acc.outputTokens + (r.outputTokens || 0),
+          cachedInputTokens: acc.cachedInputTokens + (r.cachedInputTokens || 0),
+          costCents: acc.costCents + (r.costCents || 0),
+          sumSystemPromptChars: acc.sumSystemPromptChars + (r.sumSystemPromptChars || 0),
+          sumHistoryChars: acc.sumHistoryChars + (r.sumHistoryChars || 0),
+          sumProjectContextChars: acc.sumProjectContextChars + (r.sumProjectContextChars || 0),
+          sumToolDefsChars: acc.sumToolDefsChars + (r.sumToolDefsChars || 0),
+          // Priority 2 / Option C residual: tool-result accumulation tokens
+          sumToolResultsAccumulatedTokens:
+            acc.sumToolResultsAccumulatedTokens + (r.sumToolResultsAccumulatedTokens || 0),
+        }),
+        {
+          llmCalls: 0, toolCalls: 0, inputTokens: 0, outputTokens: 0,
+          cachedInputTokens: 0, costCents: 0,
+          sumSystemPromptChars: 0, sumHistoryChars: 0,
+          sumProjectContextChars: 0, sumToolDefsChars: 0,
+          sumToolResultsAccumulatedTokens: 0,
+        },
+      );
+      const avgInputTokensPerLlmCall = costSummary.llmCalls > 0
+        ? Math.round(costSummary.inputTokens / costSummary.llmCalls)
+        : 0;
+      const avgToolCallsPerLlmCall = costSummary.llmCalls > 0
+        ? Math.round((costSummary.toolCalls / costSummary.llmCalls) * 10) / 10
+        : 0;
+      const cacheHitRateOverall = costSummary.inputTokens > 0
+        ? ((costSummary.cachedInputTokens / costSummary.inputTokens) * 100).toFixed(1) + '%'
+        : '0.0%';
+      const totalCostDollars = (costSummary.costCents / 100).toFixed(3);
+      const compressionMode = process.env.ENABLE_PROMPT_COMPRESSION === 'true'
+        ? 'on' : 'off';
+
+      // Task 2: average char-based composition per LLM call (chars/4 ≈ tokens).
+      // These averages tell us which compression technique to prioritize:
+      //   historyAvg > 40% total → implement conversation windowing
+      //   projectContextAvg > 20% total → implement context compression
+      //   toolDefsAvg > 20% total → trim tool descriptions
+      const tokenComposition = costSummary.llmCalls > 0 ? {
+        systemPromptAvg: Math.round(costSummary.sumSystemPromptChars / costSummary.llmCalls / 4),
+        historyAvg: Math.round(costSummary.sumHistoryChars / costSummary.llmCalls / 4),
+        projectContextAvg: Math.round(costSummary.sumProjectContextChars / costSummary.llmCalls / 4),
+        toolDefsAvg: Math.round(costSummary.sumToolDefsChars / costSummary.llmCalls / 4),
+        // Priority 2 / Option C: average tool-result tokens the SDK
+        // accumulates between maxSteps inside a single generateText call.
+        // Computed as (real usage.inputTokens) − (sum of our char-estimates).
+        // If this dominates, Task 6 should target tool-result truncation
+        // rather than conversation windowing.
+        toolResultsAccumulatedAvg:
+          Math.round(costSummary.sumToolResultsAccumulatedTokens / costSummary.llmCalls),
+      } : {
+        systemPromptAvg: 0, historyAvg: 0, projectContextAvg: 0,
+        toolDefsAvg: 0, toolResultsAccumulatedAvg: 0,
+      };
+
+      // Task 3: worst-case single LLM call across all agents.
+      let maxSingleCallInputTokens = 0;
+      let maxCallAgent: string | null = null;
+      for (const r of allResults) {
+        if ((r.maxSingleCallInputTokens || 0) > maxSingleCallInputTokens) {
+          maxSingleCallInputTokens = r.maxSingleCallInputTokens || 0;
+          maxCallAgent = r.agentType;
+        }
+      }
+
+      // Priority 1: report watchdog policy + any agents it killed so
+      // cost/time anomalies are easy to attribute when reviewing a scan.
+      const killedAgents = allResults
+        .filter(r => r.status === 'killed_idle')
+        .map(r => r.agentType);
+
+      logger.info('Scan cost breakdown', {
+        sessionId: this.sessionId,
+        // Task 1: clearly labeled counters
+        llmCalls: costSummary.llmCalls,
+        toolCalls: costSummary.toolCalls,
+        inputTokens: costSummary.inputTokens,
+        outputTokens: costSummary.outputTokens,
+        cachedInputTokens: costSummary.cachedInputTokens,
+        totalCostCents: costSummary.costCents,
+        totalCostDollars,
+        avgInputTokensPerLlmCall,
+        avgToolCallsPerLlmCall,
+        cacheHitRateOverall,
+        compressionMode,
+        // Priority 1: watchdog visibility
+        watchdog: {
+          maxAgentIdleMin: MAX_AGENT_IDLE_MIN,
+          pollMs: WATCHDOG_POLL_MS,
+          killedAgents,
+        },
+        // Task 2: token composition
+        tokenComposition,
+        // Task 3: worst-case LLM call
+        maxSingleCallInputTokens,
+        maxCallAgent,
+        summary: `Scan cost breakdown: ${costSummary.llmCalls} LLM calls `
+          + `(${costSummary.toolCalls} tool calls), `
+          + `${(costSummary.inputTokens / 1000).toFixed(1)}K input tokens, `
+          + `${(costSummary.outputTokens / 1000).toFixed(1)}K output tokens, `
+          + `$${totalCostDollars} total, avg ${(avgInputTokensPerLlmCall / 1000).toFixed(1)}K input tokens/LLM call`,
+        perAgent: allResults.map(r => ({
+          agent: r.agentType,
+          // Task 1: per-agent separation
+          llmCalls: r.llmCallCount || 0,
+          toolCalls: r.toolCallCount || 0,
+          inputTokens: r.inputTokens || 0,
+          outputTokens: r.outputTokens || 0,
+          cachedInputTokens: r.cachedInputTokens || 0,
+          cacheHitRate: (r.inputTokens || 0) > 0
+            ? (((r.cachedInputTokens || 0) / (r.inputTokens || 1)) * 100).toFixed(1) + '%'
+            : '0.0%',
+          costCents: r.costCents || 0,
+          model: r.modelUsed,
+          maxSingleCallInputTokens: r.maxSingleCallInputTokens || 0,
+        })),
+      });
+
+      // Task 6: tool-result truncation telemetry block
+      // Aggregates per-agent truncation stats so we can see compression
+      // effect in a single log line. Present even when the feature flag
+      // is off (enabled=false) because the execute wrapper still measures
+      // raw tool-result sizes — that's how we spot regressions later.
+      const truncAgg = {
+        enabled: false as boolean,
+        totalToolCalls: 0,
+        toolsTruncatedCount: 0,
+        totalCharsBeforeTruncation: 0,
+        totalCharsAfterTruncation: 0,
+        perTool: {} as Record<string, {
+          invocations: number;
+          truncatedInvocations: number;
+          sumCharsBefore: number;
+          sumCharsAfter: number;
+        }>,
+      };
+      for (const r of allResults) {
+        const t = r.toolTruncation;
+        if (!t) continue;
+        truncAgg.enabled = truncAgg.enabled || t.enabled;
+        truncAgg.totalToolCalls += t.totalToolCalls;
+        truncAgg.toolsTruncatedCount += t.toolsTruncatedCount;
+        truncAgg.totalCharsBeforeTruncation += t.totalCharsBeforeTruncation;
+        truncAgg.totalCharsAfterTruncation += t.totalCharsAfterTruncation;
+        for (const [tool, s] of Object.entries(t.perTool)) {
+          const slot = truncAgg.perTool[tool] ?? (truncAgg.perTool[tool] = {
+            invocations: 0, truncatedInvocations: 0, sumCharsBefore: 0, sumCharsAfter: 0,
+          });
+          slot.invocations += s.invocations;
+          slot.truncatedInvocations += s.truncatedInvocations;
+          slot.sumCharsBefore += s.sumCharsBefore;
+          slot.sumCharsAfter += s.sumCharsAfter;
+        }
+      }
+      const truncationRate = truncAgg.totalToolCalls > 0
+        ? truncAgg.toolsTruncatedCount / truncAgg.totalToolCalls
+        : 0;
+      const totalCharsElided = Math.max(
+        0,
+        truncAgg.totalCharsBeforeTruncation - truncAgg.totalCharsAfterTruncation,
+      );
+      const percentCharsRemoved = truncAgg.totalCharsBeforeTruncation > 0
+        ? totalCharsElided / truncAgg.totalCharsBeforeTruncation
+        : 0;
+      // Top 5 offenders by avg-chars-before (only count tools with >0
+      // truncations — a 3-byte click response isn't useful noise).
+      const mostTruncatedTools = Object.entries(truncAgg.perTool)
+        .filter(([, s]) => s.truncatedInvocations > 0)
+        .map(([tool, s]) => ({
+          tool,
+          invocations: s.invocations,
+          truncatedInvocations: s.truncatedInvocations,
+          avgCharsBefore: Math.round(s.sumCharsBefore / Math.max(1, s.invocations)),
+          avgCharsAfter: Math.round(s.sumCharsAfter / Math.max(1, s.invocations)),
+        }))
+        .sort((a, b) => b.avgCharsBefore - a.avgCharsBefore)
+        .slice(0, 5);
+      logger.info('Scan cost breakdown — toolResultTruncation', {
+        sessionId: this.sessionId,
+        toolResultTruncation: {
+          enabled: truncAgg.enabled,
+          totalToolCalls: truncAgg.totalToolCalls,
+          toolsTruncatedCount: truncAgg.toolsTruncatedCount,
+          truncationRate: Math.round(truncationRate * 1000) / 1000,
+          totalCharsBeforeTruncation: truncAgg.totalCharsBeforeTruncation,
+          totalCharsAfterTruncation: truncAgg.totalCharsAfterTruncation,
+          totalCharsElided,
+          percentCharsRemoved: Math.round(percentCharsRemoved * 1000) / 1000,
+          mostTruncatedTools,
+        },
+      });
+
+      // Week 2 Task 8: chromeDevtools telemetry block
+      // Rolls up per-agent CDP call counts and total truncated chars so we
+      // can see whether the integration is actually being used and whether
+      // the output truncator is doing its job.
+      const cdpTotals: Record<string, number> = {};
+      let totalCdpCharsDropped = 0;
+      let anyCdpCalls = false;
+      for (const r of allResults) {
+        if (r.cdpCallCounts) {
+          for (const [tool, n] of Object.entries(r.cdpCallCounts)) {
+            cdpTotals[tool] = (cdpTotals[tool] || 0) + n;
+            anyCdpCalls = true;
+          }
+        }
+        totalCdpCharsDropped += r.cdpCharsDropped || 0;
+      }
+      logger.info('Scan cost breakdown — chromeDevtools', {
+        sessionId: this.sessionId,
+        chromeDevtools: {
+          enabled: this.cdpMcp !== null,
+          anyCdpCallsMade: anyCdpCalls,
+          toolCallsByName: cdpTotals,
+          totalCharsDropped: totalCdpCharsDropped,
+          lighthouseRan: !!cdpTotals['cdp_lighthouse_audit'],
+          perAgent: allResults.map(r => ({
+            agent: r.agentType,
+            cdpCallCounts: r.cdpCallCounts || {},
+            cdpCharsDropped: r.cdpCharsDropped || 0,
+          })),
+        },
+      });
+
     } catch (err: any) {
       // User-initiated stop produces agent errors (MCP browser force-killed
       // mid-tool-call etc). That's expected — don't flip the DB status to
@@ -295,6 +611,9 @@ export class V2Orchestrator {
       }
 
     } finally {
+      if (this.cdpMcp) {
+        await this.cdpMcp.forceStop().catch(() => {});
+      }
       if (this.mcpBrowser) {
         await this.mcpBrowser.forceStop().catch(() => {});
       }
@@ -323,6 +642,8 @@ export class V2Orchestrator {
       await this.persistIteration('qa_lead_plan', qaLead.lastPlanUsage, {
         completionReason: 'plan_created',
       }).catch(() => {});
+      // Fix 3: include QA Lead plan cost in the circuit-breaker budget
+      this.cumulativeCostCents += qaLead.lastPlanUsage.costCents || 0;
     }
 
     // Store in database
@@ -385,6 +706,53 @@ export class V2Orchestrator {
   }
 
   /**
+   * Fix 3: accumulate DB-tracked cost across agents for the circuit breaker.
+   */
+  private accumulateCost(result: AgentResult): void {
+    this.cumulativeCostCents += result.costCents || 0;
+  }
+
+  /**
+   * Fix 3: hard $5 real-cost circuit breaker.
+   *
+   * DB-tracked cost under-reports actual Anthropic bill by ~5× (cache
+   * creation tokens + tool defs are often missing from AI SDK usage).
+   * We multiply tracked cost by COST_UNDERCOUNT_FACTOR before comparing
+   * to the cap so we stop BEFORE blowing the real-cost budget.
+   *
+   * When tripped: skips remaining agents and jumps to synthesis with
+   * partial data. Emits cost_cap_reached WebSocket event exactly once.
+   */
+  private costBudgetExceeded(): boolean {
+    const estimatedRealCents = this.cumulativeCostCents * COST_UNDERCOUNT_FACTOR;
+    if (estimatedRealCents >= MAX_SESSION_COST_CENTS) {
+      if (!this.circuitBreakerTripped) {
+        this.circuitBreakerTripped = true;
+        logger.warn('Cost circuit breaker tripped — skipping remaining agents', {
+          sessionId: this.sessionId,
+          trackedCostCents: this.cumulativeCostCents,
+          trackedCostDollars: (this.cumulativeCostCents / 100).toFixed(3),
+          estimatedRealCostCents: estimatedRealCents,
+          estimatedRealCostDollars: (estimatedRealCents / 100).toFixed(2),
+          capDollars: (MAX_SESSION_COST_CENTS / 100).toFixed(2),
+          factor: COST_UNDERCOUNT_FACTOR,
+        });
+        emitToSession(this.sessionId, {
+          type: 'cost_cap_reached',
+          data: {
+            trackedCostDollars: this.cumulativeCostCents / 100,
+            estimatedRealCostDollars: estimatedRealCents / 100,
+            capDollars: MAX_SESSION_COST_CENTS / 100,
+            message: `Cost cap reached (~$${(estimatedRealCents / 100).toFixed(2)} estimated real cost). Skipping remaining agents; synthesis will run on partial data.`,
+          },
+        });
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Run any agent by type. Instantiates the correct agent class,
    * passes the shared browser (except Auto Tester which doesn't need it).
    *
@@ -426,20 +794,20 @@ export class V2Orchestrator {
       data: { agent: agentType, status: 'starting', message: `${agentType} agent starting...` },
     });
 
-    let agent: { run(): Promise<AgentResult> };
+    let agent: BaseAgent;
 
     switch (agentType) {
       case 'exploratory':
-        agent = new ExploratoryTesterAgent(agentConfig, this.mcpBrowser!);
+        agent = new ExploratoryTesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
         break;
       case 'security':
-        agent = new SecurityTesterAgent(agentConfig, this.mcpBrowser!);
+        agent = new SecurityTesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
         break;
       case 'api_tester':
-        agent = new APITesterAgent(agentConfig, this.mcpBrowser!);
+        agent = new APITesterAgent(agentConfig, this.mcpBrowser!, this.cdpMcp);
         break;
       case 'auto_tester':
-        // Auto Tester does NOT use the browser — only generates code
+        // Auto Tester does NOT use the browser or CDP — only generates code
         agent = new AutoTesterAgent(agentConfig);
         break;
       default:
@@ -455,7 +823,43 @@ export class V2Orchestrator {
         };
     }
 
-    const result = await agent.run();
+    // ─── Priority 1: agent idle watchdog ────────────────────────────────
+    // Poll every WATCHDOG_POLL_MS. If `lastActivityAt` hasn't moved for
+    // MAX_AGENT_IDLE_MIN minutes, abort the agent's AbortController — this
+    // unwinds the in-flight generateText call, the agent's catch-block
+    // detects the AbortError, and returns a status='killed_idle' result.
+    // Orchestrator swallows the outcome and proceeds to the next agent.
+    const abortController = new AbortController();
+    agent.abortSignal = abortController.signal;
+    const idleBudgetMs = MAX_AGENT_IDLE_MIN * 60_000;
+    let watchdogTripped = false;
+    const watchdog = setInterval(() => {
+      const idleMs = Date.now() - agent.lastActivityAt;
+      if (idleMs > idleBudgetMs && !watchdogTripped) {
+        watchdogTripped = true;
+        logger.warn('AGENT_WATCHDOG_TRIGGERED', {
+          sessionId: this.sessionId,
+          agentType,
+          idleMs,
+          idleBudgetMs,
+          lastActivityAt: new Date(agent.lastActivityAt).toISOString(),
+          policy: 'abort, mark killed_idle, continue to next agent (no retry)',
+        });
+        agent.killedIdle = true;
+        abortController.abort();
+      }
+    }, WATCHDOG_POLL_MS);
+    // Prevent the interval from keeping Node alive after the agent resolves.
+    if (typeof (watchdog as any).unref === 'function') {
+      (watchdog as any).unref();
+    }
+
+    let result: AgentResult;
+    try {
+      result = await agent.run();
+    } finally {
+      clearInterval(watchdog);
+    }
 
     // Fix D: persist per-agent cost + usage to qa_loop_iterations
     // so v2 sessions have the same cost visibility as v1.
@@ -710,5 +1114,91 @@ export class V2Orchestrator {
       tests: testCoverage.length,
       apiEndpoints: apiEndpoints.length,
     });
+  }
+
+  /**
+   * Phase 5.5 — Execute every test case saved by Auto Tester through the
+   * test-executor service. Updates last_run_status on each test case and
+   * returns a pass/fail summary for the synthesis report.
+   *
+   * Uses the same ParallelTestExecutor that v1 uses, with the same
+   * queue/FIFO/mismatch-detection behaviour.
+   */
+  private async executeGeneratedTests(): Promise<{
+    testsExecuted: number;
+    testsPassed: number;
+    testsFailed: number;
+    mismatchCount: number;
+  } | null> {
+    try {
+      const testCases = await this.repository.getTestCases(this.sessionId, { active: true });
+
+      if (testCases.length === 0) {
+        logger.info('No test cases to execute', { sessionId: this.sessionId });
+        return null;
+      }
+
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          phase: 'test_execution',
+          message: `Executing ${testCases.length} generated tests...`,
+        },
+      });
+
+      logger.info('Starting test execution phase', {
+        sessionId: this.sessionId,
+        testCount: testCases.length,
+      });
+
+      const executor = new ParallelTestExecutor(
+        this.sessionId,
+        this.config,
+        this.repository,
+        this.cdpMcp,  // Week 2: CDP MCP for self-healing diagnostics on failures
+      );
+
+      for (const tc of testCases) {
+        // observed_result lives on the test case row for v2 (saved by Auto Tester)
+        const observed: 'pass' | 'fail' =
+          (tc as any).observed_result === 'fail' ? 'fail' : 'pass';
+        executor.enqueue(tc, observed);
+      }
+
+      await executor.waitForCompletion();
+      const results = executor.getResults();
+      const mismatches = executor.getMismatches();
+
+      const summary = {
+        testsExecuted: results.testsExecuted,
+        testsPassed: results.testsPassed,
+        testsFailed: results.testsFailed,
+        mismatchCount: mismatches.length,
+      };
+
+      logger.info('Test execution phase completed', {
+        sessionId: this.sessionId,
+        ...summary,
+      });
+
+      emitToSession(this.sessionId, {
+        type: 'status_update',
+        data: {
+          phase: 'test_execution_complete',
+          message: `Tests: ${summary.testsPassed} passed, ${summary.testsFailed} failed (of ${summary.testsExecuted})`,
+          summary,
+        },
+      });
+
+      return summary;
+    } catch (err: any) {
+      logger.error('Test execution phase failed (non-fatal)', {
+        sessionId: this.sessionId,
+        error: err.message,
+        stack: err.stack?.slice(0, 300),
+      });
+      // Don't crash the scan — synthesis can still proceed without exec data
+      return null;
+    }
   }
 }

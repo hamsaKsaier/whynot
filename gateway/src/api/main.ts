@@ -495,9 +495,12 @@ app.post('/api/internal/notifications', asyncHandler(async (req, res) => {
 }));
 
 // ─── Internal: AI Config (Docker-network only, no auth) ──────────────────────
-// Must be registered BEFORE the `/api` auth boundary below. Without this,
-// requireAuth (line below) returns 401 to internal services like
-// qa-loop-executor before `requireInternalNetwork` even runs.
+// This endpoint MUST be declared before the `app.use('/api', requireAuth)`
+// blanket below — otherwise qa-loop-executor's platform-config fetch gets
+// 401'd by requireAuth before requireInternalNetwork can authorize the call.
+// Same placement pattern as /api/internal/notifications above.
+// Restricted by the internal-network middleware (Railway private network /
+// Docker bridge IP range check).
 app.get('/api/internal/ai-config',
   requireInternalNetwork,
   asyncHandler(async (_req, res) => {
@@ -3808,6 +3811,11 @@ app.get('/api/me/flags', requireAuth, asyncHandler(async (req: any, res) => {
   const flags = await resolveAllFlags(orgId);
   res.json({ success: true, flags });
 }));
+
+// Note: /api/internal/ai-config was moved above the `app.use('/api', requireAuth)`
+// line so qa-loop-executor's platform-config fetch isn't 401'd before the
+// requireInternalNetwork check can run. See earlier in this file for the
+// route definition.
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

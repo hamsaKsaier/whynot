@@ -20,8 +20,79 @@ interface PlatformConfig {
 let cachedConfig: PlatformConfig | null = null;
 
 /**
+ * Build a PlatformConfig from local env vars. Used as graceful fallback
+ * when the gateway is unreachable at boot (Railway cold-start race) and
+ * for v3-sandbox where the gateway's /api/internal/ai-config may be
+ * hanging or not yet responsive. Mirrors the selectModel priority order
+ * from base-agent.ts so agent model selection still works.
+ */
+function buildPlatformConfigFromEnv(): PlatformConfig {
+  const providers: PlatformAIConfig[] = [];
+  if (process.env.ANTHROPIC_API_KEY) {
+    providers.push({
+      provider: 'anthropic',
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      fallbackKey: null,
+      defaultModel: 'claude-sonnet-4-6',
+      models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+    });
+  }
+  if (process.env.GOOGLE_AI_API_KEY) {
+    providers.push({
+      provider: 'google',
+      apiKey: process.env.GOOGLE_AI_API_KEY,
+      fallbackKey: null,
+      defaultModel: process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash',
+      models: ['gemini-2.5-flash'],
+    });
+  }
+  if (process.env.OPENROUTER_API_KEY) {
+    providers.push({
+      provider: 'openrouter',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      fallbackKey: null,
+      defaultModel: process.env.OPENROUTER_MODEL || 'z-ai/glm-5.1',
+      models: [process.env.OPENROUTER_MODEL || 'z-ai/glm-5.1'],
+    });
+  }
+  if (process.env.Z_AI_API_KEY) {
+    providers.push({
+      provider: 'z-ai',
+      apiKey: process.env.Z_AI_API_KEY,
+      fallbackKey: null,
+      defaultModel: process.env.Z_AI_PREMIUM_MODEL || 'glm-5.1',
+      models: ['glm-5.1', 'glm-5-turbo'],
+    });
+  }
+  if (process.env.OPENAI_API_KEY) {
+    providers.push({
+      provider: 'openai',
+      apiKey: process.env.OPENAI_API_KEY,
+      fallbackKey: null,
+      defaultModel: 'gpt-4o',
+      models: ['gpt-4o'],
+    });
+  }
+  const defaultProvider = providers.length > 0
+    ? { provider: providers[0].provider, model: providers[0].defaultModel }
+    : null;
+  return {
+    providers,
+    defaultProvider,
+    fallbackOrder: providers.map(p => p.provider),
+  };
+}
+
+/**
  * Fetch platform AI configuration from the gateway's internal API.
- * Results are cached in memory — call `invalidatePlatformConfigCache()` to force a re-fetch.
+ *
+ * Now non-blocking: if the gateway is unreachable (timeout, 4xx, network
+ * error) we fall back to a config synthesized from local env vars.
+ * Timeout shortened from 10s → 3s since we have a safe fallback — no
+ * point stalling boot for 10s on a Railway cold-start race.
+ *
+ * Results are cached in memory — call `invalidatePlatformConfigCache()`
+ * to force a re-fetch.
  */
 export async function getPlatformConfig(): Promise<PlatformConfig> {
   if (cachedConfig) return cachedConfig;
@@ -31,16 +102,23 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
   const gatewayUrl = process.env.GATEWAY_URL || 'http://gateway:3000';
   try {
     const res = await axios.get(`${gatewayUrl}/api/internal/ai-config`, {
-      timeout: 10_000,
+      timeout: 3_000,
     });
     cachedConfig = res.data;
     return cachedConfig!;
   } catch (error: any) {
-    logger.error('Failed to fetch platform AI config from gateway', {
+    // Fall back to env-var-derived config so startup never blocks.
+    // The gateway may be cold-starting, on a different port, or the
+    // endpoint may be gated. Either way, the env vars are the source
+    // of truth for Railway deployments (Railway injects them at boot).
+    const fallback = buildPlatformConfigFromEnv();
+    logger.warn('Platform AI config fetch failed — using env-var fallback', {
       gatewayUrl,
       error: error.message,
+      fallbackProviders: fallback.providers.map(p => p.provider),
     });
-    throw new Error('Unable to reach platform AI configuration service.');
+    cachedConfig = fallback;
+    return fallback;
   }
 }
 

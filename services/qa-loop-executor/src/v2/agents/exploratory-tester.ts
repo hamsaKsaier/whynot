@@ -17,9 +17,15 @@ import { MCPBrowser } from '../../mcp-browser';
 import { getToolSchemasForAgent, ToolSchema } from '../tools/agent-tools';
 import { ToolResult } from '../../tool-executor';
 
+import { ChromeDevToolsMCP, filterCdpToolsForAgent } from '../../chrome-devtools-mcp';
+
 export class ExploratoryTesterAgent extends BaseAgent {
-  constructor(config: AgentConfig, mcpBrowser: MCPBrowser) {
-    super(config, mcpBrowser);
+  constructor(
+    config: AgentConfig,
+    mcpBrowser: MCPBrowser,
+    cdpMcp: ChromeDevToolsMCP | null = null,
+  ) {
+    super(config, mcpBrowser, cdpMcp);
   }
 
   protected buildToolSchemas(): Record<string, { description: string; parameters: z.ZodType }> {
@@ -46,6 +52,17 @@ export class ExploratoryTesterAgent extends BaseAgent {
       }
     }
 
+    // Week 2: add Chrome DevTools diagnostics tools (cdp_*) if available
+    if (this.cdpMcp) {
+      const cdpAllowed = filterCdpToolsForAgent('exploratory', this.cdpMcp.getTools());
+      for (const tool of cdpAllowed) {
+        agentTools[tool.name] = {
+          description: tool.description || `Chrome DevTools tool: ${tool.name}`,
+          parameters: this.convertSchema(tool.input_schema),
+        };
+      }
+    }
+
     return agentTools;
   }
 
@@ -66,8 +83,8 @@ export class ExploratoryTesterAgent extends BaseAgent {
       }).catch(() => {});
     }
 
-    // Auto-write bugs to the board
-    if (toolName === 'save_bug' && !result.error && args.title) {
+    // Auto-write bugs to the board (skip when dedup'd — no new bug to share)
+    if (toolName === 'save_bug' && !result.error && !result.data?.deduplicated && args.title) {
       await this.boardTools.writeToBoard({
         type: 'bug',
         title: args.title,
