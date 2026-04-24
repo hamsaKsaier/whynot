@@ -8,6 +8,16 @@ import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import fs from 'fs';
 import path from 'path';
+vi.mock('@/lib/pricing/payg-calculator', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/pricing/payg-calculator')>(
+    '@/lib/pricing/payg-calculator',
+  );
+  return {
+    ...actual,
+    RECON_SCAN_RUN_CREDITS: 5000,
+  };
+});
+
 import { PaygPricingSection } from '../PaygPricingSection';
 
 const LOCALES_DIR = path.resolve(__dirname, '../../../../public/locales');
@@ -117,7 +127,7 @@ describe('PaygPricingSection', () => {
     const table = document.querySelector('table');
     expect(table).not.toBeNull();
     const rows = table!.querySelectorAll('tbody tr');
-    expect(rows.length).toBe(7);
+    expect(rows.length).toBe(8);
 
     const events = [
       'Test generation',
@@ -225,6 +235,59 @@ describe('PaygPricingSection', () => {
     }
   });
 
+  describe('Recon row', () => {
+    it('renders the recon scan row in the rates table', () => {
+      renderPayg();
+      const row = screen.getByTestId('recon-payg-row');
+      expect(row).toBeInTheDocument();
+      expect(row.textContent).toContain('Recon scan run');
+    });
+
+    it('renders credits from the mocked constant', () => {
+      renderPayg();
+      const cell = screen.getByTestId('recon-payg-credits');
+      expect(cell.textContent?.trim()).toBe('5000');
+    });
+
+    it('tooltip trigger renders and opens on hover', async () => {
+      const user = userEvent.setup();
+      renderPayg();
+      const trigger = screen.getByTestId('recon-payg-tooltip-trigger');
+      expect(trigger).toBeInTheDocument();
+      await user.hover(trigger);
+      await vi.waitFor(() => {
+        const contents = screen.queryAllByText(
+          /Partial or cancelled scans are billed only for the phases that ran/,
+        );
+        expect(contents.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('matches snapshot in en', () => {
+      renderPayg();
+      const row = screen.getByTestId('recon-payg-row');
+      expect(row).toMatchSnapshot();
+    });
+
+    it('matches snapshot in ar', async () => {
+      await testI18n.changeLanguage('ar');
+      renderPayg();
+      const row = screen.getByTestId('recon-payg-row');
+      expect(row).toMatchSnapshot();
+      await testI18n.changeLanguage('en');
+    });
+
+    it('does not contain banned vocabulary', () => {
+      renderPayg();
+      const row = screen.getByTestId('recon-payg-row');
+      const banned = ['Shannon', 'KeygraphHQ', 'nmap', 'subfinder', 'whatweb', 'schemathesis', 'Playwright', 'Anthropic', 'Claude'];
+      const text = row.textContent ?? '';
+      for (const word of banned) {
+        expect(text).not.toMatch(new RegExp(word, 'i'));
+      }
+    });
+  });
+
   describe('reduced motion', () => {
     beforeEach(() => {
       mockMatchMedia(true);
@@ -235,7 +298,7 @@ describe('PaygPricingSection', () => {
       const table = document.querySelector('table');
       expect(table).not.toBeNull();
       const rows = table!.querySelectorAll('tbody tr');
-      expect(rows.length).toBe(7);
+      expect(rows.length).toBe(8);
       expect(screen.getAllByText('Starter').length).toBeGreaterThanOrEqual(1);
     });
 

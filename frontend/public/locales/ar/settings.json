@@ -183,5 +183,25 @@
   "settings.notifications.disabled": "تم تعطيل الإشعار",
   "settings.notifications.updateFailed": "فشل تحديث التفضيل",
   "settings.notifications.autofixPr": "طلب إصلاح تلقائي جاهز",
-  "settings.notifications.autofixPrDesc": "إشعار عند إنشاء طلب سحب إصلاح تلقائي"
+  "settings.notifications.autofixPrDesc": "إشعار عند إنشاء طلب سحب إصلاح تلقائي",
+
+  "settings.recon.tab.label": "الاستكشاف",
+  "settings.recon.notifications.title": "الإشعارات",
+  "settings.recon.notifications.description": "اختر من يتلقى بريدًا إلكترونيًا عند اكتمال الفحص أو فشله.",
+  "settings.recon.notifications.emailOnComplete": "أرسل لي بريدًا إلكترونيًا عند اكتمال كل فحص",
+  "settings.recon.notifications.emailOnFail": "أرسل لي بريدًا إلكترونيًا عند فشل الفحص",
+  "settings.recon.notifications.recipients.label": "المستلمون",
+  "settings.recon.notifications.recipients.placeholder": "إضافة مستلم",
+  "settings.recon.notifications.recipients.empty": "لم يتم تحديد أي مستلمين",
+  "settings.recon.notifications.recipients.remove": "إزالة {{email}}",
+  "settings.recon.paygCap.label": "الحد الأقصى للأرصدة لكل فحص",
+  "settings.recon.paygCap.help": "حد أقصى صارم للأرصدة التي يمكن إنفاقها في كل فحص. أدخل 0 لاستخدام الحد الافتراضي للمنصة.",
+  "settings.recon.paygCap.error.negative": "يجب أن يكون الحد 0 أو أكثر",
+  "settings.recon.paygCap.error.tooLarge": "يجب أن يكون الحد 100,000 أو أقل",
+  "settings.recon.schedule.title": "الجدولة الافتراضية",
+  "settings.recon.schedule.description": "إعادة تشغيل الفحوصات تلقائيًا وفق جدول متكرر.",
+  "settings.recon.schedule.comingSoon": "قريبًا",
+  "settings.recon.save": "حفظ",
+  "settings.recon.saveSuccess": "تم حفظ إعدادات الاستكشاف",
+  "settings.recon.saveError": "فشل حفظ إعدادات الاستكشاف"
 }

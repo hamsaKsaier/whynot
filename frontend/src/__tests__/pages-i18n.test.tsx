@@ -329,6 +329,8 @@ const PAGE_SCANNER_EXTRAS = new Set([
   // Tech framework names (landing page)
   'React', 'Next', 'Angular', 'Svelte', 'Node', 'Vue', 'Nuxt',
   'TypeScript', 'JavaScript', 'Express', 'NestJS', 'Remix', 'Astro',
+  // File formats / acronyms kept verbatim across locales
+  'YAML', 'JSON', 'HTML', 'CSS', 'SQL',
   // Common UI words from mocked components
   'Skip', 'Flash', 'powered', 'automation',
   // Tech framework/platform names (landing page)
@@ -382,10 +384,16 @@ describe('pages-i18n — frontend', () => {
           expect(document.documentElement.dir).toBe(lang === 'ar' ? 'rtl' : 'ltr');
 
           if (rendered && lang !== 'en') {
-            // Strip HTML tags and normalise whitespace for reliable text extraction in jsdom
+            // Strip HTML tags and normalise whitespace for reliable text extraction in jsdom.
+            // Tailwind's arbitrary-child selectors (e.g. `[&>span]:line-clamp-1` from shadcn's
+            // Select) leave an unescaped `>` inside class="…" attributes in jsdom's innerHTML,
+            // which would break a naive `<[^>]*>` tag-strip. We therefore strip attribute
+            // name="…" pairs first so only element bodies remain.
             const text = (document.body.innerHTML || '')
               .replace(/<style[\s\S]*?<\/style>/gi, ' ')
               .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+              .replace(/\s+[a-zA-Z_][\w:-]*\s*=\s*"[^"]*"/g, '')
+              .replace(/\s+[a-zA-Z_][\w:-]*\s*=\s*'[^']*'/g, '')
               .replace(/<[^>]*>/g, ' ')
               .replace(/&[a-z]+;/gi, ' ')
               .replace(/\s+/g, ' ')

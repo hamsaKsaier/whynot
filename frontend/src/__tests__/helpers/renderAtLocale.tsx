@@ -10,7 +10,7 @@ export const LANGUAGES = ['en', 'ar', 'fr', 'de', 'es'] as const;
 export type SupportedLang = (typeof LANGUAGES)[number];
 
 const LOCALES_DIR = path.resolve(__dirname, '../../../public/locales');
-const NAMESPACES = ['common', 'auth', 'dashboard', 'runner', 'results', 'settings', 'billing', 'landing'];
+const NAMESPACES = ['common', 'auth', 'dashboard', 'runner', 'results', 'settings', 'billing', 'landing', 'recon'];
 
 const resources: Record<string, Record<string, unknown>> = {};
 for (const lang of LANGUAGES) {
@@ -29,6 +29,11 @@ testI18n.use(initReactI18next).init({
   fallbackLng: 'en',
   ns: NAMESPACES,
   defaultNS: 'common',
+  // Match the app (and __tests__/setup.tsx) config. The JSON stores
+  // flat dot-separated keys like `"recon.wizard.title"`, so a dot
+  // keySeparator would split them and break lookups.
+  keySeparator: false,
+  nsSeparator: ':',
   interpolation: { escapeValue: false },
 });
 

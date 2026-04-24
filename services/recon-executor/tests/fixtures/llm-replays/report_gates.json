@@ -1,0 +1,9 @@
+{
+  "default": "scrubbed",
+  "entries": [
+    {
+      "match": "Powered by",
+      "response": "Powered by Shannon and Anthropic Claude."
+    }
+  ]
+}

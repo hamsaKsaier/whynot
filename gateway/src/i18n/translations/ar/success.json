@@ -43,5 +43,9 @@
   "recon.phase.discovery.completed": "اكتملت مرحلة الاكتشاف.",
   "recon.phase.vulnAnalysis.completed": "اكتملت مرحلة تحليل الثغرات.",
   "recon.phase.exploitation.completed": "اكتملت مرحلة الاستغلال.",
-  "recon.report.generated": "تم إنشاء تقرير الاستطلاع."
+  "recon.report.generated": "تم إنشاء تقرير الاستطلاع.",
+  "recon.scan.created": "تم إنشاء فحص الاستطلاع بنجاح.",
+  "recon.scan.cancelled": "تم طلب إلغاء فحص الاستطلاع.",
+  "recon.scan.resumed": "تم استئناف فحص الاستطلاع.",
+  "recon.settings.updated": "تم تحديث إعدادات الاستطلاع."
 }

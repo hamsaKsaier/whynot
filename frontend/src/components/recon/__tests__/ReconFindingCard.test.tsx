@@ -175,7 +175,7 @@ describe('ReconFindingCard', () => {
     expect(section).not.toBeNull();
     const labelledBy = section?.getAttribute('aria-labelledby');
     expect(labelledBy).toBeTruthy();
-    const label = container.querySelector(`#${labelledBy}`);
+    const label = document.getElementById(labelledBy!);
     expect(label).not.toBeNull();
     expect(label?.className).toMatch(/sr-only/);
   });

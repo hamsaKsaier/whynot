@@ -1,0 +1,17 @@
+{
+  "default": "{}",
+  "entries": [
+    {
+      "match": "Classify this project's tech stack",
+      "response": "{\"framework\": \"express\", \"package_manager\": \"npm\", \"orm\": \"sequelize\", \"auth_library\": \"jsonwebtoken\"}"
+    },
+    {
+      "match": "categorizing endpoints discovered during an authorized",
+      "response": "{\"auth\": [\"/rest/user/login\"], \"data_mutation\": [\"/rest/products\"], \"file_upload\": [], \"redirect\": [], \"other\": []}"
+    },
+    {
+      "match": "scrub",
+      "response": "scrubbed"
+    }
+  ]
+}

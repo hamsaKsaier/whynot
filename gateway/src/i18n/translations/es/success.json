@@ -43,5 +43,9 @@
   "recon.phase.discovery.completed": "Fase de descubrimiento completada.",
   "recon.phase.vulnAnalysis.completed": "Fase de análisis de vulnerabilidades completada.",
   "recon.phase.exploitation.completed": "Fase de explotación completada.",
-  "recon.report.generated": "Informe de reconocimiento generado."
+  "recon.report.generated": "Informe de reconocimiento generado.",
+  "recon.scan.created": "Escaneo de reconocimiento creado con éxito.",
+  "recon.scan.cancelled": "Cancelación del escaneo de reconocimiento solicitada.",
+  "recon.scan.resumed": "Escaneo de reconocimiento reanudado.",
+  "recon.settings.updated": "Configuración de reconocimiento actualizada."
 }

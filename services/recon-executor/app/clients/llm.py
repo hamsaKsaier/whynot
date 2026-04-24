@@ -58,7 +58,7 @@ class LLMClient:
         return self._openai
 
     async def _with_retry(self, coro_factory: Callable[[], Any]) -> Any:
-        for attempt in range(_MAX_RETRIES):
+        for attempt in range(_MAX_RETRIES):  # pragma: no branch
             try:
                 return await coro_factory()
             except Exception as e:

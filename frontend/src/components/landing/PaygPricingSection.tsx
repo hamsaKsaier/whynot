@@ -10,11 +10,19 @@ import { CountUp } from '@/components/motion/CountUp';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 import { fadeInVariants } from '@/lib/motion/presets';
 import {
   type PaygRate,
   CREDIT_PACKS,
   MAX_QUANTITY,
+  RECON_SCAN_RUN_CREDITS,
   clampQuantity,
   computeTotalCredits,
   recommendPack,
@@ -298,6 +306,49 @@ export function PaygPricingSection() {
                     </td>
                   </tr>
                 ))}
+                <tr
+                  className="border-b last:border-b-0"
+                  data-testid="recon-payg-row"
+                >
+                  <td className="text-start text-sm p-4 font-medium">
+                    <span className="inline-flex items-center gap-1.5">
+                      {t('payg.recon.label')}
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label={t('payg.recon.tooltipLabel')}
+                            className="text-muted-foreground hover:text-foreground transition-colors duration-150"
+                            data-testid="recon-payg-tooltip-trigger"
+                          >
+                            <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="max-w-xs text-start"
+                            data-testid="recon-payg-tooltip-content"
+                          >
+                            {t('payg.recon.tooltip')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </span>
+                  </td>
+                  <td
+                    className="text-end text-sm p-4 tabular-nums text-muted-foreground"
+                    data-testid="recon-payg-credits"
+                  >
+                    {RECON_SCAN_RUN_CREDITS}
+                  </td>
+                  <td className="text-end text-sm p-4 text-muted-foreground hidden sm:table-cell">
+                    <a
+                      href="/docs/recon/quotas"
+                      className="hover:text-foreground transition-colors duration-150"
+                    >
+                      {t('payg.recon.example')}
+                    </a>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

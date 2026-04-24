@@ -197,5 +197,15 @@
   "recon.quota.exceeded": "Quota mensuel de scans de reconnaissance dépassé. Rechargez votre solde ou mettez à niveau votre plan.",
   "recon.payment.required": "Paiement requis : votre plan n'inclut pas les scans de reconnaissance ou votre solde est insuffisant.",
   "recon.phase.exploitation.authorizationMissing": "Phase d'exploitation interrompue : l'enregistrement d'autorisation par scan est manquant.",
-  "recon.report.generationFailed": "La génération du rapport de reconnaissance a échoué."
+  "recon.report.generationFailed": "La génération du rapport de reconnaissance a échoué.",
+  "recon.authorization.required": "Une autorisation par scan est requise. Fournissez l'objet authorization avec acknowledged=true et une justification.",
+  "recon.authorization.malformed": "Charge utile d'autorisation mal formée.",
+  "recon.authorization.justification.tooShort": "La justification de l'autorisation doit contenir entre 20 et 1000 caractères.",
+  "recon.project.repoRequired": "Ce projet doit avoir un dépôt lié avant de pouvoir exécuter un scan de reconnaissance.",
+  "recon.environment.urlRequired": "L'environnement sélectionné doit avoir une URL configurée.",
+  "recon.resume.urlMismatch": "Demande de reprise refusée : l'URL cible ne correspond pas au scan d'origine.",
+  "recon.scan.notFound": "Scan de reconnaissance introuvable.",
+  "recon.scan.invalidStatus": "Le scan de reconnaissance n'est pas dans un état valide pour cette action.",
+  "recon.rateLimit.exceeded": "Limite de fréquence du scan de reconnaissance dépassée. Réessayez plus tard.",
+  "recon.warnings.environmentProduction": "Attention : vous êtes sur le point de scanner un environnement de production. Ne continuez que si vous disposez d'une autorisation explicite."
 }

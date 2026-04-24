@@ -180,7 +180,7 @@ export function PricingSection() {
                   )}
                 </div>
 
-                <ul className="space-y-3 mb-8 flex-1" role="list">
+                <ul className="space-y-3 mb-4 flex-1" role="list">
                   {Array.from({ length: FEATURE_COUNTS[slug] }, (_, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <Check
@@ -191,6 +191,29 @@ export function PricingSection() {
                     </li>
                   ))}
                 </ul>
+
+                <div
+                  className="mb-6 border-t border-border pt-4 flex items-start justify-between gap-2"
+                  data-testid={`recon-row-${slug}`}
+                >
+                  <span className="text-sm text-muted-foreground">
+                    {t('pricing.recon.label')}
+                  </span>
+                  <a
+                    href="/docs/recon/quotas"
+                    className="text-sm font-medium text-foreground hover:text-primary transition-colors duration-150 text-end"
+                  >
+                    {t(
+                      `pricing.recon.${
+                        slug === 'free'
+                          ? 'free'
+                          : slug === 'pro_byo'
+                            ? 'proByo'
+                            : 'proManaged'
+                      }`,
+                    )}
+                  </a>
+                </div>
 
                 <Button
                   variant={isPopular ? 'default' : 'outline'}

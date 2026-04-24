@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertNoBannedVocabulary } from '../fixtures/recon-mock-executor';
 
 test.describe('Landing Pricing Section', () => {
   test.beforeEach(async ({ page }) => {
@@ -63,6 +64,56 @@ test.describe('Landing Pricing Section', () => {
       .analyze();
     const critical = results.violations.filter((v) => v.impact === 'critical');
     expect(critical).toHaveLength(0);
+  });
+
+  test.describe('Recon row', () => {
+    test('Recon row visible at desktop width', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/?lng=en', { waitUntil: 'networkidle' });
+      await page.locator('#pricing').scrollIntoViewIfNeeded();
+      await expect(page.getByTestId('recon-row-free')).toBeVisible();
+      await expect(page.getByTestId('recon-row-pro_byo')).toBeVisible();
+      await expect(page.getByTestId('recon-row-pro_managed')).toBeVisible();
+      await expect(page.getByTestId('recon-row-pro_byo')).toContainText(
+        '1 included scan/month',
+      );
+    });
+
+    test('Recon row visible at tablet width', async ({ page }) => {
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await page.goto('/?lng=en', { waitUntil: 'networkidle' });
+      await page.locator('#pricing').scrollIntoViewIfNeeded();
+      await expect(page.getByTestId('recon-row-pro_byo')).toBeVisible();
+    });
+
+    test('Recon row visible at mobile width', async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.goto('/?lng=en', { waitUntil: 'networkidle' });
+      await page.locator('#pricing').scrollIntoViewIfNeeded();
+      await expect(page.getByTestId('recon-row-pro_byo')).toBeVisible();
+    });
+
+    test('Recon cell links to /docs/recon/quotas', async ({ page }) => {
+      const row = page.getByTestId('recon-row-pro_byo');
+      const link = row.locator('a');
+      await expect(link).toHaveAttribute('href', '/docs/recon/quotas');
+    });
+
+    test('PAYG recon tooltip opens on hover', async ({ page }) => {
+      await page.goto('/?lng=en', { waitUntil: 'networkidle' });
+      const reconRow = page.getByTestId('recon-payg-row');
+      await reconRow.scrollIntoViewIfNeeded();
+      await expect(reconRow).toBeVisible();
+      const trigger = page.getByTestId('recon-payg-tooltip-trigger');
+      await trigger.hover();
+      await expect(
+        page.getByText(/Partial or cancelled scans are billed only/),
+      ).toBeVisible();
+    });
+
+    test('pricing section contains no banned vocabulary', async ({ page }) => {
+      await assertNoBannedVocabulary(page, '#pricing');
+    });
   });
 
   test.describe('visual regression', () => {

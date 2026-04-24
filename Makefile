@@ -196,8 +196,20 @@ test-shared: check-env ## Run shared tests
 test-e2e: check-env ## Run Playwright end-to-end tests
 	$(DC_TST) run --rm playwright
 
+.PHONY: test-recon-integration
+test-recon-integration: check-env ## Run recon-executor integration tests against pinned juice-shop
+	@echo "==> Bringing up juice-shop + postgres for recon integration..."
+	$(DC_TST) --profile recon-integration up -d --wait postgres-test juice-shop
+	@echo "==> Running recon integration suite..."
+	$(DC_TST) --profile recon-integration run --rm recon-executor-test; \
+	  rc=$$?; \
+	  echo "==> Tearing down recon integration stack..."; \
+	  $(DC_TST) --profile recon-integration down -v; \
+	  exit $$rc
+
 .PHONY: test-down
 test-down: ## Remove test containers, networks, and volumes
+	$(DC_TST) --profile recon-integration down -v
 	$(DC_TST) down -v
 
 ##@ Code review graph

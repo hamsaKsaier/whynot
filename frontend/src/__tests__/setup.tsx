@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const LOCALES_DIR = path.resolve(__dirname, '../../public/locales');
 const LANGS = ['en', 'ar', 'fr', 'de', 'es'] as const;
-const NAMESPACES = ['common', 'auth', 'dashboard', 'runner', 'results', 'settings', 'billing', 'landing'] as const;
+const NAMESPACES = ['common', 'auth', 'dashboard', 'runner', 'results', 'settings', 'billing', 'landing', 'recon', 'announcements'] as const;
 
 const resources: Record<string, Record<string, any>> = {};
 for (const lng of LANGS) {

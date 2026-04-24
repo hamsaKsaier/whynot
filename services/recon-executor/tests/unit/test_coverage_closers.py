@@ -28,10 +28,11 @@ async def test_default_vuln_analysis_agent_returns_empty_list():
 
 
 @pytest.mark.asyncio
-async def test_default_exploit_attempt_returns_false():
+async def test_default_exploit_attempt_returns_failed_outcome():
     ctx = PhaseContext(scan_id="s", workspace_id="w", target_url="u")
-    cand = exploitation.ExploitCandidate(id="c", vuln_class="x", exploit_class="read")
-    assert await exploitation._default_attempt(cand, ctx) is False
+    hypothesis = {"id": "c", "vuln_class": "x"}
+    result = await exploitation._noop_attempt(hypothesis, ctx)
+    assert result.outcome == exploitation.ExploitOutcome.FAILED
 
 
 # ─── Orchestrator background-loop exception handlers ────────────────
@@ -199,3 +200,53 @@ async def test_start_session_background_handles_db_failure_on_retry(monkeypatch,
         resp = client.post("/api/recon/sessions", json={"scan_id": "s1"})
     assert resp.status_code == 202
     await asyncio.sleep(0.05)  # let the background task run through
+
+
+# ─── Branch closers (cov-branch) ────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_skip_remaining_leaves_non_pending_phases_alone(fake_db):
+    """``_skip_remaining`` must respect existing non-PENDING rows so that an
+    earlier failure or cancellation isn't overwritten by a defensive ``skip``.
+    Covers the false branch of the ``current == PENDING`` check.
+    """
+    from app.checkpoint import PhaseStatus, ReconPhase
+
+    scan_id = "scan-skip-branch"
+    fake_db.store.scans[scan_id] = {"id": scan_id, "status": "running"}
+    # Pre-populate one phase as already FAILED.
+    fake_db.store.phases[(scan_id, ReconPhase.EXPLOITATION.value)] = {
+        "scan_id": scan_id,
+        "phase": ReconPhase.EXPLOITATION.value,
+        "status": PhaseStatus.FAILED.value,
+    }
+    orch = Orchestrator(fake_db)
+    await orch._skip_remaining(
+        [ReconPhase.EXPLOITATION, ReconPhase.REPORTING], scan_id
+    )
+    assert (
+        fake_db.store.phases[(scan_id, ReconPhase.EXPLOITATION.value)]["status"]
+        == PhaseStatus.FAILED.value
+    )
+    assert (
+        fake_db.store.phases[(scan_id, ReconPhase.REPORTING.value)]["status"]
+        == PhaseStatus.SKIPPED.value
+    )
+
+
+@pytest.mark.asyncio
+async def test_collect_js_endpoints_dedups_within_bundle(monkeypatch):
+    """Inner-loop dedup branch (``ep not in endpoints``): the same endpoint
+    appearing twice in one bundle must only be recorded once."""
+    from app.phases import discovery
+
+    async def fake_fetch(url, auth):
+        # Two bundles each contain ``/api/x`` so the second occurrence hits
+        # the false branch of the dedup ``if`` inside ``_collect_js_endpoints``.
+        if "a.js" in url:
+            return {"body": "fetch('/api/x'); fetch('/api/y');", "url": url}
+        return {"body": "fetch('/api/x'); fetch('/api/z');", "url": url}
+
+    monkeypatch.setattr(discovery, "FETCH_PAGE_FN", fake_fetch)
+    out = await discovery._collect_js_endpoints(["http://t/a.js", "http://t/b.js"])
+    assert out == ["/api/x", "/api/y", "/api/z"]

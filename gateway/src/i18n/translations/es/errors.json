@@ -197,5 +197,15 @@
   "recon.quota.exceeded": "Cuota mensual de escaneos de reconocimiento superada. Recargue su saldo o actualice su plan.",
   "recon.payment.required": "Se requiere pago: su plan no incluye escaneos de reconocimiento o su saldo es insuficiente.",
   "recon.phase.exploitation.authorizationMissing": "Fase de explotación abortada: falta el registro de autorización del escaneo.",
-  "recon.report.generationFailed": "Error al generar el informe de reconocimiento."
+  "recon.report.generationFailed": "Error al generar el informe de reconocimiento.",
+  "recon.authorization.required": "Se requiere autorización por escaneo. Proporcione el objeto de autorización con acknowledged=true y una justificación.",
+  "recon.authorization.malformed": "Carga de autorización mal formada.",
+  "recon.authorization.justification.tooShort": "La justificación de la autorización debe tener entre 20 y 1000 caracteres.",
+  "recon.project.repoRequired": "Este proyecto debe tener un repositorio vinculado antes de ejecutar un escaneo de reconocimiento.",
+  "recon.environment.urlRequired": "El entorno seleccionado debe tener una URL configurada.",
+  "recon.resume.urlMismatch": "Solicitud de reanudación rechazada: la URL objetivo no coincide con el escaneo original.",
+  "recon.scan.notFound": "Escaneo de reconocimiento no encontrado.",
+  "recon.scan.invalidStatus": "El escaneo de reconocimiento no está en un estado válido para esta acción.",
+  "recon.rateLimit.exceeded": "Se superó el límite de tasa del escaneo de reconocimiento. Inténtelo de nuevo más tarde.",
+  "recon.warnings.environmentProduction": "Advertencia: está a punto de escanear un entorno de producción. Continúe solo si tiene autorización explícita."
 }

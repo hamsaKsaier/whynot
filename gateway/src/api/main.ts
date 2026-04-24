@@ -35,6 +35,7 @@ import { InvoiceRepository } from '../../shared/database/repositories/invoice-re
 import { UserRepository } from '../../shared/database/repositories/user-repository';
 import { startCleanupScheduler, runCleanup } from '../services/cleanup-service';
 import { seedAdminUser } from '../../shared/database/seeds/admin-user';
+import { seedFeatureFlags } from '../../shared/database/seeds/feature-flags';
 import { requireCredits, deductCredits } from '../middleware/credit-gate';
 import { recordUsageEvent } from '../utils/usage-tracker';
 import { requireFeature, requireFeatureLimit } from '../middleware/feature-gate';
@@ -525,6 +526,10 @@ app.use('/api/monitors', monitorRouter);
 // ─── Performance testing routes (requires auth) ──────────────────────────────
 import { perfRouter } from './perf-router';
 app.use('/api/perf', perfRouter);
+
+// ─── Recon scans (feature-flagged + plan-gated) ──────────────────────────────
+import { reconRouter } from './recon';
+app.use('/api/recon', reconRouter);
 
 // ─── Bug Reporting + ClickUp/GitHub integration routes ──────────────────────
 import { integrationsRouter, bugReportRouter } from './integrations-router';
@@ -3817,6 +3822,10 @@ if (env.NODE_ENV !== 'test') {
     });
 
     startCleanupScheduler();
+
+    seedFeatureFlags()
+      .then(() => logger.info('Feature flags seeded'))
+      .catch((err: any) => logger.error('Feature flags seed failed', { error: err.message }));
 
     if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
       seedAdminUser(env.ADMIN_EMAIL, env.ADMIN_PASSWORD, env.ADMIN_NAME)

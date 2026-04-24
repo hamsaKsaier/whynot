@@ -43,5 +43,9 @@
   "recon.phase.discovery.completed": "Erkundungsphase abgeschlossen.",
   "recon.phase.vulnAnalysis.completed": "Schwachstellenanalyse-Phase abgeschlossen.",
   "recon.phase.exploitation.completed": "Exploitation-Phase abgeschlossen.",
-  "recon.report.generated": "Recon-Bericht erstellt."
+  "recon.report.generated": "Recon-Bericht erstellt.",
+  "recon.scan.created": "Recon-Scan erfolgreich erstellt.",
+  "recon.scan.cancelled": "Abbruch des Recon-Scans angefordert.",
+  "recon.scan.resumed": "Recon-Scan fortgesetzt.",
+  "recon.settings.updated": "Recon-Einstellungen aktualisiert."
 }

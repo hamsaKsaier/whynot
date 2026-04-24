@@ -80,11 +80,48 @@ function useStructuredData() {
     })),
   }
 
-  return { organization, product, webSite, faqPage }
+  const reconApplication = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Recon by WhyNot',
+    description: t('landing.recon.description'),
+    applicationCategory: 'SecurityApplication',
+    operatingSystem: 'Web',
+    url: `${BASE_URL}/recon`,
+    brand: {
+      '@type': 'Organization',
+      name: 'WhyNot',
+    },
+    offers: [
+      {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+        name: t('pricing.plans.free.name'),
+        availability: 'https://schema.org/InStock',
+      },
+      {
+        '@type': 'Offer',
+        price: '29',
+        priceCurrency: 'USD',
+        name: t('pricing.plans.pro_byo.name'),
+        availability: 'https://schema.org/InStock',
+      },
+      {
+        '@type': 'Offer',
+        price: '49',
+        priceCurrency: 'USD',
+        name: t('pricing.plans.pro_managed.name'),
+        availability: 'https://schema.org/InStock',
+      },
+    ],
+  }
+
+  return { organization, product, webSite, faqPage, reconApplication }
 }
 
 export function StructuredData() {
-  const { organization, product, webSite, faqPage } = useStructuredData()
+  const { organization, product, webSite, faqPage, reconApplication } = useStructuredData()
 
   return (
     <>
@@ -103,6 +140,11 @@ export function StructuredData() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
+      />
+      <script
+        type="application/ld+json"
+        data-testid="recon-software-application-jsonld"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(reconApplication) }}
       />
     </>
   )

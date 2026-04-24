@@ -231,6 +231,64 @@ describe('PricingSection', () => {
     await testI18n.changeLanguage('en');
   });
 
+  describe('Recon row', () => {
+    it('renders the recon label once per plan card', () => {
+      renderPricing();
+      const labels = screen.getAllByText('Recon — security scans');
+      expect(labels.length).toBe(3);
+    });
+
+    it('renders correct value per plan', () => {
+      renderPricing();
+      const freeRow = screen.getByTestId('recon-row-free');
+      const byoRow = screen.getByTestId('recon-row-pro_byo');
+      const managedRow = screen.getByTestId('recon-row-pro_managed');
+
+      expect(within(freeRow).getByText('—')).toBeInTheDocument();
+      expect(within(byoRow).getByText('1 included scan/month')).toBeInTheDocument();
+      expect(
+        within(managedRow).getByText('3 included scans/month'),
+      ).toBeInTheDocument();
+    });
+
+    it('each recon cell links to /docs/recon/quotas', () => {
+      renderPricing();
+      const slugs = ['free', 'pro_byo', 'pro_managed'];
+      for (const slug of slugs) {
+        const row = screen.getByTestId(`recon-row-${slug}`);
+        const link = row.querySelector('a');
+        expect(link).not.toBeNull();
+        expect(link).toHaveAttribute('href', '/docs/recon/quotas');
+      }
+    });
+
+    it('matches snapshot in en', () => {
+      const { container } = renderPricing();
+      const reconRow = container.querySelector('[data-testid="recon-row-pro_byo"]');
+      expect(reconRow).toMatchSnapshot();
+    });
+
+    it('matches snapshot in ar', async () => {
+      await testI18n.changeLanguage('ar');
+      const { container } = renderPricing();
+      const reconRow = container.querySelector('[data-testid="recon-row-pro_byo"]');
+      expect(reconRow).toMatchSnapshot();
+      await testI18n.changeLanguage('en');
+    });
+
+    it('does not contain banned vocabulary in recon row copy', () => {
+      renderPricing();
+      const banned = ['Shannon', 'KeygraphHQ', 'nmap', 'subfinder', 'whatweb', 'schemathesis', 'Playwright', 'Anthropic', 'Claude'];
+      const slugs = ['free', 'pro_byo', 'pro_managed'];
+      for (const slug of slugs) {
+        const text = screen.getByTestId(`recon-row-${slug}`).textContent ?? '';
+        for (const word of banned) {
+          expect(text).not.toMatch(new RegExp(word, 'i'));
+        }
+      }
+    });
+  });
+
   describe('reduced motion', () => {
     beforeEach(() => {
       mockMatchMedia(true);

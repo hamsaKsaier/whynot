@@ -197,5 +197,15 @@
   "recon.quota.exceeded": "Monatliches Kontingent für Recon-Scans überschritten. Laden Sie Ihr Guthaben auf oder aktualisieren Sie Ihren Plan.",
   "recon.payment.required": "Zahlung erforderlich: Ihr Plan beinhaltet keine Recon-Scans oder Ihr Guthaben ist unzureichend.",
   "recon.phase.exploitation.authorizationMissing": "Exploitation-Phase abgebrochen: Autorisierungsdatensatz für diesen Scan fehlt.",
-  "recon.report.generationFailed": "Erstellung des Recon-Berichts fehlgeschlagen."
+  "recon.report.generationFailed": "Erstellung des Recon-Berichts fehlgeschlagen.",
+  "recon.authorization.required": "Scan-Autorisierung ist erforderlich. Geben Sie das Autorisierungsobjekt mit acknowledged=true und einer Begründung an.",
+  "recon.authorization.malformed": "Autorisierungs-Nutzlast ist fehlerhaft.",
+  "recon.authorization.justification.tooShort": "Die Begründung der Autorisierung muss zwischen 20 und 1000 Zeichen lang sein.",
+  "recon.project.repoRequired": "Dieses Projekt muss ein verknüpftes Repository haben, bevor ein Recon-Scan ausgeführt werden kann.",
+  "recon.environment.urlRequired": "Die ausgewählte Umgebung muss eine konfigurierte URL haben.",
+  "recon.resume.urlMismatch": "Fortsetzungsanfrage abgelehnt: Ziel-URL stimmt nicht mit dem ursprünglichen Scan überein.",
+  "recon.scan.notFound": "Recon-Scan nicht gefunden.",
+  "recon.scan.invalidStatus": "Recon-Scan befindet sich nicht in einem gültigen Zustand für diese Aktion.",
+  "recon.rateLimit.exceeded": "Rate-Limit für Recon-Scans überschritten. Versuchen Sie es später erneut.",
+  "recon.warnings.environmentProduction": "Warnung: Sie sind dabei, eine Produktionsumgebung zu scannen. Fahren Sie nur fort, wenn Sie eine ausdrückliche Autorisierung haben."
 }

@@ -37,12 +37,28 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
 
-# OS-level recon tooling. whatweb ships as a Ruby gem; nmap is apt.
+# OS-level recon tooling + Chromium system deps (bookworm-compatible).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nmap \
         whatweb \
         curl \
         ca-certificates \
+        libnss3 \
+        libnspr4 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdrm2 \
+        libdbus-1-3 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libgbm1 \
+        libasound2 \
+        fonts-liberation \
+        fonts-unifont \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /wheels /wheels
@@ -52,8 +68,8 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-index --find-links=/wheels -r /tmp/requirements.txt \
     && rm -rf /wheels /tmp/requirements.txt
 
-# Playwright chromium + OS deps (provided by playwright CLI).
-RUN playwright install --with-deps chromium
+# Install Chromium browser binary only (deps installed above).
+RUN playwright install chromium
 
 # Non-root user.
 RUN useradd --create-home --shell /usr/sbin/nologin --uid 1001 recon \

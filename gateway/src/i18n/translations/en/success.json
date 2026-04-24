@@ -43,5 +43,9 @@
   "recon.phase.discovery.completed": "Discovery phase completed.",
   "recon.phase.vulnAnalysis.completed": "Vulnerability analysis phase completed.",
   "recon.phase.exploitation.completed": "Exploitation phase completed.",
-  "recon.report.generated": "Recon report generated."
+  "recon.report.generated": "Recon report generated.",
+  "recon.scan.created": "Recon scan created successfully.",
+  "recon.scan.cancelled": "Recon scan cancellation requested.",
+  "recon.scan.resumed": "Recon scan resumed.",
+  "recon.settings.updated": "Recon settings updated."
 }

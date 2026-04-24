@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import React from 'react';
@@ -30,11 +30,27 @@ function renderAt(path: string) {
 }
 
 describe('ReconRoute', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('renders children when recon_enabled flag is true', () => {
     flagValue = true;
     renderAt('/recon');
     expect(screen.getByTestId('recon-child')).toBeInTheDocument();
     expect(screen.queryByTestId('not-found')).not.toBeInTheDocument();
+  });
+
+  it('marks recon.announcement.seen when mounted with flag enabled', () => {
+    flagValue = true;
+    renderAt('/recon');
+    expect(localStorage.getItem('recon.announcement.seen')).toBe('1');
+  });
+
+  it('does not mark seen when flag is disabled', () => {
+    flagValue = false;
+    renderAt('/recon');
+    expect(localStorage.getItem('recon.announcement.seen')).toBeNull();
   });
 
   it('renders NotFoundPage when recon_enabled flag is false (list route)', () => {

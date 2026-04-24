@@ -1,0 +1,453 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReconSettingsTab — behavior > renders correctly with dir="rtl" (ar snapshot) > recon-settings-ar 1`] = `
+<div
+  dir="rtl"
+>
+  <div
+    class="space-y-6 max-w-2xl"
+  >
+    <div
+      class="rounded-lg border text-card-foreground shadow-sm bg-card border-border"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6"
+      >
+        <h3
+          class="text-2xl font-semibold leading-none tracking-tight text-foreground"
+        >
+          Notifications
+        </h3>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Choose who gets emailed when a scan completes or fails.
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0 space-y-1"
+      >
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors duration-150 gap-2 sm:gap-4 min-h-[44px]"
+        >
+          <div
+            class="flex-1"
+          >
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-sm font-medium text-foreground cursor-pointer"
+              for="recon-email-complete"
+            >
+              Email me on every scan completion
+            </label>
+          </div>
+          <button
+            aria-checked="true"
+            class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=unchecked]:bg-input data-[state=checked]:bg-primary"
+            data-state="checked"
+            id="recon-email-complete"
+            role="switch"
+            type="button"
+            value="on"
+          >
+            <span
+              class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-150 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5 data-[state=unchecked]:translate-x-0"
+              data-state="checked"
+            />
+          </button>
+        </div>
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors duration-150 gap-2 sm:gap-4 min-h-[44px]"
+        >
+          <div
+            class="flex-1"
+          >
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-sm font-medium text-foreground cursor-pointer"
+              for="recon-email-fail"
+            >
+              Email me when a scan fails
+            </label>
+          </div>
+          <button
+            aria-checked="true"
+            class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=unchecked]:bg-input data-[state=checked]:bg-primary"
+            data-state="checked"
+            id="recon-email-fail"
+            role="switch"
+            type="button"
+            value="on"
+          >
+            <span
+              class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-150 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5 data-[state=unchecked]:translate-x-0"
+              data-state="checked"
+            />
+          </button>
+        </div>
+        <div
+          class="p-3 space-y-2"
+        >
+          <label
+            class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-sm font-medium text-foreground"
+          >
+            Recipients
+          </label>
+          <div
+            aria-label="Recipients"
+            class="flex flex-wrap gap-2 p-2 rounded-md border border-border bg-background min-h-[44px]"
+            data-testid="recon-recipients-list"
+            role="list"
+          >
+            <span
+              class="text-sm text-muted-foreground self-center"
+            >
+              No recipients selected
+            </span>
+          </div>
+          <div
+            class="relative"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3"
+              type="button"
+            >
+              Add recipient
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="rounded-lg border text-card-foreground shadow-sm bg-card border-border"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6"
+      >
+        <h3
+          class="text-2xl font-semibold leading-none tracking-tight text-foreground"
+        >
+          Max credits per scan
+        </h3>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Hard cap on credits spent per scan. Enter 0 to use the platform default.
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0"
+      >
+        <div
+          class="space-y-2 max-w-xs"
+        >
+          <label
+            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 sr-only"
+            for="recon-payg-cap"
+          >
+            Max credits per scan
+          </label>
+          <input
+            aria-invalid="false"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            id="recon-payg-cap"
+            max="100000"
+            min="0"
+            step="1"
+            type="number"
+            value="0"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="rounded-lg border text-card-foreground shadow-sm bg-card border-border opacity-60"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6"
+      >
+        <h3
+          class="text-2xl font-semibold leading-none tracking-tight text-foreground flex items-center gap-2"
+        >
+          Default schedule
+          <div
+            class="inline-flex items-center rounded-full border px-2.5 py-0.5 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground text-xs font-normal"
+          >
+            Coming soon
+          </div>
+        </h3>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Automatically re-run scans on a recurring schedule.
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0"
+      >
+        <div
+          aria-disabled="true"
+          class="flex items-center justify-between p-3 rounded-md border border-border bg-muted/30 min-h-[44px] pointer-events-none"
+          data-testid="recon-schedule-coming-soon"
+        >
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Coming soon
+          </span>
+          <button
+            aria-checked="false"
+            aria-label="Coming soon"
+            class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
+            data-disabled=""
+            data-state="unchecked"
+            disabled=""
+            role="switch"
+            type="button"
+            value="on"
+          >
+            <span
+              class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-150 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5 data-[state=unchecked]:translate-x-0"
+              data-disabled=""
+              data-state="unchecked"
+            />
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      class="flex justify-end"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+      >
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReconSettingsTab — behavior > renders correctly with dir="rtl" (en snapshot) > recon-settings-en 1`] = `
+<div
+  dir="ltr"
+>
+  <div
+    class="space-y-6 max-w-2xl"
+  >
+    <div
+      class="rounded-lg border text-card-foreground shadow-sm bg-card border-border"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6"
+      >
+        <h3
+          class="text-2xl font-semibold leading-none tracking-tight text-foreground"
+        >
+          Notifications
+        </h3>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Choose who gets emailed when a scan completes or fails.
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0 space-y-1"
+      >
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors duration-150 gap-2 sm:gap-4 min-h-[44px]"
+        >
+          <div
+            class="flex-1"
+          >
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-sm font-medium text-foreground cursor-pointer"
+              for="recon-email-complete"
+            >
+              Email me on every scan completion
+            </label>
+          </div>
+          <button
+            aria-checked="true"
+            class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=unchecked]:bg-input data-[state=checked]:bg-primary"
+            data-state="checked"
+            id="recon-email-complete"
+            role="switch"
+            type="button"
+            value="on"
+          >
+            <span
+              class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-150 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5 data-[state=unchecked]:translate-x-0"
+              data-state="checked"
+            />
+          </button>
+        </div>
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors duration-150 gap-2 sm:gap-4 min-h-[44px]"
+        >
+          <div
+            class="flex-1"
+          >
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-sm font-medium text-foreground cursor-pointer"
+              for="recon-email-fail"
+            >
+              Email me when a scan fails
+            </label>
+          </div>
+          <button
+            aria-checked="true"
+            class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=unchecked]:bg-input data-[state=checked]:bg-primary"
+            data-state="checked"
+            id="recon-email-fail"
+            role="switch"
+            type="button"
+            value="on"
+          >
+            <span
+              class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-150 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5 data-[state=unchecked]:translate-x-0"
+              data-state="checked"
+            />
+          </button>
+        </div>
+        <div
+          class="p-3 space-y-2"
+        >
+          <label
+            class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-sm font-medium text-foreground"
+          >
+            Recipients
+          </label>
+          <div
+            aria-label="Recipients"
+            class="flex flex-wrap gap-2 p-2 rounded-md border border-border bg-background min-h-[44px]"
+            data-testid="recon-recipients-list"
+            role="list"
+          >
+            <span
+              class="text-sm text-muted-foreground self-center"
+            >
+              No recipients selected
+            </span>
+          </div>
+          <div
+            class="relative"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3"
+              type="button"
+            >
+              Add recipient
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="rounded-lg border text-card-foreground shadow-sm bg-card border-border"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6"
+      >
+        <h3
+          class="text-2xl font-semibold leading-none tracking-tight text-foreground"
+        >
+          Max credits per scan
+        </h3>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Hard cap on credits spent per scan. Enter 0 to use the platform default.
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0"
+      >
+        <div
+          class="space-y-2 max-w-xs"
+        >
+          <label
+            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 sr-only"
+            for="recon-payg-cap"
+          >
+            Max credits per scan
+          </label>
+          <input
+            aria-invalid="false"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            id="recon-payg-cap"
+            max="100000"
+            min="0"
+            step="1"
+            type="number"
+            value="0"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="rounded-lg border text-card-foreground shadow-sm bg-card border-border opacity-60"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6"
+      >
+        <h3
+          class="text-2xl font-semibold leading-none tracking-tight text-foreground flex items-center gap-2"
+        >
+          Default schedule
+          <div
+            class="inline-flex items-center rounded-full border px-2.5 py-0.5 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground text-xs font-normal"
+          >
+            Coming soon
+          </div>
+        </h3>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Automatically re-run scans on a recurring schedule.
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0"
+      >
+        <div
+          aria-disabled="true"
+          class="flex items-center justify-between p-3 rounded-md border border-border bg-muted/30 min-h-[44px] pointer-events-none"
+          data-testid="recon-schedule-coming-soon"
+        >
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Coming soon
+          </span>
+          <button
+            aria-checked="false"
+            aria-label="Coming soon"
+            class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
+            data-disabled=""
+            data-state="unchecked"
+            disabled=""
+            role="switch"
+            type="button"
+            value="on"
+          >
+            <span
+              class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-150 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5 data-[state=unchecked]:translate-x-0"
+              data-disabled=""
+              data-state="unchecked"
+            />
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      class="flex justify-end"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+      >
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+`;

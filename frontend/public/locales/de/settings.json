@@ -183,5 +183,25 @@
   "settings.notifications.disabled": "Benachrichtigung deaktiviert",
   "settings.notifications.updateFailed": "Einstellung konnte nicht aktualisiert werden",
   "settings.notifications.autofixPr": "Auto-Fix-PR bereit",
-  "settings.notifications.autofixPrDesc": "Benachrichtigung, wenn ein automatischer Fix-Pull-Request erstellt wird"
+  "settings.notifications.autofixPrDesc": "Benachrichtigung, wenn ein automatischer Fix-Pull-Request erstellt wird",
+
+  "settings.recon.tab.label": "Recon",
+  "settings.recon.notifications.title": "Benachrichtigungen",
+  "settings.recon.notifications.description": "Wählen Sie aus, wer eine E-Mail erhält, wenn ein Scan abgeschlossen wird oder fehlschlägt.",
+  "settings.recon.notifications.emailOnComplete": "Mir bei jedem abgeschlossenen Scan eine E-Mail senden",
+  "settings.recon.notifications.emailOnFail": "Mir bei einem fehlgeschlagenen Scan eine E-Mail senden",
+  "settings.recon.notifications.recipients.label": "Empfänger",
+  "settings.recon.notifications.recipients.placeholder": "Empfänger hinzufügen",
+  "settings.recon.notifications.recipients.empty": "Keine Empfänger ausgewählt",
+  "settings.recon.notifications.recipients.remove": "{{email}} entfernen",
+  "settings.recon.paygCap.label": "Maximale Credits pro Scan",
+  "settings.recon.paygCap.help": "Harte Obergrenze für Credits pro Scan. Geben Sie 0 ein, um den Plattform-Standard zu verwenden.",
+  "settings.recon.paygCap.error.negative": "Die Obergrenze muss 0 oder höher sein",
+  "settings.recon.paygCap.error.tooLarge": "Die Obergrenze darf höchstens 100.000 betragen",
+  "settings.recon.schedule.title": "Standardzeitplan",
+  "settings.recon.schedule.description": "Scans automatisch nach einem wiederkehrenden Zeitplan erneut ausführen.",
+  "settings.recon.schedule.comingSoon": "Demnächst verfügbar",
+  "settings.recon.save": "Speichern",
+  "settings.recon.saveSuccess": "Recon-Einstellungen gespeichert",
+  "settings.recon.saveError": "Speichern der Recon-Einstellungen fehlgeschlagen"
 }

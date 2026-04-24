@@ -26,6 +26,9 @@ Willkommen bei der WhyNot QA Dokumentation — einer KI-gestuetzten Testautomati
 ### Internationalisierung (i18n)
 - [So fuegen Sie einen Uebersetzungsschluessel hinzu](i18n/how-to-add-a-translation-key.md) — Anleitung zum Hinzufuegen uebersetzbarer Zeichenketten
 
+### Recon
+- [Recon](recon/) — Autorisierte, automatisierte Reconnaissance und Schwachstellenprüfung
+
 ## Unterstuetzte Sprachen
 
 WhyNot QA unterstuetzt die folgenden Sprachen:
