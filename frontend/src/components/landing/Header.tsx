@@ -106,8 +106,8 @@ export function Header() {
       className={cn(
         'sticky top-0 z-50 border-b transition-colors duration-200',
         isScrolled
-          ? 'h-16 border-border bg-background/90 shadow-sm'
-          : 'h-20 border-transparent bg-transparent'
+          ? 'h-14 border-border bg-background/90 shadow-sm sm:h-16'
+          : 'h-16 border-transparent bg-transparent sm:h-20'
       )}
       style={{ transitionProperty: 'background-color, border-color, height' }}
     >

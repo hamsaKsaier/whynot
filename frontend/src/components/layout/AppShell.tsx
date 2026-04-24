@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Header } from "./Header"
 import { Sidebar } from "./Sidebar"
 import { Footer } from "./Footer"
+import { ReconAnnouncementBanner } from "@/components/announcements/ReconAnnouncementBanner"
 
 export function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -16,6 +17,8 @@ export function AppShell() {
       </a>
 
       <Header onMenuToggle={() => setMobileOpen(true)} />
+
+      <ReconAnnouncementBanner />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}

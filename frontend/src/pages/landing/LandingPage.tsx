@@ -7,6 +7,11 @@ import { SEOHead } from '@/components/landing/SEOHead'
 const FeaturesSection = lazy(() =>
   import('@/components/landing/FeaturesSection').then((m) => ({ default: m.FeaturesSection }))
 )
+const ReconFeatureSection = lazy(() =>
+  import('@/components/landing/ReconFeatureSection').then((m) => ({
+    default: m.ReconFeatureSection,
+  }))
+)
 const ComparisonSection = lazy(() =>
   import('@/components/landing/ComparisonSection').then((m) => ({ default: m.ComparisonSection }))
 )
@@ -45,6 +50,7 @@ export function LandingPage() {
         <TrustBar />
         <Suspense fallback={null}>
           <FeaturesSection />
+          <ReconFeatureSection />
           <ComparisonSection />
           <PricingSection />
           <PaygPricingSection />

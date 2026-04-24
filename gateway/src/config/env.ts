@@ -116,6 +116,7 @@ const envSchema = z.object({
   AI_SERVICE_URL: z.string().default('http://localhost:8000'),
   TEST_EXECUTOR_URL: z.string().default('http://localhost:3001'),
   QA_LOOP_EXECUTOR_URL: z.string().default('http://localhost:3002'),
+  RECON_EXECUTOR_URL: z.string().default('http://localhost:3003'),
 
   // ── File Storage & Cleanup ──────────────────────────────────────────────
   SCREENSHOT_RETENTION_DAYS: numericString.default(30),

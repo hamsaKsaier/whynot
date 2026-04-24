@@ -26,6 +26,9 @@ Bienvenido a la documentacion de WhyNot QA — una plataforma de automatizacion 
 ### Internacionalizacion (i18n)
 - [Como agregar una clave de traduccion](i18n/how-to-add-a-translation-key.md) — Guia para agregar cadenas traducibles
 
+### Recon
+- [Recon](recon/) — Reconocimiento y análisis de vulnerabilidades automatizados y autorizados
+
 ## Idiomas soportados
 
 WhyNot QA soporta los siguientes idiomas:

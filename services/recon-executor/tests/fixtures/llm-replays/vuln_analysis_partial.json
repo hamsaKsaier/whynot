@@ -1,0 +1,21 @@
+{
+  "default": "[]",
+  "entries": [
+    {
+      "match": "generate XSS hypotheses",
+      "response": "[{\"id\": \"xss-1\", \"endpoint\": \"/rest/products/search\", \"param\": \"q\"}]"
+    },
+    {
+      "match": "generate SSRF hypotheses",
+      "response": "[{\"id\": \"ssrf-1\", \"endpoint\": \"/rest/user/upload\", \"ssrf_target\": \"http://juice-shop:3000/\"}]"
+    },
+    {
+      "match": "generate authentication hypotheses",
+      "response": "[]"
+    },
+    {
+      "match": "generate authorization hypotheses",
+      "response": "[]"
+    }
+  ]
+}

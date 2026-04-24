@@ -45,6 +45,12 @@ const FLAG_SEEDS: FeatureFlagSeed[] = [
     description: 'Show the language switcher in the UI',
     default_enabled: true,
   },
+  {
+    key: PLATFORM_FEATURES.RECON_ENABLED,
+    name: 'Recon',
+    description: 'Recon AI pentester',
+    default_enabled: false,
+  },
 ];
 
 export async function seedFeatureFlags(): Promise<void> {
@@ -54,7 +60,8 @@ export async function seedFeatureFlags(): Promise<void> {
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (key) DO UPDATE SET
          name = EXCLUDED.name,
-         description = EXCLUDED.description`,
+         description = EXCLUDED.description,
+         default_enabled = EXCLUDED.default_enabled`,
       [flag.key, flag.name, flag.description, flag.default_enabled]
     );
   }

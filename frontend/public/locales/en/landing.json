@@ -1,363 +1,273 @@
 {
-  "nav": {
-    "features": "Features",
-    "pricing": "Pricing",
-    "docs": "Docs",
-    "signIn": "Sign in",
-    "getStarted": "Get started",
-    "openApp": "Open app",
-    "menu": "Menu",
-    "changeLanguage": "Change language",
-    "themeToggleLabel": "Toggle theme",
-    "main": "Main navigation"
-  },
-  "hero": {
-    "title": "Find bugs <highlight>before your users do</highlight>",
-    "subtitle": "Autonomous AI agents that explore your web app, find bugs, and generate Playwright test code — so you can ship with confidence.",
-    "cta": "Start free trial",
-    "secondaryCta": "View pricing",
-    "socialProof": "Trusted by engineering teams shipping quality software",
-    "noCreditCard": "No credit card required",
-    "eyebrow": "AI-Powered QA",
-    "videoCaption": "WhyNot dashboard showing autonomous bug detection in action"
-  },
-  "trustBar": {
-    "ariaLabel": "Trust indicators and supported technologies",
-    "logoTitle": "Works with every framework and stack",
-    "badges": {
-      "soc2": "SOC 2 Compliant",
-      "dataPrivacy": "Data encrypted at rest",
-      "moneyBack": "30-day money-back guarantee",
-      "uptime": "99.9% uptime SLA"
-    },
-    "stats": {
-      "bugsFound": "Bugs found",
-      "bugsFoundSuffix": "+",
-      "testsGenerated": "Tests generated",
-      "testsGeneratedSuffix": "+",
-      "teams": "Teams using WhyNot",
-      "teamsSuffix": "+",
-      "accuracy": "Detection accuracy",
-      "accuracySuffix": "%"
-    }
-  },
-  "features": {
-    "heading": "Everything you need to ship bug-free software",
-    "subheading": "AI-powered autonomous testing that finds bugs, generates test code, and keeps your app reliable — without writing a single test by hand.",
-    "items": {
-      "aiAgents": {
-        "title": "Autonomous AI Agents",
-        "description": "AI agents explore your app like real users, navigating flows and uncovering edge cases humans would miss."
-      },
-      "bugDetection": {
-        "title": "Intelligent Bug Detection",
-        "description": "Automatically detects visual glitches, broken links, console errors, and functional regressions in real time."
-      },
-      "visualRegression": {
-        "title": "Visual Regression Testing",
-        "description": "Pixel-level screenshot comparisons catch UI changes before they reach production.",
-        "tierBadge": "Pro"
-      },
-      "playwrightGen": {
-        "title": "Playwright Code Generation",
-        "description": "Get production-ready Playwright test scripts generated automatically from each discovered bug."
-      },
-      "chaosTest": {
-        "title": "Chaos Testing",
-        "description": "Simulate slow networks, missing APIs, and browser quirks to stress-test your app under real-world conditions.",
-        "tierBadge": "Pro"
-      },
-      "multiBrowser": {
-        "title": "Multi-Browser Coverage",
-        "description": "Test across Chrome, Firefox, and Safari simultaneously to ensure consistent behavior everywhere."
-      },
-      "testSuites": {
-        "title": "Organized Test Suites",
-        "description": "Manage test cases in folders, tag by priority, and track coverage across user stories and features."
-      },
-      "security": {
-        "title": "Security Scanning",
-        "description": "Detects common vulnerabilities like XSS, open redirects, and exposed secrets during every test run.",
-        "tierBadge": "Managed"
-      }
-    }
-  },
-  "comparison": {
-    "title": "How WhyNot compares",
-    "subtitle": "See why teams are switching from manual testing frameworks to autonomous AI-powered QA.",
-    "featureColumn": "Feature",
-    "competitors": {
-      "whynot": "WhyNot",
-      "selenium": "Selenium",
-      "cypress": "Cypress",
-      "playwrightManual": "Playwright",
-      "browserstack": "BrowserStack",
-      "lambdatest": "LambdaTest"
-    },
-    "features": {
-      "aiAutonomous": "AI autonomous exploration",
-      "noCodeSetup": "No-code setup",
-      "bugDetection": "Automatic bug detection",
-      "testGeneration": "Test code generation",
-      "visualRegression": "Visual regression testing",
-      "chaosTest": "Chaos testing",
-      "ciIntegration": "CI/CD integration",
-      "multiBrowser": "Multi-browser testing",
-      "selfHealing": "Self-healing tests",
-      "parallelExecution": "Parallel execution"
-    },
-    "mobileHint": "Scroll to see more",
-    "values": {
-      "yes": "Yes",
-      "no": "No",
-      "partial": "Partial"
-    }
-  },
-  "testimonials": {
-    "heading": "Loved by engineering teams",
-    "subheading": "See how teams use WhyNot to catch bugs before their users do.",
-    "carousel": {
-      "previous": "Previous testimonial",
-      "next": "Next testimonial",
-      "goToSlide": "Go to testimonial {{number}}"
-    },
-    "items": {
-      "sarah": {
-        "quote": "We deployed WhyNot on our e-commerce platform and it found 23 bugs in the first hour — including a checkout flow issue that was costing us conversions. The Playwright code it generated saved our QA team days of work.",
-        "author": "Sarah Chen",
-        "title": "VP of Engineering",
-        "company": "ShopFlow"
-      },
-      "marcus": {
-        "quote": "As a startup with no dedicated QA team, WhyNot is like having a senior test engineer on call 24/7. The AI agents explore paths we never thought to test, and the chaos testing caught a race condition that would have been a P0 in production.",
-        "author": "Marcus Johnson",
-        "title": "CTO",
-        "company": "LaunchPad AI"
-      },
-      "elena": {
-        "quote": "We went from zero automated tests to full regression coverage in under a week. WhyNot generates the Playwright scripts, we review and merge. Our release confidence has never been higher.",
-        "author": "Elena Rodriguez",
-        "title": "Lead QA Engineer",
-        "company": "Meridian Health"
-      }
-    }
-  },
-  "faq": {
-    "heading": "Frequently asked questions",
-    "subheading": "Everything you need to know about WhyNot.",
-    "items": {
-      "howItWorks": {
-        "question": "How does WhyNot find bugs automatically?",
-        "answer": "WhyNot deploys autonomous AI agents that navigate your web application like real users. They click buttons, fill forms, explore navigation paths, and monitor for console errors, broken layouts, failed API calls, and visual regressions — all without you writing a single line of test code."
-      },
-      "integration": {
-        "question": "How do I integrate WhyNot with my app?",
-        "answer": "Just provide your app's URL. WhyNot works with any web application regardless of the tech stack — React, Vue, Angular, Next.js, Django, Rails, Laravel, WordPress, or any other framework. No SDK or code changes required."
-      },
-      "pricing": {
-        "question": "Is there a free tier?",
-        "answer": "Yes! Our free tier includes 50 test runs per month, up to 3 projects, and full access to AI bug detection and Playwright code generation. No credit card required to get started."
-      },
-      "security": {
-        "question": "Is my application data secure?",
-        "answer": "Absolutely. WhyNot runs tests in isolated browser sandboxes. We never store your application data, credentials, or user information. All connections are encrypted with TLS, and we are SOC 2 compliant."
-      },
-      "accuracy": {
-        "question": "How accurate is the bug detection?",
-        "answer": "Our AI achieves a 99.2% accuracy rate with very low false positives. Each reported bug includes screenshots, console logs, network traces, and generated Playwright code so you can verify and reproduce it instantly."
-      }
-    },
-    "contactText": "Still have questions?",
-    "contactLink": "Contact us",
-    "deepLinkAriaLabel": "Copy link to this question"
-  },
-  "cta": {
-    "heading": "Start finding bugs today",
-    "subheading": "Join hundreds of teams using WhyNot to ship software with confidence. Set up in minutes, no code changes required.",
-    "getStarted": "Get started free",
-    "trustSignals": {
-      "freeTier": "Free tier available",
-      "noCard": "No credit card required",
-      "moneyBack": "30-day money-back guarantee"
-    }
-  },
-  "stickyBottomCTA": {
-    "ariaLabel": "Quick action bar",
-    "text": "Find bugs before your users do.",
-    "cta": "Start Free",
-    "dismiss": "Dismiss"
-  },
-  "emailCapture": {
-    "placeholder": "Enter your work email",
-    "ariaLabel": "Email address",
-    "cta": "Get started free",
-    "sending": "Sending...",
-    "success": "Thanks! We'll be in touch soon.",
-    "error": "Something went wrong. Please try again.",
-    "invalidEmail": "Please enter a valid email address.",
-    "rateLimited": "Too many attempts. Please try again later.",
-    "rateLimitedCountdown": "Try again in {{seconds}}s"
-  },
-  "pricing": {
-    "heading": "Simple, transparent pricing",
-    "subheading": "Start free, upgrade when you need more power.",
-    "monthly": "Monthly",
-    "annual": "Annual",
-    "perMonth": "/month",
-    "perYear": "/year",
-    "monthlyEquivalent": "{{price}}/mo billed annually",
-    "saveBadge": "Save {{percent}}%",
-    "free": "Free forever",
-    "popular": "Most popular",
-    "startFree": "Start free",
-    "getStarted": "Get started",
-    "contactSales": "Contact sales",
-    "trialDays": "{{days}}-day free trial",
-    "errorFallback": "Showing default pricing. Live prices could not be loaded.",
-    "plans": {
-      "free": {
-        "name": "Free",
-        "description": "Perfect for trying out WhyNot on personal projects.",
-        "features": [
-          "50 test runs per month",
-          "Up to 3 projects",
-          "AI bug detection",
-          "Playwright code generation",
-          "Community support"
-        ]
-      },
-      "pro_byo": {
-        "name": "Pro (BYO Keys)",
-        "description": "For teams who want full power with their own AI provider keys.",
-        "features": [
-          "Unlimited test runs",
-          "Unlimited projects",
-          "Bring your own API keys",
-          "Visual regression testing",
-          "Chaos testing",
-          "CI/CD integration",
-          "Priority support"
-        ]
-      },
-      "pro_managed": {
-        "name": "Pro (Managed)",
-        "description": "Full power with platform-managed AI and pay-as-you-go credits.",
-        "features": [
-          "Everything in Pro BYO",
-          "Managed AI infrastructure",
-          "Pay-as-you-go credits",
-          "Advanced analytics",
-          "Custom monitors",
-          "SSO & team management",
-          "Dedicated support"
-        ]
-      }
-    }
-  },
-  "payg": {
-    "heading": "Pay-as-you-go pricing",
-    "subheading": "Only pay for what you use. Credits are consumed per operation on the Managed plan.",
-    "event": "Operation",
-    "credits": "Credits",
-    "example": "Example",
-    "events": {
-      "test_generation": {
-        "name": "Test generation",
-        "example": "Generate 20 tests = 1,000 credits"
-      },
-      "test_execution": {
-        "name": "Test execution",
-        "example": "Run 100 tests = 1,000 credits"
-      },
-      "qa_loop_iteration": {
-        "name": "QA loop iteration",
-        "example": "30 iterations = 900 credits"
-      },
-      "auto_fix_attempt": {
-        "name": "Auto-fix attempt",
-        "example": "10 fixes = 1,000 credits"
-      },
-      "visual_regression": {
-        "name": "Visual regression",
-        "example": "50 comparisons = 750 credits"
-      },
-      "qa_monitor_session": {
-        "name": "QA monitor session",
-        "example": "5 sessions = 1,000 credits"
-      },
-      "ci_scan": {
-        "name": "CI scan",
-        "example": "5 scans = 1,000 credits"
-      }
-    },
-    "creditsUnit": "credits",
-    "creditPack": "Credit packs start at $10 for 1,000 credits.",
-    "packs": {
-      "heading": "Credit packs",
-      "bestValue": "Best value",
-      "perCredit": "per credit",
-      "items": {
-        "starter": { "name": "Starter", "size": "1,000 credits", "price": "$10" },
-        "growth": { "name": "Growth", "size": "10,000 credits", "price": "$80" },
-        "scale": { "name": "Scale", "size": "100,000 credits", "price": "$600" }
-      }
-    },
-    "calculator": {
-      "heading": "Credit calculator",
-      "description": "Estimate your monthly credit usage and cost.",
-      "totalCreditsLabel": "Total credits",
-      "estimatedMonthlyCost": "Estimated monthly cost",
-      "recommendedPack": "Recommended pack: {{pack}}",
-      "inputLabel": {
-        "test_generation": "Test generations per month",
-        "test_execution": "Test executions per month",
-        "qa_loop_iteration": "QA loop iterations per month",
-        "auto_fix_attempt": "Auto-fix attempts per month",
-        "visual_regression": "Visual regressions per month",
-        "qa_monitor_session": "QA monitor sessions per month",
-        "ci_scan": "CI scans per month"
-      }
-    },
-    "workedExample": {
-      "heading": "Worked example",
-      "expand": "Show worked example",
-      "collapse": "Hide worked example",
-      "description": "A SaaS team with 20 engineers shipping 3× weekly:",
-      "items": [
-        "50 × test generation (50 credits) = 2,500 credits",
-        "200 × test execution (10 credits) = 2,000 credits",
-        "10 × auto-fix attempts (100 credits) = 1,000 credits"
-      ],
-      "total": "Total: 5,500 credits ≈ $55/month",
-      "note": "Plus the $49/month base subscription."
-    }
-  },
-  "footer": {
-    "description": "Autonomous QA testing powered by AI agents.",
-    "product": "Product",
-    "features": "Features",
-    "pricing": "Pricing",
-    "changelog": "Changelog",
-    "company": "Company",
-    "about": "About",
-    "blog": "Blog",
-    "contact": "Contact",
-    "resources": "Resources",
-    "docs": "Documentation",
-    "status": "Status",
-    "api": "API",
-    "legal": "Legal",
-    "privacy": "Privacy Policy",
-    "terms": "Terms of Service",
-    "security": "Security",
-    "copyright": "© {{year}} WhyNot. All rights reserved.",
-    "allRightsReserved": "All rights reserved.",
-    "github": "GitHub",
-    "twitter": "X (Twitter)"
-  },
-  "seo": {
-    "title": "WhyNot — Autonomous AI-Powered QA Testing",
-    "description": "Find bugs before your users do. Autonomous AI agents explore your web app, detect bugs, and generate Playwright test code.",
-    "keywords": "AI testing, autonomous QA, bug detection, Playwright, visual regression, test automation"
-  }
+  "nav.features": "Features",
+  "nav.pricing": "Pricing",
+  "nav.docs": "Docs",
+  "nav.signIn": "Sign in",
+  "nav.getStarted": "Get started",
+  "nav.openApp": "Open app",
+  "nav.menu": "Menu",
+  "nav.changeLanguage": "Change language",
+  "nav.themeToggleLabel": "Toggle theme",
+  "nav.main": "Main navigation",
+  "hero.title": "Find bugs <highlight>before your users do</highlight>",
+  "hero.subtitle": "Autonomous AI agents that explore your web app, find bugs, and generate Playwright test code — so you can ship with confidence.",
+  "hero.cta": "Start free trial",
+  "hero.secondaryCta": "View pricing",
+  "hero.socialProof": "Trusted by engineering teams shipping quality software",
+  "hero.noCreditCard": "No credit card required",
+  "hero.eyebrow": "AI-Powered QA",
+  "hero.videoCaption": "WhyNot dashboard showing autonomous bug detection in action",
+  "trustBar.ariaLabel": "Trust indicators and supported technologies",
+  "trustBar.logoTitle": "Works with every framework and stack",
+  "trustBar.badges.soc2": "SOC 2 Compliant",
+  "trustBar.badges.dataPrivacy": "Data encrypted at rest",
+  "trustBar.badges.moneyBack": "30-day money-back guarantee",
+  "trustBar.badges.uptime": "99.9% uptime SLA",
+  "trustBar.stats.bugsFound": "Bugs found",
+  "trustBar.stats.bugsFoundSuffix": "+",
+  "trustBar.stats.testsGenerated": "Tests generated",
+  "trustBar.stats.testsGeneratedSuffix": "+",
+  "trustBar.stats.teams": "Teams using WhyNot",
+  "trustBar.stats.teamsSuffix": "+",
+  "trustBar.stats.accuracy": "Detection accuracy",
+  "trustBar.stats.accuracySuffix": "%",
+  "features.heading": "Everything you need to ship bug-free software",
+  "features.subheading": "AI-powered autonomous testing that finds bugs, generates test code, and keeps your app reliable — without writing a single test by hand.",
+  "features.items.aiAgents.title": "Autonomous AI Agents",
+  "features.items.aiAgents.description": "AI agents explore your app like real users, navigating flows and uncovering edge cases humans would miss.",
+  "features.items.bugDetection.title": "Intelligent Bug Detection",
+  "features.items.bugDetection.description": "Automatically detects visual glitches, broken links, console errors, and functional regressions in real time.",
+  "features.items.visualRegression.title": "Visual Regression Testing",
+  "features.items.visualRegression.description": "Pixel-level screenshot comparisons catch UI changes before they reach production.",
+  "features.items.visualRegression.tierBadge": "Pro",
+  "features.items.playwrightGen.title": "Playwright Code Generation",
+  "features.items.playwrightGen.description": "Get production-ready Playwright test scripts generated automatically from each discovered bug.",
+  "features.items.chaosTest.title": "Chaos Testing",
+  "features.items.chaosTest.description": "Simulate slow networks, missing APIs, and browser quirks to stress-test your app under real-world conditions.",
+  "features.items.chaosTest.tierBadge": "Pro",
+  "features.items.multiBrowser.title": "Multi-Browser Coverage",
+  "features.items.multiBrowser.description": "Test across Chrome, Firefox, and Safari simultaneously to ensure consistent behavior everywhere.",
+  "features.items.testSuites.title": "Organized Test Suites",
+  "features.items.testSuites.description": "Manage test cases in folders, tag by priority, and track coverage across user stories and features.",
+  "features.items.security.title": "Security Scanning",
+  "features.items.security.description": "Detects common vulnerabilities like XSS, open redirects, and exposed secrets during every test run.",
+  "features.items.security.tierBadge": "Managed",
+  "comparison.title": "How WhyNot compares",
+  "comparison.subtitle": "See why teams are switching from manual testing frameworks to autonomous AI-powered QA.",
+  "comparison.featureColumn": "Feature",
+  "comparison.competitors.whynot": "WhyNot",
+  "comparison.competitors.selenium": "Selenium",
+  "comparison.competitors.cypress": "Cypress",
+  "comparison.competitors.playwrightManual": "Playwright",
+  "comparison.competitors.browserstack": "BrowserStack",
+  "comparison.competitors.lambdatest": "LambdaTest",
+  "comparison.features.aiAutonomous": "AI autonomous exploration",
+  "comparison.features.noCodeSetup": "No-code setup",
+  "comparison.features.bugDetection": "Automatic bug detection",
+  "comparison.features.testGeneration": "Test code generation",
+  "comparison.features.visualRegression": "Visual regression testing",
+  "comparison.features.chaosTest": "Chaos testing",
+  "comparison.features.ciIntegration": "CI/CD integration",
+  "comparison.features.multiBrowser": "Multi-browser testing",
+  "comparison.features.selfHealing": "Self-healing tests",
+  "comparison.features.parallelExecution": "Parallel execution",
+  "comparison.mobileHint": "Scroll to see more",
+  "comparison.values.yes": "Yes",
+  "comparison.values.no": "No",
+  "comparison.values.partial": "Partial",
+  "testimonials.heading": "Loved by engineering teams",
+  "testimonials.subheading": "See how teams use WhyNot to catch bugs before their users do.",
+  "testimonials.carousel.previous": "Previous testimonial",
+  "testimonials.carousel.next": "Next testimonial",
+  "testimonials.carousel.goToSlide": "Go to testimonial {{number}}",
+  "testimonials.items.sarah.quote": "We deployed WhyNot on our e-commerce platform and it found 23 bugs in the first hour — including a checkout flow issue that was costing us conversions. The Playwright code it generated saved our QA team days of work.",
+  "testimonials.items.sarah.author": "Sarah Chen",
+  "testimonials.items.sarah.title": "VP of Engineering",
+  "testimonials.items.sarah.company": "ShopFlow",
+  "testimonials.items.marcus.quote": "As a startup with no dedicated QA team, WhyNot is like having a senior test engineer on call 24/7. The AI agents explore paths we never thought to test, and the chaos testing caught a race condition that would have been a P0 in production.",
+  "testimonials.items.marcus.author": "Marcus Johnson",
+  "testimonials.items.marcus.title": "CTO",
+  "testimonials.items.marcus.company": "LaunchPad AI",
+  "testimonials.items.elena.quote": "We went from zero automated tests to full regression coverage in under a week. WhyNot generates the Playwright scripts, we review and merge. Our release confidence has never been higher.",
+  "testimonials.items.elena.author": "Elena Rodriguez",
+  "testimonials.items.elena.title": "Lead QA Engineer",
+  "testimonials.items.elena.company": "Meridian Health",
+  "faq.heading": "Frequently asked questions",
+  "faq.subheading": "Everything you need to know about WhyNot.",
+  "faq.items.howItWorks.question": "How does WhyNot find bugs automatically?",
+  "faq.items.howItWorks.answer": "WhyNot deploys autonomous AI agents that navigate your web application like real users. They click buttons, fill forms, explore navigation paths, and monitor for console errors, broken layouts, failed API calls, and visual regressions — all without you writing a single line of test code.",
+  "faq.items.integration.question": "How do I integrate WhyNot with my app?",
+  "faq.items.integration.answer": "Just provide your app's URL. WhyNot works with any web application regardless of the tech stack — React, Vue, Angular, Next.js, Django, Rails, Laravel, WordPress, or any other framework. No SDK or code changes required.",
+  "faq.items.pricing.question": "Is there a free tier?",
+  "faq.items.pricing.answer": "Yes! Our free tier includes 50 test runs per month, up to 3 projects, and full access to AI bug detection and Playwright code generation. No credit card required to get started.",
+  "faq.items.security.question": "Is my application data secure?",
+  "faq.items.security.answer": "Absolutely. WhyNot runs tests in isolated browser sandboxes. We never store your application data, credentials, or user information. All connections are encrypted with TLS, and we are SOC 2 compliant.",
+  "faq.items.accuracy.question": "How accurate is the bug detection?",
+  "faq.items.accuracy.answer": "Our AI achieves a 99.2% accuracy rate with very low false positives. Each reported bug includes screenshots, console logs, network traces, and generated Playwright code so you can verify and reproduce it instantly.",
+  "faq.contactText": "Still have questions?",
+  "faq.contactLink": "Contact us",
+  "faq.deepLinkAriaLabel": "Copy link to this question",
+  "cta.heading": "Start finding bugs today",
+  "cta.subheading": "Join hundreds of teams using WhyNot to ship software with confidence. Set up in minutes, no code changes required.",
+  "cta.getStarted": "Get started free",
+  "cta.trustSignals.freeTier": "Free tier available",
+  "cta.trustSignals.noCard": "No credit card required",
+  "cta.trustSignals.moneyBack": "30-day money-back guarantee",
+  "stickyBottomCTA.ariaLabel": "Quick action bar",
+  "stickyBottomCTA.text": "Find bugs before your users do.",
+  "stickyBottomCTA.cta": "Start Free",
+  "stickyBottomCTA.dismiss": "Dismiss",
+  "emailCapture.placeholder": "Enter your work email",
+  "emailCapture.ariaLabel": "Email address",
+  "emailCapture.cta": "Get started free",
+  "emailCapture.sending": "Sending...",
+  "emailCapture.success": "Thanks! We'll be in touch soon.",
+  "emailCapture.error": "Something went wrong. Please try again.",
+  "emailCapture.invalidEmail": "Please enter a valid email address.",
+  "emailCapture.rateLimited": "Too many attempts. Please try again later.",
+  "emailCapture.rateLimitedCountdown": "Try again in {{seconds}}s",
+  "pricing.heading": "Simple, transparent pricing",
+  "pricing.subheading": "Start free, upgrade when you need more power.",
+  "pricing.monthly": "Monthly",
+  "pricing.annual": "Annual",
+  "pricing.perMonth": "/month",
+  "pricing.perYear": "/year",
+  "pricing.monthlyEquivalent": "{{price}}/mo billed annually",
+  "pricing.saveBadge": "Save {{percent}}%",
+  "pricing.free": "Free forever",
+  "pricing.popular": "Most popular",
+  "pricing.startFree": "Start free",
+  "pricing.getStarted": "Get started",
+  "pricing.contactSales": "Contact sales",
+  "pricing.trialDays": "{{days}}-day free trial",
+  "pricing.errorFallback": "Showing default pricing. Live prices could not be loaded.",
+  "pricing.plans.free.name": "Free",
+  "pricing.plans.free.description": "Perfect for trying out WhyNot on personal projects.",
+  "pricing.plans.free.features.0": "50 test runs per month",
+  "pricing.plans.free.features.1": "Up to 3 projects",
+  "pricing.plans.free.features.2": "AI bug detection",
+  "pricing.plans.free.features.3": "Playwright code generation",
+  "pricing.plans.free.features.4": "Community support",
+  "pricing.plans.pro_byo.name": "Pro (BYO Keys)",
+  "pricing.plans.pro_byo.description": "For teams who want full power with their own AI provider keys.",
+  "pricing.plans.pro_byo.features.0": "Unlimited test runs",
+  "pricing.plans.pro_byo.features.1": "Unlimited projects",
+  "pricing.plans.pro_byo.features.2": "Bring your own API keys",
+  "pricing.plans.pro_byo.features.3": "Visual regression testing",
+  "pricing.plans.pro_byo.features.4": "Chaos testing",
+  "pricing.plans.pro_byo.features.5": "CI/CD integration",
+  "pricing.plans.pro_byo.features.6": "Priority support",
+  "pricing.plans.pro_managed.name": "Pro (Managed)",
+  "pricing.plans.pro_managed.description": "Full power with platform-managed AI and pay-as-you-go credits.",
+  "pricing.plans.pro_managed.features.0": "Everything in Pro BYO",
+  "pricing.plans.pro_managed.features.1": "Managed AI infrastructure",
+  "pricing.plans.pro_managed.features.2": "Pay-as-you-go credits",
+  "pricing.plans.pro_managed.features.3": "Advanced analytics",
+  "pricing.plans.pro_managed.features.4": "Custom monitors",
+  "pricing.plans.pro_managed.features.5": "SSO & team management",
+  "pricing.plans.pro_managed.features.6": "Dedicated support",
+  "payg.heading": "Pay-as-you-go pricing",
+  "payg.subheading": "Only pay for what you use. Credits are consumed per operation on the Managed plan.",
+  "payg.event": "Operation",
+  "payg.credits": "Credits",
+  "payg.example": "Example",
+  "payg.events.test_generation.name": "Test generation",
+  "payg.events.test_generation.example": "Generate 20 tests = 1,000 credits",
+  "payg.events.test_execution.name": "Test execution",
+  "payg.events.test_execution.example": "Run 100 tests = 1,000 credits",
+  "payg.events.qa_loop_iteration.name": "QA loop iteration",
+  "payg.events.qa_loop_iteration.example": "30 iterations = 900 credits",
+  "payg.events.auto_fix_attempt.name": "Auto-fix attempt",
+  "payg.events.auto_fix_attempt.example": "10 fixes = 1,000 credits",
+  "payg.events.visual_regression.name": "Visual regression",
+  "payg.events.visual_regression.example": "50 comparisons = 750 credits",
+  "payg.events.qa_monitor_session.name": "QA monitor session",
+  "payg.events.qa_monitor_session.example": "5 sessions = 1,000 credits",
+  "payg.events.ci_scan.name": "CI scan",
+  "payg.events.ci_scan.example": "5 scans = 1,000 credits",
+  "payg.creditsUnit": "credits",
+  "payg.creditPack": "Credit packs start at $10 for 1,000 credits.",
+  "payg.packs.heading": "Credit packs",
+  "payg.packs.bestValue": "Best value",
+  "payg.packs.perCredit": "per credit",
+  "payg.packs.items.starter.name": "Starter",
+  "payg.packs.items.starter.size": "1,000 credits",
+  "payg.packs.items.starter.price": "$10",
+  "payg.packs.items.growth.name": "Growth",
+  "payg.packs.items.growth.size": "10,000 credits",
+  "payg.packs.items.growth.price": "$80",
+  "payg.packs.items.scale.name": "Scale",
+  "payg.packs.items.scale.size": "100,000 credits",
+  "payg.packs.items.scale.price": "$600",
+  "payg.calculator.heading": "Credit calculator",
+  "payg.calculator.description": "Estimate your monthly credit usage and cost.",
+  "payg.calculator.totalCreditsLabel": "Total credits",
+  "payg.calculator.estimatedMonthlyCost": "Estimated monthly cost",
+  "payg.calculator.recommendedPack": "Recommended pack: {{pack}}",
+  "payg.calculator.inputLabel.test_generation": "Test generations per month",
+  "payg.calculator.inputLabel.test_execution": "Test executions per month",
+  "payg.calculator.inputLabel.qa_loop_iteration": "QA loop iterations per month",
+  "payg.calculator.inputLabel.auto_fix_attempt": "Auto-fix attempts per month",
+  "payg.calculator.inputLabel.visual_regression": "Visual regressions per month",
+  "payg.calculator.inputLabel.qa_monitor_session": "QA monitor sessions per month",
+  "payg.calculator.inputLabel.ci_scan": "CI scans per month",
+  "payg.workedExample.heading": "Worked example",
+  "payg.workedExample.expand": "Show worked example",
+  "payg.workedExample.collapse": "Hide worked example",
+  "payg.workedExample.description": "A SaaS team with 20 engineers shipping 3× weekly:",
+  "payg.workedExample.items.0": "50 × test generation (50 credits) = 2,500 credits",
+  "payg.workedExample.items.1": "200 × test execution (10 credits) = 2,000 credits",
+  "payg.workedExample.items.2": "10 × auto-fix attempts (100 credits) = 1,000 credits",
+  "payg.workedExample.total": "Total: 5,500 credits ≈ $55/month",
+  "payg.workedExample.note": "Plus the $49/month base subscription.",
+  "footer.description": "Autonomous QA testing powered by AI agents.",
+  "footer.product": "Product",
+  "footer.features": "Features",
+  "footer.pricing": "Pricing",
+  "footer.changelog": "Changelog",
+  "footer.company": "Company",
+  "footer.about": "About",
+  "footer.blog": "Blog",
+  "footer.contact": "Contact",
+  "footer.resources": "Resources",
+  "footer.docs": "Documentation",
+  "footer.status": "Status",
+  "footer.api": "API",
+  "footer.legal": "Legal",
+  "footer.privacy": "Privacy Policy",
+  "footer.terms": "Terms of Service",
+  "footer.security": "Security",
+  "footer.copyright": "© {{year}} WhyNot. All rights reserved.",
+  "footer.allRightsReserved": "All rights reserved.",
+  "footer.github": "GitHub",
+  "footer.twitter": "X (Twitter)",
+  "landing.recon.eyebrow": "Now in beta",
+  "landing.recon.title": "Pentest every release. Not once a year.",
+  "landing.recon.subtitle": "Recon runs an autonomous, white-box security test against your app and reports only the vulnerabilities it can actually exploit.",
+  "landing.recon.description": "Recon by WhyNot — autonomous, source-aware security testing that reports only vulnerabilities it can actually exploit.",
+  "landing.recon.benefit1.title": "Proof, not theory",
+  "landing.recon.benefit1.body": "Every finding ships with a working exploit you can re-run.",
+  "landing.recon.benefit2.title": "Source-aware",
+  "landing.recon.benefit2.body": "Recon reads your codebase to focus the test on what matters.",
+  "landing.recon.benefit3.title": "On-demand",
+  "landing.recon.benefit3.body": "Run a full pentest in about an hour. Repeat as often as you ship.",
+  "landing.recon.cta.primary": "Try Recon",
+  "landing.recon.cta.secondary": "See a sample report",
+  "landing.recon.sampleReport.title": "Sample finding: reflected input escape bypass",
+  "landing.recon.sampleReport.description": "A redacted excerpt from a real Recon report. Every finding includes an exact, reproducible proof-of-concept.",
+  "landing.recon.sampleReport.findingTitle": "Reflected input escape bypass — High severity",
+  "landing.recon.sampleReport.findingBody": "Input on the search endpoint is HTML-escaped but not attribute-escaped. An attacker can break out of a quoted attribute to inject event handlers.",
+  "landing.recon.sampleReport.findingSnippet": "GET /search?q=%22+onmouseover%3D[REDACTED]\nHost: [REDACTED]\n\n# Observed response reflects the payload\n# inside a quoted HTML attribute without escaping.",
+  "landing.recon.sampleReport.close": "Close",
+  "seo.title": "WhyNot — Autonomous AI-Powered QA Testing",
+  "seo.description": "Find bugs before your users do. Autonomous AI agents explore your web app, detect bugs, and generate Playwright test code.",
+  "seo.keywords": "AI testing, autonomous QA, bug detection, Playwright, visual regression, test automation",
+  "pricing.recon.label": "Recon — security scans",
+  "pricing.recon.free": "—",
+  "pricing.recon.proByo": "1 included scan/month",
+  "pricing.recon.proManaged": "3 included scans/month",
+  "payg.recon.label": "Recon scan run",
+  "payg.recon.example": "Per scan",
+  "payg.recon.tooltip": "Partial or cancelled scans are billed only for the phases that ran.",
+  "payg.recon.tooltipLabel": "Recon billing details"
 }

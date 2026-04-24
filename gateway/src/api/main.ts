@@ -35,6 +35,8 @@ import { InvoiceRepository } from '../../shared/database/repositories/invoice-re
 import { UserRepository } from '../../shared/database/repositories/user-repository';
 import { startCleanupScheduler, runCleanup } from '../services/cleanup-service';
 import { seedAdminUser } from '../../shared/database/seeds/admin-user';
+import { seedFeatureFlags } from '../../shared/database/seeds/feature-flags';
+import { seedReconPlanFeatures } from '../../shared/database/seeds/plan-features';
 import { requireCredits, deductCredits } from '../middleware/credit-gate';
 import { recordUsageEvent } from '../utils/usage-tracker';
 import { requireFeature, requireFeatureLimit } from '../middleware/feature-gate';
@@ -503,12 +505,14 @@ app.get('/api/internal/ai-config',
     const billingConfigRepo = new BillingConfigRepository();
     const defaultProvider = await billingConfigRepo.getDefaultAiProvider();
     const fallbackOrder = await billingConfigRepo.getAiFallbackOrder();
+    const reconModels = await billingConfigRepo.getAllReconModels();
 
     res.json({
       success: true,
       providers: configs,
       defaultProvider,
       fallbackOrder,
+      reconModels,
     });
   })
 );
@@ -523,6 +527,10 @@ app.use('/api/monitors', monitorRouter);
 // ─── Performance testing routes (requires auth) ──────────────────────────────
 import { perfRouter } from './perf-router';
 app.use('/api/perf', perfRouter);
+
+// ─── Recon scans (feature-flagged + plan-gated) ──────────────────────────────
+import { reconRouter } from './recon';
+app.use('/api/recon', reconRouter);
 
 // ─── Bug Reporting + ClickUp/GitHub integration routes ──────────────────────
 import { integrationsRouter, bugReportRouter } from './integrations-router';
@@ -3416,10 +3424,11 @@ function isKnownProvider(p: string): p is (typeof KNOWN_AI_PROVIDERS)[number] {
 }
 
 app.get('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(async (_req, res) => {
-  const [configs, defaultProvider, fallbackOrder] = await Promise.all([
+  const [configs, defaultProvider, fallbackOrder, reconModels] = await Promise.all([
     platformAiConfigRepository.listAll(),
     billingConfigRepository.getDefaultAiProvider(),
     billingConfigRepository.getAiFallbackOrder(),
+    billingConfigRepository.getAllReconModels(),
   ]);
 
   const providers = configs.map((c) => ({
@@ -3440,6 +3449,7 @@ app.get('/api/admin/ai-providers', requireAuth, requireSuperAdmin, asyncHandler(
     providers,
     defaultProvider: defaultProvider || { provider: 'anthropic', model: 'claude-sonnet-4-6' },
     fallbackOrder: fallbackOrder.length > 0 ? fallbackOrder : [...KNOWN_AI_PROVIDERS],
+    reconModels,
   });
 }));
 
@@ -3712,6 +3722,38 @@ app.patch('/api/admin/ai-providers/fallback-order', requireAuth, requireSuperAdm
   res.json({ success: true, fallbackOrder: order });
 }));
 
+// Recon-specific AI model tier overrides.  Empty / missing value = inherit
+// the platform-wide default model for that tier.
+app.patch('/api/admin/ai-providers/recon-models', requireAuth, requireSuperAdmin, asyncHandler(async (req: any, res) => {
+  const { small, medium, large } = req.body ?? {};
+
+  const tiers: Array<['small' | 'medium' | 'large', unknown]> = [
+    ['small', small],
+    ['medium', medium],
+    ['large', large],
+  ];
+
+  for (const [, value] of tiers) {
+    if (value !== undefined && value !== null && typeof value !== 'string') {
+      throw createError(req.t('errors:validation.invalid') || 'Recon model must be a string or null', 400, 'INVALID_BODY');
+    }
+  }
+
+  for (const [tier, value] of tiers) {
+    if (value === undefined) continue;
+    const normalized = typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+    await billingConfigRepository.setReconModel(tier, normalized);
+  }
+
+  platformKeyCache.invalidate();
+
+  const reconModels = await billingConfigRepository.getAllReconModels();
+
+  auditLog(req, 'ai-provider.recon-models-changed', 'platform_ai_config', undefined, reconModels);
+
+  res.json({ success: true, reconModels });
+}));
+
 // ─── User: AI Providers (public) ────────────────────────────────────────────
 
 app.get('/api/me/ai-providers', requireAuth, asyncHandler(async (req: any, res) => {
@@ -3781,6 +3823,14 @@ if (env.NODE_ENV !== 'test') {
     });
 
     startCleanupScheduler();
+
+    seedFeatureFlags()
+      .then(() => logger.info('Feature flags seeded'))
+      .catch((err: any) => logger.error('Feature flags seed failed', { error: err.message }));
+
+    seedReconPlanFeatures()
+      .then(() => logger.info('Recon plan features seeded'))
+      .catch((err: any) => logger.error('Recon plan features seed failed', { error: err.message }));
 
     if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
       seedAdminUser(env.ADMIN_EMAIL, env.ADMIN_PASSWORD, env.ADMIN_NAME)

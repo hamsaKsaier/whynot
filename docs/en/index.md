@@ -26,6 +26,9 @@ Welcome to the WhyNot QA documentation — an AI-powered test automation platfor
 ### Internationalization (i18n)
 - [How to Add a Translation Key](i18n/how-to-add-a-translation-key.md) — Guide to adding translatable strings
 
+### Recon
+- [Recon](recon/) — Authorized, automated reconnaissance and vulnerability scanning
+
 ## Supported Languages
 
 WhyNot QA supports the following languages:

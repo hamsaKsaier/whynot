@@ -184,5 +184,25 @@
   "settings.notifications.disabled": "Notification disabled",
   "settings.notifications.updateFailed": "Failed to update preference",
   "settings.notifications.autofixPr": "Auto-fix PR ready",
-  "settings.notifications.autofixPrDesc": "Notification when an auto-fix pull request is created"
+  "settings.notifications.autofixPrDesc": "Notification when an auto-fix pull request is created",
+
+  "settings.recon.tab.label": "Recon",
+  "settings.recon.notifications.title": "Notifications",
+  "settings.recon.notifications.description": "Choose who gets emailed when a scan completes or fails.",
+  "settings.recon.notifications.emailOnComplete": "Email me on every scan completion",
+  "settings.recon.notifications.emailOnFail": "Email me when a scan fails",
+  "settings.recon.notifications.recipients.label": "Recipients",
+  "settings.recon.notifications.recipients.placeholder": "Add recipient",
+  "settings.recon.notifications.recipients.empty": "No recipients selected",
+  "settings.recon.notifications.recipients.remove": "Remove {{email}}",
+  "settings.recon.paygCap.label": "Max credits per scan",
+  "settings.recon.paygCap.help": "Hard cap on credits spent per scan. Enter 0 to use the platform default.",
+  "settings.recon.paygCap.error.negative": "Cap must be 0 or greater",
+  "settings.recon.paygCap.error.tooLarge": "Cap must be 100,000 or less",
+  "settings.recon.schedule.title": "Default schedule",
+  "settings.recon.schedule.description": "Automatically re-run scans on a recurring schedule.",
+  "settings.recon.schedule.comingSoon": "Coming soon",
+  "settings.recon.save": "Save",
+  "settings.recon.saveSuccess": "Recon settings saved",
+  "settings.recon.saveError": "Failed to save Recon settings"
 }

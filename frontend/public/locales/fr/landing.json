@@ -1,363 +1,273 @@
 {
-  "nav": {
-    "features": "Fonctionnalités",
-    "pricing": "Tarifs",
-    "docs": "Documentation",
-    "signIn": "Se connecter",
-    "getStarted": "Commencer",
-    "openApp": "Ouvrir l'application",
-    "menu": "Menu",
-    "changeLanguage": "Changer de langue",
-    "themeToggleLabel": "Changer le thème",
-    "main": "Navigation principale"
-  },
-  "hero": {
-    "title": "Trouvez les bugs <highlight>avant vos utilisateurs</highlight>",
-    "subtitle": "Des agents IA autonomes qui explorent votre application web, trouvent les bugs et génèrent du code de test Playwright — pour déployer en toute confiance.",
-    "cta": "Essai gratuit",
-    "secondaryCta": "Voir les tarifs",
-    "socialProof": "Adopté par les équipes d'ingénierie qui livrent des logiciels de qualité",
-    "noCreditCard": "Aucune carte bancaire requise",
-    "eyebrow": "QA propulsé par l'IA",
-    "videoCaption": "Tableau de bord WhyNot montrant la détection autonome de bugs en action"
-  },
-  "trustBar": {
-    "ariaLabel": "Indicateurs de confiance et technologies supportées",
-    "logoTitle": "Compatible avec tous les frameworks et stacks",
-    "badges": {
-      "soc2": "Conforme SOC 2",
-      "dataPrivacy": "Données chiffrées au repos",
-      "moneyBack": "Garantie de remboursement 30 jours",
-      "uptime": "SLA de disponibilité 99,9\u00a0%"
-    },
-    "stats": {
-      "bugsFound": "Bugs trouvés",
-      "bugsFoundSuffix": "+",
-      "testsGenerated": "Tests générés",
-      "testsGeneratedSuffix": "+",
-      "teams": "Équipes utilisant WhyNot",
-      "teamsSuffix": "+",
-      "accuracy": "Précision de détection",
-      "accuracySuffix": " %"
-    }
-  },
-  "features": {
-    "heading": "Tout ce qu'il faut pour livrer des logiciels sans bugs",
-    "subheading": "Des tests autonomes pilotés par l'IA qui détectent les bugs, génèrent du code de test et maintiennent votre application fiable — sans écrire un seul test à la main.",
-    "items": {
-      "aiAgents": {
-        "title": "Agents IA autonomes",
-        "description": "Les agents IA explorent votre application comme de vrais utilisateurs, naviguant dans les flux et découvrant des cas limites que les humains manqueraient."
-      },
-      "bugDetection": {
-        "title": "Détection intelligente des bugs",
-        "description": "Détecte automatiquement les anomalies visuelles, les liens cassés, les erreurs console et les régressions fonctionnelles en temps réel."
-      },
-      "visualRegression": {
-        "title": "Tests de régression visuelle",
-        "description": "Des comparaisons de captures d'écran au pixel près détectent les changements d'interface avant la mise en production.",
-        "tierBadge": "Pro"
-      },
-      "playwrightGen": {
-        "title": "Génération de code Playwright",
-        "description": "Obtenez des scripts de test Playwright prêts pour la production, générés automatiquement pour chaque bug découvert."
-      },
-      "chaosTest": {
-        "title": "Tests de chaos",
-        "description": "Simulez des réseaux lents, des API manquantes et des bizarreries de navigateur pour tester votre application en conditions réelles.",
-        "tierBadge": "Pro"
-      },
-      "multiBrowser": {
-        "title": "Couverture multi-navigateurs",
-        "description": "Testez simultanément sur Chrome, Firefox et Safari pour garantir un comportement cohérent partout."
-      },
-      "testSuites": {
-        "title": "Suites de tests organisées",
-        "description": "Gérez les cas de test dans des dossiers, classez par priorité et suivez la couverture à travers les user stories et fonctionnalités."
-      },
-      "security": {
-        "title": "Analyse de sécurité",
-        "description": "Détecte les vulnérabilités courantes comme le XSS, les redirections ouvertes et les secrets exposés lors de chaque exécution de test.",
-        "tierBadge": "Géré"
-      }
-    }
-  },
-  "comparison": {
-    "title": "Comment WhyNot se compare",
-    "subtitle": "Découvrez pourquoi les équipes passent des frameworks de test manuels à l'assurance qualité autonome pilotée par l'IA.",
-    "featureColumn": "Fonctionnalité",
-    "competitors": {
-      "whynot": "WhyNot",
-      "selenium": "Selenium",
-      "cypress": "Cypress",
-      "playwrightManual": "Playwright",
-      "browserstack": "BrowserStack",
-      "lambdatest": "LambdaTest"
-    },
-    "features": {
-      "aiAutonomous": "Exploration autonome par IA",
-      "noCodeSetup": "Configuration sans code",
-      "bugDetection": "Détection automatique des bugs",
-      "testGeneration": "Génération de code de test",
-      "visualRegression": "Tests de régression visuelle",
-      "chaosTest": "Tests de chaos",
-      "ciIntegration": "Intégration CI/CD",
-      "multiBrowser": "Tests multi-navigateurs",
-      "selfHealing": "Tests auto-réparants",
-      "parallelExecution": "Exécution parallèle"
-    },
-    "mobileHint": "Faites défiler pour en voir plus",
-    "values": {
-      "yes": "Oui",
-      "no": "Non",
-      "partial": "Partiel"
-    }
-  },
-  "testimonials": {
-    "heading": "Plébiscité par les équipes d'ingénierie",
-    "subheading": "Découvrez comment les équipes utilisent WhyNot pour trouver les bugs avant leurs utilisateurs.",
-    "carousel": {
-      "previous": "Témoignage précédent",
-      "next": "Témoignage suivant",
-      "goToSlide": "Aller au témoignage {{number}}"
-    },
-    "items": {
-      "sarah": {
-        "quote": "Nous avons déployé WhyNot sur notre plateforme e-commerce et il a trouvé 23 bugs dans la première heure — dont un problème de tunnel de paiement qui nous coûtait des conversions. Le code Playwright généré a fait gagner des jours à notre équipe QA.",
-        "author": "Sarah Chen",
-        "title": "VP Ingénierie",
-        "company": "ShopFlow"
-      },
-      "marcus": {
-        "quote": "En tant que startup sans équipe QA dédiée, WhyNot c'est comme avoir un ingénieur test senior disponible 24h/24. Les agents IA explorent des chemins auxquels nous n'aurions jamais pensé, et les tests de chaos ont détecté une condition de concurrence qui aurait été un P0 en production.",
-        "author": "Marcus Johnson",
-        "title": "Directeur technique",
-        "company": "LaunchPad AI"
-      },
-      "elena": {
-        "quote": "Nous sommes passés de zéro tests automatisés à une couverture de régression complète en moins d'une semaine. WhyNot génère les scripts Playwright, nous révisons et fusionnons. Notre confiance dans les releases n'a jamais été aussi élevée.",
-        "author": "Elena Rodriguez",
-        "title": "Ingénieure QA principale",
-        "company": "Meridian Health"
-      }
-    }
-  },
-  "faq": {
-    "heading": "Questions fréquentes",
-    "subheading": "Tout ce que vous devez savoir sur WhyNot.",
-    "items": {
-      "howItWorks": {
-        "question": "Comment WhyNot trouve-t-il les bugs automatiquement\u00a0?",
-        "answer": "WhyNot déploie des agents IA autonomes qui naviguent dans votre application comme de vrais utilisateurs. Ils cliquent sur les boutons, remplissent les formulaires, explorent les parcours de navigation et surveillent les erreurs console, les mises en page cassées, les appels API échoués et les régressions visuelles — le tout sans écrire une seule ligne de code de test."
-      },
-      "integration": {
-        "question": "Comment intégrer WhyNot avec mon application\u00a0?",
-        "answer": "Fournissez simplement l'URL de votre application. WhyNot fonctionne avec toute application web, quelle que soit la stack technique — React, Vue, Angular, Next.js, Django, Rails, Laravel, WordPress ou tout autre framework. Aucun SDK ni modification de code nécessaire."
-      },
-      "pricing": {
-        "question": "Y a-t-il une offre gratuite\u00a0?",
-        "answer": "Oui\u00a0! Notre offre gratuite comprend 50 exécutions de tests par mois, jusqu'à 3 projets et un accès complet à la détection de bugs par IA et à la génération de code Playwright. Aucune carte bancaire nécessaire."
-      },
-      "security": {
-        "question": "Les données de mon application sont-elles sécurisées\u00a0?",
-        "answer": "Absolument. WhyNot exécute les tests dans des sandboxes de navigateur isolés. Nous ne stockons jamais les données de votre application, vos identifiants ou les informations utilisateur. Toutes les connexions sont chiffrées avec TLS et nous sommes conformes SOC 2."
-      },
-      "accuracy": {
-        "question": "Quelle est la précision de la détection des bugs\u00a0?",
-        "answer": "Notre IA atteint un taux de précision de 99,2\u00a0% avec très peu de faux positifs. Chaque bug signalé comprend des captures d'écran, des logs console, des traces réseau et du code Playwright généré pour que vous puissiez vérifier et reproduire instantanément."
-      }
-    },
-    "contactText": "Encore des questions\u00a0?",
-    "contactLink": "Contactez-nous",
-    "deepLinkAriaLabel": "Copier le lien vers cette question"
-  },
-  "cta": {
-    "heading": "Commencez à trouver des bugs dès aujourd'hui",
-    "subheading": "Rejoignez des centaines d'équipes qui utilisent WhyNot pour déployer en toute confiance. Configuration en quelques minutes, aucune modification de code requise.",
-    "getStarted": "Commencer gratuitement",
-    "trustSignals": {
-      "freeTier": "Offre gratuite disponible",
-      "noCard": "Aucune carte bancaire requise",
-      "moneyBack": "Garantie de remboursement 30 jours"
-    }
-  },
-  "stickyBottomCTA": {
-    "ariaLabel": "Barre d'action rapide",
-    "text": "Trouvez les bugs avant vos utilisateurs.",
-    "cta": "Essai gratuit",
-    "dismiss": "Fermer"
-  },
-  "emailCapture": {
-    "placeholder": "Entrez votre email professionnel",
-    "ariaLabel": "Adresse email",
-    "cta": "Commencer gratuitement",
-    "sending": "Envoi en cours…",
-    "success": "Merci\u00a0! Nous vous contacterons bientôt.",
-    "error": "Une erreur est survenue. Veuillez réessayer.",
-    "invalidEmail": "Veuillez entrer une adresse email valide.",
-    "rateLimited": "Trop de tentatives. Veuillez réessayer plus tard.",
-    "rateLimitedCountdown": "Réessayez dans {{seconds}}s"
-  },
-  "pricing": {
-    "heading": "Des tarifs simples et transparents",
-    "subheading": "Commencez gratuitement, évoluez quand vous avez besoin de plus.",
-    "monthly": "Mensuel",
-    "annual": "Annuel",
-    "perMonth": "/mois",
-    "perYear": "/an",
-    "monthlyEquivalent": "{{price}}/mois facturé annuellement",
-    "saveBadge": "Économisez {{percent}} %",
-    "free": "Gratuit pour toujours",
-    "popular": "Le plus populaire",
-    "startFree": "Commencer gratuitement",
-    "getStarted": "Commencer",
-    "contactSales": "Contacter les ventes",
-    "trialDays": "Essai gratuit de {{days}} jours",
-    "errorFallback": "Affichage des tarifs par défaut. Impossible de charger les tarifs en direct.",
-    "plans": {
-      "free": {
-        "name": "Gratuit",
-        "description": "Parfait pour essayer WhyNot sur vos projets personnels.",
-        "features": [
-          "50 exécutions de tests par mois",
-          "Jusqu'à 3 projets",
-          "Détection de bugs par IA",
-          "Génération de code Playwright",
-          "Support communautaire"
-        ]
-      },
-      "pro_byo": {
-        "name": "Pro (Vos clés)",
-        "description": "Pour les équipes qui veulent utiliser leurs propres clés de fournisseur IA.",
-        "features": [
-          "Exécutions illimitées",
-          "Projets illimités",
-          "Vos propres clés API",
-          "Tests de régression visuelle",
-          "Tests de chaos",
-          "Intégration CI/CD",
-          "Support prioritaire"
-        ]
-      },
-      "pro_managed": {
-        "name": "Pro (Géré)",
-        "description": "Puissance totale avec IA gérée par la plateforme et crédits à l'usage.",
-        "features": [
-          "Tout dans Pro (Vos clés)",
-          "Infrastructure IA gérée",
-          "Crédits à l'usage",
-          "Analyses avancées",
-          "Moniteurs personnalisés",
-          "SSO et gestion d'équipe",
-          "Support dédié"
-        ]
-      }
-    }
-  },
-  "payg": {
-    "heading": "Tarification à l'usage",
-    "subheading": "Payez uniquement ce que vous utilisez. Les crédits sont consommés par opération sur le plan Géré.",
-    "event": "Opération",
-    "credits": "Crédits",
-    "example": "Exemple",
-    "events": {
-      "test_generation": {
-        "name": "Génération de tests",
-        "example": "Générer 20 tests = 1\u00a0000 crédits"
-      },
-      "test_execution": {
-        "name": "Exécution de tests",
-        "example": "Exécuter 100 tests = 1\u00a0000 crédits"
-      },
-      "qa_loop_iteration": {
-        "name": "Itération de boucle QA",
-        "example": "30 itérations = 900 crédits"
-      },
-      "auto_fix_attempt": {
-        "name": "Tentative de correction auto",
-        "example": "10 corrections = 1\u00a0000 crédits"
-      },
-      "visual_regression": {
-        "name": "Régression visuelle",
-        "example": "50 comparaisons = 750 crédits"
-      },
-      "qa_monitor_session": {
-        "name": "Session de monitoring QA",
-        "example": "5 sessions = 1\u00a0000 crédits"
-      },
-      "ci_scan": {
-        "name": "Scan CI",
-        "example": "5 scans = 1\u00a0000 crédits"
-      }
-    },
-    "creditsUnit": "crédits",
-    "creditPack": "Les packs de crédits commencent à 10\u00a0$ pour 1\u00a0000 crédits.",
-    "packs": {
-      "heading": "Packs de crédits",
-      "bestValue": "Meilleur rapport qualité-prix",
-      "perCredit": "par crédit",
-      "items": {
-        "starter": { "name": "Démarrage", "size": "1\u00a0000 crédits", "price": "10\u00a0$" },
-        "growth": { "name": "Croissance", "size": "10\u00a0000 crédits", "price": "80\u00a0$" },
-        "scale": { "name": "Évolution", "size": "100\u00a0000 crédits", "price": "600\u00a0$" }
-      }
-    },
-    "calculator": {
-      "heading": "Calculateur de crédits",
-      "description": "Estimez votre consommation mensuelle de crédits et son coût.",
-      "totalCreditsLabel": "Total des crédits",
-      "estimatedMonthlyCost": "Coût mensuel estimé",
-      "recommendedPack": "Pack recommandé\u00a0: {{pack}}",
-      "inputLabel": {
-        "test_generation": "Générations de tests par mois",
-        "test_execution": "Exécutions de tests par mois",
-        "qa_loop_iteration": "Itérations de boucle QA par mois",
-        "auto_fix_attempt": "Tentatives de correction auto par mois",
-        "visual_regression": "Régressions visuelles par mois",
-        "qa_monitor_session": "Sessions de monitoring QA par mois",
-        "ci_scan": "Scans CI par mois"
-      }
-    },
-    "workedExample": {
-      "heading": "Exemple concret",
-      "expand": "Afficher l'exemple concret",
-      "collapse": "Masquer l'exemple concret",
-      "description": "Une équipe SaaS de 20 ingénieurs livrant 3 fois par semaine\u00a0:",
-      "items": [
-        "50 × génération de tests (50 crédits) = 2\u00a0500 crédits",
-        "200 × exécution de tests (10 crédits) = 2\u00a0000 crédits",
-        "10 × tentatives de correction auto (100 crédits) = 1\u00a0000 crédits"
-      ],
-      "total": "Total\u00a0: 5\u00a0500 crédits ≈ 55\u00a0$/mois",
-      "note": "Plus l'abonnement de base à 49\u00a0$/mois."
-    }
-  },
-  "footer": {
-    "description": "Tests QA autonomes propulsés par des agents IA.",
-    "product": "Produit",
-    "features": "Fonctionnalités",
-    "pricing": "Tarifs",
-    "changelog": "Journal des modifications",
-    "company": "Entreprise",
-    "about": "À propos",
-    "blog": "Blog",
-    "contact": "Contact",
-    "resources": "Ressources",
-    "docs": "Documentation",
-    "status": "Statut",
-    "api": "API",
-    "legal": "Mentions légales",
-    "privacy": "Politique de confidentialité",
-    "terms": "Conditions d'utilisation",
-    "security": "Sécurité",
-    "copyright": "© {{year}} WhyNot. Tous droits réservés.",
-    "allRightsReserved": "Tous droits réservés.",
-    "github": "GitHub",
-    "twitter": "X (Twitter)"
-  },
-  "seo": {
-    "title": "WhyNot — Tests QA autonomes propulsés par l'IA",
-    "description": "Trouvez les bugs avant vos utilisateurs. Des agents IA autonomes explorent votre application web, détectent les bugs et génèrent du code de test Playwright.",
-    "keywords": "tests IA, QA autonome, détection de bugs, Playwright, régression visuelle, automatisation des tests"
-  }
+  "nav.features": "Fonctionnalités",
+  "nav.pricing": "Tarifs",
+  "nav.docs": "Documentation",
+  "nav.signIn": "Se connecter",
+  "nav.getStarted": "Commencer",
+  "nav.openApp": "Ouvrir l'application",
+  "nav.menu": "Menu",
+  "nav.changeLanguage": "Changer de langue",
+  "nav.themeToggleLabel": "Changer le thème",
+  "nav.main": "Navigation principale",
+  "hero.title": "Trouvez les bugs <highlight>avant vos utilisateurs</highlight>",
+  "hero.subtitle": "Des agents IA autonomes qui explorent votre application web, trouvent les bugs et génèrent du code de test Playwright — pour déployer en toute confiance.",
+  "hero.cta": "Essai gratuit",
+  "hero.secondaryCta": "Voir les tarifs",
+  "hero.socialProof": "Adopté par les équipes d'ingénierie qui livrent des logiciels de qualité",
+  "hero.noCreditCard": "Aucune carte bancaire requise",
+  "hero.eyebrow": "QA propulsé par l'IA",
+  "hero.videoCaption": "Tableau de bord WhyNot montrant la détection autonome de bugs en action",
+  "trustBar.ariaLabel": "Indicateurs de confiance et technologies supportées",
+  "trustBar.logoTitle": "Compatible avec tous les frameworks et stacks",
+  "trustBar.badges.soc2": "Conforme SOC 2",
+  "trustBar.badges.dataPrivacy": "Données chiffrées au repos",
+  "trustBar.badges.moneyBack": "Garantie de remboursement 30 jours",
+  "trustBar.badges.uptime": "SLA de disponibilité 99,9 %",
+  "trustBar.stats.bugsFound": "Bugs trouvés",
+  "trustBar.stats.bugsFoundSuffix": "+",
+  "trustBar.stats.testsGenerated": "Tests générés",
+  "trustBar.stats.testsGeneratedSuffix": "+",
+  "trustBar.stats.teams": "Équipes utilisant WhyNot",
+  "trustBar.stats.teamsSuffix": "+",
+  "trustBar.stats.accuracy": "Précision de détection",
+  "trustBar.stats.accuracySuffix": " %",
+  "features.heading": "Tout ce qu'il faut pour livrer des logiciels sans bugs",
+  "features.subheading": "Des tests autonomes pilotés par l'IA qui détectent les bugs, génèrent du code de test et maintiennent votre application fiable — sans écrire un seul test à la main.",
+  "features.items.aiAgents.title": "Agents IA autonomes",
+  "features.items.aiAgents.description": "Les agents IA explorent votre application comme de vrais utilisateurs, naviguant dans les flux et découvrant des cas limites que les humains manqueraient.",
+  "features.items.bugDetection.title": "Détection intelligente des bugs",
+  "features.items.bugDetection.description": "Détecte automatiquement les anomalies visuelles, les liens cassés, les erreurs console et les régressions fonctionnelles en temps réel.",
+  "features.items.visualRegression.title": "Tests de régression visuelle",
+  "features.items.visualRegression.description": "Des comparaisons de captures d'écran au pixel près détectent les changements d'interface avant la mise en production.",
+  "features.items.visualRegression.tierBadge": "Pro",
+  "features.items.playwrightGen.title": "Génération de code Playwright",
+  "features.items.playwrightGen.description": "Obtenez des scripts de test Playwright prêts pour la production, générés automatiquement pour chaque bug découvert.",
+  "features.items.chaosTest.title": "Tests de chaos",
+  "features.items.chaosTest.description": "Simulez des réseaux lents, des API manquantes et des bizarreries de navigateur pour tester votre application en conditions réelles.",
+  "features.items.chaosTest.tierBadge": "Pro",
+  "features.items.multiBrowser.title": "Couverture multi-navigateurs",
+  "features.items.multiBrowser.description": "Testez simultanément sur Chrome, Firefox et Safari pour garantir un comportement cohérent partout.",
+  "features.items.testSuites.title": "Suites de tests organisées",
+  "features.items.testSuites.description": "Gérez les cas de test dans des dossiers, classez par priorité et suivez la couverture à travers les user stories et fonctionnalités.",
+  "features.items.security.title": "Analyse de sécurité",
+  "features.items.security.description": "Détecte les vulnérabilités courantes comme le XSS, les redirections ouvertes et les secrets exposés lors de chaque exécution de test.",
+  "features.items.security.tierBadge": "Géré",
+  "comparison.title": "Comment WhyNot se compare",
+  "comparison.subtitle": "Découvrez pourquoi les équipes passent des frameworks de test manuels à l'assurance qualité autonome pilotée par l'IA.",
+  "comparison.featureColumn": "Fonctionnalité",
+  "comparison.competitors.whynot": "WhyNot",
+  "comparison.competitors.selenium": "Selenium",
+  "comparison.competitors.cypress": "Cypress",
+  "comparison.competitors.playwrightManual": "Playwright",
+  "comparison.competitors.browserstack": "BrowserStack",
+  "comparison.competitors.lambdatest": "LambdaTest",
+  "comparison.features.aiAutonomous": "Exploration autonome par IA",
+  "comparison.features.noCodeSetup": "Configuration sans code",
+  "comparison.features.bugDetection": "Détection automatique des bugs",
+  "comparison.features.testGeneration": "Génération de code de test",
+  "comparison.features.visualRegression": "Tests de régression visuelle",
+  "comparison.features.chaosTest": "Tests de chaos",
+  "comparison.features.ciIntegration": "Intégration CI/CD",
+  "comparison.features.multiBrowser": "Tests multi-navigateurs",
+  "comparison.features.selfHealing": "Tests auto-réparants",
+  "comparison.features.parallelExecution": "Exécution parallèle",
+  "comparison.mobileHint": "Faites défiler pour en voir plus",
+  "comparison.values.yes": "Oui",
+  "comparison.values.no": "Non",
+  "comparison.values.partial": "Partiel",
+  "testimonials.heading": "Plébiscité par les équipes d'ingénierie",
+  "testimonials.subheading": "Découvrez comment les équipes utilisent WhyNot pour trouver les bugs avant leurs utilisateurs.",
+  "testimonials.carousel.previous": "Témoignage précédent",
+  "testimonials.carousel.next": "Témoignage suivant",
+  "testimonials.carousel.goToSlide": "Aller au témoignage {{number}}",
+  "testimonials.items.sarah.quote": "Nous avons déployé WhyNot sur notre plateforme e-commerce et il a trouvé 23 bugs dans la première heure — dont un problème de tunnel de paiement qui nous coûtait des conversions. Le code Playwright généré a fait gagner des jours à notre équipe QA.",
+  "testimonials.items.sarah.author": "Sarah Chen",
+  "testimonials.items.sarah.title": "VP Ingénierie",
+  "testimonials.items.sarah.company": "ShopFlow",
+  "testimonials.items.marcus.quote": "En tant que startup sans équipe QA dédiée, WhyNot c'est comme avoir un ingénieur test senior disponible 24h/24. Les agents IA explorent des chemins auxquels nous n'aurions jamais pensé, et les tests de chaos ont détecté une condition de concurrence qui aurait été un P0 en production.",
+  "testimonials.items.marcus.author": "Marcus Johnson",
+  "testimonials.items.marcus.title": "Directeur technique",
+  "testimonials.items.marcus.company": "LaunchPad AI",
+  "testimonials.items.elena.quote": "Nous sommes passés de zéro tests automatisés à une couverture de régression complète en moins d'une semaine. WhyNot génère les scripts Playwright, nous révisons et fusionnons. Notre confiance dans les releases n'a jamais été aussi élevée.",
+  "testimonials.items.elena.author": "Elena Rodriguez",
+  "testimonials.items.elena.title": "Ingénieure QA principale",
+  "testimonials.items.elena.company": "Meridian Health",
+  "faq.heading": "Questions fréquentes",
+  "faq.subheading": "Tout ce que vous devez savoir sur WhyNot.",
+  "faq.items.howItWorks.question": "Comment WhyNot trouve-t-il les bugs automatiquement ?",
+  "faq.items.howItWorks.answer": "WhyNot déploie des agents IA autonomes qui naviguent dans votre application comme de vrais utilisateurs. Ils cliquent sur les boutons, remplissent les formulaires, explorent les parcours de navigation et surveillent les erreurs console, les mises en page cassées, les appels API échoués et les régressions visuelles — le tout sans écrire une seule ligne de code de test.",
+  "faq.items.integration.question": "Comment intégrer WhyNot avec mon application ?",
+  "faq.items.integration.answer": "Fournissez simplement l'URL de votre application. WhyNot fonctionne avec toute application web, quelle que soit la stack technique — React, Vue, Angular, Next.js, Django, Rails, Laravel, WordPress ou tout autre framework. Aucun SDK ni modification de code nécessaire.",
+  "faq.items.pricing.question": "Y a-t-il une offre gratuite ?",
+  "faq.items.pricing.answer": "Oui ! Notre offre gratuite comprend 50 exécutions de tests par mois, jusqu'à 3 projets et un accès complet à la détection de bugs par IA et à la génération de code Playwright. Aucune carte bancaire nécessaire.",
+  "faq.items.security.question": "Les données de mon application sont-elles sécurisées ?",
+  "faq.items.security.answer": "Absolument. WhyNot exécute les tests dans des sandboxes de navigateur isolés. Nous ne stockons jamais les données de votre application, vos identifiants ou les informations utilisateur. Toutes les connexions sont chiffrées avec TLS et nous sommes conformes SOC 2.",
+  "faq.items.accuracy.question": "Quelle est la précision de la détection des bugs ?",
+  "faq.items.accuracy.answer": "Notre IA atteint un taux de précision de 99,2 % avec très peu de faux positifs. Chaque bug signalé comprend des captures d'écran, des logs console, des traces réseau et du code Playwright généré pour que vous puissiez vérifier et reproduire instantanément.",
+  "faq.contactText": "Encore des questions ?",
+  "faq.contactLink": "Contactez-nous",
+  "faq.deepLinkAriaLabel": "Copier le lien vers cette question",
+  "cta.heading": "Commencez à trouver des bugs dès aujourd'hui",
+  "cta.subheading": "Rejoignez des centaines d'équipes qui utilisent WhyNot pour déployer en toute confiance. Configuration en quelques minutes, aucune modification de code requise.",
+  "cta.getStarted": "Commencer gratuitement",
+  "cta.trustSignals.freeTier": "Offre gratuite disponible",
+  "cta.trustSignals.noCard": "Aucune carte bancaire requise",
+  "cta.trustSignals.moneyBack": "Garantie de remboursement 30 jours",
+  "stickyBottomCTA.ariaLabel": "Barre d'action rapide",
+  "stickyBottomCTA.text": "Trouvez les bugs avant vos utilisateurs.",
+  "stickyBottomCTA.cta": "Essai gratuit",
+  "stickyBottomCTA.dismiss": "Fermer",
+  "emailCapture.placeholder": "Entrez votre email professionnel",
+  "emailCapture.ariaLabel": "Adresse email",
+  "emailCapture.cta": "Commencer gratuitement",
+  "emailCapture.sending": "Envoi en cours…",
+  "emailCapture.success": "Merci ! Nous vous contacterons bientôt.",
+  "emailCapture.error": "Une erreur est survenue. Veuillez réessayer.",
+  "emailCapture.invalidEmail": "Veuillez entrer une adresse email valide.",
+  "emailCapture.rateLimited": "Trop de tentatives. Veuillez réessayer plus tard.",
+  "emailCapture.rateLimitedCountdown": "Réessayez dans {{seconds}}s",
+  "pricing.heading": "Des tarifs simples et transparents",
+  "pricing.subheading": "Commencez gratuitement, évoluez quand vous avez besoin de plus.",
+  "pricing.monthly": "Mensuel",
+  "pricing.annual": "Annuel",
+  "pricing.perMonth": "/mois",
+  "pricing.perYear": "/an",
+  "pricing.monthlyEquivalent": "{{price}}/mois facturé annuellement",
+  "pricing.saveBadge": "Économisez {{percent}} %",
+  "pricing.free": "Gratuit pour toujours",
+  "pricing.popular": "Le plus populaire",
+  "pricing.startFree": "Commencer gratuitement",
+  "pricing.getStarted": "Commencer",
+  "pricing.contactSales": "Contacter les ventes",
+  "pricing.trialDays": "Essai gratuit de {{days}} jours",
+  "pricing.errorFallback": "Affichage des tarifs par défaut. Impossible de charger les tarifs en direct.",
+  "pricing.plans.free.name": "Gratuit",
+  "pricing.plans.free.description": "Parfait pour essayer WhyNot sur vos projets personnels.",
+  "pricing.plans.free.features.0": "50 exécutions de tests par mois",
+  "pricing.plans.free.features.1": "Jusqu'à 3 projets",
+  "pricing.plans.free.features.2": "Détection de bugs par IA",
+  "pricing.plans.free.features.3": "Génération de code Playwright",
+  "pricing.plans.free.features.4": "Support communautaire",
+  "pricing.plans.pro_byo.name": "Pro (Vos clés)",
+  "pricing.plans.pro_byo.description": "Pour les équipes qui veulent utiliser leurs propres clés de fournisseur IA.",
+  "pricing.plans.pro_byo.features.0": "Exécutions illimitées",
+  "pricing.plans.pro_byo.features.1": "Projets illimités",
+  "pricing.plans.pro_byo.features.2": "Vos propres clés API",
+  "pricing.plans.pro_byo.features.3": "Tests de régression visuelle",
+  "pricing.plans.pro_byo.features.4": "Tests de chaos",
+  "pricing.plans.pro_byo.features.5": "Intégration CI/CD",
+  "pricing.plans.pro_byo.features.6": "Support prioritaire",
+  "pricing.plans.pro_managed.name": "Pro (Géré)",
+  "pricing.plans.pro_managed.description": "Puissance totale avec IA gérée par la plateforme et crédits à l'usage.",
+  "pricing.plans.pro_managed.features.0": "Tout dans Pro (Vos clés)",
+  "pricing.plans.pro_managed.features.1": "Infrastructure IA gérée",
+  "pricing.plans.pro_managed.features.2": "Crédits à l'usage",
+  "pricing.plans.pro_managed.features.3": "Analyses avancées",
+  "pricing.plans.pro_managed.features.4": "Moniteurs personnalisés",
+  "pricing.plans.pro_managed.features.5": "SSO et gestion d'équipe",
+  "pricing.plans.pro_managed.features.6": "Support dédié",
+  "payg.heading": "Tarification à l'usage",
+  "payg.subheading": "Payez uniquement ce que vous utilisez. Les crédits sont consommés par opération sur le plan Géré.",
+  "payg.event": "Opération",
+  "payg.credits": "Crédits",
+  "payg.example": "Exemple",
+  "payg.events.test_generation.name": "Génération de tests",
+  "payg.events.test_generation.example": "Générer 20 tests = 1 000 crédits",
+  "payg.events.test_execution.name": "Exécution de tests",
+  "payg.events.test_execution.example": "Exécuter 100 tests = 1 000 crédits",
+  "payg.events.qa_loop_iteration.name": "Itération de boucle QA",
+  "payg.events.qa_loop_iteration.example": "30 itérations = 900 crédits",
+  "payg.events.auto_fix_attempt.name": "Tentative de correction auto",
+  "payg.events.auto_fix_attempt.example": "10 corrections = 1 000 crédits",
+  "payg.events.visual_regression.name": "Régression visuelle",
+  "payg.events.visual_regression.example": "50 comparaisons = 750 crédits",
+  "payg.events.qa_monitor_session.name": "Session de monitoring QA",
+  "payg.events.qa_monitor_session.example": "5 sessions = 1 000 crédits",
+  "payg.events.ci_scan.name": "Scan CI",
+  "payg.events.ci_scan.example": "5 scans = 1 000 crédits",
+  "payg.creditsUnit": "crédits",
+  "payg.creditPack": "Les packs de crédits commencent à 10 $ pour 1 000 crédits.",
+  "payg.packs.heading": "Packs de crédits",
+  "payg.packs.bestValue": "Meilleur rapport qualité-prix",
+  "payg.packs.perCredit": "par crédit",
+  "payg.packs.items.starter.name": "Démarrage",
+  "payg.packs.items.starter.size": "1 000 crédits",
+  "payg.packs.items.starter.price": "10 $",
+  "payg.packs.items.growth.name": "Croissance",
+  "payg.packs.items.growth.size": "10 000 crédits",
+  "payg.packs.items.growth.price": "80 $",
+  "payg.packs.items.scale.name": "Évolution",
+  "payg.packs.items.scale.size": "100 000 crédits",
+  "payg.packs.items.scale.price": "600 $",
+  "payg.calculator.heading": "Calculateur de crédits",
+  "payg.calculator.description": "Estimez votre consommation mensuelle de crédits et son coût.",
+  "payg.calculator.totalCreditsLabel": "Total des crédits",
+  "payg.calculator.estimatedMonthlyCost": "Coût mensuel estimé",
+  "payg.calculator.recommendedPack": "Pack recommandé : {{pack}}",
+  "payg.calculator.inputLabel.test_generation": "Générations de tests par mois",
+  "payg.calculator.inputLabel.test_execution": "Exécutions de tests par mois",
+  "payg.calculator.inputLabel.qa_loop_iteration": "Itérations de boucle QA par mois",
+  "payg.calculator.inputLabel.auto_fix_attempt": "Tentatives de correction auto par mois",
+  "payg.calculator.inputLabel.visual_regression": "Régressions visuelles par mois",
+  "payg.calculator.inputLabel.qa_monitor_session": "Sessions de monitoring QA par mois",
+  "payg.calculator.inputLabel.ci_scan": "Scans CI par mois",
+  "payg.workedExample.heading": "Exemple concret",
+  "payg.workedExample.expand": "Afficher l'exemple concret",
+  "payg.workedExample.collapse": "Masquer l'exemple concret",
+  "payg.workedExample.description": "Une équipe SaaS de 20 ingénieurs livrant 3 fois par semaine :",
+  "payg.workedExample.items.0": "50 × génération de tests (50 crédits) = 2 500 crédits",
+  "payg.workedExample.items.1": "200 × exécution de tests (10 crédits) = 2 000 crédits",
+  "payg.workedExample.items.2": "10 × tentatives de correction auto (100 crédits) = 1 000 crédits",
+  "payg.workedExample.total": "Total : 5 500 crédits ≈ 55 $/mois",
+  "payg.workedExample.note": "Plus l'abonnement de base à 49 $/mois.",
+  "footer.description": "Tests QA autonomes propulsés par des agents IA.",
+  "footer.product": "Produit",
+  "footer.features": "Fonctionnalités",
+  "footer.pricing": "Tarifs",
+  "footer.changelog": "Journal des modifications",
+  "footer.company": "Entreprise",
+  "footer.about": "À propos",
+  "footer.blog": "Blog",
+  "footer.contact": "Contact",
+  "footer.resources": "Ressources",
+  "footer.docs": "Documentation",
+  "footer.status": "Statut",
+  "footer.api": "API",
+  "footer.legal": "Mentions légales",
+  "footer.privacy": "Politique de confidentialité",
+  "footer.terms": "Conditions d'utilisation",
+  "footer.security": "Sécurité",
+  "footer.copyright": "© {{year}} WhyNot. Tous droits réservés.",
+  "footer.allRightsReserved": "Tous droits réservés.",
+  "footer.github": "GitHub",
+  "footer.twitter": "X (Twitter)",
+  "landing.recon.eyebrow": "Bêta publique",
+  "landing.recon.title": "Un pentest à chaque release. Pas une fois par an.",
+  "landing.recon.subtitle": "Recon lance un test de sécurité autonome en boîte blanche contre votre application et ne signale que les vulnérabilités qu'il peut réellement exploiter.",
+  "landing.recon.description": "Recon by WhyNot — tests de sécurité autonomes, informés par le code source, ne signalant que les vulnérabilités réellement exploitables.",
+  "landing.recon.benefit1.title": "La preuve, pas la théorie",
+  "landing.recon.benefit1.body": "Chaque résultat est livré avec un exploit fonctionnel que vous pouvez rejouer.",
+  "landing.recon.benefit2.title": "Conscient du code source",
+  "landing.recon.benefit2.body": "Recon lit votre code source pour cibler le test sur ce qui compte.",
+  "landing.recon.benefit3.title": "À la demande",
+  "landing.recon.benefit3.body": "Lancez un pentest complet en environ une heure. Répétez à chaque release.",
+  "landing.recon.cta.primary": "Essayer Recon",
+  "landing.recon.cta.secondary": "Voir un exemple de rapport",
+  "landing.recon.sampleReport.title": "Exemple de découverte : contournement de l'échappement d'entrée réfléchie",
+  "landing.recon.sampleReport.description": "Extrait caviardé d'un vrai rapport Recon. Chaque découverte inclut une preuve reproductible exacte.",
+  "landing.recon.sampleReport.findingTitle": "Contournement d'échappement d'entrée réfléchie — sévérité haute",
+  "landing.recon.sampleReport.findingBody": "L'entrée du point de recherche est échappée en HTML mais pas en attribut. Un attaquant peut sortir d'un attribut entre guillemets pour injecter des gestionnaires d'événements.",
+  "landing.recon.sampleReport.findingSnippet": "GET /search?q=%22+onmouseover%3D[REDACTED]\nHost: [REDACTED]\n\n# La réponse observée reflète la charge\n# dans un attribut HTML entre guillemets sans échappement.",
+  "landing.recon.sampleReport.close": "Fermer",
+  "seo.title": "WhyNot — Tests QA autonomes propulsés par l'IA",
+  "seo.description": "Trouvez les bugs avant vos utilisateurs. Des agents IA autonomes explorent votre application web, détectent les bugs et génèrent du code de test Playwright.",
+  "seo.keywords": "tests IA, QA autonome, détection de bugs, Playwright, régression visuelle, automatisation des tests",
+  "pricing.recon.label": "Recon — analyses de sécurité",
+  "pricing.recon.free": "—",
+  "pricing.recon.proByo": "1 analyse incluse/mois",
+  "pricing.recon.proManaged": "3 analyses incluses/mois",
+  "payg.recon.label": "Exécution d'analyse Recon",
+  "payg.recon.example": "Par analyse",
+  "payg.recon.tooltip": "Les analyses partielles ou annulées ne sont facturées que pour les phases exécutées.",
+  "payg.recon.tooltipLabel": "Détails de facturation Recon"
 }

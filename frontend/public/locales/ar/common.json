@@ -91,6 +91,7 @@
   "common.workspace.deleteConfirm": "حذف مساحة العمل \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
   "common.header.credits": "{{count}} رصيد",
   "common.nav.qaLoop": "حلقة ضمان الجودة",
+  "common.nav.recon": "ريكون",
   "common.nav.performance": "الأداء",
   "common.nav.dashboard": "لوحة التحكم",
   "common.nav.projects": "المشاريع",

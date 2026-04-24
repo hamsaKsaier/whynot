@@ -20,7 +20,8 @@ import {
   getAIProviders, updateAIProviders, setProviderKey, removeProviderKey,
   setProviderFallbackKey, removeProviderFallbackKey, testProviderKey,
   setDefaultModel, setFallbackOrder as saveFallbackOrderApi,
-  type AIProviderEntry, type AIProvidersConfig,
+  setReconModels as saveReconModelsApi,
+  type AIProviderEntry, type AIProvidersConfig, type ReconModelOverrides,
 } from '../services/api'
 
 const PROVIDER_DISPLAY: Record<string, { label: string; color: string }> = {
@@ -65,6 +66,14 @@ export function AIProvidersPage() {
   const [defaultProvider, setDefaultProvider] = useState({ provider: '', model: '' })
   const [fallbackOrder, setFallbackOrder] = useState<string[]>([])
 
+  // Recon-specific model overrides.  Stored as strings so the <Input/> is
+  // controlled; empty string means "inherit" and is round-tripped as null.
+  const [reconModelInputs, setReconModelInputs] = useState<{ small: string; medium: string; large: string }>({
+    small: '', medium: '', large: '',
+  })
+  const [savingRecon, setSavingRecon] = useState(false)
+  const [savedRecon, setSavedRecon] = useState(false)
+
   // Remove key confirmation dialog
   const [removeDialog, setRemoveDialog] = useState<{ open: boolean; provider: string; isFallback: boolean }>({
     open: false, provider: '', isFallback: false,
@@ -82,6 +91,12 @@ export function AIProvidersPage() {
       setConfig(data)
       setDefaultProvider(data.defaultProvider || { provider: '', model: '' })
       setFallbackOrder(data.fallbackOrder || [])
+      const recon: ReconModelOverrides = data.reconModels ?? { small: null, medium: null, large: null }
+      setReconModelInputs({
+        small: recon.small ?? '',
+        medium: recon.medium ?? '',
+        large: recon.large ?? '',
+      })
     } catch {
       setError(t('admin.aiProviders.loadError'))
     } finally {
@@ -278,6 +293,30 @@ export function AIProvidersPage() {
     })
   }
 
+  const handleSaveReconModels = async () => {
+    setSavingRecon(true)
+    setSavedRecon(false)
+    setError(null)
+    try {
+      const saved = await saveReconModelsApi({
+        small: reconModelInputs.small,
+        medium: reconModelInputs.medium,
+        large: reconModelInputs.large,
+      })
+      setReconModelInputs({
+        small: saved?.small ?? '',
+        medium: saved?.medium ?? '',
+        large: saved?.large ?? '',
+      })
+      setSavedRecon(true)
+      setTimeout(() => setSavedRecon(false), 2000)
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('admin.aiProviders.saveError'))
+    } finally {
+      setSavingRecon(false)
+    }
+  }
+
   const handleSaveFallbackOrder = async () => {
     setSavingOrder(true)
     setSavedOrder(false)
@@ -397,6 +436,55 @@ export function AIProvidersPage() {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Recon-specific Model Overrides */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('admin.ai.recon.title')}</CardTitle>
+          <CardDescription>{t('admin.ai.recon.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {(['small', 'medium', 'large'] as const).map((tier) => (
+              <div key={tier} className="space-y-2">
+                <Label htmlFor={`recon-${tier}-model`}>
+                  {t(`admin.ai.recon.${tier}.label`)}
+                </Label>
+                <Input
+                  id={`recon-${tier}-model`}
+                  value={reconModelInputs[tier]}
+                  onChange={(e) =>
+                    setReconModelInputs((prev) => ({ ...prev, [tier]: e.target.value }))
+                  }
+                  placeholder={t('admin.ai.recon.placeholder')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t(`admin.ai.recon.${tier}.help`)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <Button
+            data-testid="save-recon-models"
+            onClick={handleSaveReconModels}
+            disabled={savingRecon}
+            className="mt-4"
+          >
+            {savingRecon ? (
+              <Loader2 className="h-4 w-4 me-1 animate-spin" />
+            ) : savedRecon ? (
+              <Check className="h-4 w-4 me-1" />
+            ) : (
+              <Save className="h-4 w-4 me-1" />
+            )}
+            {savingRecon
+              ? t('admin.aiProviders.saving')
+              : savedRecon
+                ? t('admin.aiProviders.saved')
+                : t('admin.aiProviders.save')}
+          </Button>
         </CardContent>
       </Card>
 

@@ -91,6 +91,7 @@
   "common.workspace.deleteConfirm": "Arbeitsbereich \"{{name}}\" löschen? Dies kann nicht rückgängig gemacht werden.",
   "common.header.credits": "{{count}} Credits",
   "common.nav.qaLoop": "QA Loop",
+  "common.nav.recon": "Recon",
   "common.nav.performance": "Leistung",
   "common.nav.dashboard": "Dashboard",
   "common.nav.projects": "Projekte",

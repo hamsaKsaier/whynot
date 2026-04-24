@@ -11,6 +11,8 @@ export interface CreditPack {
 
 export const MAX_QUANTITY = 100_000;
 
+export const RECON_SCAN_RUN_CREDITS = 5000;
+
 export const CREDIT_PACKS: CreditPack[] = [
   { size: 1_000, priceCents: 1_000, perCreditCents: 1.0 },
   { size: 10_000, priceCents: 8_000, perCreditCents: 0.8 },

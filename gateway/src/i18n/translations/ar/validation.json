@@ -13,5 +13,7 @@
   "uuid": "{{field}} يجب أن يكون UUID صالحًا",
   "date": "{{field}} يجب أن يكون تاريخًا صالحًا",
   "passwordMismatch": "كلمتا المرور غير متطابقتين",
-  "termsRequired": "يجب الموافقة على الشروط"
+  "termsRequired": "يجب الموافقة على الشروط",
+  "recon.authorization.acknowledged": "يجب إقرار التفويض بشكل صريح.",
+  "recon.targetUrl.invalid": "يجب أن يكون عنوان URL الهدف عنوان http أو https صالحًا."
 }

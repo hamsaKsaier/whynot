@@ -193,5 +193,19 @@
   "validation.urlProtocolRequired": "targetUrl يجب أن يستخدم http أو https",
   "validation.valueMustBeString": "القيمة لـ \"{{key}}\" يجب أن تكون نصًا",
   "workspace.notResolved": "لم يتم تحديد مساحة العمل",
-  "workspace.noWorkspace": "لم يتم العثور على مساحة عمل للمستخدم"
+  "workspace.noWorkspace": "لم يتم العثور على مساحة عمل للمستخدم",
+  "recon.quota.exceeded": "تم تجاوز حصة فحص الاستطلاع الشهرية. قم بإعادة شحن رصيدك أو ترقية خطتك.",
+  "recon.payment.required": "الدفع مطلوب: خطتك لا تتضمن عمليات فحص الاستطلاع أو رصيدك غير كافٍ.",
+  "recon.phase.exploitation.authorizationMissing": "تم إحباط مرحلة الاستغلال: سجل التفويض لكل فحص غير موجود.",
+  "recon.report.generationFailed": "فشل إنشاء تقرير الاستطلاع.",
+  "recon.authorization.required": "التفويض لكل فحص مطلوب. قدم كائن التفويض مع acknowledged=true ومبرر.",
+  "recon.authorization.malformed": "حمولة التفويض غير صحيحة.",
+  "recon.authorization.justification.tooShort": "يجب أن يكون مبرر التفويض بين 20 و1000 حرف.",
+  "recon.project.repoRequired": "يجب أن يحتوي هذا المشروع على مستودع مرتبط قبل تشغيل فحص الاستطلاع.",
+  "recon.environment.urlRequired": "يجب أن تحتوي البيئة المحددة على عنوان URL مُعدّ.",
+  "recon.resume.urlMismatch": "تم رفض طلب الاستئناف: عنوان URL الهدف لا يطابق الفحص الأصلي.",
+  "recon.scan.notFound": "لم يتم العثور على فحص الاستطلاع.",
+  "recon.scan.invalidStatus": "فحص الاستطلاع ليس في حالة صالحة لهذا الإجراء.",
+  "recon.rateLimit.exceeded": "تم تجاوز حد معدل فحص الاستطلاع. حاول مرة أخرى لاحقًا.",
+  "recon.warnings.environmentProduction": "تحذير: أنت على وشك فحص بيئة إنتاج. تابع فقط إذا كان لديك تفويض صريح."
 }

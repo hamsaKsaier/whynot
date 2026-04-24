@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, lazy } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import { Toaster } from "sonner"
 import { ThemeProvider } from "./components/ThemeProvider"
@@ -31,6 +31,17 @@ import { MonitorsPage } from "./pages/MonitorsPage"
 import { PerformancePage } from "./pages/PerformancePage"
 import { CheckoutPage } from "./pages/CheckoutPage"
 import { UpgradePrompt } from "./components/common/UpgradePrompt"
+import { ReconRoute } from "./pages/recon/ReconRoute"
+
+const ReconScansListPage = lazy(() =>
+  import("./pages/recon/ReconScansListPage").then((m) => ({ default: m.ReconScansListPage }))
+)
+const ReconNewScanPage = lazy(() =>
+  import("./pages/recon/ReconNewScanPage").then((m) => ({ default: m.ReconNewScanPage }))
+)
+const ReconScanDetailPage = lazy(() =>
+  import("./pages/recon/ReconScanDetailPage").then((m) => ({ default: m.ReconScanDetailPage }))
+)
 
 function App() {
   const [upgradePrompt, setUpgradePrompt] = useState<{
@@ -83,6 +94,9 @@ function App() {
                     <Route path="/performance" element={<PerformancePage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/architecture-flow" element={<ArchitectureFlowPage />} />
+                    <Route path="/recon" element={<ReconRoute><ReconScansListPage /></ReconRoute>} />
+                    <Route path="/recon/new" element={<ReconRoute><ReconNewScanPage /></ReconRoute>} />
+                    <Route path="/recon/:scanId" element={<ReconRoute><ReconScanDetailPage /></ReconRoute>} />
 
                     {/* Redirects from old routes */}
                     <Route path="/test-runs" element={<Navigate to="/test-results?tab=runs" replace />} />

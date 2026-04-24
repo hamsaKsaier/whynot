@@ -183,5 +183,25 @@
   "settings.notifications.disabled": "Notificación deshabilitada",
   "settings.notifications.updateFailed": "Error al actualizar la preferencia",
   "settings.notifications.autofixPr": "PR de corrección automática lista",
-  "settings.notifications.autofixPrDesc": "Notificación cuando se crea un pull request de corrección automática"
+  "settings.notifications.autofixPrDesc": "Notificación cuando se crea un pull request de corrección automática",
+
+  "settings.recon.tab.label": "Recon",
+  "settings.recon.notifications.title": "Notificaciones",
+  "settings.recon.notifications.description": "Elija quién recibe un correo electrónico cuando se completa o falla un análisis.",
+  "settings.recon.notifications.emailOnComplete": "Enviarme un correo al completarse cada análisis",
+  "settings.recon.notifications.emailOnFail": "Enviarme un correo cuando un análisis falle",
+  "settings.recon.notifications.recipients.label": "Destinatarios",
+  "settings.recon.notifications.recipients.placeholder": "Añadir destinatario",
+  "settings.recon.notifications.recipients.empty": "No hay destinatarios seleccionados",
+  "settings.recon.notifications.recipients.remove": "Quitar {{email}}",
+  "settings.recon.paygCap.label": "Créditos máximos por análisis",
+  "settings.recon.paygCap.help": "Límite estricto de créditos gastados por análisis. Introduzca 0 para usar el valor predeterminado de la plataforma.",
+  "settings.recon.paygCap.error.negative": "El límite debe ser 0 o superior",
+  "settings.recon.paygCap.error.tooLarge": "El límite debe ser 100.000 o inferior",
+  "settings.recon.schedule.title": "Programación predeterminada",
+  "settings.recon.schedule.description": "Volver a ejecutar los análisis automáticamente según un calendario recurrente.",
+  "settings.recon.schedule.comingSoon": "Próximamente",
+  "settings.recon.save": "Guardar",
+  "settings.recon.saveSuccess": "Configuración de Recon guardada",
+  "settings.recon.saveError": "Error al guardar la configuración de Recon"
 }

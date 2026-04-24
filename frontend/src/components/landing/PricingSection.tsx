@@ -73,19 +73,19 @@ export function PricingSection() {
   }, []);
 
   return (
-    <section id="pricing" className="py-24 sm:py-32 bg-muted/30" aria-labelledby="pricing-heading">
+    <section id="pricing" className="py-16 sm:py-24 md:py-32 bg-muted/30" aria-labelledby="pricing-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <FadeIn className="text-center max-w-3xl mx-auto mb-10">
+        <FadeIn className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
           <h2
             id="pricing-heading"
-            className="text-3xl sm:text-4xl font-bold tracking-tight mb-4"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3 sm:mb-4"
           >
             {t('pricing.heading')}
           </h2>
-          <p className="text-lg text-muted-foreground">{t('pricing.subheading')}</p>
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground">{t('pricing.subheading')}</p>
         </FadeIn>
 
-        <div className="flex justify-center mb-12">
+        <div className="flex justify-center mb-8 sm:mb-12">
           <Tabs value={interval} onValueChange={handleIntervalChange}>
             <TabsList aria-label={t('pricing.monthly')}>
               <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
@@ -99,7 +99,7 @@ export function PricingSection() {
           </Tabs>
         </div>
 
-        <Stagger className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <Stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
           {PLAN_SLUGS.map((slug) => {
             const isPopular = slug === 'pro_byo';
             const isFree = slug === 'free';
@@ -180,7 +180,7 @@ export function PricingSection() {
                   )}
                 </div>
 
-                <ul className="space-y-3 mb-8 flex-1" role="list">
+                <ul className="space-y-3 mb-4 flex-1" role="list">
                   {Array.from({ length: FEATURE_COUNTS[slug] }, (_, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <Check
@@ -191,6 +191,29 @@ export function PricingSection() {
                     </li>
                   ))}
                 </ul>
+
+                <div
+                  className="mb-6 border-t border-border pt-4 flex items-start justify-between gap-2"
+                  data-testid={`recon-row-${slug}`}
+                >
+                  <span className="text-sm text-muted-foreground">
+                    {t('pricing.recon.label')}
+                  </span>
+                  <a
+                    href="/docs/recon/quotas"
+                    className="text-sm font-medium text-foreground hover:text-primary transition-colors duration-150 text-end"
+                  >
+                    {t(
+                      `pricing.recon.${
+                        slug === 'free'
+                          ? 'free'
+                          : slug === 'pro_byo'
+                            ? 'proByo'
+                            : 'proManaged'
+                      }`,
+                    )}
+                  </a>
+                </div>
 
                 <Button
                   variant={isPopular ? 'default' : 'outline'}

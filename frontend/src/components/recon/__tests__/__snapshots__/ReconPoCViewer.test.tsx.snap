@@ -1,0 +1,197 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReconPoCViewer > matches code snapshot (en) 1`] = `
+<div>
+  <div
+    class="relative rounded-md border bg-muted text-muted-foreground"
+    data-testid="recon-poc-viewer-code"
+  >
+    <div
+      class="flex items-center justify-between border-b px-3 py-2"
+    >
+      <span
+        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+      >
+        sql
+      </span>
+      <button
+        aria-label="Copy proof of concept"
+        class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-md px-3 h-7 gap-1 text-xs"
+        data-testid="recon-poc-copy-button"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-copy h-3.5 w-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="14"
+            rx="2"
+            ry="2"
+            width="14"
+            x="8"
+            y="8"
+          />
+          <path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          />
+        </svg>
+        <span>
+          Copy proof of concept
+        </span>
+      </button>
+    </div>
+    <pre
+      class="overflow-x-auto whitespace-pre-wrap break-words p-3 text-xs font-mono text-foreground"
+      data-testid="recon-poc-code-content"
+      dir="ltr"
+    >
+      ' OR 1=1 --
+    </pre>
+  </div>
+</div>
+`;
+
+exports[`ReconPoCViewer > matches http snapshot (en) 1`] = `
+<div>
+  <div
+    class="relative rounded-md border bg-muted text-muted-foreground"
+    data-testid="recon-poc-viewer-http"
+  >
+    <div
+      class="flex items-center justify-between border-b px-3 py-2"
+    >
+      <span
+        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+      >
+        HTTP
+      </span>
+      <button
+        aria-label="Copy proof of concept"
+        class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-md px-3 h-7 gap-1 text-xs"
+        data-testid="recon-poc-copy-button"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-copy h-3.5 w-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="14"
+            rx="2"
+            ry="2"
+            width="14"
+            x="8"
+            y="8"
+          />
+          <path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          />
+        </svg>
+        <span>
+          Copy proof of concept
+        </span>
+      </button>
+    </div>
+    <div
+      class="divide-y"
+    >
+      <pre
+        class="overflow-x-auto whitespace-pre-wrap break-words p-3 text-xs font-mono text-foreground"
+        data-testid="recon-poc-http-request"
+        dir="ltr"
+      >
+        GET /users?id=1 HTTP/1.1
+Host: example.com
+      </pre>
+      <pre
+        class="overflow-x-auto whitespace-pre-wrap break-words p-3 text-xs font-mono text-foreground"
+        data-testid="recon-poc-http-response"
+        dir="ltr"
+      >
+        HTTP/1.1 200 OK
+Content-Type: application/json
+      </pre>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReconPoCViewer > matches script snapshot (en) 1`] = `
+<div>
+  <div
+    class="relative rounded-md border bg-muted text-muted-foreground"
+    data-testid="recon-poc-viewer-script"
+  >
+    <div
+      class="flex items-center justify-between border-b px-3 py-2"
+    >
+      <span
+        class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+      >
+        shell
+      </span>
+      <button
+        aria-label="Copy proof of concept"
+        class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-md px-3 h-7 gap-1 text-xs"
+        data-testid="recon-poc-copy-button"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-copy h-3.5 w-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="14"
+            rx="2"
+            ry="2"
+            width="14"
+            x="8"
+            y="8"
+          />
+          <path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          />
+        </svg>
+        <span>
+          Copy proof of concept
+        </span>
+      </button>
+    </div>
+    <pre
+      class="overflow-x-auto whitespace-pre-wrap break-words p-3 text-xs font-mono bg-slate-950 text-slate-100 rounded-b-md"
+      data-testid="recon-poc-script-content"
+      dir="ltr"
+    >
+      curl -X POST https://example.com/api/attack
+    </pre>
+  </div>
+</div>
+`;

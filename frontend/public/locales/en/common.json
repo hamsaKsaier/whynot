@@ -91,6 +91,7 @@
   "common.workspace.deleteConfirm": "Delete workspace \"{{name}}\"? This cannot be undone.",
   "common.header.credits": "{{count}} credits",
   "common.nav.qaLoop": "QA Loop",
+  "common.nav.recon": "Recon",
   "common.nav.performance": "Performance",
   "common.nav.dashboard": "Dashboard",
   "common.nav.projects": "Projects",

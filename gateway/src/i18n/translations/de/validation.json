@@ -13,5 +13,7 @@
   "uuid": "{{field}} muss eine gültige UUID sein",
   "date": "{{field}} muss ein gültiges Datum sein",
   "passwordMismatch": "Passwörter stimmen nicht überein",
-  "termsRequired": "Sie müssen die Nutzungsbedingungen akzeptieren"
+  "termsRequired": "Sie müssen die Nutzungsbedingungen akzeptieren",
+  "recon.authorization.acknowledged": "Die Autorisierung muss ausdrücklich bestätigt werden.",
+  "recon.targetUrl.invalid": "Die Ziel-URL muss eine gültige http- oder https-URL sein."
 }

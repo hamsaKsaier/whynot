@@ -91,6 +91,7 @@
   "common.workspace.deleteConfirm": "Supprimer l'espace de travail «\u00a0{{name}}\u00a0»\u00a0? Cette action est irréversible.",
   "common.header.credits": "{{count}} crédits",
   "common.nav.qaLoop": "Boucle QA",
+  "common.nav.recon": "Recon",
   "common.nav.performance": "Performance",
   "common.nav.dashboard": "Tableau de bord",
   "common.nav.projects": "Projets",

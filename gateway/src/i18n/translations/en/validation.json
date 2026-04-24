@@ -13,5 +13,7 @@
   "uuid": "{{field}} must be a valid UUID",
   "date": "{{field}} must be a valid date",
   "passwordMismatch": "Passwords do not match",
-  "termsRequired": "You must accept the terms"
+  "termsRequired": "You must accept the terms",
+  "recon.authorization.acknowledged": "Authorization must be explicitly acknowledged.",
+  "recon.targetUrl.invalid": "Target URL must be a valid http or https URL."
 }

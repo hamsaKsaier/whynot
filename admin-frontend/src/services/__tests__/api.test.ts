@@ -132,6 +132,34 @@ describe('api service', () => {
     const api = await import('../api');
     expect(typeof api.getAIProviders).toBe('function');
     expect(typeof api.updateAIProviders).toBe('function');
+    expect(typeof api.setReconModels).toBe('function');
+  });
+
+  it('setReconModels collapses empty strings to null before sending', async () => {
+    const api = await import('../api');
+    const instance = vi.mocked(axios.create).mock.results[0]?.value;
+    instance.patch.mockResolvedValue({ data: { reconModels: { small: null, medium: null, large: 'opus' } } });
+
+    const result = await api.setReconModels({ small: '', medium: '   ', large: 'opus' });
+
+    expect(instance.patch).toHaveBeenCalledWith(
+      '/admin/ai-providers/recon-models',
+      { small: null, medium: null, large: 'opus' },
+    );
+    expect(result).toEqual({ small: null, medium: null, large: 'opus' });
+  });
+
+  it('setReconModels forwards null verbatim and only includes provided tiers', async () => {
+    const api = await import('../api');
+    const instance = vi.mocked(axios.create).mock.results[0]?.value;
+    instance.patch.mockResolvedValue({ data: { reconModels: { small: null, medium: null, large: null } } });
+
+    await api.setReconModels({ small: null });
+
+    expect(instance.patch).toHaveBeenCalledWith(
+      '/admin/ai-providers/recon-models',
+      { small: null },
+    );
   });
 
   it('exports system settings functions', async () => {

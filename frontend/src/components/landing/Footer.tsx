@@ -81,7 +81,7 @@ export function Footer() {
 
   return (
     <footer className="border-t border-border" role="contentinfo">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
         <Stagger className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <motion.div variants={reduced ? undefined : fadeInVariants}>
             <div className="mb-4 flex items-center gap-2">

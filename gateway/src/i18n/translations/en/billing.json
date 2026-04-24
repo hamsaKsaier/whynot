@@ -26,5 +26,7 @@
   "subscription.downgraded": "Subscription downgrade scheduled",
   "payg.usageRecorded": "Usage event recorded",
   "payg.topupCompleted": "Balance top-up completed",
-  "payg.autoCharged": "Auto-charge completed"
+  "payg.autoCharged": "Auto-charge completed",
+  "recon.scan.includedQuota": "Included scans remaining: {{count}}",
+  "recon.scan.paygCost": "This scan will cost {{credits}} credits"
 }

@@ -100,6 +100,49 @@ services:
     command: >
       sh -c "npm install --prefer-offline && echo 'Lighthouse CI ready — run against built frontend'"
 
+  # Intentionally-vulnerable target for recon integration tests. Pinned to a
+  # specific version so the test results are reproducible. See
+  # ``services/recon-executor/tests/integration/`` for the consumers.
+  juice-shop:
+    image: bkimminich/juice-shop:v15.0.0
+    ports:
+      - "3014:3000"
+    environment:
+      NODE_ENV: unsafe
+    profiles: ["recon-integration"]
+    healthcheck:
+      test:
+        - "CMD"
+        - "/nodejs/bin/node"
+        - "-e"
+        - "require('http').get('http://localhost:3000/rest/admin/application-version', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  recon-executor-test:
+    build:
+      context: ../../services/recon-executor
+      dockerfile: Dockerfile
+    working_dir: /w
+    environment:
+      DATABASE_URL: postgresql://whynot:whynot@postgres-test:5432/whynot_test
+      LOG_LEVEL: INFO
+      JUICE_SHOP_URL: http://juice-shop:3000
+      RECON_INTEGRATION: "1"
+    volumes:
+      - ../../services/recon-executor:/w
+    user: "0:0"
+    profiles: ["recon-integration"]
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      juice-shop:
+        condition: service_healthy
+    command: >
+      sh -c "pip install --quiet -r requirements-dev.txt &&
+             pytest -q -o addopts='--cov=app --cov-branch --cov-report=term-missing --cov-fail-under=100'"
+
 volumes:
   frontend_node_modules:
   admin_frontend_node_modules:

@@ -16,6 +16,7 @@ describe('platform-features', () => {
         ADVANCED_ANALYTICS: 'advanced_analytics',
         SUPERADMIN_IMPERSONATION: 'superadmin_impersonation',
         LANGUAGE_SWITCHER: 'language_switcher',
+        RECON_ENABLED: 'recon_enabled',
       });
     });
 

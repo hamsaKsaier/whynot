@@ -8,6 +8,7 @@ import {
   Activity,
   BarChart2,
   Settings,
+  Shield,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
@@ -23,6 +24,7 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { Logo } from "@/components/ui/Logo"
 import { useDirectionContext } from "@/components/DirectionProvider"
+import { useFeatureFlag } from "@/hooks/useFeatureFlag"
 
 interface SidebarProps {
   collapsed: boolean
@@ -32,6 +34,7 @@ interface SidebarProps {
 
 const NAV_ITEMS = [
   { icon: Zap, labelKey: "common.nav.qaLoop", path: "/qa-loop" },
+  { icon: Shield, labelKey: "common.nav.recon", path: "/recon", flag: "recon_enabled" },
   { icon: BarChart2, labelKey: "common.nav.performance", path: "/performance" },
   { icon: Home, labelKey: "common.nav.dashboard", path: "/app" },
   { icon: FolderOpen, labelKey: "common.nav.projects", path: "/projects" },
@@ -55,6 +58,7 @@ function NavItem({
   active,
   collapsed,
   onClick,
+  testId,
 }: {
   icon: typeof Home
   labelKey: string
@@ -62,6 +66,7 @@ function NavItem({
   active: boolean
   collapsed: boolean
   onClick?: () => void
+  testId?: string
 }) {
   const { t } = useTranslation("common")
   const label = t(labelKey)
@@ -70,6 +75,7 @@ function NavItem({
     <Link
       to={path}
       onClick={onClick}
+      data-testid={testId}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
         active
@@ -95,6 +101,25 @@ function NavItem({
   }
 
   return link
+}
+
+function GatedNavItem({
+  flag,
+  path,
+  ...rest
+}: {
+  icon: typeof Home
+  labelKey: string
+  path: string
+  flag?: string
+  active: boolean
+  collapsed: boolean
+  onClick?: () => void
+}) {
+  const flagEnabled = useFeatureFlag(flag ?? "")
+  if (flag && !flagEnabled) return null
+  const testId = flag ? `sidebar-nav-${path.replace(/^\//, "")}` : undefined
+  return <NavItem path={path} testId={testId} {...rest} />
 }
 
 export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarProps) {
@@ -144,11 +169,12 @@ export function Sidebar({ collapsed, onToggleCollapse, onMobileClose }: SidebarP
             aria-label={t("common.sidebar.mainNav")}
           >
             {NAV_ITEMS.map((item) => (
-              <NavItem
+              <GatedNavItem
                 key={item.path}
                 icon={item.icon}
                 labelKey={item.labelKey}
                 path={item.path}
+                flag={"flag" in item ? item.flag : undefined}
                 active={isActive(pathname, item.path)}
                 collapsed={collapsed}
                 onClick={onMobileClose}

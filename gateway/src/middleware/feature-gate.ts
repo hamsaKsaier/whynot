@@ -11,6 +11,11 @@ const planRepository = new PlanRepository();
 const featureCache = new Map<string, { features: Record<string, string>; expiresAt: number }>();
 const CACHE_TTL_MS = 60_000; // 1 minute
 
+/** Test-only: clear the in-memory plan-feature cache between runs. */
+export function __resetFeatureCache(): void {
+  featureCache.clear();
+}
+
 async function getWorkspaceFeatures(workspaceId: string): Promise<Record<string, string>> {
   const cached = featureCache.get(workspaceId);
   if (cached && cached.expiresAt > Date.now()) {

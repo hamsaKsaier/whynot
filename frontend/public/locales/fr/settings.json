@@ -183,5 +183,25 @@
   "settings.notifications.disabled": "Notification désactivée",
   "settings.notifications.updateFailed": "Échec de la mise à jour de la préférence",
   "settings.notifications.autofixPr": "Pull request de correction automatique prête",
-  "settings.notifications.autofixPrDesc": "Notification lorsqu'une pull request de correction automatique est créée"
+  "settings.notifications.autofixPrDesc": "Notification lorsqu'une pull request de correction automatique est créée",
+
+  "settings.recon.tab.label": "Recon",
+  "settings.recon.notifications.title": "Notifications",
+  "settings.recon.notifications.description": "Choisissez qui reçoit un e-mail lorsqu'un scan se termine ou échoue.",
+  "settings.recon.notifications.emailOnComplete": "M'envoyer un e-mail à la fin de chaque scan",
+  "settings.recon.notifications.emailOnFail": "M'envoyer un e-mail en cas d'échec d'un scan",
+  "settings.recon.notifications.recipients.label": "Destinataires",
+  "settings.recon.notifications.recipients.placeholder": "Ajouter un destinataire",
+  "settings.recon.notifications.recipients.empty": "Aucun destinataire sélectionné",
+  "settings.recon.notifications.recipients.remove": "Retirer {{email}}",
+  "settings.recon.paygCap.label": "Crédits maximum par scan",
+  "settings.recon.paygCap.help": "Limite stricte des crédits dépensés par scan. Saisissez 0 pour utiliser la valeur par défaut de la plateforme.",
+  "settings.recon.paygCap.error.negative": "La limite doit être 0 ou plus",
+  "settings.recon.paygCap.error.tooLarge": "La limite doit être 100 000 ou moins",
+  "settings.recon.schedule.title": "Planification par défaut",
+  "settings.recon.schedule.description": "Relancer automatiquement les scans selon un calendrier récurrent.",
+  "settings.recon.schedule.comingSoon": "Bientôt disponible",
+  "settings.recon.save": "Enregistrer",
+  "settings.recon.saveSuccess": "Paramètres Recon enregistrés",
+  "settings.recon.saveError": "Échec de l'enregistrement des paramètres Recon"
 }

@@ -1,0 +1,473 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReconNewScanPage — snapshot > matches ar (RTL) snapshot on step 2 1`] = `
+<div>
+  <div
+    class="max-w-2xl"
+  >
+    <div
+      class="mb-6"
+    >
+      <div
+        class="flex items-start justify-between gap-3"
+      >
+        <div>
+          <h1
+            class="text-xl sm:text-2xl font-semibold text-foreground"
+          >
+            فحص جديد
+          </h1>
+          <p
+            class="text-sm sm:text-base text-muted-foreground mt-1"
+          >
+            قم بتكوين فحص أمني مُصرَّح به وتفويضه والبدء به.
+          </p>
+        </div>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3"
+          data-testid="wizard-cancel"
+          type="button"
+        >
+          إلغاء
+        </button>
+      </div>
+      <ol
+        class="mt-4 flex items-center gap-2 text-sm flex-wrap"
+        data-testid="wizard-step-indicator"
+      >
+        <li
+          class="flex items-center gap-2"
+        >
+          <span
+            class="flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium border-primary/50 bg-primary/10 text-primary"
+          >
+            1
+          </span>
+          <span
+            class="text-muted-foreground"
+          >
+            الهدف
+          </span>
+          <span
+            aria-hidden="true"
+            class="text-muted-foreground mx-1"
+          >
+            ·
+          </span>
+        </li>
+        <li
+          aria-current="step"
+          class="flex items-center gap-2"
+        >
+          <span
+            class="flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium border-primary bg-primary text-primary-foreground"
+          >
+            2
+          </span>
+          <span
+            class="font-medium text-foreground"
+          >
+            التفويض
+          </span>
+          <span
+            aria-hidden="true"
+            class="text-muted-foreground mx-1"
+          >
+            ·
+          </span>
+        </li>
+        <li
+          class="flex items-center gap-2"
+        >
+          <span
+            class="flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium border-border bg-background text-muted-foreground"
+          >
+            3
+          </span>
+          <span
+            class="text-muted-foreground"
+          >
+            المراجعة
+          </span>
+        </li>
+      </ol>
+    </div>
+    <div
+      class="flex flex-col gap-6"
+      data-testid="wizard-step-2"
+    >
+      <div>
+        <h2
+          class="text-lg font-semibold text-foreground"
+        >
+          قم بتفويض هذا الفحص
+        </h2>
+        <p
+          class="text-sm text-muted-foreground mt-1"
+        >
+          يجب عليك تأكيد امتلاكك الإذن بفحص هذا الهدف.
+        </p>
+      </div>
+      <div
+        class="rounded-lg border bg-card p-4"
+      >
+        <h3
+          class="text-sm font-semibold text-foreground"
+        >
+          قبل المتابعة
+        </h3>
+        <ul
+          class="mt-2 list-disc ps-5 text-sm text-muted-foreground space-y-1"
+        >
+          <li>
+            سيحاول الفاحص تنفيذ استغلالات فعلية على هذا الهدف، وليست محاكاة.
+          </li>
+          <li>
+            يتم تسجيل تفويضك، بما في ذلك هذا المبرِّر، في سجل تدقيق غير قابل للتعديل.
+          </li>
+          <li>
+            تُقر بأن لديك الصلاحية القانونية لتفويض هذا الفحص على هذا الهدف.
+          </li>
+        </ul>
+      </div>
+      <div
+        class="flex items-center justify-between gap-3 rounded-md border p-3 min-h-[44px]"
+      >
+        <label
+          class="font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-sm"
+          for=":r2a:"
+        >
+          أصرِّح بهذا الفحص.
+        </label>
+        <button
+          aria-checked="false"
+          class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
+          data-state="unchecked"
+          data-testid="wizard-ack-switch"
+          id=":r2a:"
+          role="switch"
+          type="button"
+          value="on"
+        >
+          <span
+            class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-150 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5 data-[state=unchecked]:translate-x-0"
+            data-state="unchecked"
+          />
+        </button>
+      </div>
+      <div
+        class="flex flex-col gap-2"
+      >
+        <label
+          class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          for=":r2b:"
+        >
+          المبرِّر
+        </label>
+        <textarea
+          aria-describedby=":r2b:-counter"
+          aria-invalid="true"
+          class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          data-testid="wizard-justification-input"
+          id=":r2b:"
+          maxlength="1000"
+          placeholder="لماذا تفحص هذا الهدف؟ اذكر التذكرة أو طلب التغيير أو المالك."
+          rows="4"
+        />
+        <div
+          class="flex items-center justify-between text-xs"
+          id=":r2b:-counter"
+        >
+          <span
+            class="text-destructive"
+            data-testid="wizard-justification-error"
+          >
+            يجب ألا يقل المبرِّر عن 20 حرفاً.
+          </span>
+          <span
+            class="text-muted-foreground"
+            data-testid="wizard-justification-counter"
+          >
+            0
+            /
+            1000
+          </span>
+        </div>
+      </div>
+      <div
+        class="flex items-center justify-between"
+      >
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+          data-testid="wizard-step2-back"
+          type="button"
+        >
+          رجوع
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+          data-testid="wizard-step2-continue"
+          disabled=""
+          type="button"
+        >
+          متابعة
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="location"
+  >
+    /recon/new?step=2
+  </div>
+</div>
+`;
+
+exports[`ReconNewScanPage — snapshot > matches en snapshot on step 1 1`] = `
+<div>
+  <div
+    class="max-w-2xl"
+  >
+    <div
+      class="mb-6"
+    >
+      <div
+        class="flex items-start justify-between gap-3"
+      >
+        <div>
+          <h1
+            class="text-xl sm:text-2xl font-semibold text-foreground"
+          >
+            New scan
+          </h1>
+          <p
+            class="text-sm sm:text-base text-muted-foreground mt-1"
+          >
+            Configure, authorize, and start an authorized security scan.
+          </p>
+        </div>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3"
+          data-testid="wizard-cancel"
+          type="button"
+        >
+          Cancel
+        </button>
+      </div>
+      <ol
+        class="mt-4 flex items-center gap-2 text-sm flex-wrap"
+        data-testid="wizard-step-indicator"
+      >
+        <li
+          aria-current="step"
+          class="flex items-center gap-2"
+        >
+          <span
+            class="flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium border-primary bg-primary text-primary-foreground"
+          >
+            1
+          </span>
+          <span
+            class="font-medium text-foreground"
+          >
+            Target
+          </span>
+          <span
+            aria-hidden="true"
+            class="text-muted-foreground mx-1"
+          >
+            ·
+          </span>
+        </li>
+        <li
+          class="flex items-center gap-2"
+        >
+          <span
+            class="flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium border-border bg-background text-muted-foreground"
+          >
+            2
+          </span>
+          <span
+            class="text-muted-foreground"
+          >
+            Authorization
+          </span>
+          <span
+            aria-hidden="true"
+            class="text-muted-foreground mx-1"
+          >
+            ·
+          </span>
+        </li>
+        <li
+          class="flex items-center gap-2"
+        >
+          <span
+            class="flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium border-border bg-background text-muted-foreground"
+          >
+            3
+          </span>
+          <span
+            class="text-muted-foreground"
+          >
+            Review
+          </span>
+        </li>
+      </ol>
+    </div>
+    <div
+      class="flex flex-col gap-6"
+      data-testid="wizard-step-1"
+    >
+      <div>
+        <h2
+          class="text-lg font-semibold text-foreground"
+        >
+          Choose the scan target
+        </h2>
+        <p
+          class="text-sm text-muted-foreground mt-1"
+        >
+          Pick a project and an environment with a reachable target URL.
+        </p>
+      </div>
+      <div
+        class="flex flex-col gap-2"
+      >
+        <label
+          class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          for="wizard-project"
+        >
+          Project
+        </label>
+        <div>
+          <button
+            data-testid="wizard-project-select"
+            id="wizard-project"
+            role="combobox"
+            type="button"
+          >
+            <span>
+              Select a project
+            </span>
+          </button>
+          <div
+            data-value="proj-with-repo"
+            role="option"
+          >
+            Acme Web
+          </div>
+          <select
+            data-testid="__native_select"
+            style="position: absolute; inset: 0; opacity: 0;"
+          >
+            <option
+              value=""
+            />
+            <option
+              value="proj-with-repo"
+            >
+              Acme Web
+            </option>
+          </select>
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-2"
+      >
+        <label
+          class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          for="wizard-environment"
+        >
+          Environment
+        </label>
+        <div>
+          <button
+            data-testid="wizard-environment-select"
+            id="wizard-environment"
+            role="combobox"
+            type="button"
+          >
+            <span>
+              Select an environment
+            </span>
+          </button>
+          <div
+            data-value="env-prod"
+            role="option"
+          >
+            Production Main
+             — 
+            https://app.example.com
+          </div>
+          <div
+            data-value="env-staging"
+            role="option"
+          >
+            Staging
+             — 
+            https://staging.example.com
+          </div>
+          <select
+            data-testid="__native_select"
+            style="position: absolute; inset: 0; opacity: 0;"
+          >
+            <option
+              value=""
+            />
+            <option
+              value="env-prod"
+            >
+              env-prod
+            </option>
+            <option
+              value="env-staging"
+            >
+              env-staging
+            </option>
+          </select>
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-2"
+      >
+        <label
+          class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          for="wizard-config"
+        >
+          Scan configuration (optional)
+        </label>
+        <p
+          class="text-xs text-muted-foreground"
+        >
+          Upload a YAML file to customise phases or scope. Max 64 KB.
+        </p>
+        <input
+          accept=".yaml,.yml,application/x-yaml,text/yaml,text/plain"
+          class="text-sm file:me-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-accent"
+          data-testid="wizard-config-input"
+          id="wizard-config"
+          type="file"
+        />
+      </div>
+      <div
+        class="flex justify-end"
+      >
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+          data-testid="wizard-step1-continue"
+          disabled=""
+          type="button"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="location"
+  >
+    /recon/new
+  </div>
+</div>
+`;

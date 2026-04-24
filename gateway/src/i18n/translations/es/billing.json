@@ -26,5 +26,7 @@
   "subscription.downgraded": "Reducción de suscripción programada",
   "payg.usageRecorded": "Evento de uso registrado",
   "payg.topupCompleted": "Recarga de saldo completada",
-  "payg.autoCharged": "Cargo automático completado"
+  "payg.autoCharged": "Cargo automático completado",
+  "recon.scan.includedQuota": "Escaneos incluidos restantes: {{count}}",
+  "recon.scan.paygCost": "Este escaneo costará {{credits}} créditos"
 }

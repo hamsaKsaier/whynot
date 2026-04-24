@@ -138,6 +138,38 @@ services:
       timeout: 10s
       retries: 3
 
+  recon-executor:
+    build:
+      context: ../../services/recon-executor
+      dockerfile: Dockerfile
+    ports:
+      - "${RECON_EXECUTOR_PORT:-3013}:8001"
+    env_file:
+      - ../../.env
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - GATEWAY_INTERNAL_URL=http://gateway:3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      # Scanned-repo mount is read-only — the executor must never write into a
+      # target repository (recon-safety: upstream tool safety posture).
+      - ${RECON_SCAN_REPO_PATH:-/tmp/recon-repos}:/scan-repos:ro
+    depends_on:
+      database:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   gateway:
     build:
       context: ../..
@@ -153,6 +185,7 @@ services:
       - AI_SERVICE_URL=http://ai-service:8000
       - TEST_EXECUTOR_URL=http://test-executor:3001
       - QA_LOOP_EXECUTOR_URL=http://qa-loop-executor:3002
+      - RECON_EXECUTOR_URL=http://recon-executor:8001
       - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
       - ALLOW_INTERNAL_SCAN=${ALLOW_INTERNAL_SCAN:-true}

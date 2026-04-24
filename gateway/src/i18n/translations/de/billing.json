@@ -26,5 +26,7 @@
   "subscription.downgraded": "Abonnement-Herabstufung geplant",
   "payg.usageRecorded": "Nutzungsereignis erfasst",
   "payg.topupCompleted": "Guthaben-Aufladung abgeschlossen",
-  "payg.autoCharged": "Automatische Abbuchung abgeschlossen"
+  "payg.autoCharged": "Automatische Abbuchung abgeschlossen",
+  "recon.scan.includedQuota": "Verbleibende inklusive Scans: {{count}}",
+  "recon.scan.paygCost": "Dieser Scan kostet {{credits}} Credits"
 }

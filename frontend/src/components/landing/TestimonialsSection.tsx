@@ -214,14 +214,14 @@ export function TestimonialsSection() {
   return (
     <section
       id="testimonials"
-      className="py-24 sm:py-32 bg-background border-y border-border/50"
+      className="py-16 sm:py-24 md:py-32 bg-background border-y border-border/50"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Reveal className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+        <Reveal className="text-center max-w-3xl mx-auto mb-10 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3 sm:mb-4">
             {t('testimonials.heading')}
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
             {t('testimonials.subheading')}
           </p>
         </Reveal>
@@ -315,7 +315,7 @@ export function TestimonialsSection() {
         </div>
 
         {/* Desktop: side-by-side grid */}
-        <Stagger className="hidden md:grid md:grid-cols-3 gap-8">
+        <Stagger className="hidden md:grid md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {TESTIMONIALS.map((testimonial) => (
             <Reveal key={testimonial.key}>
               <TestimonialCard testimonial={testimonial} />

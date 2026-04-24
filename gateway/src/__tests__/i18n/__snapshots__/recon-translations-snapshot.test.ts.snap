@@ -1,0 +1,41 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Recon translations — snapshot > ar billing:recon.scan.includedQuota is stable 1`] = `"عمليات الفحص المضمنة المتبقية: {{count}}"`;
+
+exports[`Recon translations — snapshot > ar errors:recon.payment.required is stable 1`] = `"الدفع مطلوب: خطتك لا تتضمن عمليات فحص الاستطلاع أو رصيدك غير كافٍ."`;
+
+exports[`Recon translations — snapshot > ar success:recon.scan.created is stable 1`] = `"تم إنشاء فحص الاستطلاع بنجاح."`;
+
+exports[`Recon translations — snapshot > ar validation:recon.authorization.acknowledged is stable 1`] = `"يجب إقرار التفويض بشكل صريح."`;
+
+exports[`Recon translations — snapshot > de billing:recon.scan.includedQuota is stable 1`] = `"Verbleibende inklusive Scans: {{count}}"`;
+
+exports[`Recon translations — snapshot > de errors:recon.payment.required is stable 1`] = `"Zahlung erforderlich: Ihr Plan beinhaltet keine Recon-Scans oder Ihr Guthaben ist unzureichend."`;
+
+exports[`Recon translations — snapshot > de success:recon.scan.created is stable 1`] = `"Recon-Scan erfolgreich erstellt."`;
+
+exports[`Recon translations — snapshot > de validation:recon.authorization.acknowledged is stable 1`] = `"Die Autorisierung muss ausdrücklich bestätigt werden."`;
+
+exports[`Recon translations — snapshot > en billing:recon.scan.includedQuota is stable 1`] = `"Included scans remaining: {{count}}"`;
+
+exports[`Recon translations — snapshot > en errors:recon.payment.required is stable 1`] = `"Payment required: your plan does not include recon scans or you have insufficient credits."`;
+
+exports[`Recon translations — snapshot > en success:recon.scan.created is stable 1`] = `"Recon scan created successfully."`;
+
+exports[`Recon translations — snapshot > en validation:recon.authorization.acknowledged is stable 1`] = `"Authorization must be explicitly acknowledged."`;
+
+exports[`Recon translations — snapshot > es billing:recon.scan.includedQuota is stable 1`] = `"Escaneos incluidos restantes: {{count}}"`;
+
+exports[`Recon translations — snapshot > es errors:recon.payment.required is stable 1`] = `"Se requiere pago: su plan no incluye escaneos de reconocimiento o su saldo es insuficiente."`;
+
+exports[`Recon translations — snapshot > es success:recon.scan.created is stable 1`] = `"Escaneo de reconocimiento creado con éxito."`;
+
+exports[`Recon translations — snapshot > es validation:recon.authorization.acknowledged is stable 1`] = `"La autorización debe reconocerse explícitamente."`;
+
+exports[`Recon translations — snapshot > fr billing:recon.scan.includedQuota is stable 1`] = `"Scans inclus restants : {{count}}"`;
+
+exports[`Recon translations — snapshot > fr errors:recon.payment.required is stable 1`] = `"Paiement requis : votre plan n'inclut pas les scans de reconnaissance ou votre solde est insuffisant."`;
+
+exports[`Recon translations — snapshot > fr success:recon.scan.created is stable 1`] = `"Scan de reconnaissance créé avec succès."`;
+
+exports[`Recon translations — snapshot > fr validation:recon.authorization.acknowledged is stable 1`] = `"L'autorisation doit être explicitement reconnue."`;

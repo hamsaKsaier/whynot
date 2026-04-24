@@ -28,6 +28,9 @@ import { PerformancePage } from '../pages/PerformancePage';
 import { CheckoutPage } from '../pages/CheckoutPage';
 import { ArchitectureFlowPage } from '../pages/ArchitectureFlowPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { ReconScansListPage } from '../pages/recon/ReconScansListPage';
+import { ReconNewScanPage } from '../pages/recon/ReconNewScanPage';
+import { ReconScanDetailPage } from '../pages/recon/ReconScanDetailPage';
 
 /**
  * Every user-facing route must appear here.
@@ -56,6 +59,9 @@ export const PAGES: PageEntry[] = [
   { key: 'performance', path: '/performance', routePattern: '/performance', component: PerformancePage, requiresAuth: true },
   { key: 'checkout', path: '/checkout', routePattern: '/checkout', component: CheckoutPage, requiresAuth: true },
   { key: 'architecture-flow', path: '/architecture-flow', routePattern: '/architecture-flow', component: ArchitectureFlowPage, requiresAuth: true },
+  { key: 'recon-list', path: '/recon', routePattern: '/recon', component: ReconScansListPage, requiresAuth: true },
+  { key: 'recon-new', path: '/recon/new', routePattern: '/recon/new', component: ReconNewScanPage, requiresAuth: true },
+  { key: 'recon-detail', path: '/recon/scan-1', routePattern: '/recon/:scanId', component: ReconScanDetailPage, requiresAuth: true },
 
   // ── Error page ────���──────────────────────────────────────────────────
   { key: 'not-found', path: '/nonexistent', routePattern: '*', component: NotFoundPage, requiresAuth: false },

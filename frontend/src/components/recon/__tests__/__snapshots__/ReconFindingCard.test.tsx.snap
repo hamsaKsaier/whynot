@@ -1,0 +1,357 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReconFindingCard > matches ar (RTL) snapshot 1`] = `
+<div>
+  <section
+    aria-labelledby=":r12:"
+    class="rounded-lg border bg-card text-card-foreground shadow-sm p-4 space-y-3"
+    data-testid="recon-finding-card-finding-1"
+  >
+    <span
+      class="sr-only"
+      id=":r12:"
+    >
+      مرتفع
+       — 
+      /api/users/{id}
+    </span>
+    <header
+      class="flex flex-wrap items-center gap-3"
+    >
+      <div
+        class="rounded-full px-2.5 py-0.5 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 inline-flex items-center gap-1.5 text-xs font-medium border bg-orange-50 text-orange-900 dark:bg-orange-900/20 dark:text-orange-300 border-orange-200 dark:border-orange-800"
+        data-testid="severity-badge-high"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-octagon-alert h-3 w-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 16h.01"
+          />
+          <path
+            d="M12 8v4"
+          />
+          <path
+            d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"
+          />
+        </svg>
+        <span>
+          مرتفع
+        </span>
+      </div>
+      <div
+        class="inline-flex items-center rounded-full border px-2.5 py-0.5 font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground text-xs"
+        data-testid="recon-finding-vuln-class"
+      >
+        الحقن
+      </div>
+      <code
+        class="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs font-mono text-foreground"
+        data-testid="recon-finding-endpoint"
+        dir="ltr"
+        title="/api/users/{id}"
+      >
+        /api/users/{id}
+      </code>
+      <button
+        aria-label="نسخ نقطة النهاية"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-md h-7 px-2 ms-auto"
+        data-testid="recon-finding-copy-endpoint"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-copy h-3.5 w-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="14"
+            rx="2"
+            ry="2"
+            width="14"
+            x="8"
+            y="8"
+          />
+          <path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          />
+        </svg>
+      </button>
+    </header>
+    <div
+      class="text-sm text-foreground"
+    >
+      <p
+        class="line-clamp-2"
+        data-testid="recon-finding-description"
+      >
+        This endpoint is vulnerable to SQL injection via the user id parameter. An attacker can bypass authentication and extract database contents. Confirmed with a boolean-based blind payload.
+      </p>
+      <button
+        class="mt-1 text-xs font-medium text-primary hover:underline"
+        data-testid="recon-finding-desc-toggle"
+        type="button"
+      >
+        عرض المزيد
+      </button>
+    </div>
+    <div
+      class="space-y-2"
+    >
+      <button
+        aria-controls=":r13:"
+        aria-expanded="false"
+        class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md px-3 h-7 gap-1 text-xs"
+        data-testid="recon-finding-poc-toggle"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-chevron-down h-3.5 w-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+          />
+        </svg>
+        <span>
+          عرض المزيد
+        </span>
+      </button>
+    </div>
+    <footer
+      class="flex items-start justify-between gap-3 border-t pt-3"
+    >
+      <div
+        class="min-w-0 flex-1 text-xs"
+      >
+        <span
+          class="font-medium text-foreground"
+        >
+          الحل
+          :
+        </span>
+         
+        <span
+          class="text-muted-foreground line-clamp-1"
+          data-testid="recon-finding-remediation"
+          title="Use parameterized queries and validate all input server-side."
+        >
+          Use parameterized queries and validate all input server-side.
+        </span>
+      </div>
+      <button
+        class="whitespace-nowrap text-xs font-medium text-primary hover:underline"
+        data-testid="recon-finding-view-details"
+        type="button"
+      >
+        عرض التفاصيل
+      </button>
+    </footer>
+  </section>
+</div>
+`;
+
+exports[`ReconFindingCard > matches en snapshot 1`] = `
+<div>
+  <section
+    aria-labelledby=":r10:"
+    class="rounded-lg border bg-card text-card-foreground shadow-sm p-4 space-y-3"
+    data-testid="recon-finding-card-finding-1"
+  >
+    <span
+      class="sr-only"
+      id=":r10:"
+    >
+      High
+       — 
+      /api/users/{id}
+    </span>
+    <header
+      class="flex flex-wrap items-center gap-3"
+    >
+      <div
+        class="rounded-full px-2.5 py-0.5 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 inline-flex items-center gap-1.5 text-xs font-medium border bg-orange-50 text-orange-900 dark:bg-orange-900/20 dark:text-orange-300 border-orange-200 dark:border-orange-800"
+        data-testid="severity-badge-high"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-octagon-alert h-3 w-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 16h.01"
+          />
+          <path
+            d="M12 8v4"
+          />
+          <path
+            d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"
+          />
+        </svg>
+        <span>
+          High
+        </span>
+      </div>
+      <div
+        class="inline-flex items-center rounded-full border px-2.5 py-0.5 font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground text-xs"
+        data-testid="recon-finding-vuln-class"
+      >
+        Injection
+      </div>
+      <code
+        class="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs font-mono text-foreground"
+        data-testid="recon-finding-endpoint"
+        dir="ltr"
+        title="/api/users/{id}"
+      >
+        /api/users/{id}
+      </code>
+      <button
+        aria-label="Copy endpoint"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-md h-7 px-2 ms-auto"
+        data-testid="recon-finding-copy-endpoint"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-copy h-3.5 w-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="14"
+            rx="2"
+            ry="2"
+            width="14"
+            x="8"
+            y="8"
+          />
+          <path
+            d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+          />
+        </svg>
+      </button>
+    </header>
+    <div
+      class="text-sm text-foreground"
+    >
+      <p
+        class="line-clamp-2"
+        data-testid="recon-finding-description"
+      >
+        This endpoint is vulnerable to SQL injection via the user id parameter. An attacker can bypass authentication and extract database contents. Confirmed with a boolean-based blind payload.
+      </p>
+      <button
+        class="mt-1 text-xs font-medium text-primary hover:underline"
+        data-testid="recon-finding-desc-toggle"
+        type="button"
+      >
+        Show more
+      </button>
+    </div>
+    <div
+      class="space-y-2"
+    >
+      <button
+        aria-controls=":r11:"
+        aria-expanded="false"
+        class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md px-3 h-7 gap-1 text-xs"
+        data-testid="recon-finding-poc-toggle"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-chevron-down h-3.5 w-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+          />
+        </svg>
+        <span>
+          Show more
+        </span>
+      </button>
+    </div>
+    <footer
+      class="flex items-start justify-between gap-3 border-t pt-3"
+    >
+      <div
+        class="min-w-0 flex-1 text-xs"
+      >
+        <span
+          class="font-medium text-foreground"
+        >
+          Remediation
+          :
+        </span>
+         
+        <span
+          class="text-muted-foreground line-clamp-1"
+          data-testid="recon-finding-remediation"
+          title="Use parameterized queries and validate all input server-side."
+        >
+          Use parameterized queries and validate all input server-side.
+        </span>
+      </div>
+      <button
+        class="whitespace-nowrap text-xs font-medium text-primary hover:underline"
+        data-testid="recon-finding-view-details"
+        type="button"
+      >
+        View details
+      </button>
+    </footer>
+  </section>
+</div>
+`;

@@ -193,5 +193,19 @@
   "validation.urlProtocolRequired": "targetUrl must use http or https",
   "validation.valueMustBeString": "Value for \"{{key}}\" must be a string",
   "workspace.notResolved": "Workspace not resolved",
-  "workspace.noWorkspace": "No workspace found for user"
+  "workspace.noWorkspace": "No workspace found for user",
+  "recon.quota.exceeded": "Monthly recon scan quota exceeded. Top up your balance or upgrade your plan.",
+  "recon.payment.required": "Payment required: your plan does not include recon scans or you have insufficient credits.",
+  "recon.phase.exploitation.authorizationMissing": "Exploitation phase aborted: per-scan authorization record is missing.",
+  "recon.report.generationFailed": "Recon report generation failed.",
+  "recon.authorization.required": "Per-scan authorization is required. Provide the authorization object with acknowledged=true and a justification.",
+  "recon.authorization.malformed": "Authorization payload is malformed.",
+  "recon.authorization.justification.tooShort": "Authorization justification must be between 20 and 1000 characters.",
+  "recon.project.repoRequired": "This project must have a linked repository before a recon scan can run.",
+  "recon.environment.urlRequired": "The selected environment must have a URL configured.",
+  "recon.resume.urlMismatch": "Resume request rejected: target URL does not match the original scan.",
+  "recon.scan.notFound": "Recon scan not found.",
+  "recon.scan.invalidStatus": "Recon scan is not in a valid state for this action.",
+  "recon.rateLimit.exceeded": "Recon scan rate limit exceeded. Try again later.",
+  "recon.warnings.environmentProduction": "Warning: you are about to scan a production environment. Only proceed if you have explicit authorization."
 }

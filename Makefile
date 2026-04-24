@@ -109,6 +109,10 @@ logs-test-executor: ## Tail test-executor logs
 logs-qa-loop: ## Tail qa-loop-executor logs
 	$(DC_RUN) logs -f qa-loop-executor
 
+.PHONY: logs-recon-executor
+logs-recon-executor: ## Tail recon-executor logs
+	$(DC_RUN) logs -f recon-executor
+
 ##@ Status and inspection
 
 .PHONY: ps
@@ -152,6 +156,10 @@ shell-test-executor: ## Open a shell inside the test-executor container
 shell-qa-loop: ## Open a shell inside the qa-loop-executor container
 	$(DC_RUN) exec qa-loop-executor sh
 
+.PHONY: shell-recon-executor
+shell-recon-executor: ## Open a shell inside the recon-executor container
+	$(DC_RUN) exec recon-executor sh
+
 .PHONY: psql
 psql: ## Open a psql shell in the database container
 	$(DC_RUN) exec database psql -U $${POSTGRES_USER:-whynot} -d $${POSTGRES_DB:-whynot}
@@ -188,8 +196,20 @@ test-shared: check-env ## Run shared tests
 test-e2e: check-env ## Run Playwright end-to-end tests
 	$(DC_TST) run --rm playwright
 
+.PHONY: test-recon-integration
+test-recon-integration: check-env ## Run recon-executor integration tests against pinned juice-shop
+	@echo "==> Bringing up juice-shop + postgres for recon integration..."
+	$(DC_TST) --profile recon-integration up -d --wait postgres-test juice-shop
+	@echo "==> Running recon integration suite..."
+	$(DC_TST) --profile recon-integration run --rm recon-executor-test; \
+	  rc=$$?; \
+	  echo "==> Tearing down recon integration stack..."; \
+	  $(DC_TST) --profile recon-integration down -v; \
+	  exit $$rc
+
 .PHONY: test-down
 test-down: ## Remove test containers, networks, and volumes
+	$(DC_TST) --profile recon-integration down -v
 	$(DC_TST) down -v
 
 ##@ Code review graph

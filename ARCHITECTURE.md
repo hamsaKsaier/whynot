@@ -84,7 +84,8 @@ whynot is an AI-powered autonomous QA platform that converts user stories into e
 | `services/ai-service/` | LLM test generation & vision analysis | Python 3.11+ / FastAPI | `services/ai-service/app/main.py`, `services/ai-service/app/api/routes.py` | AI team |
 | `services/test-executor/` | Browser automation & test runner | Node + TS + Playwright | `services/test-executor/src/index.ts`, `services/test-executor/src/api/routes.ts` | Backend team |
 | `services/qa-loop-executor/` | Autonomous agent runner (v1 + v2) | Node + TS + Vercel AI SDK | `services/qa-loop-executor/src/index.ts`, `services/qa-loop-executor/src/v2/orchestrator.ts` | AI team — **v2/ and mcp-browser.ts are untouchable** |
-| `services/database/` | SQL migrations | PostgreSQL 15 | `services/database/migrations/001_initial_schema.sql` … `services/database/migrations/042_session_report_data.sql` | DBA — **untouchable except with user coordination** |
+| `services/recon-executor/` | Authorization-only recon (pentest orchestration) scan runner | Python 3.11+ / FastAPI | `services/recon-executor/app/` (see §21) | Security team — scoped by `.claude/rules/recon-safety.md` |
+| `services/database/` | SQL migrations | PostgreSQL 15 | `services/database/migrations/001_initial_schema.sql` … `services/database/migrations/054_reconcile_plan_taxonomy.sql` | DBA — **untouchable except with user coordination** |
 | `shared/` | Cross-service types, repositories, logger, utilities | Node + TS | `shared/database/connection.ts`, `shared/types/index.ts`, `shared/logger/logger.ts` | Shared ownership |
 | `docs/` | Platform documentation | Markdown | `docs/API.md`, `docs/DEPLOYMENT.md`, `docs/TROUBLESHOOTING.md` | All teams |
 | `examples/` | API usage examples | Shell, Python | `examples/test-example.sh`, `examples/test-example.py` | All teams |
@@ -108,6 +109,7 @@ whynot is an AI-powered autonomous QA platform that converts user stories into e
 | `ai-service` | Build `./services/ai-service` | `8010 → 8000` | HTTP /health every 30s | — |
 | `test-executor` | Build `.` + `./services/test-executor/Dockerfile` | `3011 → 3001` | HTTP /health every 30s | `database` (healthy), `ai-service` (started) |
 | `qa-loop-executor` | Build `.` + `./services/qa-loop-executor/Dockerfile` | `3012 → 3002` | HTTP /health every 30s | `database` (healthy), `test-executor` (healthy) |
+| `recon-executor` | Build `./services/recon-executor` | `3013 → 8001` | HTTP /health every 30s | `database` (healthy), `db-migrate` (completed), `gateway` (healthy). Mounts `$RECON_SCAN_REPO_PATH → /scan-repos:ro` — read-only; the executor MUST NOT write into scanned repos (recon-safety). |
 | `gateway` | Build `.` + `./gateway/Dockerfile` | `3010 → 3000` | HTTP /health every 30s | `database` (healthy), `ai-service` (started), `test-executor` (started), `qa-loop-executor` (started) |
 | `frontend` | Build `./frontend` | `5183 → 80` | `wget` every 30s | `gateway` |
 | `admin-frontend` | Build `./admin-frontend` | `5184 → 80` | `wget` every 30s | `gateway` |
@@ -334,6 +336,18 @@ All tables live in a single Postgres 15 database. Multi-tenancy is enforced via 
 | `qa_loop_notification_channels` | 016 | Notification channel configs |
 | `qa_loop_webhook_logs` | 016 | Webhook delivery logs |
 
+#### Recon (see §21)
+
+| Table | Migration | Purpose | Key FKs |
+|-------|-----------|---------|---------|
+| `recon_scans` | 051 | Top-level scan record (status, target URL, cost) | `workspaces.id`, `projects.id`, `saved_environments.id`, `users.id` |
+| `recon_scan_phases` | 051 | Per-phase checkpoint state (fingerprinting → discovery → vuln_analysis → exploitation → reporting) | `recon_scans.id` |
+| `recon_findings` | 051 | Validated and discarded findings with PoC payload (must be non-null to appear in reports) | `recon_scans.id` |
+| `recon_reports` | 051 | Final consolidated report | `recon_scans.id` |
+| `recon_scan_artifacts` | 051 | Per-phase outputs (fingerprint maps, discovery data, screenshots) | `recon_scans.id` |
+| `recon_scan_authorizations` | 051 | Immutable per-scan legal authorization audit log — MUST be written before a scan enqueues (recon-safety rule 1) | `recon_scans.id` |
+| `recon_workspace_settings` | 053 | Per-workspace owner settings — notification recipients, `payg_cap_credits` | `workspaces.id` |
+
 ### Entity Relationship Diagram
 
 ```mermaid
@@ -500,6 +514,15 @@ The gateway (`gateway/src/api/main.ts`) is the single API entry point. All route
 | /api | `gateway/src/api/main.ts` (bugReportRouter) | Bug reporting |
 | /api | `gateway/src/api/main.ts` (credentialsRouter) | Project credentials & notification prefs |
 | /api/qa-loop | `gateway/src/api/qa-loop-router.ts` | QA Loop session management |
+| **Recon** (mounted at `gateway/src/api/recon/index.ts`; chain: `requireAuth` → `requireFlag('recon_enabled', { statusCode: 404 })` → `requireFeature('recon_enabled')`) | | |
+| POST /api/recon/scans | recon router | Create a scan. Validates `authorization` payload and writes a row to `recon_scan_authorizations` before enqueueing (recon-safety rule 1). Rate-limited via `reconRateLimiter`. |
+| GET /api/recon/scans | recon router | List scans for the current workspace (cursor-paginated) |
+| GET /api/recon/scans/:id | recon router | Scan detail |
+| POST /api/recon/scans/:id/cancel | recon router | Cooperative cancel |
+| POST /api/recon/scans/:id/resume | recon router | Resume from checkpoint. Rejects URL mismatch (recon-safety rule 5). |
+| GET /api/recon/scans/:id/findings | recon router | Findings with non-null PoC (recon-safety rule 10) |
+| GET /api/recon/scans/:id/report | recon router | Final report |
+| GET/PUT /api/recon/settings | recon router | Workspace-owner settings: notification recipients, `payg_cap_credits` |
 
 ### Auth Middleware
 
@@ -947,6 +970,30 @@ Component catalog for the live test-runner and results views:
 | QA Monitor session | 10 | `QA_MONITOR_SESSION` |
 | CI scan | 10 | `CI_SCAN` |
 
+### Recon PAYG Rates
+
+Rates (credits) from `shared/constants/pricing.ts:DEFAULT_PAYG_RATES`. Debited through the usage-event pipeline for workspaces whose plan has `tier = 'managed_payg'`.
+
+| Event Type | Credits | Notes |
+|------------|---------|-------|
+| `recon_scan_run` | 5000 | Full-scan baseline (all phases complete). |
+| `recon_phase_fingerprinting` | 200 | Recorded on partial/cancelled scans instead of the full-run event. |
+| `recon_phase_discovery` | 800 | ↑ |
+| `recon_phase_vuln_analysis` | 1500 | ↑ |
+| `recon_phase_exploitation` | 2000 | ↑ |
+| `recon_phase_reporting` | 500 | ↑ |
+
+Per-plan **included** monthly scans (post-migration 054) are held in `plan_features.recon_monthly_scans`:
+
+| Plan | `recon_enabled` | `recon_monthly_scans` |
+|------|-----------------|-----------------------|
+| `free` / `free-trial` | false | 0 |
+| `pro_byo` / `starter` (legacy) | true | 1 |
+| `pro_managed` / `pro` (legacy) | true | 3 |
+| `enterprise` (legacy) | true | 99 |
+
+Overage handling for managed_payg tier: `BillingService.checkReconQuota()` returns `{included_remaining, payg_per_scan_credits}`. Scan creation 402s when both are exhausted. Per-workspace cap via `recon_workspace_settings.payg_cap_credits` (0 = platform default).
+
 ### Middleware Chain for Paid Operations
 
 1. `requireAuth()` — verify JWT
@@ -1041,6 +1088,7 @@ INDEX idx_org_feature_flags_org(organization_id)
 - `PlatformFeatureKey` — union type of all valid keys
 - `ALL_PLATFORM_FEATURE_KEYS` — array of all valid keys
 - `isValidFeatureKey(key)` — type guard for runtime validation
+- Notable keys: `language_switcher` (default ON), `recon_enabled` (dual-gated — global `feature_flags` toggle returns 404 at the route level via `requireFlag('recon_enabled', { statusCode: 404 })`, per-plan `plan_features.recon_enabled` returns 403 via `requireFeature('recon_enabled')`). Per `.claude/rules/recon-safety.md` rule 7, recon uses this single flag — no per-phase or per-vuln-class flags.
 
 ### Seeds
 
@@ -1132,6 +1180,7 @@ recordUsageEvent({ workspaceId, userId?, eventType, quantity?, metadata? })
 | `POST /api/generate-tests` | `test_generation` | `gateway/src/api/main.ts` | after `deductCredits(..., 'TEST_GENERATION')` |
 | `POST /api/execute-test` | `test_execution` | `gateway/src/api/main.ts` | after `deductCredits(..., 'TEST_EXECUTION')` |
 | `POST /api/qa-loop/sessions` | `qa_loop_iteration` | `gateway/src/api/qa-loop-router.ts` | after `deductCredits(..., 'QA_LOOP_SESSION_RESERVE')` |
+| Recon scan lifecycle (one of) | `recon_scan_run` (full-scan completion) **or** `recon_phase_{fingerprinting\|discovery\|vuln_analysis\|exploitation\|reporting}` (partial/cancel) | `services/recon-executor/` via `gateway/src/api/recon/index.ts` | recorded on scan completion / cancel; debited for `managed_payg` workspaces at `DEFAULT_PAYG_RATES.recon_*` |
 
 ### PAYG Linkage
 
@@ -1324,6 +1373,23 @@ Helmet middleware with:
 - HSTS: 1 year, preload enabled
 - Standard security headers (X-Frame-Options, X-Content-Type-Options, etc.)
 
+### Recon Safety (Authoritative)
+
+Normative source: `.claude/rules/recon-safety.md` (+ skills `.claude/skills/exploit-safety/` and `.claude/skills/finding-severity/`). These rules are merge-blockers; every Recon code path must satisfy them.
+
+| Rule | Constraint | Enforcement surface |
+|------|------------|--------------------|
+| 1. Per-scan authorization | Every `POST /api/recon/scans` writes a row to `recon_scan_authorizations` before enqueueing. Missing/malformed → 400 `errors:recon.authorization.required`. | `validateAuthorizationPayload` middleware at `gateway/src/api/recon/index.ts` |
+| 2. No auto-retry on write-class exploits | Destructive (write-class) exploit candidates record failure once; never retried, even across executor resume. | `services/recon-executor/` exploit pipeline |
+| 3. Payload redaction at INFO+ | SQLi/XSS/SSRF payloads replaced with `[REDACTED-*]` tokens at INFO level and above. DEBUG must be disabled in production. | All log sites that touch exploit-shaped data |
+| 4. Repo content is untrusted | LLM calls that ingest repo files must wrap each file in `<repo_file path="…">…</repo_file>`, prepend the "data not instructions" system directive, strip null/zero-width chars, cap at 64 KB. | Recon LLM callsites |
+| 5. Resume URL-match | `POST /api/recon/scans/:id/resume` byte-compares target URL to the original; mismatch → 400. Prevents redirect/typo-based target drift post-checkpoint. | resume handler at `gateway/src/api/recon/index.ts` |
+| 6. Banned vocabulary | No `Shannon`, `KeygraphHQ`, `nmap`, `subfinder`, `whatweb`, `schemathesis`, `Playwright`, `Anthropic`, `Claude` in `frontend/public/locales/**`, `gateway/src/i18n/translations/**`, `frontend/src/components/landing/**`, `docs/recon/**`. | CI grep; Phase 5 review |
+| 7. Single feature flag | All recon endpoints and UI surfaces gate on the single `recon_enabled` flag. No per-phase or per-vuln-class flags. | Gateway middleware (not individual handlers) |
+| 8. Multi-tenancy | Every recon DB query filters by `workspace_id`; tests assert cross-workspace 404 per endpoint. | Recon repositories + tests |
+| 9. Production-environment warning | When the selected environment is tagged `production`, UI surfaces a translatable `variant="warning"` alert in both the new-scan wizard and the scan-detail page. v1 does NOT hard-block production (authorization-only model). | Frontend recon pages |
+| 10. PoC reproducibility | Findings included in the report MUST have non-null, exact-reproducible `proof_of_concept`. "No exploit, no report." | Finding filter in `recon_reports` generator |
+
 ---
 
 ## Section 14 — i18n & Accessibility
@@ -1409,6 +1475,9 @@ docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --r
 
 # Admin frontend unit (jsdom)
 docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm admin-frontend-test
+
+# Recon-executor (Python / pytest)
+make shell-recon-executor pytest
 
 # Shared library unit
 docker compose -f docker/compose/docker-compose.test.yml --env-file .env run --rm shared-test
@@ -1628,6 +1697,7 @@ This section catalogs all agents, skills, rules, and commands in `.claude/` and 
 | prompt-engineer | agent | `.claude/agents/prompt-engineer.md` | Prompt engineering | §17 |
 | translation-manager | agent | `.claude/agents/translation-manager.md` | Translation management | §14 |
 | rtl-support-arabic | rule | `.claude/rules/rtl-support-arabic.md` | RTL support patterns | §14 |
+| recon-safety | rule | `.claude/rules/recon-safety.md` | Recon subsystem safety (per-scan authorization, payload redaction, prompt-injection wrapper, banned vocabulary) | §13, §21 |
 | spec-driven-development | rule | `.claude/rules/spec-driven-development.md` | SDD workflow enforcement | §17 |
 | switch-component-styling | rule | `.claude/rules/switch-component-styling.md` | Switch component rules | §7 |
 | uncodixify-ui | rule | `.claude/rules/uncodixify-ui.md` | Anti-codex UI standards | §7 |
@@ -1642,15 +1712,19 @@ This section catalogs all agents, skills, rules, and commands in `.claude/` and 
 | content-strategy | skill | `.claude/skills/content-strategy/SKILL.md` | Content strategy | §8 |
 | copywriting | skill | `.claude/skills/copywriting/SKILL.md` | Copywriting frameworks | §8 |
 | debug-issue | skill | `.claude/skills/debug-issue.md` | Issue debugging | §17 |
+| exploit-safety | skill | `.claude/skills/exploit-safety/SKILL.md` | Normative safety rules for exploit execution (per-scan authorization, payload redaction, prompt-injection hardening) | §13, §21 |
+| finding-severity | skill | `.claude/skills/finding-severity/SKILL.md` | Severity scoring + "no exploit, no report" gate for recon findings | §13, §21 |
 | landing-page-optimization | skill | `.claude/skills/landing-page-optimization/SKILL.md` | Landing page CRO | §7 |
 | legal-content-generator | skill | `.claude/skills/legal-content-generator/SKILL.md` | Legal content (privacy, terms) | §8 |
 | marketing-ideas | skill | `.claude/skills/marketing-ideas/SKILL.md` | Marketing ideation | §8 |
 | page-cro | skill | `.claude/skills/page-cro/SKILL.md` | Page conversion optimization | §7 |
 | paid-ads | skill | `.claude/skills/paid-ads/SKILL.md` | Paid advertising | §8 |
 | paywall-upgrade-cro | skill | `.claude/skills/paywall-upgrade-cro/SKILL.md` | Paywall optimization | §9 |
+| pentest-orchestration | skill | `.claude/skills/pentest-orchestration/SKILL.md` | Recon pentest-orchestration playbook — scan-phase routing, checkpointing, cancel/resume semantics | §21 |
 | popup-cro | skill | `.claude/skills/popup-cro/SKILL.md` | Popup conversion optimization | §7 |
 | pricing-strategy | skill | `.claude/skills/pricing-strategy/SKILL.md` | Pricing strategy | §9 |
 | programmatic-seo | skill | `.claude/skills/programmatic-seo/SKILL.md` | Programmatic SEO | §8 |
+| recon-ui | skill | `.claude/skills/recon-ui/SKILL.md` | Frontend Recon UI patterns — wizard, scan-detail, PoC viewer, severity badge | §7, §21 |
 | refactor-safely | skill | `.claude/skills/refactor-safely.md` | Safe refactoring | §17 |
 | referral-program | skill | `.claude/skills/referral-program/SKILL.md` | Referral program design | §8 |
 | review-changes | skill | `.claude/skills/review-changes.md` | Code review | §17 |
@@ -1737,3 +1811,76 @@ This section catalogs all agents, skills, rules, and commands in `.claude/` and 
 | **Feature gate** | Middleware that checks whether the current workspace's plan includes a required feature |
 | **Request ID** | Unique identifier (`X-Request-ID` header) assigned to every API request for distributed tracing |
 | **Workspace** | Multi-tenant isolation boundary — owns projects, subscriptions, credits, and team members |
+| **Recon** | Authorization-only security scanning subsystem — see §21. Orchestrates a multi-phase pentest (fingerprinting → discovery → vuln-analysis → exploitation → reporting) for workspace-owned targets with explicit per-scan legal authorization. |
+| **PoC** | Proof-of-concept — an exact-reproducible request/command/script attached to a recon finding. Findings without a non-null PoC are excluded from reports (recon-safety rule 10). |
+| **Per-scan authorization** | The `authorization` block sent with every `POST /api/recon/scans`. Persisted to `recon_scan_authorizations` before the scan enqueues; this row is an immutable legal audit record (recon-safety rule 1). |
+| **PAYG cap** | Per-workspace overage ceiling for recon scans, held in `recon_workspace_settings.payg_cap_credits`. `0` = inherit platform default. |
+| **Write-class exploit** | A recon exploit candidate classified as mutating target state. Never auto-retried on failure — a partially-applied write could leave the target corrupted (recon-safety rule 2). |
+
+---
+
+## Section 21 — Recon Subsystem
+
+Authorization-only security scanning introduced on `feat/recon` (migrations 051–054). All recon code is governed by `.claude/rules/recon-safety.md` (see §13 for the rule matrix).
+
+### Components
+
+| Component | Path | Purpose |
+|-----------|------|---------|
+| Gateway router | `gateway/src/api/recon/index.ts` | HTTP API mounted at `/api/recon`; middleware chain `requireAuth → requireFlag('recon_enabled', {statusCode:404}) → requireFeature('recon_enabled')` |
+| Executor service | `services/recon-executor/` | Python 3.11 / FastAPI; runs phases; writes artifacts, findings, reports to Postgres |
+| Frontend pages | `frontend/src/pages/recon/` | Scan wizard, scan detail, findings list, PoC viewer, severity badge |
+| Landing section | `frontend/src/components/landing/ReconFeatureSection*` | Public marketing copy (must pass recon-safety rule 6 banned-vocabulary check) |
+| Shared types | recon repositories under `shared/database/repositories/` | `recon_scans`, `recon_findings`, `recon_reports`, etc. |
+| Rule | `.claude/rules/recon-safety.md` | Merge-blocker safety rules (see §13) |
+| Skills | `.claude/skills/pentest-orchestration/`, `.claude/skills/recon-ui/`, `.claude/skills/exploit-safety/`, `.claude/skills/finding-severity/` | Orchestration, UI, safety, severity-scoring playbooks |
+
+### Scan Lifecycle
+
+```
+POST /api/recon/scans
+  ├─ validate authorization payload  ──► row in recon_scan_authorizations (rule 1)
+  ├─ checkReconQuota()                ──► 402 if no included + no PAYG budget
+  └─ enqueue to recon-executor
+                │
+                ▼
+fingerprinting → discovery → vuln_analysis → exploitation → reporting
+                │                                │
+                │                                ├─ write-class exploits: no auto-retry (rule 2)
+                │                                ├─ payload redaction at INFO+ (rule 3)
+                │                                └─ findings persisted; only PoC-bearing ones reach reports (rule 10)
+                │
+                ▼
+recon_scan_phases checkpointed on each phase transition
+  └─ POST /api/recon/scans/:id/resume — URL byte-match required (rule 5)
+```
+
+### Billing
+
+- **Included quota** — `plan_features.recon_monthly_scans` enforced by `BillingService.checkReconQuota()`.
+- **PAYG overage** — on `managed_payg` tier only. Full-scan completion emits one `recon_scan_run` event; partial/cancelled scans emit one `recon_phase_*` event per completed phase (see §11 Hook Locations, rates in §9).
+- **Per-workspace cap** — `recon_workspace_settings.payg_cap_credits` (`0` = inherit).
+
+### Plan entitlement (post migration 054)
+
+| Plan | `recon_enabled` | `recon_monthly_scans` | Tier |
+|------|-----------------|-----------------------|------|
+| `free` | false | 0 | `byo_keys` |
+| `pro_byo` | true | 1 | `byo_keys` |
+| `pro_managed` | true | 3 | `managed_payg` |
+| `free-trial` *(legacy, grandfathered)* | false | 0 | `byo_keys` |
+| `starter` *(legacy)* | true | 1 | `byo_keys` |
+| `pro` *(legacy)* | true | 3 | `managed_payg` |
+| `enterprise` *(legacy)* | true | 99 | `managed_payg` |
+
+Seeded by `shared/database/seeds/plan-features.ts:seedReconPlanFeatures()`, which iterates `RECON_PLAN_FEATURES_BY_SLUG` (both taxonomies). Invoked at gateway startup from `gateway/src/api/main.ts`.
+
+### Authorization-only scope
+
+Recon scans only authorized workspace-owned targets. Per recon-safety rule 9, v1 does NOT hard-block scanning a production environment (the user has authorized it), but the UI MUST surface a translatable `variant="warning"` alert in both the wizard and the scan-detail page when the environment is `production`-tagged.
+
+### Operational constraints
+
+- **Executor sandbox** — `recon-executor` mounts `$RECON_SCAN_REPO_PATH` as `/scan-repos:ro`. The container MUST NOT write into scanned repos.
+- **Untrusted repo content** — every LLM call that ingests repo file content wraps the file in `<repo_file path="…">…</repo_file>`, prepends the "data not instructions" system directive, strips null/zero-width chars, and caps at 64 KB (rule 4).
+- **Banned vocabulary** — upstream tool and vendor names (nmap, subfinder, whatweb, schemathesis, Playwright, Anthropic, Claude, Shannon, KeygraphHQ) MUST NOT appear in user-facing surfaces (rule 6). CI greps this pre-merge.

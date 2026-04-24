@@ -6,7 +6,7 @@ import { BRAND_ALLOW_LIST } from '@shared/constants/brand-allowlist';
 const LOCALES_DIR = path.resolve(__dirname, '../../public/locales');
 const LANGUAGES = ['en', 'ar', 'fr', 'de', 'es'];
 const NON_EN_LANGUAGES = LANGUAGES.filter(l => l !== 'en');
-const NAMESPACES = ['common', 'auth', 'dashboard', 'runner', 'results', 'settings', 'billing', 'landing'];
+const NAMESPACES = ['common', 'auth', 'dashboard', 'runner', 'results', 'settings', 'billing', 'landing', 'recon'];
 
 const FULLY_TRANSLATED_LANGUAGES = new Set(['ar', 'fr', 'de', 'es']);
 
@@ -268,7 +268,7 @@ describe('i18n completeness — frontend', () => {
   });
 
   describe('German (de) — full coverage', () => {
-    const GERMAN_MARKERS = /[äöüßÄÖÜ]|\b(der|die|das|und|sie|ist|ein|eine|es|so|wo|da|ob|für|mit|von|nicht|oder|auf|den|dem|des|wird|sind|als|nach|bei|zum|zur|aus|über|ihre|ihrem|ihren|ihr|auch|noch|nur|aber|wenn|wie|alle|keine|kein|kann|werden|diese|mehr|zu|um|am|im|ab|unter|vor|ohne|durch|hier|sehr|dieser|diesem|jetzt|bereits|erneut|bitte|diesen|einen|einem|einer|wirklich|wurde|noch|dann|neue|neuer|neues|neuen|neuem|muss|sein|lang|pro|Tage|aktiv|generieren|bereit|gestartet|schnell|visuelle)\b/i;
+    const GERMAN_MARKERS = /[äöüßÄÖÜ]|\b(der|die|das|und|sie|ist|ein|eine|es|so|wo|da|ob|für|mit|von|nicht|oder|auf|den|dem|des|wird|sind|als|nach|bei|zum|zur|aus|über|ihre|ihrem|ihren|ihr|auch|noch|nur|aber|wenn|wie|alle|keine|kein|kann|werden|diese|mehr|zu|um|am|im|ab|unter|vor|ohne|durch|hier|sehr|dieser|diesem|jetzt|bereits|erneut|bitte|diesen|einen|einem|einer|wirklich|wurde|noch|dann|neue|neuer|neues|neuen|neuem|muss|sein|lang|pro|Tage|aktiv|generieren|bereit|gestartet|schnell|visuelle|Guthaben|Testgenerierung|Testausführung|Reparaturversuche|automatische)\b/i;
 
     for (const ns of NAMESPACES) {
       it(`de/${ns}.json — every non-brand value contains German markers`, () => {
