@@ -1,0 +1,427 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReconFeatureSection > snapshot: ar 1`] = `
+<section
+  aria-labelledby="recon-feature-heading"
+  class="py-16 sm:py-24 md:py-32 bg-muted/30"
+  id="recon"
+>
+  <div
+    class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+  >
+    <div
+      class="text-center max-w-3xl mx-auto mb-10 sm:mb-16"
+      data-motion="reveal"
+      style="opacity: 0; transform: translateY(8px);"
+    >
+      <div
+        class="inline-flex items-center rounded-full border px-2.5 py-0.5 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground mb-4 text-xs font-medium"
+      >
+        قيد الإصدار التجريبي
+      </div>
+      <h2
+        class="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight mb-3 sm:mb-4"
+        id="recon-feature-heading"
+      >
+        اختبار اختراق مع كل إصدار. ليس مرة في السنة.
+      </h2>
+      <p
+        class="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed"
+      >
+        يُجري Recon اختبار أمان مستقلاً بصندوق أبيض ضد تطبيقك ويُبلغ فقط عن الثغرات التي يمكنه استغلالها فعلياً.
+      </p>
+    </div>
+    <div
+      class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-10 sm:mb-12"
+      data-motion="stagger"
+    >
+      <div
+        class="rounded-lg border bg-card p-4 sm:p-6 hover:border-primary/50 transition-colors duration-150"
+        data-motion="reveal"
+        style="opacity: 0; transform: translateY(8px);"
+      >
+        <div
+          class="mb-3 sm:mb-4"
+        >
+          <div
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-shield-check w-4 h-4 sm:w-5 sm:h-5 text-primary"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+              />
+              <path
+                d="m9 12 2 2 4-4"
+              />
+            </svg>
+          </div>
+        </div>
+        <h3
+          class="text-base font-semibold text-foreground mb-2"
+        >
+          إثبات، لا مجرد نظرية
+        </h3>
+        <p
+          class="text-sm text-muted-foreground leading-relaxed"
+        >
+          كل نتيجة مرفقة بثغرة عاملة يمكنك إعادة تشغيلها.
+        </p>
+      </div>
+      <div
+        class="rounded-lg border bg-card p-4 sm:p-6 hover:border-primary/50 transition-colors duration-150"
+        data-motion="reveal"
+        style="opacity: 0; transform: translateY(8px);"
+      >
+        <div
+          class="mb-3 sm:mb-4"
+        >
+          <div
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-search w-4 h-4 sm:w-5 sm:h-5 text-primary"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M4.268 21a2 2 0 0 0 1.727 1H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v3"
+              />
+              <path
+                d="m9 18-1.5-1.5"
+              />
+              <circle
+                cx="5"
+                cy="14"
+                r="3"
+              />
+            </svg>
+          </div>
+        </div>
+        <h3
+          class="text-base font-semibold text-foreground mb-2"
+        >
+          يفهم الشيفرة المصدرية
+        </h3>
+        <p
+          class="text-sm text-muted-foreground leading-relaxed"
+        >
+          يقرأ Recon شيفرتك المصدرية ليركز الاختبار على ما يهم.
+        </p>
+      </div>
+      <div
+        class="rounded-lg border bg-card p-4 sm:p-6 hover:border-primary/50 transition-colors duration-150"
+        data-motion="reveal"
+        style="opacity: 0; transform: translateY(8px);"
+      >
+        <div
+          class="mb-3 sm:mb-4"
+        >
+          <div
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-zap w-4 h-4 sm:w-5 sm:h-5 text-primary"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+              />
+            </svg>
+          </div>
+        </div>
+        <h3
+          class="text-base font-semibold text-foreground mb-2"
+        >
+          عند الطلب
+        </h3>
+        <p
+          class="text-sm text-muted-foreground leading-relaxed"
+        >
+          شغّل اختبار اختراق كامل في ساعة تقريباً. كرّره بقدر ما تُصدر.
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
+      data-motion="reveal"
+      style="opacity: 0; transform: translateY(8px);"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-11 rounded-md px-8"
+      >
+        جرّب Recon
+        <svg
+          class="lucide lucide-arrow-right ms-2 h-5 w-5 rtl:scale-x-[-1]"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M5 12h14"
+          />
+          <path
+            d="m12 5 7 7-7 7"
+          />
+        </svg>
+      </button>
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-11 rounded-md px-8"
+        data-testid="recon-sample-report-trigger"
+      >
+        شاهد تقريراً نموذجياً
+      </button>
+    </div>
+  </div>
+</section>
+`;
+
+exports[`ReconFeatureSection > snapshot: en 1`] = `
+<section
+  aria-labelledby="recon-feature-heading"
+  class="py-16 sm:py-24 md:py-32 bg-muted/30"
+  id="recon"
+>
+  <div
+    class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+  >
+    <div
+      class="text-center max-w-3xl mx-auto mb-10 sm:mb-16"
+      data-motion="reveal"
+      style="opacity: 0; transform: translateY(8px);"
+    >
+      <div
+        class="inline-flex items-center rounded-full border px-2.5 py-0.5 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground mb-4 text-xs font-medium"
+      >
+        Now in beta
+      </div>
+      <h2
+        class="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight mb-3 sm:mb-4"
+        id="recon-feature-heading"
+      >
+        Pentest every release. Not once a year.
+      </h2>
+      <p
+        class="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed"
+      >
+        Recon runs an autonomous, white-box security test against your app and reports only the vulnerabilities it can actually exploit.
+      </p>
+    </div>
+    <div
+      class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-10 sm:mb-12"
+      data-motion="stagger"
+    >
+      <div
+        class="rounded-lg border bg-card p-4 sm:p-6 hover:border-primary/50 transition-colors duration-150"
+        data-motion="reveal"
+        style="opacity: 0; transform: translateY(8px);"
+      >
+        <div
+          class="mb-3 sm:mb-4"
+        >
+          <div
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-shield-check w-4 h-4 sm:w-5 sm:h-5 text-primary"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+              />
+              <path
+                d="m9 12 2 2 4-4"
+              />
+            </svg>
+          </div>
+        </div>
+        <h3
+          class="text-base font-semibold text-foreground mb-2"
+        >
+          Proof, not theory
+        </h3>
+        <p
+          class="text-sm text-muted-foreground leading-relaxed"
+        >
+          Every finding ships with a working exploit you can re-run.
+        </p>
+      </div>
+      <div
+        class="rounded-lg border bg-card p-4 sm:p-6 hover:border-primary/50 transition-colors duration-150"
+        data-motion="reveal"
+        style="opacity: 0; transform: translateY(8px);"
+      >
+        <div
+          class="mb-3 sm:mb-4"
+        >
+          <div
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-search w-4 h-4 sm:w-5 sm:h-5 text-primary"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M4.268 21a2 2 0 0 0 1.727 1H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v3"
+              />
+              <path
+                d="m9 18-1.5-1.5"
+              />
+              <circle
+                cx="5"
+                cy="14"
+                r="3"
+              />
+            </svg>
+          </div>
+        </div>
+        <h3
+          class="text-base font-semibold text-foreground mb-2"
+        >
+          Source-aware
+        </h3>
+        <p
+          class="text-sm text-muted-foreground leading-relaxed"
+        >
+          Recon reads your codebase to focus the test on what matters.
+        </p>
+      </div>
+      <div
+        class="rounded-lg border bg-card p-4 sm:p-6 hover:border-primary/50 transition-colors duration-150"
+        data-motion="reveal"
+        style="opacity: 0; transform: translateY(8px);"
+      >
+        <div
+          class="mb-3 sm:mb-4"
+        >
+          <div
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-zap w-4 h-4 sm:w-5 sm:h-5 text-primary"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+              />
+            </svg>
+          </div>
+        </div>
+        <h3
+          class="text-base font-semibold text-foreground mb-2"
+        >
+          On-demand
+        </h3>
+        <p
+          class="text-sm text-muted-foreground leading-relaxed"
+        >
+          Run a full pentest in about an hour. Repeat as often as you ship.
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
+      data-motion="reveal"
+      style="opacity: 0; transform: translateY(8px);"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-11 rounded-md px-8"
+      >
+        Try Recon
+        <svg
+          class="lucide lucide-arrow-right ms-2 h-5 w-5 rtl:scale-x-[-1]"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M5 12h14"
+          />
+          <path
+            d="m12 5 7 7-7 7"
+          />
+        </svg>
+      </button>
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-11 rounded-md px-8"
+        data-testid="recon-sample-report-trigger"
+      >
+        See a sample report
+      </button>
+    </div>
+  </div>
+</section>
+`;

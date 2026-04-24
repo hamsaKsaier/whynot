@@ -1,0 +1,171 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReconAnnouncementBanner > snapshot (ar) — rendered HTML contains no banned vocabulary 1`] = `
+<div
+  aria-label="وصل Recon."
+  class="border-b bg-muted/50 transition-opacity duration-150 opacity-100"
+  data-testid="recon-announcement-banner"
+  role="region"
+>
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 lg:px-8"
+  >
+    <div
+      class="flex items-start gap-3 sm:items-center"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-shield mt-0.5 h-5 w-5 shrink-0 text-primary sm:mt-0"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+        />
+      </svg>
+      <div
+        class="min-w-0"
+      >
+        <p
+          class="text-sm font-semibold text-foreground"
+        >
+          وصل Recon.
+        </p>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          نفّذ اختبار اختراق تلقائيًا لتطبيقك — لا يُبلَّغ إلا عن الثغرات المُثبَتة.
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex items-center gap-2 sm:shrink-0"
+    >
+      <a
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3 rounded-md"
+        href="/recon"
+      >
+        جرّب Recon
+      </a>
+      <button
+        aria-label="إغلاق"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-8 w-8"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-x h-4 w-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M18 6 6 18"
+          />
+          <path
+            d="m6 6 12 12"
+          />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReconAnnouncementBanner > snapshot (en) 1`] = `
+<div
+  aria-label="Recon is here."
+  class="border-b bg-muted/50 transition-opacity duration-150 opacity-100"
+  data-testid="recon-announcement-banner"
+  role="region"
+>
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 lg:px-8"
+  >
+    <div
+      class="flex items-start gap-3 sm:items-center"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-shield mt-0.5 h-5 w-5 shrink-0 text-primary sm:mt-0"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+        />
+      </svg>
+      <div
+        class="min-w-0"
+      >
+        <p
+          class="text-sm font-semibold text-foreground"
+        >
+          Recon is here.
+        </p>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Run an autonomous pentest against your app — only proven exploits are reported.
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex items-center gap-2 sm:shrink-0"
+    >
+      <a
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3 rounded-md"
+        href="/recon"
+      >
+        Try Recon
+      </a>
+      <button
+        aria-label="Dismiss"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-8 w-8"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-x h-4 w-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M18 6 6 18"
+          />
+          <path
+            d="m6 6 12 12"
+          />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+`;

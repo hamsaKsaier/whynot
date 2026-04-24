@@ -1,0 +1,39 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PricingSection > Recon row > matches snapshot in ar 1`] = `
+<div
+  class="mb-6 border-t border-border pt-4 flex items-start justify-between gap-2"
+  data-testid="recon-row-pro_byo"
+>
+  <span
+    class="text-sm text-muted-foreground"
+  >
+    فحوصات Recon الأمنية
+  </span>
+  <a
+    class="text-sm font-medium text-foreground hover:text-primary transition-colors duration-150 text-end"
+    href="/docs/recon/quotas"
+  >
+    فحص واحد مُدرَج شهريًا
+  </a>
+</div>
+`;
+
+exports[`PricingSection > Recon row > matches snapshot in en 1`] = `
+<div
+  class="mb-6 border-t border-border pt-4 flex items-start justify-between gap-2"
+  data-testid="recon-row-pro_byo"
+>
+  <span
+    class="text-sm text-muted-foreground"
+  >
+    Recon — security scans
+  </span>
+  <a
+    class="text-sm font-medium text-foreground hover:text-primary transition-colors duration-150 text-end"
+    href="/docs/recon/quotas"
+  >
+    1 included scan/month
+  </a>
+</div>
+`;
