@@ -45,7 +45,7 @@ export const ReconSettingsTab: React.FC = () => {
   const load = useCallback(async () => {
     try {
       const [settingsRes, membersRes] = await Promise.all([
-        apiClient.get('/api/recon/settings'),
+        apiClient.get('/recon/settings'),
         apiClient.get('/me/organization/members'),
       ]);
       const next = { ...DEFAULT_SETTINGS, ...(settingsRes.data.settings ?? {}) };
@@ -125,7 +125,7 @@ export const ReconSettingsTab: React.FC = () => {
         email_on_fail: settings.emailOnFail,
         payg_cap_credits: capNumber,
       };
-      const res = await apiClient.put('/api/recon/settings', payload);
+      const res = await apiClient.put('/recon/settings', payload);
       const next = { ...DEFAULT_SETTINGS, ...(res.data.settings ?? {}) };
       setSettings(next);
       setCapInput(String(next.paygCapCredits ?? 0));

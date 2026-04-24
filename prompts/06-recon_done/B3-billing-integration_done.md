@@ -68,3 +68,20 @@ The `POST /api/recon/scans` handler (created in C6) will call:
 - `gateway/src/services/billing-service.ts` (or wherever `BillingService` lives — confirm via `grep -r 'class BillingService' gateway/`)
 - `gateway/src/__tests__/payments/billing-service.test.ts`
 - All 10 `gateway/src/i18n/translations/{en,ar,fr,de,es}/{billing,errors}.json`
+
+---
+
+### Appendix: Plan taxonomy reconciliation (migration 054)
+
+This spec was authored against the architectural plan slugs (`free`, `pro_byo`, `pro_managed`) defined in `shared/constants/pricing.ts`. At implementation time, the DB retained the legacy slugs seeded by migration 021 (`free-trial`, `starter`, `pro`, `enterprise`) — the two taxonomies never converged. As a result, the recon feature seeder silently no-oped against every paying customer.
+
+Migration `054_reconcile_plan_taxonomy.sql` resolves this:
+
+- Adds `tier` column to `plans`; inserts the architectural plans (`free`, `pro_byo`, `pro_managed`).
+- Hides legacy plans from new signups (`is_public = false`) but keeps them selectable for grandfathered `workspace_subscriptions` rows. No subscription data is migrated.
+- Sets `tier = 'managed_payg'` on legacy `pro` and `enterprise` (matches the `$99/mo` platform-managed experience existing customers signed up for, so `SubscriptionManager.isManagedPaygTier` routes PAYG debits correctly).
+- Carries non-recon `plan_features` forward: `free-trial → free`, `starter → pro_byo`, `pro → pro_managed`.
+
+The recon entitlement constant is extended into `RECON_PLAN_FEATURES_BY_SLUG`, which covers both taxonomies in one lookup table; `DEFAULT_RECON_PLAN_FEATURES` becomes a strictly-typed projection over the architectural slugs. `seedReconPlanFeatures()` iterates the map so every plan row present in the DB — architectural or legacy — receives `recon_enabled` and `recon_monthly_scans`. Legacy quotas mirror their architectural counterparts: `starter = pro_byo = 1`, `pro = pro_managed = 3`, `enterprise = 99`.
+
+Sunset plan: once all legacy subscriptions have churned or been explicitly upgraded, a follow-up migration can archive the legacy `plans` rows and the legacy entries in `RECON_PLAN_FEATURES_BY_SLUG` can be removed.

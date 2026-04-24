@@ -65,21 +65,21 @@ function serializeParams(params: ListReconScansParams): Record<string, string> {
 export const listReconScans = async (
   params: ListReconScansParams = {},
 ): Promise<ListReconScansResponse> => {
-  const response = await apiClient.get<ListReconScansResponse>("/api/recon/scans", {
+  const response = await apiClient.get<ListReconScansResponse>("/recon/scans", {
     params: serializeParams(params),
   });
   return response.data;
 };
 
 export const cancelReconScan = async (id: string): Promise<void> => {
-  await apiClient.post(`/api/recon/scans/${id}/cancel`);
+  await apiClient.post(`/recon/scans/${id}/cancel`);
 };
 
 export const resumeReconScan = async (
   id: string,
   targetUrl: string,
 ): Promise<void> => {
-  await apiClient.post(`/api/recon/scans/${id}/resume`, {
+  await apiClient.post(`/recon/scans/${id}/resume`, {
     target_url: targetUrl,
   });
 };
@@ -108,7 +108,7 @@ export const createReconScan = async (
   payload: CreateReconScanRequest,
 ): Promise<CreateReconScanResponse> => {
   const response = await apiClient.post<CreateReconScanResponse>(
-    "/api/recon/scans",
+    "/recon/scans",
     payload,
   );
   return response.data;
@@ -124,7 +124,7 @@ export interface ReconQuotaResponse {
 
 export const getReconQuota = async (): Promise<ReconQuotaResponse> => {
   const response = await apiClient.get<ReconQuotaResponse>(
-    "/api/recon/quota",
+    "/recon/quota",
   );
   return response.data;
 };
@@ -207,7 +207,7 @@ export interface ReconScanArtifact {
 
 export const getReconScan = async (id: string): Promise<ReconScanDetail> => {
   const response = await apiClient.get<ReconScanDetail>(
-    `/api/recon/scans/${id}`,
+    `/recon/scans/${id}`,
   );
   return response.data;
 };
@@ -222,7 +222,7 @@ export const listReconFindings = async (
     query.vuln_classes = params.vuln_classes.join(",");
   if (params.sort) query.sort = params.sort;
   const response = await apiClient.get<{ findings: ReconFinding[] }>(
-    `/api/recon/scans/${id}/findings`,
+    `/recon/scans/${id}/findings`,
     { params: query },
   );
   return response.data;
@@ -232,7 +232,7 @@ export const getReconReport = async (
   id: string,
 ): Promise<{ markdown: string }> => {
   const response = await apiClient.get<{ markdown: string }>(
-    `/api/recon/scans/${id}/report`,
+    `/recon/scans/${id}/report`,
   );
   return response.data;
 };
@@ -241,7 +241,7 @@ export const listReconArtifacts = async (
   id: string,
 ): Promise<{ artifacts: ReconScanArtifact[] }> => {
   const response = await apiClient.get<{ artifacts: ReconScanArtifact[] }>(
-    `/api/recon/scans/${id}/artifacts`,
+    `/recon/scans/${id}/artifacts`,
   );
   return response.data;
 };

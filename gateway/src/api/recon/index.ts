@@ -15,6 +15,9 @@
  *   GET    /api/recon/scans/:id/report
  *   POST   /api/recon/scans/:id/cancel
  *   POST   /api/recon/scans/:id/resume
+ *   GET    /api/recon/quota
+ *   GET    /api/recon/settings
+ *   PUT    /api/recon/settings
  */
 
 import express, { Request, Response, NextFunction } from 'express';
@@ -88,7 +91,7 @@ const createScanSchema = z.object({
   project_id: z.string().uuid(),
   environment_id: z.string().uuid(),
   target_url: targetUrlSchema,
-  config_yaml: z.string().max(64_000).optional(),
+  config_yaml: z.string().max(64_000).nullable().optional(),
   authorization: authorizationInputSchema,
 });
 
@@ -254,7 +257,7 @@ router.post(
       environment_id: body.environment_id,
       target_url: body.target_url,
       created_by_user_id: user.id,
-      config_yaml: body.config_yaml,
+      config_yaml: body.config_yaml ?? undefined,
     });
 
     // Persist authorization row (recon-safety #1). This table is append-only.
@@ -543,6 +546,28 @@ router.post(
       success: true,
       message: (req as any).t('success:recon.scan.resumed'),
       scan: serializeScan(resumed ?? scan),
+    });
+  }),
+);
+
+/**
+ * GET /api/recon/quota — current workspace's per-month Recon scan quota.
+ * Used by the New Scan wizard's Cost Preview (Step 3).
+ *   - mode:         "included" when the plan has remaining included scans,
+ *                   otherwise "payg" (caller will be charged per scan).
+ *   - remaining:    included scans remaining this calendar month.
+ *   - cost_credits: PAYG cost per scan as a decimal string (BigInt-safe).
+ */
+router.get(
+  '/quota',
+  asyncHandler(async (req: Request, res: Response) => {
+    const workspaceId = req.workspaceId!;
+    const quota = await BillingService.checkReconQuota(workspaceId);
+    const mode = quota.included_remaining > 0 ? 'included' : 'payg';
+    res.json({
+      mode,
+      remaining: quota.included_remaining,
+      cost_credits: quota.payg_per_scan_credits.toString(),
     });
   }),
 );

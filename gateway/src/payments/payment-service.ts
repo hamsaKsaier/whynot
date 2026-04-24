@@ -756,8 +756,15 @@ export class PaymentService {
   // BILLING OPERATIONS (ported from BillingService)
   // ===========================================================================
 
-  static async provisionNewWorkspace(workspaceId: string, planSlug: string = 'free-trial'): Promise<void> {
-    const plan = await planRepo.findBySlug(planSlug);
+  static async provisionNewWorkspace(workspaceId: string, planSlug: string = 'free'): Promise<void> {
+    // New signups land on the architectural `free` plan (post-migration 054).
+    // The legacy `'free-trial'` slug remains selectable by explicit caller.
+    // Fall back to legacy `'free-trial'` if `'free'` hasn't been inserted yet
+    // (i.e. a stale DB without migration 054 applied).
+    let plan = await planRepo.findBySlug(planSlug);
+    if (!plan && planSlug === 'free') {
+      plan = await planRepo.findBySlug('free-trial');
+    }
     if (!plan) return;
 
     const now = new Date();

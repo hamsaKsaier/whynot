@@ -36,6 +36,7 @@ import { UserRepository } from '../../shared/database/repositories/user-reposito
 import { startCleanupScheduler, runCleanup } from '../services/cleanup-service';
 import { seedAdminUser } from '../../shared/database/seeds/admin-user';
 import { seedFeatureFlags } from '../../shared/database/seeds/feature-flags';
+import { seedReconPlanFeatures } from '../../shared/database/seeds/plan-features';
 import { requireCredits, deductCredits } from '../middleware/credit-gate';
 import { recordUsageEvent } from '../utils/usage-tracker';
 import { requireFeature, requireFeatureLimit } from '../middleware/feature-gate';
@@ -3826,6 +3827,10 @@ if (env.NODE_ENV !== 'test') {
     seedFeatureFlags()
       .then(() => logger.info('Feature flags seeded'))
       .catch((err: any) => logger.error('Feature flags seed failed', { error: err.message }));
+
+    seedReconPlanFeatures()
+      .then(() => logger.info('Recon plan features seeded'))
+      .catch((err: any) => logger.error('Recon plan features seed failed', { error: err.message }));
 
     if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
       seedAdminUser(env.ADMIN_EMAIL, env.ADMIN_PASSWORD, env.ADMIN_NAME)

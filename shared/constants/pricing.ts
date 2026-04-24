@@ -53,8 +53,34 @@ export const RECON_PAYG_EVENT_TYPES = [
 
 export type ReconPaygEventType = (typeof RECON_PAYG_EVENT_TYPES)[number];
 
-export const DEFAULT_RECON_PLAN_FEATURES: Record<PlanSlug, { recon_enabled: boolean; recon_monthly_scans: number }> = {
-  free: { recon_enabled: false, recon_monthly_scans: 0 },
-  pro_byo: { recon_enabled: true, recon_monthly_scans: 1 },
-  pro_managed: { recon_enabled: true, recon_monthly_scans: 3 },
+export interface ReconPlanFeatures {
+  recon_enabled: boolean;
+  recon_monthly_scans: number;
+}
+
+// Recon entitlement per plan slug. Keyed on a string (not PlanSlug) because
+// the DB retains legacy plan slugs (free-trial, starter, pro, enterprise)
+// after migration 054 as grandfathered options — existing subscriptions keep
+// their original plan_id while new signups get the architectural slugs
+// (free, pro_byo, pro_managed). The seeder iterates this map so every DB
+// plan row, old or new, receives the correct recon entitlement.
+export const RECON_PLAN_FEATURES_BY_SLUG: Record<string, ReconPlanFeatures> = {
+  // Architectural (post-054 canonical)
+  free:         { recon_enabled: false, recon_monthly_scans: 0 },
+  pro_byo:      { recon_enabled: true,  recon_monthly_scans: 1 },
+  pro_managed:  { recon_enabled: true,  recon_monthly_scans: 3 },
+  // Legacy (pre-054; grandfathered; kept in lockstep with their architectural
+  // counterparts so active customers get recon without a subscription-data
+  // migration).
+  'free-trial': { recon_enabled: false, recon_monthly_scans: 0 },
+  starter:      { recon_enabled: true,  recon_monthly_scans: 1 },
+  pro:          { recon_enabled: true,  recon_monthly_scans: 3 },
+  enterprise:   { recon_enabled: true,  recon_monthly_scans: 99 },
 };
+
+// Strictly-typed projection for callers that expect only architectural slugs.
+export const DEFAULT_RECON_PLAN_FEATURES: Record<PlanSlug, ReconPlanFeatures> =
+  VALID_PLAN_SLUGS.reduce((acc, slug) => {
+    acc[slug] = RECON_PLAN_FEATURES_BY_SLUG[slug];
+    return acc;
+  }, {} as Record<PlanSlug, ReconPlanFeatures>);

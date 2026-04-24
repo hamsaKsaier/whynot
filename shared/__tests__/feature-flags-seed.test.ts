@@ -22,10 +22,10 @@ describe('feature-flags seed', () => {
     expect(keys).toContain('recon_enabled');
   });
 
-  it('LANGUAGE_SWITCHER and RECON_ENABLED are enabled by default', async () => {
+  it('only LANGUAGE_SWITCHER is enabled by default', async () => {
     const { FLAG_SEEDS } = await import('../database/seeds/feature-flags');
     const enabled = FLAG_SEEDS.filter((f) => f.default_enabled).map((f) => f.key).sort();
-    expect(enabled).toEqual(['language_switcher', 'recon_enabled']);
+    expect(enabled).toEqual(['language_switcher']);
   });
 
   it('each seed has required fields', async () => {

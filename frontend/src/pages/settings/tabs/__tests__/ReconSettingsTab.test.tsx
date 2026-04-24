@@ -91,7 +91,7 @@ const defaultSettings = {
 function setupMocks(overrides: Partial<typeof defaultSettings> = {}) {
   const settings = { ...defaultSettings, ...overrides };
   mockGet.mockImplementation(async (url: string) => {
-    if (url === '/api/recon/settings') return { data: { success: true, settings } };
+    if (url === '/recon/settings') return { data: { success: true, settings } };
     if (url === '/me/organization/members') return { data: { members: mockMembers } };
     return { data: {} };
   });
@@ -163,7 +163,7 @@ describe('ReconSettingsTab — behavior', () => {
   it('loads initial settings and members', async () => {
     render(<ReconSettingsTab />);
     await waitFor(() => {
-      expect(mockGet).toHaveBeenCalledWith('/api/recon/settings');
+      expect(mockGet).toHaveBeenCalledWith('/recon/settings');
       expect(mockGet).toHaveBeenCalledWith('/me/organization/members');
     });
     expect(screen.getByText('No recipients selected')).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe('ReconSettingsTab — behavior', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(mockPut).toHaveBeenCalledWith(
-        '/api/recon/settings',
+        '/recon/settings',
         expect.objectContaining({ notify_recipient_user_ids: [] }),
       );
     });
@@ -238,7 +238,7 @@ describe('ReconSettingsTab — behavior', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith('/api/recon/settings', {
+      expect(mockPut).toHaveBeenCalledWith('/recon/settings', {
         notify_recipient_user_ids: [],
         email_on_complete: true,
         email_on_fail: true,

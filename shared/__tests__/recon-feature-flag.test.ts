@@ -18,11 +18,11 @@ describe('recon_enabled feature flag', () => {
     expect(isValidFeatureKey('recon_enabled')).toBe(true);
   });
 
-  it('seed row exists with default_enabled: true', async () => {
+  it('seed row exists with default_enabled: false', async () => {
     const { FLAG_SEEDS } = await import('../database/seeds/feature-flags');
     const recon = FLAG_SEEDS.find((f) => f.key === 'recon_enabled');
     expect(recon).toBeDefined();
-    expect(recon!.default_enabled).toBe(true);
+    expect(recon!.default_enabled).toBe(false);
     expect(recon!.name).toBeTruthy();
     expect(recon!.description).toBe('Recon AI pentester');
   });
@@ -36,7 +36,7 @@ describe('recon_enabled feature flag', () => {
       (c: any[]) => Array.isArray(c[1]) && c[1][0] === 'recon_enabled'
     );
     expect(reconCall).toBeDefined();
-    expect(reconCall[1]).toEqual(['recon_enabled', 'Recon', 'Recon AI pentester', true]);
+    expect(reconCall[1]).toEqual(['recon_enabled', 'Recon', 'Recon AI pentester', false]);
     expect(reconCall[0]).toContain('ON CONFLICT');
   });
 });

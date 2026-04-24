@@ -362,6 +362,16 @@ describe('POST /api/recon/scans — create', () => {
     expect(authRow.scan_id).toBe(res.body.scan.id);
   });
 
+  it('accepts config_yaml: null from the wizard (no file uploaded)', async () => {
+    const res = await request(app())
+      .post('/api/recon/scans')
+      .set('x-test-user-id', USER)
+      .set('x-test-workspace-id', WS)
+      .send(validCreatePayload({ config_yaml: null }));
+    expect(res.status).toBe(201);
+    expect(res.body.scan.id).toBeDefined();
+  });
+
   it('returns a production warning when environment name contains "prod"', async () => {
     const res = await request(app())
       .post('/api/recon/scans')
@@ -696,5 +706,92 @@ describe('POST /api/recon/scans/:id/resume', () => {
       .set('x-test-workspace-id', WS)
       .send({ target_url: scan.target_url });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/recon/quota', () => {
+  it('returns included mode when plan has remaining scans', async () => {
+    h.mockCheckReconQuota.mockResolvedValue({
+      included_remaining: 3,
+      payg_per_scan_credits: 5000n,
+    });
+    const res = await request(app())
+      .get('/api/recon/quota')
+      .set('x-test-user-id', USER)
+      .set('x-test-workspace-id', WS);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      mode: 'included',
+      remaining: 3,
+      cost_credits: '5000',
+    });
+    expect(h.mockCheckReconQuota).toHaveBeenCalledWith(WS);
+  });
+
+  it('returns payg mode when no included quota remains', async () => {
+    h.mockCheckReconQuota.mockResolvedValue({
+      included_remaining: 0,
+      payg_per_scan_credits: 5000n,
+    });
+    const res = await request(app())
+      .get('/api/recon/quota')
+      .set('x-test-user-id', USER)
+      .set('x-test-workspace-id', WS);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      mode: 'payg',
+      remaining: 0,
+      cost_credits: '5000',
+    });
+  });
+
+  it('falls back to payg once included scans are exhausted', async () => {
+    h.mockCheckReconQuota.mockResolvedValue({
+      included_remaining: 0,
+      payg_per_scan_credits: 5000n,
+    });
+    const res = await request(app())
+      .get('/api/recon/quota')
+      .set('x-test-user-id', USER)
+      .set('x-test-workspace-id', WS);
+    expect(res.body.mode).toBe('payg');
+    expect(res.body.remaining).toBe(0);
+  });
+
+  it('passes the caller workspaceId to BillingService (multi-tenancy)', async () => {
+    h.mockCheckReconQuota.mockResolvedValue({
+      included_remaining: 1,
+      payg_per_scan_credits: 0n,
+    });
+    const res = await request(app())
+      .get('/api/recon/quota')
+      .set('x-test-user-id', USER)
+      .set('x-test-workspace-id', OTHER_WS);
+    expect(res.status).toBe(200);
+    expect(h.mockCheckReconQuota).toHaveBeenCalledWith(OTHER_WS);
+    expect(h.mockCheckReconQuota).not.toHaveBeenCalledWith(WS);
+  });
+
+  it('anonymous request → 401', async () => {
+    const res = await request(app()).get('/api/recon/quota');
+    expect(res.status).toBe(401);
+  });
+
+  it('flag disabled → 404', async () => {
+    h.mockIsFlagEnabled.mockResolvedValue(false);
+    const res = await request(app())
+      .get('/api/recon/quota')
+      .set('x-test-user-id', USER)
+      .set('x-test-workspace-id', WS);
+    expect(res.status).toBe(404);
+  });
+
+  it('plan without recon_enabled → 403', async () => {
+    h.mockPlanRepo.getFeatures.mockResolvedValue([]);
+    const res = await request(app())
+      .get('/api/recon/quota')
+      .set('x-test-user-id', USER)
+      .set('x-test-workspace-id', WS);
+    expect(res.status).toBe(403);
   });
 });
