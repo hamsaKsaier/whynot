@@ -29,5 +29,8 @@ ENV GATEWAY_URL=gateway:3000
 
 EXPOSE 80
 
-# Substitute only our env vars, leaving nginx variables intact
-CMD ["/bin/sh", "-c", "envsubst '${PORT} ${GATEWAY_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Substitute env vars at startup, auto-detect DNS resolver from /etc/resolv.conf.
+# Wrap IPv6 addresses in brackets for nginx resolver directive. This is the same
+# pattern as frontend/Dockerfile — required so nginx can re-resolve
+# *.railway.internal hosts per-request (Railway DNS is IPv6 and changes on redeploy).
+CMD ["/bin/sh", "-c", "RAW_NS=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf) && case \"$RAW_NS\" in *:*) export RESOLVER=\"[$RAW_NS]\";; *) export RESOLVER=\"$RAW_NS\";; esac && envsubst '${PORT} ${GATEWAY_URL} ${RESOLVER}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

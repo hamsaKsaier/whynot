@@ -4,14 +4,24 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Use container's DNS resolver with short TTL for dynamic service discovery.
+    # Railway internal DNS (.railway.internal) is IPv6 and changes on redeploys —
+    # nginx must re-resolve per-request, not cache at startup. Without this the
+    # upstream silently 499s. Copied from frontend/nginx.conf.template.
+    resolver ${RESOLVER} valid=10s ipv6=off;
+
     # SPA: route all non-file requests to index.html
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # Proxy API calls to gateway
+    # Proxy API calls to gateway.
+    # `set $gateway_upstream` + variable proxy_pass forces nginx to re-resolve
+    # ${GATEWAY_URL} on every request via the resolver above (instead of
+    # baking the IP at startup, which is what produced the 499s).
     location /api/ {
-        proxy_pass http://${GATEWAY_URL};
+        set $gateway_upstream ${GATEWAY_URL};
+        proxy_pass http://$gateway_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
