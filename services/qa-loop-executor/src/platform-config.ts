@@ -17,7 +17,16 @@ interface PlatformConfig {
   fallbackOrder: string[];
 }
 
+// TTL'd in-memory cache. The executor caches the provider config to avoid
+// hammering the gateway on every scan start, but a stale cache silently
+// breaks the "save key in admin UI → next scan uses new key" flow because
+// the gateway has no out-of-band signal to the executor when admin saves.
+// 60s TTL is the compromise: admin changes propagate within a minute, and
+// we still save ~95% of the per-scan fetches. Call
+// `invalidatePlatformConfigCache()` to force immediate re-fetch.
+const CACHE_TTL_MS = 60_000;
 let cachedConfig: PlatformConfig | null = null;
+let cacheExpiresAt = 0;
 
 /**
  * Build a PlatformConfig from local env vars. Used as graceful fallback
@@ -91,11 +100,11 @@ function buildPlatformConfigFromEnv(): PlatformConfig {
  * Timeout shortened from 10s → 3s since we have a safe fallback — no
  * point stalling boot for 10s on a Railway cold-start race.
  *
- * Results are cached in memory — call `invalidatePlatformConfigCache()`
- * to force a re-fetch.
+ * Results are cached in memory with a 60s TTL — call
+ * `invalidatePlatformConfigCache()` to force immediate re-fetch.
  */
 export async function getPlatformConfig(): Promise<PlatformConfig> {
-  if (cachedConfig) return cachedConfig;
+  if (cachedConfig && Date.now() < cacheExpiresAt) return cachedConfig;
 
   const gatewayUrl = process.env.GATEWAY_URL || 'http://gateway:3010';
   try {
@@ -103,6 +112,7 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
       timeout: 3_000,
     });
     cachedConfig = res.data;
+    cacheExpiresAt = Date.now() + CACHE_TTL_MS;
     return cachedConfig!;
   } catch (error: any) {
     // Fall back to env-var-derived config so startup never blocks.
@@ -116,6 +126,7 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
       fallbackProviders: fallback.providers.map(p => p.provider),
     });
     cachedConfig = fallback;
+    cacheExpiresAt = Date.now() + CACHE_TTL_MS;
     return fallback;
   }
 }
@@ -135,4 +146,5 @@ export async function getPlatformKey(provider: string): Promise<string | null> {
  */
 export function invalidatePlatformConfigCache(): void {
   cachedConfig = null;
+  cacheExpiresAt = 0;
 }
