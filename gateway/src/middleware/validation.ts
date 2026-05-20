@@ -3,6 +3,62 @@ import { z, ZodError, ZodIssue } from 'zod';
 import { createError } from './error-handler';
 
 /**
+ * Spam-content guard for free-form text fields that get rendered to users
+ * (e.g. `users.name` which is also written into `workspaces.name` via the
+ * `${name}'s Workspace` template in seedAdminUser).
+ *
+ * Bots target these fields to smuggle promotional URLs and emoji-heavy
+ * gambling/casino content onto your domain. Caught one wave on 2026-05-13:
+ * 3 signups within 9 seconds with name = "🚀5.000 TL - Tam İade Garantili!
+ * https://bit.ly/BestBonus4U 🚀".
+ *
+ * Designed to be PERMISSIVE on legitimate names:
+ *   - Allows all Unicode letters (Arabic, Cyrillic, CJK, accents, etc.)
+ *   - Allows apostrophes, hyphens, spaces, periods (O'Brien, Jean-Paul, Mr.)
+ *   - Allows up to 2 emoji (lets people add a flag/heart if they want)
+ *
+ * Designed to be STRICT on the actual attack patterns:
+ *   - Any URL-like substring (http://, https://, www., bit.ly, tinyurl, etc.)
+ *   - >2 emoji (the 🚀-bombing pattern)
+ *   - Gambling/promo keywords in TR/RU/EN — extend as new waves appear
+ *
+ * Returns true if the value is CLEAN (passes the filter). Used in zod
+ * `.refine()` calls — see the `register` schema below.
+ */
+function isCleanFreeTextName(value: string): boolean {
+  // Empty / whitespace-only handled elsewhere by .min(1)
+  const v = value.trim();
+  if (v.length === 0) return true;
+
+  // 1. URL / link-shortener detection.
+  //    Catches: http://, https://, www., bit.ly, tinyurl, cutt.ly, t.co, goo.gl,
+  //             tiny.cc, is.gd, ow.ly, buff.ly, t.me, shorturl, rebrand.ly
+  const urlPattern = /\b(https?:\/\/|www\.|bit\.ly|tinyurl|cutt\.ly|t\.co|goo\.gl|tiny\.cc|is\.gd|ow\.ly|buff\.ly|t\.me|shorturl|rebrand\.ly)\b/i;
+  if (urlPattern.test(v)) return false;
+
+  // 2. Emoji density. Allow up to 2; reject more.
+  //    Uses Unicode property escape — requires ES2018+ regex support
+  //    (Node 12+, which we are well past).
+  const emojiMatches = v.match(/\p{Extended_Pictographic}/gu) || [];
+  if (emojiMatches.length > 2) return false;
+
+  // 3. Promo / gambling keyword blocklist. Case-insensitive substring match.
+  //    Extend as new attack waves appear. Keep keywords specific enough that
+  //    legitimate names don't trigger (e.g. "casino" yes, but not "cas").
+  const lower = v.toLowerCase();
+  const promoKeywords = [
+    'bonus', 'garantili', 'i̇ade', 'iade', 'kazanc', 'kazanç',
+    'casino', 'kasino', 'bahis', 'kumar', 'slot', 'bedava',
+    'free spin', 'freespin', 'jackpot',
+    'казино', 'бонус', 'ставк', 'выигр',
+    'tl bonus', '5000 tl', '5.000 tl', '5,000 tl',
+  ];
+  if (promoKeywords.some(kw => lower.includes(kw))) return false;
+
+  return true;
+}
+
+/**
  * Validation middleware factory
  */
 export function validate(schema: z.ZodSchema) {
@@ -214,7 +270,11 @@ export const schemas = {
       .max(128, 'Password must not exceed 128 characters'),
     name: z.string()
       .min(1, 'Name is required')
-      .max(100, 'Name must not exceed 100 characters'),
+      .max(100, 'Name must not exceed 100 characters')
+      // Reject names containing URLs, excessive emoji, or gambling keywords.
+      // Error message is intentionally generic — don't tell attackers which
+      // rule they hit. Legitimate users with normal names won't see this.
+      .refine(isCleanFreeTextName, { message: 'Name contains disallowed content' }),
   }),
 
   login: z.object({
