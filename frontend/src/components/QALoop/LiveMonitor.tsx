@@ -693,7 +693,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
             </div>
             {/* Structured Content */}
             {showThinking ? (
-              <div ref={thinkingContainerRef} className="flex-1 overflow-y-auto font-mono text-xs sm:text-sm h-[40vh] md:h-[50vh] lg:h-[500px]"
+              <div ref={thinkingContainerRef} className="overflow-y-auto font-mono text-xs sm:text-sm max-h-[40vh] md:max-h-[50vh] lg:max-h-[500px]"
                 aria-live="polite">
                 {thinkingLines.length === 0 ? (
                   <div className="p-4">
