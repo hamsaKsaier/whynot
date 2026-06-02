@@ -257,8 +257,10 @@ export class QALeadWatcher {
     agents: AgentRuntimeProbe[],
     idle: AgentRuntimeProbe[],
   ): Promise<z.infer<typeof DecisionSchema> | null> {
-    // Force Sonnet for cost. Opus is reserved for plan + synthesis.
-    const { model, modelId } = selectModel('security');
+    // Uses the admin-configured default model (per-agent tiers no longer
+    // apply under admin-managed config). The 'security' hint only matters
+    // for the legacy env fallback.
+    const { model, modelId } = await selectModel('security');
     const prompt = this.buildPrompt(agents, idle);
     const messages: ModelMessage[] = [{ role: 'user', content: prompt }];
 

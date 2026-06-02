@@ -106,77 +106,138 @@ export function computeCostCents(
   return Math.ceil(costDollars * 100); // cents, rounded up
 }
 
-export function selectModel(agentType?: string): { model: LanguageModel; name: string; modelId: string } {
-  // Priority 1: OpenRouter (paid, tool-calling capable)
-  // Uses createOpenAICompatible (not createOpenAI) to force /chat/completions endpoint.
-  // createOpenAI defaults to the OpenAI Responses API which OpenRouter does not support.
+/**
+ * Build an AI SDK LanguageModel for a given provider + model + key.
+ * Shared by the admin-config-driven path and the env fallback so both
+ * construct providers identically.
+ */
+function buildModel(
+  provider: string,
+  modelId: string,
+  apiKey: string,
+): { model: LanguageModel; name: string; modelId: string } {
+  switch (provider) {
+    case 'openrouter': {
+      // createOpenAICompatible (not createOpenAI) forces the /chat/completions
+      // endpoint; createOpenAI defaults to the Responses API which OpenRouter
+      // does not support.
+      const openrouter = createOpenAICompatible({
+        name: 'openrouter',
+        apiKey,
+        baseURL: 'https://openrouter.ai/api/v1',
+        headers: { 'HTTP-Referer': 'https://whynotqa.com', 'X-Title': 'WhyNot QA' },
+      });
+      return { model: openrouter(modelId), name: `OpenRouter (${modelId})`, modelId };
+    }
+    case 'google': {
+      const google = createGoogleGenerativeAI({ apiKey });
+      return { model: google(modelId), name: `Google ${modelId}`, modelId };
+    }
+    case 'z-ai': {
+      const zai = createOpenAICompatible({
+        name: 'z-ai',
+        apiKey,
+        baseURL: process.env.Z_AI_BASE_URL || 'https://api.z.ai/api/paas/v4/',
+      });
+      return { model: zai(modelId), name: `GLM via Z.ai (${modelId})`, modelId };
+    }
+    case 'anthropic': {
+      const anthropic = createAnthropic({ apiKey });
+      return { model: anthropic(modelId), name: `Anthropic ${modelId}`, modelId };
+    }
+    case 'openai': {
+      const openai = createOpenAI({ apiKey });
+      return { model: openai(modelId), name: `OpenAI ${modelId}`, modelId };
+    }
+    default:
+      throw new Error(`Unknown provider "${provider}" in platform config`);
+  }
+}
+
+/**
+ * Resolve the model for an agent from the ADMIN-MANAGED platform config
+ * (gateway DB, fetched via getPlatformConfig). The admin "AI Providers" page
+ * is the single source of truth:
+ *   - defaultProvider {provider, model} → what every agent uses
+ *   - providers[].apiKey                → decrypted key from the DB
+ *   - fallbackOrder                     → tried in order if no explicit default
+ *
+ * Environment variables are now ONLY a cold-start fallback (used when the
+ * gateway is unreachable at boot — getPlatformConfig itself synthesizes a
+ * config from env in that case, and selectModelFromEnv is the last resort).
+ *
+ * NOTE: per-agent model tiers (Opus for qa_lead, Sonnet for specialists) are
+ * NOT expressed in the admin config today — all agents use the single admin
+ * default model. The env fallback preserves the old qa_lead→Opus tiering for
+ * parity. If the cost/quality tradeoff warrants it, add a per-agent model map
+ * to the admin UI later.
+ */
+export async function selectModel(agentType?: string): Promise<{ model: LanguageModel; name: string; modelId: string }> {
+  try {
+    const { getPlatformConfig } = await import('../../platform-config');
+    const cfg = await getPlatformConfig();
+
+    // 1. Explicit admin default provider + model.
+    const dp = cfg.defaultProvider;
+    if (dp?.provider) {
+      const entry = cfg.providers.find(p => p.provider === dp.provider && p.apiKey);
+      const modelId = dp.model || entry?.defaultModel;
+      if (entry && modelId) return buildModel(dp.provider, modelId, entry.apiKey);
+    }
+
+    // 2. No usable default → walk fallbackOrder, then any remaining provider.
+    const order = cfg.fallbackOrder?.length ? cfg.fallbackOrder : cfg.providers.map(p => p.provider);
+    for (const prov of order) {
+      const entry = cfg.providers.find(p => p.provider === prov && p.apiKey && p.defaultModel);
+      if (entry) return buildModel(prov, entry.defaultModel, entry.apiKey);
+    }
+
+    logger.warn('selectModel: platform config had no usable provider — falling back to env', {
+      providerCount: cfg.providers.length,
+      agentType,
+    });
+  } catch (err: any) {
+    logger.warn('selectModel: platform config unavailable — falling back to env', {
+      error: err?.message,
+      agentType,
+    });
+  }
+
+  return selectModelFromEnv(agentType);
+}
+
+/**
+ * Legacy env-var model selection. Cold-start / last-resort fallback only.
+ * Preserves the qa_lead→Opus, specialists→Sonnet tiering.
+ */
+function selectModelFromEnv(agentType?: string): { model: LanguageModel; name: string; modelId: string } {
+  // Priority 1: OpenRouter
   if (process.env.OPENROUTER_API_KEY) {
-    const openrouter = createOpenAICompatible({
-      name: 'openrouter',
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: 'https://openrouter.ai/api/v1',
-      headers: {
-        'HTTP-Referer': 'https://whynotqa.com',
-        'X-Title': 'WhyNot QA',
-      },
-    });
-    const modelName = process.env.OPENROUTER_MODEL || 'z-ai/glm-5.1';
-    return { model: openrouter(modelName), name: `GLM-5.1`, modelId: modelName };
+    return buildModel('openrouter', process.env.OPENROUTER_MODEL || 'z-ai/glm-5.1', process.env.OPENROUTER_API_KEY);
   }
-
-  // Priority 2: Google Gemini 2.5 Flash
+  // Priority 2: Google Gemini
   if (process.env.GOOGLE_AI_API_KEY) {
-    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
-    const modelId = process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash';
-    return { model: google(modelId), name: `Google ${modelId}`, modelId };
+    return buildModel('google', process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash', process.env.GOOGLE_AI_API_KEY);
   }
-
-  // Priority 3: Z.ai GLM-5.1 (standard pay-as-you-go endpoint only)
+  // Priority 3: Z.ai GLM (premium for qa_lead/auto_tester, turbo otherwise)
   if (process.env.Z_AI_API_KEY) {
-    const zai = createOpenAICompatible({
-      name: 'z-ai',
-      apiKey: process.env.Z_AI_API_KEY,
-      baseURL: process.env.Z_AI_BASE_URL || 'https://api.z.ai/api/paas/v4/',
-    });
-    const override = process.env.Z_AI_MODEL;
     const premiumModel = process.env.Z_AI_PREMIUM_MODEL || 'glm-5.1';
     const turboModel = process.env.Z_AI_TURBO_MODEL || 'glm-5-turbo';
-    const modelName = override
+    const modelName = process.env.Z_AI_MODEL
       || ((agentType === 'qa_lead' || agentType === 'auto_tester') ? premiumModel : turboModel);
-    return { model: zai(modelName), name: `GLM via Z.ai (${modelName})`, modelId: modelName };
+    return buildModel('z-ai', modelName, process.env.Z_AI_API_KEY);
   }
-
-  // Priority 4: Anthropic Claude — Opus 4.6 for QA Lead, Sonnet 4.6 for everyone else
-  //
-  // Opus 4.6 ($15/$75 per M) for QA Lead ONLY:
-  //   - Planning + synthesis = only 2 API calls per scan
-  //   - Best-in-class cross-referencing and critical cluster detection
-  //   - Cost impact: ~$0.15-0.20 per scan (negligible on the plan/synthesis pair)
-  //
-  // Sonnet 4.6 ($3/$15 per M) for all specialist agents:
-  //   - exploratory  — intelligent navigation, form/link discovery
-  //   - security     — injection testing that requires real reasoning
-  //   - api_tester   — edge-case generation with schema awareness
-  //   - auto_tester  — Playwright code generation
-  //
-  // Prior Haiku experiment failed (0 bugs / 0 tests / 0 pages on specialists)
-  // because Haiku couldn't navigate OrangeHRM or generate working code.
-  // Sonnet 4.6 is the latest Sonnet (same price as Sonnet 4 but better tool calling).
+  // Priority 4: Anthropic — Opus for QA Lead, Sonnet for specialists
   if (process.env.ANTHROPIC_API_KEY) {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    if (agentType === 'qa_lead') {
-      return { model: anthropic('claude-opus-4-6'), name: 'Claude Opus 4.6', modelId: 'claude-opus-4-6' };
-    }
-    return { model: anthropic('claude-sonnet-4-6'), name: 'Claude Sonnet 4.6', modelId: 'claude-sonnet-4-6' };
+    const modelId = agentType === 'qa_lead' ? 'claude-opus-4-6' : 'claude-sonnet-4-6';
+    return buildModel('anthropic', modelId, process.env.ANTHROPIC_API_KEY);
   }
-
   // Priority 5: OpenAI
   if (process.env.OPENAI_API_KEY) {
-    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    return { model: openai('gpt-4o'), name: 'GPT-4o', modelId: 'gpt-4o' };
+    return buildModel('openai', 'gpt-4o', process.env.OPENAI_API_KEY);
   }
 
-  throw new Error('No AI provider configured. Set GOOGLE_AI_API_KEY (primary), OPENROUTER_API_KEY + OPENROUTER_MODEL, Z_AI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.');
+  throw new Error('No AI provider configured (admin config empty and no provider env vars set). Set a provider key in the admin AI Providers page, or set ANTHROPIC_API_KEY / OPENROUTER_API_KEY / GOOGLE_AI_API_KEY / Z_AI_API_KEY / OPENAI_API_KEY.');
 }
 
 export abstract class BaseAgent {
@@ -698,7 +759,7 @@ export abstract class BaseAgent {
    * handles tool calling internally. We use onStepFinish for WebSocket events.
    */
   protected async executeLoop(systemPrompt: string): Promise<void> {
-    const { model, name: modelName, modelId } = selectModel(this.agentType);
+    const { model, name: modelName, modelId } = await selectModel(this.agentType);
     this.modelIdUsed = modelId;
     const maxOuterLoops = this.getMaxLoops();
 
