@@ -35,12 +35,24 @@ const logger = createLogger('v2-orchestrator');
 
 // ─── Cost circuit breaker constants ─────────────────────────────────────
 // Hard cap: $5.00 estimated REAL Anthropic cost per session.
-// Our DB-tracked cost (from result.usage tokens) consistently under-reports
-// actual Anthropic bill by ~5× because the AI SDK doesn't always surface
-// cache creation tokens. We multiply DB-tracked cost by this factor before
-// comparing to the cap so we stop BEFORE we blow the real-cost budget.
+// Calibration factor applied to DB-tracked cost before comparing to the cap.
+//
+// HISTORY: tracked cost used to under-report the real Anthropic bill by ~5×
+// because cache-CREATION tokens were read from the SDK but never costed.
+// That accounting bug is now fixed in base-agent.ts computeCostCents (cache
+// writes priced at 1.25× input). The remaining factor is pure calibration
+// slack against real invoices — it should now be much closer to 1.0.
+//
+// ⚠ This is the number that backs the investor "cost per scan" answer.
+// Do NOT trust it blindly: run one real scan, then reconcile the logged
+// `cost_reconciliation` line below against the actual provider invoice for
+// that scan window and set COST_CALIBRATION_FACTOR to (realBill / tracked).
+// Until reconciled, default of 1.5 keeps a safety margin on the circuit
+// breaker without the wildly-inflated 5×.
 const MAX_SESSION_COST_CENTS = 500;       // $5.00 real cost cap
-const COST_UNDERCOUNT_FACTOR = 5;         // Real cost ≈ DB-tracked × 5
+const COST_UNDERCOUNT_FACTOR = Number(
+  process.env.COST_CALIBRATION_FACTOR ?? process.env.COST_UNDERCOUNT_FACTOR ?? 1.5,
+);
 
 // ─── Priority 1: agent idle watchdog ────────────────────────────────────
 // If an agent makes no progress (no LLM call, no tool call step, no status

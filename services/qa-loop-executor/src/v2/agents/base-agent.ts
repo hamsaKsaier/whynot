@@ -58,37 +58,50 @@ const logger = createLogger('base-agent');
  * to compute cost per agent. Only covers the models we currently use —
  * unknown model IDs fall through to $0 (free tier) pricing.
  */
-export const MODEL_PRICING_PER_MTOKEN: Record<string, { input: number; output: number; cachedInput: number }> = {
+// Rates are USD per million tokens. `cacheWrite` is the cache-CREATION rate:
+// on Anthropic, writing to the prompt cache costs 1.25× the base input rate
+// (5-minute TTL). This was previously unmodeled — cache-write tokens were
+// read from the SDK and logged but never costed, which was the dominant
+// driver of the historical ~5× cost undercount. For providers without a
+// distinct cache-write price we set cacheWrite = input (safe upper bound).
+export const MODEL_PRICING_PER_MTOKEN: Record<string, { input: number; output: number; cachedInput: number; cacheWrite: number }> = {
   // Opus 4.6 — premium reasoning, used for QA Lead plan + synthesis
-  'claude-opus-4-6': { input: 15, output: 75, cachedInput: 1.5 },
-  'claude-opus-4-5': { input: 15, output: 75, cachedInput: 1.5 },
-  'claude-opus-4-5-20251101': { input: 15, output: 75, cachedInput: 1.5 },
+  'claude-opus-4-6': { input: 15, output: 75, cachedInput: 1.5, cacheWrite: 18.75 },
+  'claude-opus-4-5': { input: 15, output: 75, cachedInput: 1.5, cacheWrite: 18.75 },
+  'claude-opus-4-5-20251101': { input: 15, output: 75, cachedInput: 1.5, cacheWrite: 18.75 },
   // Sonnet 4.6 — workhorse for all specialist agents
-  'claude-sonnet-4-6': { input: 3, output: 15, cachedInput: 0.30 },
-  'claude-sonnet-4-5': { input: 3, output: 15, cachedInput: 0.30 },
-  'claude-sonnet-4-20250514': { input: 3, output: 15, cachedInput: 0.30 },
+  'claude-sonnet-4-6': { input: 3, output: 15, cachedInput: 0.30, cacheWrite: 3.75 },
+  'claude-sonnet-4-5': { input: 3, output: 15, cachedInput: 0.30, cacheWrite: 3.75 },
+  'claude-sonnet-4-20250514': { input: 3, output: 15, cachedInput: 0.30, cacheWrite: 3.75 },
   // Haiku 4.5 — kept for fallback / future use
-  'claude-haiku-4-5-20251001': { input: 1, output: 5, cachedInput: 0.10 },
-  'claude-haiku-4-5': { input: 1, output: 5, cachedInput: 0.10 },
+  'claude-haiku-4-5-20251001': { input: 1, output: 5, cachedInput: 0.10, cacheWrite: 1.25 },
+  'claude-haiku-4-5': { input: 1, output: 5, cachedInput: 0.10, cacheWrite: 1.25 },
   // Non-Anthropic providers
-  'gemini-2.5-flash': { input: 0, output: 0, cachedInput: 0 },
-  'gemma-4-26b-a4b-it': { input: 0, output: 0, cachedInput: 0 },
-  'glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26 },
-  'z-ai/glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26 },
-  'glm-5-turbo': { input: 0.60, output: 2.20, cachedInput: 0.06 },
+  'gemini-2.5-flash': { input: 0, output: 0, cachedInput: 0, cacheWrite: 0 },
+  'gemma-4-26b-a4b-it': { input: 0, output: 0, cachedInput: 0, cacheWrite: 0 },
+  'glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26, cacheWrite: 1.26 },
+  'z-ai/glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26, cacheWrite: 1.26 },
+  'glm-5-turbo': { input: 0.60, output: 2.20, cachedInput: 0.06, cacheWrite: 0.60 },
 };
 
 export function computeCostCents(
   modelId: string,
   inputTokens: number,
   outputTokens: number,
-  cachedInputTokens: number = 0,
+  cachedInputTokens: number = 0,   // cache-READ tokens (served from cache)
+  cacheWriteTokens: number = 0,    // cache-CREATION tokens (written to cache)
 ): number {
-  const rates = MODEL_PRICING_PER_MTOKEN[modelId] || { input: 0, output: 0, cachedInput: 0 };
-  const billableInput = Math.max(0, inputTokens - cachedInputTokens);
+  const rates = MODEL_PRICING_PER_MTOKEN[modelId] || { input: 0, output: 0, cachedInput: 0, cacheWrite: 0 };
+  // The SDK reports inputTokens as the TOTAL prompt, broken down in
+  // inputTokenDetails into { cacheReadTokens, cacheWriteTokens, noCacheTokens }.
+  // The fresh (base-rate) portion is whatever remains after removing the two
+  // cache subsets. Each subset is priced separately.
+  const freshInput = Math.max(0, inputTokens - cachedInputTokens - cacheWriteTokens);
+  const cacheWriteRate = rates.cacheWrite ?? rates.input;
   const costDollars =
-    (billableInput * rates.input) / 1_000_000 +
+    (freshInput * rates.input) / 1_000_000 +
     (cachedInputTokens * rates.cachedInput) / 1_000_000 +
+    (cacheWriteTokens * cacheWriteRate) / 1_000_000 +
     (outputTokens * rates.output) / 1_000_000;
   return Math.ceil(costDollars * 100); // cents, rounded up
 }
@@ -189,7 +202,8 @@ export abstract class BaseAgent {
   // Cost tracking (Fix D — accumulated across all generateText calls)
   protected inputTokens = 0;
   protected outputTokens = 0;
-  protected cachedInputTokens = 0;
+  protected cachedInputTokens = 0;   // cache reads
+  protected cacheWriteTokens = 0;    // cache creations — billed at 1.25× input on Anthropic
   protected modelIdUsed: string = 'unknown';
   protected lastCompletionReason: string = '';
 
@@ -500,12 +514,13 @@ export abstract class BaseAgent {
         ? ((this.successfulToolCalls / this.totalToolCalls) * 100).toFixed(1) + '%'
         : 'N/A';
 
-      // Fix D: compute cost from accumulated usage
+      // Fix D: compute cost from accumulated usage (now incl. cache-write tokens)
       const costCents = computeCostCents(
         this.modelIdUsed,
         this.inputTokens,
         this.outputTokens,
         this.cachedInputTokens,
+        this.cacheWriteTokens,
       );
       const costDollars = costCents / 100;
 
@@ -617,6 +632,7 @@ export abstract class BaseAgent {
         this.inputTokens,
         this.outputTokens,
         this.cachedInputTokens,
+        this.cacheWriteTokens,
       );
 
       const cdpSnapshot = this.snapshotCdpTelemetry();
@@ -873,9 +889,13 @@ export abstract class BaseAgent {
         const callCached = (usage.inputTokenDetails?.cacheReadTokens
           || usage.cachedInputTokens
           || 0);
+        const callCacheWrite = (usage.inputTokenDetails?.cacheWriteTokens
+          || usage.cacheCreationInputTokens
+          || 0);
         this.inputTokens += callInput;
         this.outputTokens += callOutput;
         this.cachedInputTokens += callCached;
+        this.cacheWriteTokens += callCacheWrite;
         // Task 1: count LLM invocations distinctly from tool calls.
         this.llmCallCount++;
         // Task 3: track biggest single call so we know the worst case.
