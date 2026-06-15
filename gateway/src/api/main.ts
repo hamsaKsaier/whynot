@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import { env } from '../config/env';
+import { isSelfHosted } from '../config/edition';
 import { WorkflowOrchestrator } from '../workflow/workflow-orchestrator';
 import { UserStory, TestCase } from '../../shared/types';
 import { errorHandler, asyncHandler, createError } from '../middleware/error-handler';
@@ -291,6 +292,16 @@ app.get('/health', async (req, res) => {
 // ==================== AUTH ROUTES (public — no auth middleware) ====================
 
 app.post('/api/auth/register', registerRateLimiter, validate(schemas.register), asyncHandler(async (req, res) => {
+  // Self-hosted is single-admin: public registration is disabled. The one
+  // admin account is provisioned at boot from ADMIN_EMAIL / ADMIN_PASSWORD.
+  if (isSelfHosted()) {
+    res.status(403).json({
+      success: false,
+      error: 'Registration is disabled in the self-hosted edition. Sign in with the admin account from your ADMIN_EMAIL setting.',
+      code: 'SELF_HOSTED_SINGLE_ADMIN',
+    });
+    return;
+  }
   const { email, password, name } = req.body;
   const result = await authService.register(String(email), String(password), String(name));
   res.status(201).json({ success: true, ...result });
@@ -3791,9 +3802,18 @@ if (env.NODE_ENV !== 'test') {
     startCleanupScheduler();
 
     if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
+      // seedAdminUser also provisions a workspace for the admin, which is what
+      // makes self-hosted work: requireAuth → resolveWorkspace finds it, so the
+      // single admin can run scans immediately.
       seedAdminUser(env.ADMIN_EMAIL, env.ADMIN_PASSWORD, env.ADMIN_NAME)
         .then(() => logger.info('Admin user seeded'))
         .catch((err: any) => logger.error('Admin seed failed', { error: err.message }));
+    } else if (isSelfHosted()) {
+      logger.error(
+        'SELF_HOSTED is on but ADMIN_EMAIL / ADMIN_PASSWORD are not set — ' +
+        'no admin account will be created and login will be impossible. ' +
+        'Set both in your .env and restart.'
+      );
     }
 
     import('../services/qa-monitor-scheduler').then(({ startMonitorScheduler }) => {
