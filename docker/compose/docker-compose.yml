@@ -158,6 +158,13 @@ services:
       - QA_LOOP_EXECUTOR_URL=http://qa-loop-executor:3002
       - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
+      # Edition (open-core). SELF_HOSTED=true disables billing/gates and runs
+      # the single-admin self-hosted edition. ADMIN_* provisions that admin.
+      - SELF_HOSTED=${SELF_HOSTED:-false}
+      - AUTH_DISABLED=${AUTH_DISABLED:-false}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_NAME=${ADMIN_NAME:-Admin}
       - ALLOW_INTERNAL_SCAN=${ALLOW_INTERNAL_SCAN:-true}
       - RATE_LIMIT_TEST_EXECUTION_MAX=${RATE_LIMIT_TEST_EXECUTION_MAX:-50}
       - RATE_LIMIT_TEST_GENERATION_MAX=${RATE_LIMIT_TEST_GENERATION_MAX:-50}
