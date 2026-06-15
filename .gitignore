@@ -60,6 +60,8 @@ ENV/
 .env.*.local
 .env.development
 .env.production
+.env.staging
+.env.v2
 !.env.example
 !.env.test
 
