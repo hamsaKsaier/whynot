@@ -107,6 +107,15 @@ const envSchema = z.object({
   ADMIN_PASSWORD: z.string().optional(),
   ADMIN_NAME: z.string().default('Admin'),
 
+  // ── Edition (open-core) ──────────────────────────────────────────────────
+  // SELF_HOSTED=true switches the gateway to the open-source self-hosted
+  // edition: no billing, no subscription/credit/feature gates, a single
+  // auto-provisioned admin + workspace. The hosted SaaS leaves this false.
+  // AUTH_DISABLED=true (self-hosted only) auto-logs-in as the default admin —
+  // for running locally on a trusted machine. Never enable when exposed.
+  SELF_HOSTED: booleanString,
+  AUTH_DISABLED: booleanString,
+
   CORS_ALLOWED_ORIGINS: z.string().default(''),
   GATEWAY_URL: z.string().default('http://localhost:3010'),
   APP_URL: z.string().default(''),

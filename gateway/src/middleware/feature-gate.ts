@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
 import { PlanRepository } from '../../shared/database/repositories/plan-repository';
+import { isSelfHosted } from '../config/edition';
 
 const subscriptionRepository = new SubscriptionRepository();
 const planRepository = new PlanRepository();
@@ -36,6 +37,8 @@ async function getWorkspaceFeatures(workspaceId: string): Promise<Record<string,
  */
 export function requireFeature(featureKey: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // Self-hosted edition unlocks every feature — no plan tiers.
+    if (isSelfHosted()) return next();
     try {
       const t = (req as any).t ?? ((k: string) => k);
       const workspaceId = req.workspaceId;
@@ -80,6 +83,8 @@ export function requireFeatureLimit(
   countFn: (req: Request) => Promise<number>
 ) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // Self-hosted edition has no plan limits.
+    if (isSelfHosted()) return next();
     try {
       const t = (req as any).t ?? ((k: string) => k);
       const workspaceId = req.workspaceId;

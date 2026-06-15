@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PaymentService } from '../payments/payment-service';
 import { getCreditCost, getCreditDescription, CreditCostKey } from '../payments/credit-cost-mapper';
+import { isSelfHosted } from '../config/edition';
 
 /**
  * Middleware that checks if the workspace has enough credits for an operation.
@@ -10,6 +11,8 @@ import { getCreditCost, getCreditDescription, CreditCostKey } from '../payments/
  */
 export function requireCredits(costOrKey: CreditCostKey | number) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // Self-hosted edition has no credit system — operations are never metered.
+    if (isSelfHosted()) return next();
     try {
       const t = (req as any).t ?? ((k: string) => k);
       const workspaceId = req.workspaceId;
@@ -58,6 +61,8 @@ export async function deductCredits(
   referenceType?: string,
   referenceId?: string
 ): Promise<void> {
+  // Self-hosted edition has no credit system — nothing to deduct.
+  if (isSelfHosted()) return;
   const cost = getCreditCost(operation);
   const description = getCreditDescription(operation, detail);
 

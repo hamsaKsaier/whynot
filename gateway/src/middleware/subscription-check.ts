@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { SubscriptionRepository } from '../../shared/database/repositories/subscription-repository';
+import { isSelfHosted } from '../config/edition';
 
 const subscriptionRepository = new SubscriptionRepository();
 
@@ -12,6 +13,8 @@ export async function requireActiveSubscription(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  // Self-hosted edition has no billing — every workspace is fully entitled.
+  if (isSelfHosted()) return next();
   try {
     const t = (req as any).t ?? ((k: string) => k);
     const workspaceId = req.workspaceId;
