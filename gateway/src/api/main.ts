@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import { env } from '../config/env';
-import { isSelfHosted } from '../config/edition';
+import { isSelfHosted, isAuthDisabled } from '../config/edition';
 import { WorkflowOrchestrator } from '../workflow/workflow-orchestrator';
 import { UserStory, TestCase } from '../../shared/types';
 import { errorHandler, asyncHandler, createError } from '../middleware/error-handler';
@@ -176,7 +176,10 @@ app.use(cors({
   exposedHeaders: ['X-Request-ID', 'RateLimit-*']
 }));
 // Stripe webhook needs raw body for signature verification — must be before express.json()
-app.use(stripeWebhookRouter);
+// Self-hosted edition has no Stripe; don't mount the webhook at all.
+if (!isSelfHosted()) {
+  app.use(stripeWebhookRouter);
+}
 
 app.use(express.json({ limit: '12mb' })); // Allow document uploads (base64 encoded files)
 app.use(express.urlencoded({ extended: true, limit: '12mb' }));
@@ -527,8 +530,28 @@ app.get('/api/internal/ai-config',
   })
 );
 
+// Public runtime config — lets the frontend adapt to the server's edition
+// from a single build (behavior set by the server's env, not at build time).
+// No auth and no secrets: just edition booleans.
+app.get('/api/config', (_req, res) => {
+  res.json({ success: true, selfHosted: isSelfHosted(), authDisabled: isAuthDisabled() });
+});
+
 // ─── All routes below this line require a valid JWT ───────────────────────────
 app.use('/api', requireAuth);
+
+// Self-hosted edition has no billing — short-circuit every billing/plan
+// endpoint with a 404 so the surface simply doesn't exist (the handlers are
+// still defined below for the hosted edition).
+if (isSelfHosted()) {
+  app.use(['/api/billing', '/api/me/billing', '/api/plans'], (_req, res) => {
+    res.status(404).json({
+      success: false,
+      error: 'Billing is not available in the self-hosted edition.',
+      code: 'SELF_HOSTED_NO_BILLING',
+    });
+  });
+}
 
 // ─── Monitor routes (requires auth) ──────────────────────────────────────────
 import { monitorRouter } from './monitor-router';
