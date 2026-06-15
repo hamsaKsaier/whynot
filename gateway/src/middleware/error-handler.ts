@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env';
+import { redactSecrets } from '../utils/redact';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -20,7 +21,7 @@ export function errorHandler(
     stack: err.stack,
     url: req.url,
     method: req.method,
-    body: req.body,
+    body: redactSecrets(req.body),
     statusCode: (err as AppError).statusCode
   });
 
