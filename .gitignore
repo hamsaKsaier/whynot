@@ -95,3 +95,11 @@ Thumbs.db
 
 # ---------- Knowledge graph ----------
 .code-review-graph/
+
+# ---------- Internal working files (not for the public repo) ----------
+# Planning docs and scratch scripts that reference private infrastructure
+# (hosting project names, domains) or were written for one-off migrations.
+PLAN-*.md
+test-gemma4-qa.py
+# Zero-byte screenshots left behind by editor paste operations.
+assets/
