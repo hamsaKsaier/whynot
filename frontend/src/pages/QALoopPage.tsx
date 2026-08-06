@@ -43,6 +43,7 @@ import {
   ResultsTabs,
   AgentProgressPanel,
   CommandCenter,
+  TeamBoard,
 } from '../components/QALoop';
 
 // -- Status helpers -----------------------------------------------------------
@@ -489,6 +490,18 @@ export const QALoopPage: React.FC = () => {
                   showQualityDashboard={showQualityDashboard}
                   onToggleQualityDashboard={() => setShowQualityDashboard(v => !v)}
                 />
+
+                {/* The QA team board — the primary way to watch a multi-agent
+                    scan. Rendered as soon as any agent has reported in, so it
+                    never shows an empty org chart during a single-agent scan
+                    (which has no per-agent streams to display). */}
+                {Object.keys(agentStreams || {}).length > 0 && (
+                  <TeamBoard
+                    agentStreams={agentStreams || {}}
+                    leadDispatches={leadDispatches || []}
+                    isRunning={activeSession.status === 'running'}
+                  />
+                )}
 
                 {/* v4 Phase 3: 4-quadrant Command Center view (opt-in via ?view=command-center) */}
                 {commandCenterEnabled && (

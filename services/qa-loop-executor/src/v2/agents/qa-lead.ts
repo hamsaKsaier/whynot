@@ -13,6 +13,23 @@ import { AgentConfig, AgentResult, AppAnalysis, PlanObjective, AgentBoardEntry }
 import { AgentContextBuilder } from '../agent-context-builder';
 import { AgentBoard } from '../agent-board';
 import { selectModel, computeCostCents } from './base-agent';
+import { emitToSession } from '../../api/websocket';
+
+/**
+ * Report QA Lead activity on the same websocket channel the specialist agents
+ * use. QALeadAgent does not extend BaseAgent — it calls generateText directly —
+ * so it never went through the emission path in BaseAgent's onStepFinish. The
+ * result was a team board where the Lead sat permanently at "waiting" with zero
+ * activity while it was in fact planning the scan and writing the final report.
+ *
+ * `agent: 'qa_lead'` is what routes these into the Lead's stream slice.
+ */
+function reportLeadActivity(sessionId: string, text: string): void {
+  emitToSession(sessionId, {
+    type: 'thinking',
+    data: { text: `${text}\n`, agent: 'qa_lead' },
+  });
+}
 
 export interface QALeadUsage {
   inputTokens: number;
@@ -72,6 +89,11 @@ export class QALeadAgent {
       model: modelName,
     });
 
+    reportLeadActivity(
+      this.config.sessionId,
+      `Analysing ${this.config.targetUrl} and drawing up the test plan…`,
+    );
+
     try {
       const result = await generateText({
         model,
@@ -126,6 +148,13 @@ export class QALeadAgent {
       }));
 
       logger.info('QA Lead plan created', { appType: appAnalysis.app_type, objectives: objectives.length });
+
+      reportLeadActivity(
+        this.config.sessionId,
+        `Read it as ${appAnalysis.app_type}. Assigning ${objectives.length} objective(s):\n` +
+          objectives.map(o => `  • ${o.agent}: ${o.objective}`).join('\n'),
+      );
+
       return { app_analysis: appAnalysis, objectives };
 
     } catch (err: any) {
@@ -212,6 +241,12 @@ Produce the synthesis report JSON.`;
 
     logger.info('QA Lead synthesizing report', { sessionId: this.config.sessionId, model: modelName });
 
+    reportLeadActivity(
+      this.config.sessionId,
+      `Team is done. Reviewing ${bugs.length} bug(s) and ${testCases.length} test(s) across ` +
+        `${pages.length} page(s) to write the report…`,
+    );
+
     try {
       const result = await generateText({
         model,
@@ -244,6 +279,12 @@ Produce the synthesis report JSON.`;
         report.findings_by_agent = report.findings_by_agent || {};
         report.critical_clusters = report.critical_clusters || [];
         report.recommendations = report.recommendations || [];
+
+        reportLeadActivity(
+          this.config.sessionId,
+          `Report ready — quality score ${report.quality_score}. ${report.summary}`,
+        );
+
         return report;
       }
     } catch (err: any) {
