@@ -29,11 +29,11 @@ router = APIRouter()
 test_generator = TestGenerator()
 vision_analyzer = VisionAnalyzer()
 html_preprocessor = HTMLPreProcessor()
-chatbot = TestAutomationChatbot()
 scenario_prioritizer = ScenarioPrioritizer()
 test_case_validator = TestCaseValidator()
 visual_diff_analyzer = VisualDiffAnalyzer()
 _strategy_agent = None
+_chatbot = None
 
 def get_strategy_agent():
     """Lazy initialization of strategy agent"""
@@ -41,6 +41,20 @@ def get_strategy_agent():
     if _strategy_agent is None:
         _strategy_agent = StrategyAgent(LLMClient())
     return _strategy_agent
+
+
+def get_chatbot():
+    """Lazy initialization of chatbot.
+
+    Constructing it at import time makes the whole service crash-loop when
+    ANTHROPIC_API_KEY / OPENAI_API_KEY is unset — which is a supported
+    self-hosted setup (the QA Loop runs on Google or OpenRouter keys instead).
+    Only the chatbot endpoints require an LLMClient, so build it on demand.
+    """
+    global _chatbot
+    if _chatbot is None:
+        _chatbot = TestAutomationChatbot()
+    return _chatbot
 
 
 @router.get("/health")
@@ -570,7 +584,7 @@ async def send_chat_message(request: dict):
         ]
         
         # Process message with chatbot
-        response = await chatbot.processMessage(
+        response = await get_chatbot().processMessage(
             context={**session.context, **context},
             userMessage=message,
             conversationHistory=conversation_history
@@ -632,7 +646,7 @@ async def generate_test_from_chat(request: dict):
         conversation = request.get('conversation', [])
         user_story = request.get('user_story')
         
-        test_case = await chatbot.generateTestFromConversation(
+        test_case = await get_chatbot().generateTestFromConversation(
             conversation=conversation,
             userStory=user_story
         )
@@ -662,7 +676,7 @@ async def modify_test_from_chat(request: dict):
             raise ValueError("test_case is required")
         
         # Call modifyTest with optional step context
-        modified_test_case = await chatbot.modifyTest(
+        modified_test_case = await get_chatbot().modifyTest(
             testCase=test_case,
             userRequest=user_request,
             stepIndex=step_index,

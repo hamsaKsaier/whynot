@@ -78,6 +78,8 @@ export const MODEL_PRICING_PER_MTOKEN: Record<string, { input: number; output: n
   'claude-haiku-4-5': { input: 1, output: 5, cachedInput: 0.10, cacheWrite: 1.25 },
   // Non-Anthropic providers
   'gemini-2.5-flash': { input: 0, output: 0, cachedInput: 0, cacheWrite: 0 },
+  'gemini-flash-latest': { input: 0, output: 0, cachedInput: 0, cacheWrite: 0 },
+  'gemini-3.5-flash': { input: 0, output: 0, cachedInput: 0, cacheWrite: 0 },
   'gemma-4-26b-a4b-it': { input: 0, output: 0, cachedInput: 0, cacheWrite: 0 },
   'glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26, cacheWrite: 1.26 },
   'z-ai/glm-5.1': { input: 1.26, output: 3.96, cachedInput: 1.26, cacheWrite: 1.26 },
@@ -217,7 +219,9 @@ function selectModelFromEnv(agentType?: string): { model: LanguageModel; name: s
   }
   // Priority 2: Google Gemini
   if (process.env.GOOGLE_AI_API_KEY) {
-    return buildModel('google', process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash', process.env.GOOGLE_AI_API_KEY);
+    // See platform-config.ts: use the `-latest` alias, not a pinned ID, so a
+    // fresh install doesn't hit "model no longer available to new users".
+    return buildModel('google', process.env.GOOGLE_AI_MODEL || 'gemini-flash-latest', process.env.GOOGLE_AI_API_KEY);
   }
   // Priority 3: Z.ai GLM (premium for qa_lead/auto_tester, turbo otherwise)
   if (process.env.Z_AI_API_KEY) {

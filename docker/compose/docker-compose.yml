@@ -124,6 +124,10 @@ services:
       - NODE_ENV=production
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://whynot.skrum.io,http://localhost:5173,http://localhost:5183,http://localhost:5184}
       - QA_LOOP_WS_SECRET=${QA_LOOP_WS_SECRET}
+      # Service-to-service: the gateway listens on 3000 INSIDE the network
+      # (3010 is only the host-side published port). Without this the executor
+      # can't read admin AI config or send scan-complete notifications.
+      - GATEWAY_URL=http://gateway:3000
     volumes:
       - ../../services/qa-loop-executor/src:/app/src
       - ../../shared:/app/shared
@@ -158,13 +162,13 @@ services:
       - QA_LOOP_EXECUTOR_URL=http://qa-loop-executor:3002
       - DATABASE_URL=postgresql://${POSTGRES_USER:-whynot}:${POSTGRES_PASSWORD:-whynot}@database:5432/${POSTGRES_DB:-whynot}
       - NODE_ENV=production
-      # Edition (open-core). SELF_HOSTED=true disables billing/gates and runs
-      # the single-admin self-hosted edition. ADMIN_* provisions that admin.
-      - SELF_HOSTED=${SELF_HOSTED:-false}
-      - AUTH_DISABLED=${AUTH_DISABLED:-false}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
-      - ADMIN_NAME=${ADMIN_NAME:-Admin}
+      # Edition (open-core). SELF_HOSTED / AUTH_DISABLED / ADMIN_* are supplied
+      # by env_file (../../.env) above — deliberately NOT repeated here.
+      # `${VAR}` interpolation resolves against docker/compose/.env, not the
+      # repo-root .env, so listing them here would override the real values
+      # with defaults whenever compose is run without `--env-file ../../.env`
+      # (i.e. exactly what the README quickstart tells a first-time user to do)
+      # and self-hosted mode would silently never engage.
       - ALLOW_INTERNAL_SCAN=${ALLOW_INTERNAL_SCAN:-true}
       - RATE_LIMIT_TEST_EXECUTION_MAX=${RATE_LIMIT_TEST_EXECUTION_MAX:-50}
       - RATE_LIMIT_TEST_GENERATION_MAX=${RATE_LIMIT_TEST_GENERATION_MAX:-50}

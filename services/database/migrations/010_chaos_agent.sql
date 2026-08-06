@@ -38,7 +38,7 @@ INSERT INTO qa_loop_chaos_patterns (id, session_id, category, name, description,
  'text_input', 'medium'),
 
 (gen_random_uuid(), NULL, 'boundary', 'extreme_lengths', 'Extreme length values',
- '["a", "' || repeat('a', 1000) || '", "' || repeat('a', 10000) || '"]'::jsonb,
+ ('["a", "' || repeat('a', 1000) || '", "' || repeat('a', 10000) || '"]')::jsonb,
  'text_input', 'medium'),
 
 (gen_random_uuid(), NULL, 'boundary', 'special_characters', 'Special character payloads',
@@ -50,7 +50,7 @@ INSERT INTO qa_loop_chaos_patterns (id, session_id, category, name, description,
  'text_input', 'medium'),
 
 (gen_random_uuid(), NULL, 'boundary', 'unicode_special', 'Unicode and emoji payloads',
- '["🔥💀🎉", "ñ", "你好", "مرحبا", "🏳️‍🌈", "\u0000", "\uFFFF", "​"]'::jsonb,
+ '["🔥💀🎉", "ñ", "你好", "مرحبا", "🏳️‍🌈", "%00", "\uFFFF", "​"]'::jsonb,
  'text_input', 'low'),
 
 -- Command injection
@@ -65,7 +65,7 @@ INSERT INTO qa_loop_chaos_patterns (id, session_id, category, name, description,
 
 -- LDAP injection
 (gen_random_uuid(), NULL, 'injection', 'ldap_injection', 'LDAP injection payloads',
- '["*", "*)(&", "*)(uid=*))(|(uid=*", "admin)(&)", "x])(|(cn=*"])"]'::jsonb,
+ '["*", "*)(&", "*)(uid=*))(|(uid=*", "admin)(&)", "x])(|(cn=*"]'::jsonb,
  'text_input', 'high'),
 
 -- Header injection

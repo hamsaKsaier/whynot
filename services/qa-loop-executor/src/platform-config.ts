@@ -51,8 +51,14 @@ function buildPlatformConfigFromEnv(): PlatformConfig {
       provider: 'google',
       apiKey: process.env.GOOGLE_AI_API_KEY,
       fallbackKey: null,
-      defaultModel: process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash',
-      models: ['gemini-2.5-flash'],
+      // `gemini-flash-latest` is an alias that always resolves to Google's
+      // current Flash model. Pinned IDs go stale: Google retires them for NEW
+      // API keys while existing keys keep working, so a hardcoded default
+      // silently breaks every fresh self-hosted install while working fine on
+      // the maintainer's machine. (gemini-2.5-flash was rejected exactly this
+      // way: "no longer available to new users".)
+      defaultModel: process.env.GOOGLE_AI_MODEL || 'gemini-flash-latest',
+      models: ['gemini-flash-latest'],
     });
   }
   if (process.env.OPENROUTER_API_KEY) {
@@ -106,7 +112,7 @@ function buildPlatformConfigFromEnv(): PlatformConfig {
 export async function getPlatformConfig(): Promise<PlatformConfig> {
   if (cachedConfig && Date.now() < cacheExpiresAt) return cachedConfig;
 
-  const gatewayUrl = process.env.GATEWAY_URL || 'http://gateway:3010';
+  const gatewayUrl = process.env.GATEWAY_URL || 'http://gateway:3000';
   try {
     const res = await axios.get(`${gatewayUrl}/api/internal/ai-config`, {
       timeout: 3_000,
