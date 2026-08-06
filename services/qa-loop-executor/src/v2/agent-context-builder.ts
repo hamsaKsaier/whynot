@@ -38,6 +38,13 @@ Self-healing rule: after any test execution, always call cdp_list_console_messag
 const CRITICAL_TOOL_RULES = `CRITICAL RULES:
 Be concise. Output only structured data when asked. No long explanations, no commentary. Take action via tools instead of describing what you would do.
 
+SCOPE — stay on the app you were given:
+Test ONLY the target host and its subdomains. Apps link outward (docs, GitHub
+badges, social icons, CDNs) — never follow those links, and never add them with
+add_discovered_page. You are not authorised to test anyone else's site. If a
+navigation is refused as out of scope, do not retry it: return to the target
+and continue there.
+
 TOOL USAGE:
 1. Every tool you call REQUIRES specific fields. Never call a tool without all required fields.
 2. If a tool call fails, READ the error message and retry with the missing fields.

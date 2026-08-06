@@ -7,8 +7,16 @@ import { ReportTools } from './tools/report-tools';
 import { ChaosTools } from './tools/chaos-tools';
 import { DetectiveTools } from './tools/detective-tools';
 import { GuardianTools } from './tools/guardian-tools';
+import { isWithinScanScope, outOfScopeMessage, logOutOfScope } from './scan-scope';
 
 const logger = createLogger('tool-executor');
+
+/**
+ * Tools that take a URL the agent chose, and so can carry a scan off the
+ * target app. Enforced here rather than in each tool because this is the one
+ * point every agent's tool call passes through.
+ */
+const URL_SCOPED_TOOLS = new Set(['browser_navigate', 'add_discovered_page']);
 
 export interface ToolResult {
   data?: any;
@@ -61,6 +69,20 @@ export class ToolExecutor {
 
   async execute(toolName: string, input: Record<string, any>): Promise<ToolResult> {
     logger.debug('Executing tool', { sessionId: this.sessionId, tool: toolName, input });
+
+    // Keep the scan on the app it was pointed at. Apps link outward, and an
+    // agent that follows those links ends up crawling — and, in the Security
+    // agent's case, submitting attack payloads to — a site the operator does
+    // not own. Refused here for every agent, before the tool runs.
+    if (URL_SCOPED_TOOLS.has(toolName) && typeof input?.url === 'string') {
+      const inScope = isWithinScanScope(input.url, this.config.targetUrl, [
+        this.config.loginCredentials?.loginUrl,
+      ]);
+      if (!inScope) {
+        logOutOfScope(this.sessionId, toolName, input.url, this.config.targetUrl);
+        return { error: outOfScopeMessage(input.url, this.config.targetUrl) };
+      }
+    }
 
     try {
       // Route MCP browser tools (browser_navigate, browser_click, browser_snapshot, etc.)
