@@ -61,6 +61,8 @@
   "results.testCases.namePlaceholder": "اسم حالة الاختبار",
   "results.testCases.new": "حالة اختبار جديدة",
   "results.testCases.noDescription": "بدون وصف",
+  "results.testCases.fromScan": "من الفحص",
+  "results.testCases.viewInScan": "للقراءة فقط — من فحص الجودة",
   "results.testCases.noMatch": "لا توجد حالات اختبار تطابق مرشحاتك",
   "results.testCases.notRun": "لم يُشغّل",
   "results.testCases.retry": "إعادة المحاولة",

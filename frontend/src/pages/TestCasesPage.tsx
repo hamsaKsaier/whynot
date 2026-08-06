@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Play, Pencil, Trash2, Save, X, Globe, Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { Plus, Play, Pencil, Trash2, Save, X, Globe, Search, Filter, SlidersHorizontal, Zap } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -36,6 +37,14 @@ import { useToastContext } from '../contexts/ToastContext';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getTestCases, updateTestCase, deleteTestCase, executeTest } from '../services/api';
 import type { TestCase } from '../types';
+
+/**
+ * Sentinel for the "all domains" option. Radix rejects `<SelectItem value="">`
+ * (an empty value is reserved for clearing the selection), and throwing inside
+ * render crashes the whole page — so the empty domainFilter state is mapped to
+ * this sentinel at the boundary instead.
+ */
+const ALL_DOMAINS = '__all__';
 
 export const TestCasesContent: React.FC = () => <TestCasesPage embedded />;
 
@@ -220,12 +229,15 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
               />
             </div>
             {uniqueDomains.length > 0 && (
-              <Select value={domainFilter} onValueChange={setDomainFilter}>
+              <Select
+                value={domainFilter || ALL_DOMAINS}
+                onValueChange={(v) => setDomainFilter(v === ALL_DOMAINS ? '' : v)}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t('results.testCases.allDomains')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('results.testCases.allDomains')}</SelectItem>
+                  <SelectItem value={ALL_DOMAINS}>{t('results.testCases.allDomains')}</SelectItem>
                   {uniqueDomains.map((d) => (
                     <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
@@ -291,12 +303,15 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                         <label className="text-sm font-medium text-foreground">
                           {t('results.testCases.allDomains')}
                         </label>
-                        <Select value={domainFilter} onValueChange={setDomainFilter}>
+                        <Select
+                          value={domainFilter || ALL_DOMAINS}
+                          onValueChange={(v) => setDomainFilter(v === ALL_DOMAINS ? '' : v)}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder={t('results.testCases.allDomains')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">{t('results.testCases.allDomains')}</SelectItem>
+                            <SelectItem value={ALL_DOMAINS}>{t('results.testCases.allDomains')}</SelectItem>
                             {uniqueDomains.map((d) => (
                               <SelectItem key={d} value={d}>{d}</SelectItem>
                             ))}
@@ -422,6 +437,9 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
           {filteredTestCases.map((testCase) => {
             const isEditing = editingId === testCase.id;
             const isRunning = runningTestId === testCase.id;
+            // Produced by a QA Loop scan (stored in qa_loop_test_cases), not by
+            // the test_cases CRUD flow — see listWithScanResults on the gateway.
+            const isFromScan = testCase.metadata?.source === 'qa_loop';
 
             return (
               <Card key={testCase.id} className="hover:bg-muted/50 transition-colors duration-150">
@@ -462,7 +480,15 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                     </div>
                   ) : (
                     <>
-                      <h3 className="font-semibold text-foreground mb-2">{testCase.name}</h3>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-foreground">{testCase.name}</h3>
+                        {isFromScan && (
+                          <Badge variant="outline" className="flex-shrink-0 gap-1">
+                            <Zap className="h-3 w-3" />
+                            {t('results.testCases.fromScan')}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {testCase.description || t('results.testCases.noDescription')}
                       </p>
@@ -475,36 +501,47 @@ export const TestCasesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) =>
                         <span className="text-xs text-muted-foreground">
                           {t('results.testCases.stepsCount', { count: testCase.steps.length })}
                         </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleRunTest(testCase)}
-                            disabled={isRunning}
-                            title={t('results.testCases.runTest')}
-                          >
-                            <Play className={cn('h-4 w-4', isRunning ? 'text-muted-foreground' : 'text-primary')} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEdit(testCase)}
-                            title={t('results.testCases.edit')}
-                          >
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDeleteClick(testCase)}
-                            title={t('results.testCases.delete')}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        {/* Scan-generated cases live in a different table with a
+                            different step format, so the run/edit/delete
+                            endpoints (which own `test_cases`) don't apply to
+                            them. Show them read-only rather than offering
+                            buttons that would 404. */}
+                        {isFromScan ? (
+                          <span className="text-xs text-muted-foreground">
+                            {t('results.testCases.viewInScan')}
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleRunTest(testCase)}
+                              disabled={isRunning}
+                              title={t('results.testCases.runTest')}
+                            >
+                              <Play className={cn('h-4 w-4', isRunning ? 'text-muted-foreground' : 'text-primary')} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(testCase)}
+                              title={t('results.testCases.edit')}
+                            >
+                              <Pencil className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleDeleteClick(testCase)}
+                              title={t('results.testCases.delete')}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}

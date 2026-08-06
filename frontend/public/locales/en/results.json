@@ -61,6 +61,8 @@
   "results.testCases.namePlaceholder": "Test case name",
   "results.testCases.new": "New Test Case",
   "results.testCases.noDescription": "No description",
+  "results.testCases.fromScan": "From scan",
+  "results.testCases.viewInScan": "Read-only — from a QA scan",
   "results.testCases.noMatch": "No test cases match your filters",
   "results.testCases.notRun": "Not run",
   "results.testCases.retry": "Retry",

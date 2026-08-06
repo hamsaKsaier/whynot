@@ -1279,7 +1279,9 @@ app.delete('/api/folders/:id', asyncHandler(async (req, res) => {
 app.get('/api/test-cases', asyncHandler(async (req, res) => {
   const offset = parseInt(req.query.offset as string) || 0;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-  const entities = await testCaseRepository.list(offset, limit, req.workspaceId);
+  // Includes QA Loop scan output, not just `test_cases` rows — otherwise a
+  // successful scan leaves this page showing "No test cases yet".
+  const entities = await testCaseRepository.listWithScanResults(offset, limit, req.workspaceId);
   const testCases = entities.map(transformTestCaseEntity);
   res.json({ test_cases: testCases, offset, limit });
 }));

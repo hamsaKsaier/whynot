@@ -87,6 +87,68 @@ export class TestCaseRepository {
   }
 
   /**
+   * List test cases from BOTH sources: manually-created/generated ones in
+   * `test_cases`, and the ones a QA Loop scan produced in
+   * `qa_loop_test_cases`.
+   *
+   * These are two separate data models that grew independently — the scan
+   * engine writes only to `qa_loop_test_cases`, so a user who ran a successful
+   * scan and then opened Test Results saw "No test cases yet". This union is
+   * what makes scan output visible where people actually look for it.
+   *
+   * Scan rows are workspace-scoped through their session, tagged with
+   * `metadata.source = 'qa_loop'` so the UI can mark them as read-only, and
+   * de-duplicated against `test_cases` (running a scan test copies it into
+   * `test_cases`, which would otherwise show the same test twice).
+   */
+  async listWithScanResults(
+    offset: number = 0,
+    limit: number = 50,
+    workspaceId?: string
+  ): Promise<TestCaseEntity[]> {
+    // Without a workspace we cannot scope scan rows safely, so fall back to
+    // the plain listing rather than leaking every workspace's scan output.
+    if (!workspaceId) {
+      return this.list(offset, limit, workspaceId);
+    }
+
+    const sql = `
+      SELECT id, name, description, website_url, user_story, steps, metadata,
+             workspace_id, created_at, updated_at
+        FROM test_cases
+       WHERE workspace_id = $3
+      UNION ALL
+      SELECT qtc.id,
+             qtc.name,
+             qtc.description,
+             COALESCE(NULLIF(qtc.source_page_url, ''), s.target_url) AS website_url,
+             '' AS user_story,
+             qtc.steps,
+             jsonb_build_object(
+               'source', 'qa_loop',
+               'session_id', qtc.session_id,
+               'project_id', qtc.project_id,
+               'category', qtc.category,
+               'risk_level', qtc.risk_level,
+               'priority_score', qtc.priority,
+               'last_run_status', qtc.last_run_status
+             ) AS metadata,
+             s.workspace_id,
+             qtc.created_at,
+             qtc.updated_at
+        FROM qa_loop_test_cases qtc
+        JOIN qa_loop_sessions s ON s.id = qtc.session_id
+       WHERE s.workspace_id = $3
+         AND qtc.is_active = true
+         AND NOT EXISTS (SELECT 1 FROM test_cases tc WHERE tc.id = qtc.id)
+      ORDER BY created_at DESC
+       LIMIT $1 OFFSET $2
+    `;
+
+    return await query<TestCaseEntity>(sql, [limit, offset, workspaceId]);
+  }
+
+  /**
    * Update test case
    */
   async update(id: string, updates: Partial<TestCase>): Promise<TestCaseEntity | null> {

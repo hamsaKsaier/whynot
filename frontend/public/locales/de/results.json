@@ -61,6 +61,8 @@
   "results.testCases.namePlaceholder": "Name des Testfalls",
   "results.testCases.new": "Neuer Testfall",
   "results.testCases.noDescription": "Keine Beschreibung",
+  "results.testCases.fromScan": "Aus Scan",
+  "results.testCases.viewInScan": "Schreibgesch\u00fctzt — aus QA-Scan",
   "results.testCases.noMatch": "Keine Testfälle entsprechen Ihren Filtern",
   "results.testCases.notRun": "Nicht ausgeführt",
   "results.testCases.retry": "Erneut versuchen",

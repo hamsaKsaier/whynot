@@ -61,6 +61,8 @@
   "results.testCases.namePlaceholder": "Nombre del caso de prueba",
   "results.testCases.new": "Nuevo caso de prueba",
   "results.testCases.noDescription": "Sin descripción",
+  "results.testCases.fromScan": "De un escaneo",
+  "results.testCases.viewInScan": "Solo lectura — de un escaneo QA",
   "results.testCases.noMatch": "Ningún caso de prueba coincide con sus filtros",
   "results.testCases.notRun": "No ejecutado",
   "results.testCases.retry": "Reintentar",
