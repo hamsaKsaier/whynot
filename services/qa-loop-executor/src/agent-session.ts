@@ -8,7 +8,7 @@ import { getToolsForFocusArea } from './tools/tool-definitions';
 import { ClaudeModel, getModelDisplayName } from './model-selector';
 import { QALoopRepository } from './repositories/qa-loop-repository';
 import { combineDocuments, ParsedDocument } from './document-parser';
-import { IterationResult } from './claude-session';
+import { IterationResult } from './session-types';
 import { selectModel, computeCostCents } from './v2/agents/base-agent';
 
 /** Mirror of FocusArea from loop-orchestrator (defined here to avoid a circular import). */

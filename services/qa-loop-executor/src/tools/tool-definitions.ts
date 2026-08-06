@@ -3,35 +3,7 @@ import { CHAOS_TOOL_DEFINITIONS } from './chaos-tools';
 import { DETECTIVE_TOOL_DEFINITIONS } from './detective-tools';
 import { GUARDIAN_TOOL_DEFINITIONS } from './guardian-tools';
 
-/**
- * Convert Anthropic-format tool definitions to Google GenAI functionDeclarations.
- * The schemas are mostly JSON-Schema compatible; we just strip `additionalProperties`
- * which Google's API does not support.
- */
-export function toGemmaFunctionDeclarations(tools: Anthropic.Tool[]): any[] {
-  return tools.map(tool => ({
-    name: tool.name,
-    description: tool.description || '',
-    parameters: stripUnsupportedSchemaFields(tool.input_schema),
-  }));
-}
 
-function stripUnsupportedSchemaFields(schema: any): any {
-  if (!schema || typeof schema !== 'object') return schema;
-  const { additionalProperties, ...rest } = schema;
-  // Recurse into nested properties
-  if (rest.properties) {
-    const cleaned: any = {};
-    for (const [key, val] of Object.entries(rest.properties)) {
-      cleaned[key] = stripUnsupportedSchemaFields(val);
-    }
-    rest.properties = cleaned;
-  }
-  if (rest.items) {
-    rest.items = stripUnsupportedSchemaFields(rest.items);
-  }
-  return rest;
-}
 
 /**
  * Get non-browser tool definitions (state + report tools).
@@ -394,16 +366,6 @@ const EXPLORE_TOOLS = new Set([
   'get_explored_pages',
 ]);
 
-/**
- * Custom tools allowed during the report phase (lighter set).
- */
-const REPORT_TOOLS = new Set([
-  'get_session_state',
-  'save_test_case',
-  'save_bug',
-  'get_test_cases',
-  'get_bugs',
-]);
 
 /**
  * Filter MCP browser tools to remove unused ones (saves ~300 tokens per tool).
@@ -437,25 +399,3 @@ export function getToolsForFocusArea(
   return [...filteredMcp, ...customTools];
 }
 
-/**
- * Return tool definitions for Gemma 4's explore / report phases.
- * Used by GemmaSession to further reduce per-call tool tokens.
- */
-export function getToolsForPhase(
-  phase: 'explore' | 'report',
-  mcpTools: Anthropic.Tool[] = []
-): Anthropic.Tool[] {
-  const filteredMcp = filterMcpTools(mcpTools);
-  const toolSet = phase === 'report' ? REPORT_TOOLS : EXPLORE_TOOLS;
-  const customTools = getToolDefinitions().filter(t => toolSet.has(t.name));
-
-  if (phase === 'report') {
-    // Report phase only needs navigate + snapshot from MCP
-    const reportMcp = filteredMcp.filter(t =>
-      t.name === 'browser_navigate' || t.name === 'browser_snapshot'
-    );
-    return [...reportMcp, ...customTools];
-  }
-
-  return [...filteredMcp, ...customTools];
-}

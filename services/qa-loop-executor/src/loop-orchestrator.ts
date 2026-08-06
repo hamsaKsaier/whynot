@@ -1,6 +1,6 @@
 import { createLogger } from '../../shared/logger/logger';
 import { QALoopRepository } from './repositories/qa-loop-repository';
-import { CostInfo } from './claude-session';
+import { CostInfo } from './session-types';
 import { AgentSession } from './agent-session';
 import { emitToSession, cleanupSession } from './api/websocket';
 import { ChaosAgent } from './agents/chaos-agent';
