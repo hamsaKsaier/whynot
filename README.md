@@ -1,361 +1,147 @@
-# WhyNot - AI-Powered Test Automation
+# WhyNot QA — your self-hosted AI QA team
 
-A proof-of-concept implementation of an AI-powered test automation tool that converts user stories into executable test cases, automatically detects UI elements, and runs tests in a browser environment.
+An open-source platform that puts a **team of specialized AI QA agents** to work
+on your web app: they explore it in a real browser, find real bugs, probe your
+API and security posture, and write Playwright regression tests — then the QA
+Lead compiles everything into one report.
 
-## Architecture Overview
+**Self-hosted. Bring your own model key. Your code and staging credentials never
+leave your network.**
 
-This project implements a **clean architecture** with microservices:
+<!-- TODO: demo GIF of the QA team board here before launch -->
 
-- **AI Service** (Python/FastAPI): Handles test case generation from user stories using LLMs and vision analysis
-- **Test Executor** (Node.js/TypeScript): Manages browser automation using Playwright and element detection
-- **Gateway** (Node.js/TypeScript): Orchestrates the complete workflow
+## Why not just paste screenshots into a chatbot?
 
-## Features
+A chatbot answers a question and forgets you. WhyNot runs a **workflow**:
 
-- ✅ **Natural Language Test Generation**: Convert user stories into executable test cases using AI
-- ✅ **Hybrid Element Detection**: Combines DOM analysis and vision AI to find UI elements
-- ✅ **Automatic Selector Ranking**: Prioritizes stable selectors (data-testid, IDs, semantic attributes)
-- ✅ **Browser Automation**: Full Playwright integration for test execution
-- ✅ **Screenshot Capture**: Automatic screenshots at each test step
-- ✅ **Clean Architecture**: Separation of concerns with domain, application, and infrastructure layers
-- ✅ **Production Ready**: Error handling, retry logic, circuit breakers, rate limiting
-- ✅ **Data Persistence**: PostgreSQL database for test cases and execution results
-- ✅ **Structured Logging**: Request tracking, metrics collection, detailed health checks
-- ✅ **Input Validation**: Comprehensive validation and sanitization
+- **A real QA team, not one generalist.** Five agents with distinct roles work
+  in parallel and talk to each other — the Lead sets strategy, the Exploratory
+  tester wanders your UI, the Security tester pokes where it shouldn't, the API
+  tester hunts edge cases, and the Auto tester turns confirmed bugs into
+  Playwright regression tests.
+- **Memory.** Projects, bug history, and test suites persist. Every scan makes
+  the next one smarter.
+- **Privacy.** Runs entirely on your infrastructure with a single
+  `docker compose up`. No vendor cloud in the loop — usable where a cloud
+  chatbot never will be (banks, healthcare, government, EU data residency).
+- **Model-agnostic.** New model released this week? It's a dropdown entry in
+  your admin panel, not a migration.
 
-## Prerequisites
+## Quickstart (~15 minutes)
 
-- Docker and Docker Compose
-- Node.js 20+ (for local development)
-- Python 3.11+ (for local development)
-- OpenAI API key or Anthropic API key
-- PostgreSQL 15+ (included in Docker Compose)
-
-## Quick Start
-
-### Using Docker Compose (Recommended)
-
-1. **Clone and navigate to the project:**
-   ```bash
-   cd whynot
-   ```
-
-2. **Set up environment variables:**
-   ```bash
-   cp .env.example .env
-   # Edit .env and add your OpenAI or Anthropic API key
-   # Configure database credentials and other settings
-   ```
-
-3. **Start all services:**
-   ```bash
-   make start-build
-   ```
-
-4. **Test the API:**
-   ```bash
-   curl -X POST http://localhost:3000/api/run-test \
-     -H "Content-Type: application/json" \
-     -d '{
-       "website_url": "https://example.com",
-       "user_story": "As a user, I want to navigate to the website and see the homepage"
-     }'
-   ```
-
-### Local Development
-
-#### AI Service (Python)
+Requirements: Docker + Docker Compose, ~4 GB free RAM, and **one** LLM API key
+(Anthropic, OpenAI, Google, or any OpenRouter model).
 
 ```bash
-cd services/ai-service
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+git clone https://github.com/hamsaKsaier/whynot.git && cd whynot
 cp .env.example .env
-# Edit .env with your API keys
-uvicorn app.main:app --reload --port 8000
 ```
 
-#### Test Executor (Node.js)
+Edit `.env` and set, at minimum:
 
 ```bash
-cd services/test-executor
-npm install
-cp .env.example .env
-npm run build
-npm start
-# Or for development: npm run dev
-```
+SELF_HOSTED=true
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=<a strong password>
 
-#### Gateway (Node.js)
+# Pick ONE provider key. Google's free tier is the zero-cost path:
+GOOGLE_AI_API_KEY=<free key from aistudio.google.com>
+GOOGLE_AI_MODEL=gemini-flash-lite-latest
+# or ANTHROPIC_API_KEY=... / OPENAI_API_KEY=... / OPENROUTER_API_KEY=...
+
+# Required secrets — generate each with: openssl rand -base64 32
+JWT_SECRET=<generated>
+SECRETS_ENCRYPTION_KEY=<generated, exactly 32 bytes>
+```
 
 ```bash
-cd gateway
-npm install
-cp .env.example .env
-npm run build
-npm start
-# Or for development: npm run dev
+docker compose -f docker/compose/docker-compose.yml up --build
 ```
 
-## API Endpoints
+Then open:
 
-### Gateway Service (Port 3000)
+- **App** → http://localhost:5183 — sign in with your admin email/password
+- **Admin** → http://localhost:5184 → **AI Providers** → confirm your key, pick a model
 
-#### `POST /api/run-test`
-Complete workflow: Generate tests from user story and execute them.
+Point a scan at a URL and watch the QA team work.
 
-**Request:**
-```json
-{
-  "website_url": "https://example.com",
-  "user_story": "As a user, I want to login to the website",
-  "headless": true
-}
+Full guide, edition-flag details, and troubleshooting: **[docs/SELF_HOSTING.md](docs/SELF_HOSTING.md)**
+
+## Run scans for free
+
+WhyNot runs a full scan on **Google AI Studio's free tier** — no card, no spend.
+Grab a key at [aistudio.google.com](https://aistudio.google.com) and set:
+
+```bash
+GOOGLE_AI_API_KEY=<your free key>
+GOOGLE_AI_MODEL=gemini-flash-lite-latest
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "test_case": {
-    "id": "test-abc123",
-    "name": "User can login",
-    "steps": [...]
-  },
-  "execution_result": {
-    "execution_id": "exec-xyz789",
-    "status": "completed",
-    "steps": [...],
-    "screenshots": [...]
-  },
-  "summary": {
-    "test_name": "User can login",
-    "total_steps": 5,
-    "passed_steps": 5,
-    "failed_steps": 0,
-    "status": "completed",
-    "duration_ms": 12345
-  }
-}
-```
+That second line matters. Free-tier request limits differ sharply between
+models: the full `flash` models allow as few as **5 requests per minute**, and a
+single scan makes far more calls than that. Scans still complete — WhyNot backs
+off and retries when a provider rate-limits it — but they crawl. The `flash-lite`
+alias has much higher limits and is what we test the free path against.
 
-#### `POST /api/generate-tests`
-Generate test cases only (without execution).
+> **Use the `-latest` aliases, not pinned model IDs.** Google retires specific
+> versions for *new* API keys while existing keys keep working, so a pinned ID
+> like `gemini-2.5-flash` fails with "no longer available to new users" on a
+> fresh install. The aliases always resolve to the current model.
 
-**Request:**
-```json
-{
-  "website_url": "https://example.com",
-  "user_story": "As a user, I want to search for products"
-}
-```
+If you'd rather pay a little for a faster, sharper scan, a full 5-agent run on
+Gemini 2.5 Flash via OpenRouter costs roughly **2–3 cents**.
 
-### AI Service (Port 8000)
+## Supported models
 
-- `POST /api/generate-tests` - Generate test cases from user story
-- `POST /api/analyze-screenshot` - Analyze screenshot for element detection
-- `GET /health` - Health check
+WhyNot is model-agnostic — the admin panel picks the provider and model, so a
+new model release is a config change, not a code change.
 
-### Test Executor Service (Port 3001)
+| Provider | Status |
+|----------|--------|
+| Google (Gemini) | **Verified** — free tier completes scans; use `gemini-flash-lite-latest` |
+| OpenRouter (Gemini, Qwen, GLM, DeepSeek, …) | **Verified** on Gemini 2.5 Flash; other models untested |
+| Anthropic (Claude) | **Verified** |
+| OpenAI | Supported in code, not yet verified |
+| Z.ai (GLM) | Supported in code, not yet verified |
 
-- `POST /api/execute-test` - Execute a test case
-- `POST /api/detect-elements` - Detect elements from HTML
-- `GET /api/results/:id` - Get execution results
-- `GET /health` - Health check
+A caveat worth knowing: several **free** models advertised as supporting tool
+calling fail partway through a scan — they handle single calls but not the long
+multi-step tool loops the agents need. If a scan dies with JSON or provider
+errors, try a different model before assuming WhyNot is broken.
 
-## Project Structure
+Running a model we haven't listed? Tell us how it went — open a `[model-report]`
+issue (see [CONTRIBUTING.md](CONTRIBUTING.md)) and we'll add it to this table.
 
-```
-whynot/
-├── services/
-│   ├── ai-service/          # Python FastAPI service
-│   │   ├── app/
-│   │   │   ├── domain/      # Business models
-│   │   │   ├── application/ # Use cases (test generation)
-│   │   │   ├── infrastructure/ # LLM, Vision APIs
-│   │   │   └── api/         # FastAPI routes
-│   │   └── requirements.txt
-│   │
-│   └── test-executor/       # Node.js service
-│       ├── src/
-│       │   ├── domain/      # TypeScript models
-│       │   ├── application/ # Test runner, step executor
-│       │   ├── infrastructure/ # Playwright, selectors
-│       │   └── api/         # Express routes
-│       └── package.json
-│
-├── gateway/                 # API Gateway
-│   └── src/
-│       ├── api/            # Main API endpoint
-│       └── workflow/        # Workflow orchestrator
-│
-├── shared/                  # Shared types
-│   └── types/
-│
-├── docker/                  # Docker orchestration
-│   └── compose/             # docker-compose.yml + docker-compose.test.yml
-└── Makefile                 # make start, make logs, make test, ...
-```
+## Architecture
 
-## How It Works
+Microservices orchestrated with Docker Compose:
 
-### 1. Test Generation Flow
+| Service | Role |
+|---------|------|
+| `frontend` | Dashboard — projects, scans, bugs, test suites |
+| `admin-frontend` | Control plane — AI providers, model selection, settings |
+| `gateway` | API gateway, auth, orchestration |
+| `services/qa-loop-executor` | The agent team — browser-driving QA agents (MCP + Playwright) |
+| `services/test-executor` | Playwright test execution |
+| `services/ai-service` | Test generation & vision analysis |
+| `database` | PostgreSQL |
 
-```
-User Story Input
-    ↓
-[NLP Engine] → LLM processes user story
-    ↓
-[Test Case Generator] → Creates test scenarios
-    ↓
-[Step Decomposer] → Breaks into atomic steps
-    ↓
-Test Steps with Element Descriptions
-```
-
-### 2. Element Detection Flow
-
-```
-Test Step with Element Description
-    ↓
-[DOM Analyzer] → Extracts selectors from HTML
-    ↓
-[Vision Analyzer] → Analyzes screenshot (optional)
-    ↓
-[Hybrid Selector] → Combines and ranks selectors
-    ↓
-Ranked Selector List (data-testid > id > text > visual)
-```
-
-### 3. Test Execution Flow
-
-```
-Test Case
-    ↓
-[Test Runner] → Initializes browser
-    ↓
-For each step:
-    [Step Executor] → Locates element
-    [Action Performer] → Executes action
-    [Screenshot Capture] → Captures state
-    ↓
-Execution Result with Screenshots
-```
-
-## Element Detection Strategy
-
-The system uses a **hybrid approach** with the following priority:
-
-1. **Data attributes** (`data-testid`, `data-cy`) - Stability: 0.95
-2. **Stable IDs** - Stability: 0.85
-3. **Semantic attributes** (`aria-label`, `role`) - Stability: 0.75
-4. **Stable CSS classes** (semantic class names like `login-button`, `submit-form`, BEM notation) - Stability: 0.65
-5. **Text content** - Stability: 0.60
-6. **Unstable CSS classes** (framework-generated classes like `sc-123abc`, Tailwind utilities) - Stability: 0.40
-7. **Visual position** (from screenshot) - Stability: 0.40
-8. **XPath** (last resort) - Stability: 0.30
-
-### Class Stability Detection
-
-The system intelligently detects stable vs unstable CSS classes:
-
-**Stable Classes** (score: 0.65):
-- Semantic names: `login-button`, `submit-form`, `cancel-btn`
-- BEM notation: `button-primary`, `card-header`, `button__text`
-- Descriptive names: `menu`, `navbar`, `sidebar`, `modal`, `dialog`
-
-**Unstable Classes** (score: 0.40):
-- Framework-generated: `sc-123abc`, `css-xyz789`
-- Index-based: `item-0`, `button-1`
-- Tailwind utilities: `mt-4`, `px-2`, `bg-blue-500`
-- State classes: `hover`, `active`, `focus`, `disabled`
-
-Framework-generated classes are still used as fallback selectors but with lower priority than semantic classes.
-
-## Configuration
-
-### Environment Variables
-
-**AI Service:**
-- `LLM_PROVIDER`: `openai` or `anthropic`
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `OPENAI_MODEL`: Model to use (default: `gpt-4`)
-- `ANTHROPIC_API_KEY`: Your Anthropic API key
-
-**Test Executor:**
-- `AI_SERVICE_URL`: URL of AI service (default: `http://localhost:8000`)
-- `SCREENSHOTS_DIR`: Directory for screenshots
-- `PREVIEW_FRAME_INTERVAL_MS`: Minimum interval between frame captures in milliseconds (default: `50`)
-- `PREVIEW_SCREENSHOT_TYPE`: Screenshot format - `png` or `jpeg` (default: `jpeg`)
-- `PREVIEW_JPEG_QUALITY`: JPEG quality 0-100 (default: `85`)
-- `PREVIEW_FULL_PAGE`: Enable full-page screenshots - `true` or `false` (default: `false`)
-- `PREVIEW_MAX_HISTORY_FRAMES`: Maximum number of frames to store in history (default: `100`)
-
-**Gateway:**
-- `AI_SERVICE_URL`: URL of AI service
-- `TEST_EXECUTOR_URL`: URL of test executor
-
-## Production Features
-
-This project now includes production-ready features:
-
-- ✅ **Error Handling & Resilience**: Retry logic with exponential backoff, circuit breakers
-- ✅ **Data Persistence**: PostgreSQL database for test cases, executions, and step results
-- ✅ **Structured Logging**: Request ID tracking, log levels, metrics collection
-- ✅ **Input Validation**: Zod-based validation with sanitization
-- ✅ **Rate Limiting**: Per-IP rate limiting for API protection
-- ✅ **Enhanced Health Checks**: Detailed service status with dependency health
-- ✅ **Metrics Collection**: Execution times, success rates, error tracking
-- ✅ **Comprehensive Documentation**: API docs, deployment guide, troubleshooting
-
-## Limitations
-
-- Single test case execution (first generated test case)
-- Limited assertion types
-- No parallel test execution
-- No self-healing mechanism (yet)
-
-## Future Enhancements
-
-- [ ] Self-healing tests that adapt to UI changes
-- [ ] Test result storage (database)
-- [ ] Web dashboard UI
-- [ ] CI/CD integration
-- [ ] Multi-browser support
-- [ ] Parallel test execution
-- [ ] Advanced assertion types
-- [ ] Test reporting and analytics
-
-## Documentation
-
-- **[API Documentation](./docs/API.md)**: Complete API reference
-- **[Deployment Guide](./docs/DEPLOYMENT.md)**: Production deployment instructions
-- **[Troubleshooting Guide](./docs/TROUBLESHOOTING.md)**: Common issues and solutions
-
-## Troubleshooting
-
-See the [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) for detailed solutions to common issues.
-
-Quick fixes:
-
-- **Services not starting**: Check Docker logs: `make logs` (or `make logs-<service>`)
-- **Database connection issues**: Verify DATABASE_URL in `.env` matches `docker/compose/docker-compose.yml`
-- **Test execution fails**: Check browser installation and website accessibility
-- **Rate limiting**: Adjust limits in `.env` or wait for reset window
+More docs: [API](docs/API.md) · [Deployment](docs/DEPLOYMENT.md) ·
+[Troubleshooting](docs/TROUBLESHOOTING.md)
 
 ## Contributing
 
-This project has been enhanced with production-ready features. Future enhancements:
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Commits require
+a DCO sign-off (`git commit -s`).
 
-- Self-healing tests that adapt to UI changes
-- Parallel test execution
-- Advanced assertion types
-- Test reporting and analytics
-- CI/CD integration improvements
-- Multi-browser support
+## Hosted edition
+
+The self-hosted edition is free and will stay free. A hosted version (same
+codebase, we run it for you) is planned — open an issue if you'd want that.
 
 ## License
 
-MIT
+[AGPL-3.0](LICENSE) © 2026 Hamza Ksaier and contributors.
 
+If you run a modified version of WhyNot as a network service, the AGPL requires
+you to make your modified source available to its users.

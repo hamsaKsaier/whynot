@@ -34,9 +34,14 @@ SELF_HOSTED=true
 ADMIN_EMAIL=you@example.com
 ADMIN_PASSWORD=<a strong password>
 
-# Pick ONE provider key:
-ANTHROPIC_API_KEY=sk-ant-...
-# or OPENAI_API_KEY=...  / GOOGLE_AI_API_KEY=...  / OPENROUTER_API_KEY=...
+# Pick ONE provider key. Google's free tier is the zero-cost path:
+GOOGLE_AI_API_KEY=<free key from aistudio.google.com>
+GOOGLE_AI_MODEL=gemini-flash-lite-latest
+# or ANTHROPIC_API_KEY=...  / OPENAI_API_KEY=...  / OPENROUTER_API_KEY=...
+#
+# Use the `-latest` aliases, not pinned IDs like `gemini-2.5-flash` — Google
+# retires specific versions for NEW API keys, so a pinned default fails on a
+# fresh install with "no longer available to new users".
 
 # Required secrets — generate each with: openssl rand -base64 32
 JWT_SECRET=<generated>
