@@ -1,7 +1,7 @@
 import { createLogger } from '../../shared/logger/logger';
 import { QALoopRepository } from './repositories/qa-loop-repository';
-import { ClaudeSession, CostInfo } from './claude-session';
-import { GemmaSession } from './gemma-session';
+import { CostInfo } from './claude-session';
+import { AgentSession } from './agent-session';
 import { emitToSession, cleanupSession } from './api/websocket';
 import { ChaosAgent } from './agents/chaos-agent';
 import { DetectiveAgent } from './agents/detective-agent';
@@ -56,7 +56,7 @@ export class LoopOrchestrator {
   private sessionId: string;
   private config: LoopConfig;
   private repository: QALoopRepository;
-  private claudeSession: ClaudeSession | GemmaSession | null = null;
+  private claudeSession: AgentSession | null = null;
   private isPaused: boolean = false;
   private isStopped: boolean = false;
   private currentIteration: number = 0;
@@ -411,9 +411,9 @@ export class LoopOrchestrator {
         this.repository
       );
 
-      // Create a ClaudeSession pointed at the login URL, using the explore tool-set
+      // Create a session pointed at the login URL, using the explore tool-set
       // The onTestCaseCreated callback feeds each new test case into the parallel executor
-      const authSession = new ClaudeSession(
+      const authSession = new AgentSession(
         this.sessionId,
         { ...this.config, targetUrl: loginUrl },
         this.mcpBrowser!,
@@ -554,7 +554,7 @@ Start now with get_session_state(), then navigate and explore.
    */
   private async loadCachedDocumentContext(): Promise<void> {
     try {
-      const tempSession = new ClaudeSession(this.sessionId, this.config, this.mcpBrowser!, 'explore');
+      const tempSession = new AgentSession(this.sessionId, this.config, this.mcpBrowser!, 'explore');
       await tempSession.loadDocumentContext();
       this.cachedDocumentContext = (tempSession as any).documentContext as string | null;
       logger.info('Document context pre-loaded for session', {
@@ -808,32 +808,22 @@ Start now with get_session_state(), then navigate and explore.
     // and pass the pre-loaded document context to skip the per-iteration DB query (2.6).
     // The onTestCaseCreated callback feeds each new test case into the parallel executor.
     //
-    // When GOOGLE_AI_API_KEY is set, use GemmaSession ($0 per scan) instead of ClaudeSession.
-    // Removing the env var instantly falls back to Claude — no code change needed.
-    const useGemma = !!process.env.GOOGLE_AI_API_KEY;
+    // AgentSession resolves its provider from the admin AI Providers config
+    // (env vars as cold-start fallback), so single-agent scans run on whatever
+    // key the self-hoster actually has — Anthropic, Google, OpenAI, OpenRouter
+    // or Z.ai. This replaced the old ClaudeSession/GemmaSession pair, which was
+    // picked by an env check and hard-failed for every other provider.
     const testCaseCallback = (testCase: any, observedResult?: 'pass' | 'fail') =>
       parallelExecutor.enqueue(testCase, observedResult || 'pass');
 
-    if (useGemma) {
-      this.claudeSession = new GemmaSession(
-        this.sessionId,
-        this.config,
-        this.mcpBrowser!,
-        plan.focusArea as any,
-        this.cachedDocumentContext,
-        testCaseCallback,
-      );
-      logger.info('Using Gemma 4 26B for exploration (free tier)', { sessionId: this.sessionId });
-    } else {
-      this.claudeSession = new ClaudeSession(
-        this.sessionId,
-        this.config,
-        this.mcpBrowser!,
-        plan.focusArea as any,
-        this.cachedDocumentContext,
-        testCaseCallback,
-      );
-    }
+    this.claudeSession = new AgentSession(
+      this.sessionId,
+      this.config,
+      this.mcpBrowser!,
+      plan.focusArea as any,
+      this.cachedDocumentContext,
+      testCaseCallback,
+    );
 
     // Select model based on focus area (Phase 6: Tiered Models)
     const modelSelection = selectModel({
@@ -841,11 +831,14 @@ Start now with get_session_state(), then navigate and explore.
       preferCostEffective: this.config.maxBudgetCents !== undefined
     });
 
-    logger.info('Model selected for exploration', {
+    // NOTE: this is the focus-area *preference* only. The model that actually
+    // runs is resolved inside AgentSession via selectModel() from the admin AI
+    // Providers config, and is logged there as "Starting single-agent iteration".
+    logger.info('Preferred model for exploration', {
       sessionId: this.sessionId,
-      model: useGemma ? 'gemma-4-26b-a4b-it' : modelSelection.model,
-      reason: useGemma ? 'GOOGLE_AI_API_KEY set — using free Gemma 4' : modelSelection.reason,
-      estimatedCostPerCall: useGemma ? 0 : modelSelection.estimatedCostPerCall,
+      preferredModel: modelSelection.model,
+      reason: modelSelection.reason,
+      estimatedCostPerCall: modelSelection.estimatedCostPerCall,
     });
 
     const targetHint = plan.targets.length > 0
