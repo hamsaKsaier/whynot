@@ -10,6 +10,70 @@ import type { AgentType } from '../v2/types';
 const logger = createLogger('report-tools');
 
 /**
+ * "This page failed to load" is only a bug for a page the app actually routes
+ * to. SPAs (Angular, Vue, React) answer 200 + index.html for ANY path, so when
+ * an agent guesses a URL the app never links to and navigates there, the app's
+ * own scripts fail to resolve relative to the bogus path and throw real console
+ * errors. The agent then files those as a page-load bug.
+ *
+ * This was not hypothetical: a scan of OWASP Juice Shop (an Angular shop)
+ * produced four HIGH "Admin Page Failed to Load" bugs against invented
+ * OrangeHRM-style paths like /web/index.php/admin/viewSystemRole — routes Juice
+ * Shop does not have. Publishing those would have been trivially falsifiable.
+ *
+ * So a load-failure bug is only accepted for a page the crawler genuinely
+ * reached via a real link (recorded in qa_loop_pages) or the scan target
+ * itself. Matches on the failure vocabulary agents actually use.
+ */
+function isPageLoadFailureClaim(input: { title?: string; description?: string }): boolean {
+  const text = `${input.title || ''} ${input.description || ''}`.toLowerCase();
+  return (
+    /\bfail(ed|s|ing)?\s+to\s+load\b/.test(text) ||
+    /\b(page|site|app|screen)\s+(did\s*n'?t|does\s*n'?t|would\s*n'?t|failed\s+to)\s+(load|render|display)\b/.test(text) ||
+    /\bblank\s+(page|screen)\b/.test(text) ||
+    /\bmodule\s+script\b/.test(text) ||
+    /\bfailed\s+to\s+(fetch|import)\b.*\b(script|module|stylesheet|css)\b/.test(text) ||
+    /\b(page|route)\s+not\s+found\b/.test(text)
+  );
+}
+
+/**
+ * True when a bug is really one of WhyNot's OWN tools failing, misattributed to
+ * the target app. When the browser_evaluate tool can't serialise a function, or
+ * the Chrome DevTools MCP can't find a Chrome binary, that is our tooling — not
+ * a defect in the app under test. Agents nonetheless file these, and as
+ * critical: a scan of OWASP Juice Shop produced a CRITICAL "CDP functions fail:
+ * Chrome executable not found" and a HIGH "browser_evaluate function not
+ * serializable", neither of which is a Juice Shop bug.
+ *
+ * Matches on our internal tool/infra identifiers, which essentially never
+ * appear when describing a genuine application defect.
+ */
+function isOwnToolFailure(input: { title?: string; description?: string }): boolean {
+  const text = `${input.title || ''} ${input.description || ''}`.toLowerCase();
+  const mentionsInternal =
+    /\bbrowser_evaluate\b/.test(text) ||
+    /\bcdp_[a-z_]+/.test(text) ||
+    /\bpage\._evaluate/.test(text) ||
+    /_evaluatefunction/.test(text) ||
+    /\b(playwright|chrome\s+devtools)\s+mcp\b/.test(text) ||
+    /\bmcp\s+(tool|server|browser)\b/.test(text);
+  const infraError =
+    /not\s+(well[-\s]?)?serializable/.test(text) ||
+    /chrome(\s+executable)?\s+(not\s+found|is\s+not\s+installed|could\s*n'?t\s+be\s+found)/.test(text) ||
+    /executable\s+doesn'?t\s+exist/.test(text);
+  // Either an explicit internal-tool reference, or a bare infra-error string
+  // that only our stack emits — both mean "our tool broke", not "app is buggy".
+  return mentionsInternal || infraError;
+}
+
+/** Normalise a URL for comparison: drop trailing slash and SPA hash fragment. */
+function canonicalUrl(u: string | null | undefined): string {
+  if (!u) return '';
+  return u.trim().replace(/#.*$/, '').replace(/\/+$/, '').toLowerCase();
+}
+
+/**
  * Safety net: if requires_auth is true but playwright_code has no login steps,
  * prepend them automatically so the cold verification browser can authenticate.
  */
@@ -242,6 +306,78 @@ export class ReportTools {
 
   async saveBug(input: BugInput): Promise<ToolResult> {
     try {
+      // ── Verification gate C: our own tool failures, not app defects ──
+      // Checked first — cheap, no DB round-trip.
+      if (isOwnToolFailure(input)) {
+        logger.warn('Rejected own-tool-failure reported as app bug', {
+          sessionId: this.sessionId,
+          title: input.title,
+        });
+        return {
+          error:
+            `Not filed: this describes a failure of a testing tool (e.g. ` +
+            `browser_evaluate, cdp_*, or a missing Chrome binary), not a defect ` +
+            `in the app under test. That is an environment/tooling problem — do ` +
+            `not report it as a bug in the target. Continue testing with other ` +
+            `tools and only file bugs about the application's own behaviour.`,
+        };
+      }
+
+      // ── Verification gate A: page-load failures on undiscovered routes ──
+      // Only meaningful for a page the app actually links to. See
+      // isPageLoadFailureClaim for why (SPA catch-all routing turns a guessed
+      // URL into a real-looking load failure).
+      if (isPageLoadFailureClaim(input) && input.page_url) {
+        const session = await this.repository.getSession(this.sessionId);
+        const target = canonicalUrl(session?.target_url);
+        const claimed = canonicalUrl(input.page_url);
+        const isTarget = claimed === target || (!!target && claimed.startsWith(target));
+
+        if (!isTarget) {
+          const pages = await this.repository.getPages(this.sessionId).catch(() => []);
+          const wasDiscovered = pages.some(p => canonicalUrl(p.url) === claimed);
+          if (!wasDiscovered) {
+            logger.warn('Rejected page-load bug on undiscovered URL', {
+              sessionId: this.sessionId,
+              title: input.title,
+              page_url: input.page_url,
+            });
+            return {
+              error:
+                `Not filed: "${input.page_url}" is not a page this app links to — ` +
+                `it was never found via a real link, so a load failure there is not a bug ` +
+                `(single-page apps return a page for any URL, and the app's own scripts then ` +
+                `fail against the wrong path). Only report load failures for pages reached by ` +
+                `following an actual link. Do not re-file this.`,
+            };
+          }
+        }
+      }
+
+      // ── Verification gate B: high/critical claims need reproduction steps ──
+      // A "reflected XSS / arbitrary code execution" filed with no way to
+      // reproduce it is the severity-inflation failure mode. Real high-severity
+      // findings can be reproduced; require the steps rather than taking the
+      // label on faith. (Observed: a HIGH "Reflected XSS" whose payload was in
+      // fact escaped in the page body and merely reflected inside a meta tag.)
+      const severity = (input.severity || '').toLowerCase();
+      const hasRepro = Array.isArray(input.reproduction_steps)
+        && input.reproduction_steps.filter(s => (s || '').trim().length > 0).length >= 1;
+      if ((severity === 'high' || severity === 'critical') && !hasRepro) {
+        logger.warn('Rejected high/critical bug with no reproduction steps', {
+          sessionId: this.sessionId,
+          title: input.title,
+          severity,
+        });
+        return {
+          error:
+            `Not filed: a ${severity}-severity bug must include concrete reproduction_steps ` +
+            `(the exact actions that trigger it, and what you observed). If you cannot give ` +
+            `steps that reproduce it, you have not confirmed it — lower the severity to ` +
+            `'medium' or below, or verify it first, then re-file.`,
+        };
+      }
+
       // Fix 4: deduplicate bugs by title + page_url within the same session.
       // Agents frequently re-report the same missing-header / CSRF / etc.
       // issue across iterations. Skip silently so the report stays clean.

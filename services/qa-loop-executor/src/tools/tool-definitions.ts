@@ -221,7 +221,7 @@ PLAYWRIGHT CODE RULES for playwright_code field:
     },
     {
       name: 'save_bug',
-      description: 'Report a bug or issue found during exploration.',
+      description: 'Report a bug you have CONFIRMED during exploration. Two rules are enforced and a call that breaks them is rejected: (1) only report a "page failed to load" for a URL the app actually links to — never for a URL you typed or guessed, because single-page apps return a page for every path and their scripts then fail against the wrong path; (2) a high or critical bug MUST include reproduction_steps that actually trigger it — if you cannot reproduce it, it is not high/critical.',
       input_schema: {
         type: 'object' as const,
         properties: {
@@ -254,7 +254,7 @@ PLAYWRIGHT CODE RULES for playwright_code field:
           reproduction_steps: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Steps to reproduce the bug'
+            description: 'Exact steps that reproduce the bug, and what you observed. REQUIRED for high/critical severity.'
           },
           root_cause: {
             type: 'string',
