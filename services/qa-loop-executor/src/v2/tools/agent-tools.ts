@@ -203,6 +203,10 @@ export function getToolSchemasForAgent(agentType: AgentType): Record<string, Too
       };
     case 'qa_lead':
       return {};
+    case 'verifier':
+      // The verifier defines its own tools inline (verify_bug + read-only
+      // browser tools) in VerifierAgent.buildToolSchemas.
+      return {};
     default:
       return { ...board };
   }

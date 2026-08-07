@@ -29,6 +29,7 @@ import { ExploratoryTesterAgent } from './agents/exploratory-tester';
 import { SecurityTesterAgent } from './agents/security-tester';
 import { APITesterAgent } from './agents/api-tester';
 import { AutoTesterAgent } from './agents/auto-tester';
+import { VerifierAgent, isBugVerifierEnabled } from './agents/verifier';
 import { BaseAgent } from './agents/base-agent';
 
 const logger = createLogger('v2-orchestrator');
@@ -441,6 +442,32 @@ export class V2Orchestrator {
       // the test-executor so last_run_status gets populated. Pass/fail
       // counts are passed to QA Lead for the synthesis report.
       const execSummary = await this.executeGeneratedTests();
+
+      // ─── Phase 5.7: Verify filed bugs ───────────────────────────
+      // Reproduce each open bug before it reaches the report. The save-time
+      // gates catch known false-positive shapes; this catches the rest by
+      // actually re-checking. Best-effort: a verifier failure must not sink a
+      // scan that already found real bugs, so it's wrapped and swallowed.
+      if (isBugVerifierEnabled()) {
+        try {
+          emitToSession(this.sessionId, {
+            type: 'status_update',
+            data: { phase: 'verifying', message: 'Verifier reproducing reported bugs...' },
+          });
+          const verifyResult = await this.runAgent('verifier', plan);
+          allResults.push(verifyResult);
+          this.accumulateCost(verifyResult);
+          logger.info('Verifier completed', {
+            sessionId: this.sessionId,
+            status: verifyResult.status,
+          });
+        } catch (err: any) {
+          logger.warn('Verifier phase failed — proceeding to synthesis unverified', {
+            sessionId: this.sessionId,
+            error: err.message,
+          });
+        }
+      }
 
       // ─── Phase 6: QA Lead synthesis ─────────────────────────────
       emitToSession(this.sessionId, {
@@ -1136,7 +1163,7 @@ export class V2Orchestrator {
 
     // Browser-using agents: verify the shared browser is still alive, restart if not.
     // Parallel mode skips this branch — the dedicatedPair is already started.
-    const needsBrowser = agentType !== 'auto_tester' && agentType !== 'qa_lead';
+    const needsBrowser = agentType !== 'auto_tester' && agentType !== 'qa_lead'; // verifier DOES need the browser
     if (needsBrowser && !dedicatedPair) {
       if (!this.mcpBrowser || !this.mcpBrowser.connected) {
         logger.warn(`MCP browser not connected for ${agentType} — restarting`, {
@@ -1181,6 +1208,10 @@ export class V2Orchestrator {
       case 'auto_tester':
         // Auto Tester does NOT use the browser or CDP — only generates code
         agent = new AutoTesterAgent(agentConfig);
+        break;
+      case 'verifier':
+        // Reproduces filed bugs in the shared browser and records verdicts.
+        agent = new VerifierAgent(agentConfig, browserForAgent!, cdpForAgent);
         break;
       default:
         logger.warn(`Unknown agent type: ${agentType}, skipping`);
@@ -1396,9 +1427,21 @@ export class V2Orchestrator {
 
     // Gather all data for synthesis
     const boardEntries = await this.board.getAllForSession(this.sessionId);
-    const bugs = await this.repository.getBugs(this.sessionId).catch(() => []);
+    const allBugs = await this.repository.getBugs(this.sessionId).catch(() => []);
     const testCases = await this.repository.getTestCases(this.sessionId).catch(() => []);
     const pages = await this.repository.getExploredPages(this.sessionId).catch(() => []);
+
+    // Exclude bugs the Verifier could not reproduce — the report should reflect
+    // confirmed/unverified findings, not ones already ruled out.
+    const bugs = allBugs.filter(b => b.status !== 'false_positive');
+    const falsePositives = allBugs.length - bugs.length;
+    if (falsePositives > 0) {
+      logger.info('Excluded false-positive bugs from synthesis', {
+        sessionId: this.sessionId,
+        falsePositives,
+        remaining: bugs.length,
+      });
+    }
 
     const report = await qaLead.synthesize(agentResults, boardEntries, bugs, testCases, pages);
 

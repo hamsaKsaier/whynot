@@ -2,7 +2,7 @@
  * Shared types for the multi-agent v2 system.
  */
 
-export type AgentType = 'qa_lead' | 'exploratory' | 'security' | 'api_tester' | 'auto_tester';
+export type AgentType = 'qa_lead' | 'exploratory' | 'security' | 'api_tester' | 'auto_tester' | 'verifier';
 
 // 'killed_idle' = watchdog killed the agent for inactivity (see orchestrator.runAgent
 // and the MAX_AGENT_IDLE_MIN env var). Distinct from 'error' because the agent

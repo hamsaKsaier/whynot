@@ -22,12 +22,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Loader2, ArrowLeft, Compass, ShieldAlert, Plug, Hammer, Crown } from 'lucide-react';
+import { Loader2, ArrowLeft, Compass, ShieldAlert, Plug, Hammer, Crown, CheckCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { AgentStreamSlice, LeadDispatch } from '../../hooks/useQALoopStream';
 
 const LEAD: AgentKey = 'qa_lead';
-const SPECIALISTS = ['exploratory', 'security', 'api_tester', 'auto_tester'] as const;
+const SPECIALISTS = ['exploratory', 'security', 'api_tester', 'auto_tester', 'verifier'] as const;
 
 type AgentKey = 'qa_lead' | typeof SPECIALISTS[number];
 
@@ -69,6 +69,12 @@ const PROFILES: Record<AgentKey, AgentProfile> = {
     persona: 'the builder',
     role: 'Turns confirmed findings into Playwright regression tests.',
     Icon: Hammer,
+  },
+  verifier: {
+    title: 'Verifier',
+    persona: 'the skeptic',
+    role: 'Reproduces every reported bug and throws out the ones that do not hold up.',
+    Icon: CheckCheck,
   },
 };
 
@@ -180,7 +186,7 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
               {SPECIALISTS.map(a => <div key={a} className="h-4 w-px bg-border" />)}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full mt-3 md:mt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full mt-3 md:mt-0">
               {SPECIALISTS.map(agent => (
                 <AgentNode
                   key={agent}

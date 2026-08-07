@@ -706,6 +706,34 @@ export class QALoopRepository {
     return result.rows;
   }
 
+  /**
+   * Record the Verifier agent's verdict on a bug.
+   *
+   * status: 'confirmed'      — reproduced; verified_at stamped
+   *         'false_positive' — could not be reproduced
+   * The verdict note is appended to root_cause (prefixed) so the reasoning is
+   * visible in the report without a new column. Scoped by session_id so a bad
+   * bugId can't touch another scan's data.
+   */
+  async setBugVerdict(
+    sessionId: string,
+    bugId: string,
+    status: 'confirmed' | 'false_positive',
+    note: string,
+  ): Promise<void> {
+    await this.pool.query(
+      `UPDATE qa_loop_bugs
+          SET status = $3,
+              verified_at = CURRENT_TIMESTAMP,
+              root_cause = CASE
+                WHEN $4::text = '' THEN root_cause
+                ELSE '[verifier] ' || $4 || coalesce(E'\n' || root_cause, '')
+              END
+        WHERE id = $2 AND session_id = $1`,
+      [sessionId, bugId, status, note || ''],
+    );
+  }
+
   // Note methods
   async addNote(sessionId: string, note: {
     note: string;

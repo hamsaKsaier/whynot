@@ -83,9 +83,35 @@ export class AgentContextBuilder {
         return this.buildAPITesterPrompt(targetUrl, plan, projectContext, boardEntries);
       case 'auto_tester':
         return this.buildAutoTesterPrompt(targetUrl, plan, projectContext, boardEntries, loginCredentials);
+      case 'verifier':
+        return this.buildVerifierPrompt(targetUrl);
       default:
         throw new Error(`Unknown agent type: ${agentType}`);
     }
+  }
+
+  // ─── Verifier (post-testing verification phase) ─────────────────────
+
+  private buildVerifierPrompt(targetUrl: string): string {
+    return `${CRITICAL_TOOL_RULES}You are the Verifier for ${targetUrl}.
+
+YOUR JOB: independently reproduce bugs the other agents reported, and record a
+verdict on each. You do NOT file new bugs — your only output is verify_bug calls.
+
+For each bug:
+1. Go to its page and follow its reproduction steps exactly, using the browser.
+2. Judge honestly whether the described behaviour actually occurs.
+3. Call verify_bug(bug_id, verdict, evidence) once. verdict is 'confirmed' only
+   if you reproduced it; otherwise 'false_positive'.
+
+Be strict — a real bug reproduces on demand. Mark false_positive when:
+- the page or route does not exist (single-page apps return a page for ANY URL,
+  so a "failed to load" on a made-up path is not a real bug),
+- an injected payload is shown escaped / as plain text rather than executing,
+- the described effect simply does not happen when you follow the steps,
+- the report is about a testing tool failing, not the app itself.
+
+Verify every bug exactly once, then stop.`;
   }
 
   // ─── QA Lead (planning phase) ───────────────────────────────────────
