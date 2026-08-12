@@ -8,7 +8,27 @@ Lead compiles everything into one report.
 **Self-hosted. Bring your own model key. Your code and staging credentials never
 leave your network.**
 
-<!-- TODO: demo GIF of the QA team board here before launch -->
+<!--
+  DEMO: add docs/demo.gif (or an MP4, see below), then delete the two comment
+  markers around the block below to make it live. Kept commented so the public
+  README never shows a broken image before the asset exists.
+
+  GIF option (simplest — always renders, autoplays, loops):
+<p align="center">
+  <a href="#quickstart-15-minutes">
+    <img src="docs/demo.gif"
+         alt="WhyNot QA team board — five AI agents testing a web app live, with the Security agent submitting SQL injection payloads"
+         width="820">
+  </a>
+</p>
+<p align="center">
+  <em>Point it at a URL &rarr; five agents test it live &rarr; real bugs, with reproduction steps.</em>
+</p>
+
+  MP4 option (sharper, smaller): drag the .mp4 into any GitHub issue/PR comment,
+  copy the https://github.com/user-attachments/assets/... URL it generates, and
+  paste that URL on its own line here — GitHub renders it as an inline player.
+-->
 
 ## Why not just paste screenshots into a chatbot?
 
