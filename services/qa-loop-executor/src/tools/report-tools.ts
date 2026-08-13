@@ -217,7 +217,9 @@ export class ReportTools {
         requiresAuth: input.requires_auth || false
       });
 
-      // Emit event for UI update
+      // Emit event for UI update. `agent` is what lets the team board credit
+      // the test to the agent that saved it — without it every per-agent
+      // counter on the board stays at zero even after a productive scan.
       emitToSession(this.sessionId, {
         type: 'test_generated',
         data: {
@@ -225,7 +227,8 @@ export class ReportTools {
           name: testCase.name,
           category: testCase.category,
           stepsCount: steps.length,
-          observedResult: input.observed_result
+          observedResult: input.observed_result,
+          agent: this.eventBusAgentType || undefined,
         }
       });
 
@@ -422,14 +425,16 @@ export class ReportTools {
         videoPath: input.video_path
       });
 
-      // Emit event for UI update
+      // Emit event for UI update. See saveTestCase — `agent` is required for
+      // the team board to attribute the finding to whoever found it.
       emitToSession(this.sessionId, {
         type: 'bug_found',
         data: {
           id: bug.id,
           title: bug.title,
           severity: bug.severity,
-          category: input.category
+          category: input.category,
+          agent: this.eventBusAgentType || undefined,
         }
       });
 

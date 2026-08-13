@@ -127,10 +127,23 @@ function anyAgentWorking(streams: Record<string, AgentStreamSlice>, now: number)
   );
 }
 
-/** Last non-empty line of an agent's thinking — what it is "saying" right now. */
+/**
+ * Internal protocol markers the agents emit to signal completion to the
+ * orchestrator. They are not speech and must never surface as an agent's
+ * "last words" — a finished board otherwise reads "AGENT_DONE" five times.
+ */
+const SENTINEL_RE = /^(AGENT_DONE|EXPLORATION_COMPLETE)\.?$/i;
+
+/** Last meaningful line of an agent's thinking — what it is "saying" right now. */
 function latestLine(slice: AgentStreamSlice | undefined): string | null {
   if (!slice?.thinkingText) return null;
-  const lines = slice.thinkingText.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines = slice.thinkingText
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    // Drop bare sentinels, and strip one that's tacked onto a real sentence.
+    .map(l => l.replace(/\s*\b(AGENT_DONE|EXPLORATION_COMPLETE)\b\.?\s*$/i, '').trim())
+    .filter(l => l && !SENTINEL_RE.test(l));
   return lines.length ? lines[lines.length - 1] : null;
 }
 
@@ -156,6 +169,13 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
 
   const anyWorking = anyAgentWorking(agentStreams, now);
 
+  // The Verifier is experimental and off by default, so in a normal scan it
+  // would sit on the board permanently "waiting" — a dead node on the screen
+  // people judge the product by. Show it only once it actually participates.
+  const specialists = SPECIALISTS.filter(
+    a => a !== 'verifier' || agentStreams['verifier'] != null,
+  );
+
   if (focused) {
     return (
       <AgentDetail
@@ -178,7 +198,7 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
             <div>
               <h3 className="text-lg font-semibold">QA Team</h3>
               <p className="text-sm text-muted-foreground">
-                Five agents working your app. Select one to see what it is doing.
+                {specialists.length + 1} agents working your app. Select one to see what it is doing.
               </p>
             </div>
             {isRunning && (
@@ -208,11 +228,14 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
             <div className="h-4 w-px bg-border" aria-hidden="true" />
             <div className="hidden md:block h-px w-3/4 bg-border" aria-hidden="true" />
             <div className="hidden md:flex w-3/4 justify-around" aria-hidden="true">
-              {SPECIALISTS.map(a => <div key={a} className="h-4 w-px bg-border" />)}
+              {specialists.map(a => <div key={a} className="h-4 w-px bg-border" />)}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full mt-3 md:mt-0">
-              {SPECIALISTS.map(agent => (
+            <div className={cn(
+              'grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-3 md:mt-0',
+              specialists.length >= 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4',
+            )}>
+              {specialists.map(agent => (
                 <AgentNode
                   key={agent}
                   agent={agent}
@@ -264,14 +287,15 @@ function AgentNode({ agent, slice, now, isRunning, anyWorking, onSelect }: Agent
         state === 'stalled' && 'border-amber-500/60',
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Icon className={cn('h-4 w-4 flex-shrink-0', state === 'working' ? 'text-primary' : 'text-muted-foreground')} />
-          <div className="min-w-0">
-            <div className="font-medium text-sm truncate">{profile.title}</div>
-            <div className="text-xs text-muted-foreground truncate">{profile.persona}</div>
-          </div>
-        </div>
+      {/* Name on its own row: at five columns a side-by-side name + badge
+          squeezed every title into "Explorat…" / "API Te…" / "Auto Tes…".
+          The agent's name is the one thing that must always be readable. */}
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon className={cn('h-4 w-4 flex-shrink-0', state === 'working' ? 'text-primary' : 'text-muted-foreground')} />
+        <span className="font-medium text-sm whitespace-nowrap">{profile.title}</span>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground truncate">{profile.persona}</span>
         <StateBadge state={state} />
       </div>
 
