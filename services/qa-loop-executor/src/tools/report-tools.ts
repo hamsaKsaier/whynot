@@ -74,6 +74,49 @@ function canonicalUrl(u: string | null | undefined): string {
 }
 
 /**
+ * Every concrete page route a bug refers to — from page_url AND the free text
+ * of its title and description — resolved to canonical URLs on the target
+ * origin.
+ *
+ * Why the free text matters: an agent can name a hallucinated route in the
+ * title ("Blank page … on /admin/viewSystemRole") while leaving page_url on the
+ * legitimate root. The load-failure gate that only inspected page_url waved
+ * those through — a real hole, seen on a Juice Shop scan that filed four HIGH
+ * "blank page" bugs against invented OrangeHRM paths.
+ *
+ * Asset URLs (…/main.js, …/styles.css) are excluded — a failed asset fetch is
+ * not a "page route" and shouldn't be treated as one.
+ */
+function referencedRoutes(input: { page_url?: string; title?: string; description?: string }, targetUrl: string): string[] {
+  let origin = '';
+  try { origin = new URL(targetUrl).origin; } catch { /* no origin to resolve against */ }
+
+  const text = [input.page_url, input.title, input.description].filter(Boolean).join('  ');
+  const out = new Set<string>();
+
+  // Absolute URLs mentioned anywhere.
+  const URL_RE = /https?:\/\/[^\s"'<>)\]]+/g;
+  for (const m of text.match(URL_RE) || []) {
+    try { out.add(canonicalUrl(new URL(m).href)); } catch { /* skip malformed */ }
+  }
+  // Absolute, route-shaped paths (/admin/viewSystemRole). Two guards:
+  //   - strip full URLs first, so the `//host` inside one isn't read as a path;
+  //   - `(?<!#)` so an SPA hash route like /#/basket isn't split into "/basket"
+  //     (hash routes collapse to the root and are trusted).
+  // Skip anything whose last segment has a file extension — /assets/main.js is
+  // an asset fetch, not a page route.
+  if (origin) {
+    const textNoUrls = text.replace(URL_RE, ' ');
+    for (const m of textNoUrls.match(/(?<!#)\/[A-Za-z0-9._~\-]+(?:\/[A-Za-z0-9._~\-]+)*/g) || []) {
+      const last = m.split('/').pop() || '';
+      if (/\.[a-z0-9]{1,6}$/i.test(last)) continue;
+      try { out.add(canonicalUrl(new URL(m, origin).href)); } catch { /* skip */ }
+    }
+  }
+  return [...out];
+}
+
+/**
  * Safety net: if requires_auth is true but playwright_code has no login steps,
  * prepend them automatically so the cold verification browser can authenticate.
  */
@@ -327,31 +370,47 @@ export class ReportTools {
       }
 
       // ── Verification gate A: page-load failures on undiscovered routes ──
-      // Only meaningful for a page the app actually links to. See
-      // isPageLoadFailureClaim for why (SPA catch-all routing turns a guessed
-      // URL into a real-looking load failure).
-      if (isPageLoadFailureClaim(input) && input.page_url) {
+      // A "page failed to load" is only meaningful for a page the app actually
+      // links to. SPA catch-all routing turns a guessed URL into a real-looking
+      // load failure, so agents hallucinate routes and file bugs about them.
+      //
+      // Checks EVERY route the bug names — page_url and the routes mentioned in
+      // its title/description — against the target root and the discovered
+      // pages. Any concrete route on the target host that was never discovered
+      // is the false-positive pattern, wherever in the bug it appears.
+      if (isPageLoadFailureClaim(input)) {
         const session = await this.repository.getSession(this.sessionId);
         const target = canonicalUrl(session?.target_url);
-        const claimed = canonicalUrl(input.page_url);
-        const isTarget = claimed === target || (!!target && claimed.startsWith(target));
+        let targetHost = '';
+        try { targetHost = new URL(session?.target_url || '').host; } catch { /* none */ }
 
-        if (!isTarget) {
+        if (target && targetHost) {
           const pages = await this.repository.getPages(this.sessionId).catch(() => []);
-          const wasDiscovered = pages.some(p => canonicalUrl(p.url) === claimed);
-          if (!wasDiscovered) {
-            logger.warn('Rejected page-load bug on undiscovered URL', {
+          const discovered = new Set(pages.map(p => canonicalUrl(p.url)));
+
+          const bogus = referencedRoutes(input, session!.target_url).find(u => {
+            if (u === target || discovered.has(u)) return false;   // root or a real page
+            let host = '', path = '';
+            try { const p = new URL(u); host = p.host; path = p.pathname.replace(/\/+$/, ''); }
+            catch { return false; }
+            // Only judge routes ON the target host that are deeper than root.
+            return host === targetHost && path !== '';
+          });
+
+          if (bogus) {
+            logger.warn('Rejected page-load bug on undiscovered route', {
               sessionId: this.sessionId,
               title: input.title,
               page_url: input.page_url,
+              bogusRoute: bogus,
             });
             return {
               error:
-                `Not filed: "${input.page_url}" is not a page this app links to — ` +
-                `it was never found via a real link, so a load failure there is not a bug ` +
-                `(single-page apps return a page for any URL, and the app's own scripts then ` +
-                `fail against the wrong path). Only report load failures for pages reached by ` +
-                `following an actual link. Do not re-file this.`,
+                `Not filed: "${bogus}" is not a page this app links to — it was never ` +
+                `found via a real link, so a load failure there is not a bug (single-page ` +
+                `apps return a page for any URL, and the app's own scripts then fail against ` +
+                `the wrong path). Only report load failures for pages you reached by ` +
+                `following an actual link. Do not re-file this under a different URL field.`,
             };
           }
         }
