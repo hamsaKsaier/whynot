@@ -345,13 +345,21 @@ export function useQALoopStream({
 
       case 'bug_found':
         if (event.data?.title) {
-          setBugsFound(prev => [...prev, {
-            title: event.data.title,
-            severity: event.data.severity || 'medium',
-            agent: event.data.agent,
-            category: event.data.category,
-            at: Date.now(),
-          }]);
+          setBugsFound(prev => {
+            // Dedupe: the same bug_found can arrive more than once — the WS
+            // replays buffered events on reconnect during a long scan — and a
+            // findings list that shows the same bug four times reads as broken
+            // (and inflates every bug count downstream). Key on title + agent.
+            const key = `${event.data.title}::${event.data.agent || ''}`;
+            if (prev.some(b => `${b.title}::${b.agent || ''}` === key)) return prev;
+            return [...prev, {
+              title: event.data.title,
+              severity: event.data.severity || 'medium',
+              agent: event.data.agent,
+              category: event.data.category,
+              at: Date.now(),
+            }];
+          });
           const agent = event.data?.agent;
           if (agent) {
             setAgentStreams(prev => {
@@ -360,14 +368,19 @@ export function useQALoopStream({
                 lastActivityTs: Date.now(), pulse: null,
                 firstSeenTs: Date.now(), lastSeenTs: Date.now(),
               };
+              // Same dedupe as the top-level list — a replayed bug_found must
+              // not double-count on the agent's card.
+              const already = slot.bugsFound.some(b => b.title === event.data.title);
               return {
                 ...prev,
                 [agent]: {
                   ...slot,
-                  bugsFound: [...slot.bugsFound, {
-                    title: event.data.title,
-                    severity: event.data.severity || 'medium',
-                  }],
+                  bugsFound: already
+                    ? slot.bugsFound
+                    : [...slot.bugsFound, {
+                        title: event.data.title,
+                        severity: event.data.severity || 'medium',
+                      }],
                   firstSeenTs: slot.firstSeenTs ?? Date.now(),
                   lastSeenTs: Date.now(), lastActivityTs: Date.now(),
                 },
