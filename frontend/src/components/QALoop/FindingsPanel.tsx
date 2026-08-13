@@ -40,30 +40,44 @@ function normSev(s: string | undefined): Sev {
 
 const SEV_ORDER: Record<Sev, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
-/** Palette per severity — project tokens / Tailwind scale with dark variants only. */
+/**
+ * Severity palette, chosen for how the eye should move, not just to be colourful.
+ *
+ * The ramp is warm-and-escalating for the three that demand action
+ * (red → orange → amber) and deliberately COOL AND MUTED for low (slate), so
+ * an informational finding recedes instead of competing with a critical one.
+ * A common mistake is a bright blue "low" that pulls attention to the least
+ * important item; slate fixes that.
+ *
+ * Legibility: amber replaces yellow for medium (yellow text is the worst on a
+ * dark surface). Backgrounds are low-opacity tints (/10–/15) so nothing glows
+ * on the near-black theme, and text sits at -700 on light / -300 on dark for
+ * contrast in both. The "just arrived" ring uses the brand primary, not a
+ * severity colour, so it reads as "new" rather than as a severity.
+ */
 const SEV_STYLES: Record<Sev, { accent: string; badge: string; dot: string; label: string }> = {
   critical: {
-    accent: 'border-s-red-600',
-    badge: 'bg-red-50 text-red-900 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/40',
-    dot: 'bg-red-600',
+    accent: 'border-s-red-500',
+    badge: 'bg-red-500/10 text-red-700 border-red-500/30 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/40',
+    dot: 'bg-red-500',
     label: 'critical',
   },
   high: {
     accent: 'border-s-orange-500',
-    badge: 'bg-orange-50 text-orange-900 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-900/40',
+    badge: 'bg-orange-500/10 text-orange-700 border-orange-500/30 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/40',
     dot: 'bg-orange-500',
     label: 'high',
   },
   medium: {
-    accent: 'border-s-yellow-500',
-    badge: 'bg-yellow-50 text-yellow-900 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-900/40',
-    dot: 'bg-yellow-500',
+    accent: 'border-s-amber-500',
+    badge: 'bg-amber-500/10 text-amber-700 border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
+    dot: 'bg-amber-500',
     label: 'medium',
   },
   low: {
-    accent: 'border-s-sky-500',
-    badge: 'bg-sky-50 text-sky-900 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-900/40',
-    dot: 'bg-sky-500',
+    accent: 'border-s-slate-400',
+    badge: 'bg-slate-500/10 text-slate-600 border-slate-400/30 dark:bg-slate-400/10 dark:text-slate-300 dark:border-slate-400/30',
+    dot: 'bg-slate-400',
     label: 'low',
   },
 };
