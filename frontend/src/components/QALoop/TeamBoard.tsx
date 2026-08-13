@@ -86,24 +86,45 @@ const STALE_WINDOW_MS = 120_000;
 type AgentState = 'working' | 'idle' | 'stalled' | 'waiting' | 'done';
 
 /**
- * `isRunning` matters as much as the clock here. "Stalled" is derived from
- * elapsed silence, so once a scan ends every agent eventually crosses that
- * threshold and the finished board turns amber — reporting failure for agents
- * that completed successfully. When the scan is over, an agent that did any
- * work is done, not stalled.
+ * Agent state, honestly.
+ *
+ * "Stalled" used to be derived from elapsed silence alone — but agents run in
+ * turns. The Lead plans early then waits for synthesis; each specialist works
+ * once then hands off. So a quiet agent is almost always *between turns or
+ * finished*, not stuck — yet the old rule painted all of them amber "stalled"
+ * (which reads as an error) the moment their turn ended. `anyWorking` fixes
+ * this: while someone on the team is active, a quiet agent is simply calm.
+ *
+ * "Stalled" now means what it should — the whole board has gone silent while
+ * the scan claims to be running, i.e. an actual hang. Nothing else is amber.
  */
 function stateOf(
   slice: AgentStreamSlice | undefined,
   now: number,
   isRunning: boolean,
+  anyWorking: boolean,
 ): AgentState {
   if (!slice?.lastActivityTs) return isRunning ? 'waiting' : 'idle';
   if (!isRunning) return 'done';
 
   const since = now - slice.lastActivityTs;
   if (since < ACTIVE_WINDOW_MS) return 'working';
+
+  // Scan is running but this agent is quiet. If a teammate is active, this
+  // agent has simply had (or not yet reached) its turn — calm, not stuck.
+  if (anyWorking) return 'idle';
+
+  // Nobody is working and the whole board has been silent a long time: a real
+  // hang. Only here is "stalled" earned.
   if (since >= STALE_WINDOW_MS) return 'stalled';
   return 'idle';
+}
+
+/** True if any agent acted within the active window — the team is doing something. */
+function anyAgentWorking(streams: Record<string, AgentStreamSlice>, now: number): boolean {
+  return Object.values(streams).some(
+    s => s?.lastActivityTs != null && now - s.lastActivityTs < ACTIVE_WINDOW_MS,
+  );
 }
 
 /** Last non-empty line of an agent's thinking — what it is "saying" right now. */
@@ -133,6 +154,8 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
     return () => clearInterval(id);
   }, [isRunning]);
 
+  const anyWorking = anyAgentWorking(agentStreams, now);
+
   if (focused) {
     return (
       <AgentDetail
@@ -141,6 +164,7 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
         leadDispatches={leadDispatches}
         now={now}
         isRunning={isRunning}
+        anyWorking={anyWorking}
         onBack={() => setFocused(null)}
       />
     );
@@ -173,6 +197,7 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
                 slice={agentStreams[LEAD]}
                 now={now}
                 isRunning={isRunning}
+                anyWorking={anyWorking}
                 onSelect={() => setFocused(LEAD)}
               />
             </div>
@@ -194,6 +219,7 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
                   slice={agentStreams[agent]}
                   now={now}
                   isRunning={isRunning}
+                  anyWorking={anyWorking}
                   onSelect={() => setFocused(agent)}
                 />
               ))}
@@ -214,12 +240,13 @@ interface AgentNodeProps {
   slice: AgentStreamSlice | undefined;
   now: number;
   isRunning: boolean;
+  anyWorking: boolean;
   onSelect: () => void;
 }
 
-function AgentNode({ agent, slice, now, isRunning, onSelect }: AgentNodeProps) {
+function AgentNode({ agent, slice, now, isRunning, anyWorking, onSelect }: AgentNodeProps) {
   const profile = PROFILES[agent];
-  const state = stateOf(slice, now, isRunning);
+  const state = stateOf(slice, now, isRunning, anyWorking);
   const line = latestLine(slice);
   const { Icon } = profile;
 
@@ -387,6 +414,7 @@ function AgentDetail({
   leadDispatches,
   now,
   isRunning,
+  anyWorking,
   onBack,
 }: {
   agent: AgentKey;
@@ -394,10 +422,11 @@ function AgentDetail({
   leadDispatches: LeadDispatch[];
   now: number;
   isRunning: boolean;
+  anyWorking: boolean;
   onBack: () => void;
 }) {
   const profile = PROFILES[agent];
-  const state = stateOf(slice, now, isRunning);
+  const state = stateOf(slice, now, isRunning, anyWorking);
   const { Icon } = profile;
   const dispatches = leadDispatches.filter(d => d.target === agent);
 
