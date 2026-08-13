@@ -499,6 +499,7 @@ export const QALoopPage: React.FC = () => {
                   <TeamBoard
                     agentStreams={agentStreams || {}}
                     leadDispatches={leadDispatches || []}
+                    findings={streamBugsFound || []}
                     isRunning={activeSession.status === 'running'}
                   />
                 )}

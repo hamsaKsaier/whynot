@@ -24,7 +24,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Loader2, ArrowLeft, Compass, ShieldAlert, Plug, Hammer, Crown, CheckCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { AgentStreamSlice, LeadDispatch } from '../../hooks/useQALoopStream';
+import type { AgentStreamSlice, LeadDispatch, Finding } from '../../hooks/useQALoopStream';
+import { FindingsPanel } from './FindingsPanel';
 
 const LEAD: AgentKey = 'qa_lead';
 const SPECIALISTS = ['exploratory', 'security', 'api_tester', 'auto_tester', 'verifier'] as const;
@@ -150,10 +151,11 @@ function latestLine(slice: AgentStreamSlice | undefined): string | null {
 interface TeamBoardProps {
   agentStreams: Record<string, AgentStreamSlice>;
   leadDispatches: LeadDispatch[];
+  findings: Finding[];
   isRunning: boolean;
 }
 
-export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoardProps) {
+export function TeamBoard({ agentStreams, leadDispatches, findings, isRunning }: TeamBoardProps) {
   const [focused, setFocused] = useState<AgentKey | null>(null);
 
   // One timer for the whole board. Agent state is derived from "time since
@@ -250,6 +252,8 @@ export function TeamBoard({ agentStreams, leadDispatches, isRunning }: TeamBoard
           </div>
         </CardContent>
       </Card>
+
+      <FindingsPanel findings={findings} isRunning={isRunning} />
 
       <TeamFeed agentStreams={agentStreams} leadDispatches={leadDispatches} />
     </div>

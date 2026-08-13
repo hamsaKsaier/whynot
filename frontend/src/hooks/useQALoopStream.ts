@@ -45,6 +45,19 @@ export interface CostInfo {
  * whole-session fields above stay in place so LiveMonitor keeps
  * working unchanged when the Command Center is toggled off.
  */
+/**
+ * One finding as it streams in. title/severity are always present; agent
+ * (who found it), category, and `at` (arrival clock) are enriched from the
+ * bug_found event so the Findings panel can credit and order them.
+ */
+export interface Finding {
+  title: string;
+  severity: string;
+  agent?: string;
+  category?: string;
+  at?: number;
+}
+
 export interface AgentStreamSlice {
   thinkingText: string;
   toolCalls: Array<{ tool: string; input: any; result?: any; timestamp: string }>;
@@ -78,7 +91,7 @@ interface UseQALoopStreamReturn {
   pagesDiscovered: string[];
   pagesExplored: string[];
   testsGenerated: string[];
-  bugsFound: Array<{ title: string; severity: string }>;
+  bugsFound: Finding[];
   sessionStatus: string | null;
   currentPhase: string | null;
   currentMessage: string | null;
@@ -110,7 +123,7 @@ export function useQALoopStream({
   const [pagesDiscovered, setPagesDiscovered] = useState<string[]>([]);
   const [pagesExplored, setPagesExplored] = useState<string[]>([]);
   const [testsGenerated, setTestsGenerated] = useState<string[]>([]);
-  const [bugsFound, setBugsFound] = useState<Array<{ title: string; severity: string }>>([]);
+  const [bugsFound, setBugsFound] = useState<Finding[]>([]);
   const [sessionStatus, setSessionStatus] = useState<string | null>(null);
   const [currentPhase, setCurrentPhase] = useState<string | null>(null);
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
@@ -334,7 +347,10 @@ export function useQALoopStream({
         if (event.data?.title) {
           setBugsFound(prev => [...prev, {
             title: event.data.title,
-            severity: event.data.severity || 'medium'
+            severity: event.data.severity || 'medium',
+            agent: event.data.agent,
+            category: event.data.category,
+            at: Date.now(),
           }]);
           const agent = event.data?.agent;
           if (agent) {
